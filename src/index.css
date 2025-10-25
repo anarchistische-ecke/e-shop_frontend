@@ -1,0 +1,20 @@
+/* Tailwind CSS base styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom overrides and utility classes can be added here if needed. */
+
+/* Define reusable component classes using Tailwind's @layer directive.  The
+   `.button` class creates a consistent button style across the app with our
+   custom colour palette. */
+@layer components {
+  .button {
+    /* Main action button with subtle scaling on hover/click for feedback */
+    @apply inline-block bg-primary text-white py-2 px-4 rounded hover:bg-accent transition-colors duration-200 transition-transform transform hover:scale-105 active:scale-95;
+  }
+  .button-gray {
+    /* A secondary button variant used for less prominent actions. */
+    @apply inline-block bg-muted text-white py-2 px-4 rounded hover:bg-gray-600 transition-colors duration-200 transition-transform transform hover:scale-105 active:scale-95;
+  }
+}
