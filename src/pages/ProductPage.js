@@ -1,22 +1,34 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams } from 'react-router-dom';
-import { products } from '../data/products';
+import { getProduct } from '../api';
 import { reviews } from '../data/reviews';
 import { CartContext } from '../contexts/CartContext';
 
 /**
  * ProductPage renders detailed information about a single product.  It
- * includes a gallery with thumbnails (using a single placeholder here),
- * pricing information, a description and a simple tabbed interface
- * replicating the various informational panels from the original site.
+ * fetches the product from the backend based on the route parameter
+ * and allows adding it to the cart using the CartContext.  A simple
+ * tabbed interface displays description, customer reviews and a
+ * placeholder for technical details.
  */
 function ProductPage() {
   const { id } = useParams();
-  const product = products.find((p) => p.id === id);
-  const productReviews = reviews.filter((r) => r.productId === id);
+  const [product, setProduct] = useState(null);
   const [activeTab, setActiveTab] = useState('about');
-
   const { addItem } = useContext(CartContext);
+
+  // Fetch product details when the ID changes
+  useEffect(() => {
+    getProduct(id)
+      .then((data) => setProduct(data))
+      .catch((err) => {
+        console.error('Failed to fetch product:', err);
+        setProduct(null);
+      });
+  }, [id]);
+
+  // Filter reviews for this product (static sample data)
+  const productReviews = reviews.filter((r) => r.productId === id);
 
   if (!product) {
     return (
@@ -45,16 +57,24 @@ function ProductPage() {
         <div className="flex-1 min-w-[280px]">
           <h1 className="text-2xl font-semibold mb-2">{product.name}</h1>
           <div className="text-primary text-2xl font-semibold mb-2">
-            {product.price.toLocaleString('ru-RU')} ₽
+            {/* Price rendering: if the backend returns a Money object with amount and currency
+                fields, convert to local currency formatting.  Otherwise assume it's a number. */}
+            {typeof product.price === 'object'
+              ? (product.price.amount / 100).toLocaleString('ru-RU')
+              : (product.price || 0).toLocaleString('ru-RU')}
+             ₽
             {product.oldPrice && (
               <span className="text-lg line-through text-muted ml-2">
-                {product.oldPrice.toLocaleString('ru-RU')} ₽
+                {typeof product.oldPrice === 'object'
+                  ? (product.oldPrice.amount / 100).toLocaleString('ru-RU')
+                  : product.oldPrice.toLocaleString('ru-RU')}
+                 ₽
               </span>
             )}
           </div>
           <div className="text-primary text-base mb-2">
-            {'★'.repeat(Math.round(product.rating))}{'☆'.repeat(5 - Math.round(product.rating))}
-            <span className="ml-1 text-muted">{product.rating.toFixed(1)}</span>
+            {'★'.repeat(Math.round(product.rating || 0))}{'☆'.repeat(5 - Math.round(product.rating || 0))}
+            <span className="ml-1 text-muted">{(product.rating || 0).toFixed(1)}</span>
           </div>
           {/* Add to cart button */}
           <button className="button mb-4" onClick={() => addItem(product)}>
@@ -84,7 +104,7 @@ function ProductPage() {
           {/* Tab content */}
           {activeTab === 'about' && (
             <div>
-              <p>{product.description}</p>
+              <p>{product.description || 'Описание отсутствует.'}</p>
             </div>
           )}
           {activeTab === 'reviews' && (

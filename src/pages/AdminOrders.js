@@ -1,24 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { getOrders, updateOrderStatus, getCustomers } from '../api';
 
 /**
- * AdminOrders displays a filterable list of orders.  This placeholder
- * provides a description of the intended features; implement the
- * functionality when connecting to a backend.
+ * AdminOrders displays a list of all orders retrieved from the backend.
+ * Administrators can filter by status and update an order's status
+ * directly in the table.  Customer names are resolved by fetching
+ * customer metadata on mount.
  */
 function AdminOrders() {
-  const initialOrders = [
-    { id: '10001', customer: 'Иван Иванов', date: '2025-09-01', total: 3999, status: 'Новый' },
-    { id: '10002', customer: 'Мария Петрова', date: '2025-09-02', total: 7299, status: 'В обработке' },
-    { id: '10003', customer: 'Ольга Смирнова', date: '2025-09-03', total: 15999, status: 'Доставлен' },
-  ];
-  const [orders, setOrders] = React.useState(initialOrders);
-  const [filter, setFilter] = React.useState('Все');
+  const [orders, setOrders] = useState([]);
+  const [customers, setCustomers] = useState({});
+  const [filter, setFilter] = useState('Все');
 
-  const handleStatusChange = (index, newStatus) => {
-    setOrders((prev) => prev.map((o, i) => (i === index ? { ...o, status: newStatus } : o)));
+  // Fetch orders and customers once when the component mounts
+  useEffect(() => {
+    getOrders()
+      .then((data) => setOrders(Array.isArray(data) ? data : []))
+      .catch((err) => console.error('Failed to fetch orders:', err));
+    getCustomers()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const map = {};
+          data.forEach((c) => {
+            map[c.id] = `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.email || c.id;
+          });
+          setCustomers(map);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch customers:', err));
+  }, []);
+
+  // Handle status update
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+      );
+    } catch (err) {
+      console.error('Failed to update order status:', err);
+    }
   };
 
-  const filteredOrders = orders.filter((o) => (filter === 'Все' ? true : o.status === filter));
+  // Apply status filter
+  const filteredOrders = orders.filter((o) =>
+    filter === 'Все' ? true : o.status === filter
+  );
 
   return (
     <div className="space-y-4">
@@ -33,9 +60,17 @@ function AdminOrders() {
           onChange={(e) => setFilter(e.target.value)}
           className="p-2 border border-gray-300 rounded"
         >
-          {['Все', 'Новый', 'В обработке', 'Доставлен', 'Отменён'].map((status) => (
+          {['Все', 'PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
             <option key={status} value={status}>
-              {status}
+              {status === 'PENDING'
+                ? 'Новый'
+                : status === 'PROCESSING'
+                ? 'В обработке'
+                : status === 'DELIVERED'
+                ? 'Доставлен'
+                : status === 'CANCELLED'
+                ? 'Отменён'
+                : status}
             </option>
           ))}
         </select>
@@ -45,25 +80,31 @@ function AdminOrders() {
           <tr>
             <th className="p-2 border-b">ID</th>
             <th className="p-2 border-b">Клиент</th>
-            <th className="p-2 border-b">Дата</th>
             <th className="p-2 border-b">Сумма</th>
             <th className="p-2 border-b">Статус</th>
+            <th className="p-2 border-b">Действия</th>
           </tr>
         </thead>
         <tbody>
-          {filteredOrders.map((order, index) => (
+          {filteredOrders.map((order) => (
             <tr key={order.id} className="border-b">
               <td className="p-2">{order.id}</td>
-              <td className="p-2">{order.customer}</td>
-              <td className="p-2">{order.date}</td>
-              <td className="p-2">{order.total.toLocaleString('ru-RU')} ₽</td>
+              <td className="p-2">{customers[order.customerId] || order.customerId}</td>
+              <td className="p-2">
+                {/* Convert Money object or numeric total to currency string */}
+                {typeof order.total === 'object'
+                  ? (order.total.amount / 100).toLocaleString('ru-RU')
+                  : (order.total || 0).toLocaleString('ru-RU')}{' '}
+                ₽
+              </td>
+              <td className="p-2">{order.status}</td>
               <td className="p-2">
                 <select
                   value={order.status}
-                  onChange={(e) => handleStatusChange(index, e.target.value)}
+                  onChange={(e) => handleStatusChange(order.id, e.target.value)}
                   className="p-1 border border-gray-300 rounded"
                 >
-                  {['Новый', 'В обработке', 'Доставлен', 'Отменён'].map((status) => (
+                  {['PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
                     <option key={status} value={status}>
                       {status}
                     </option>

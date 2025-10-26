@@ -1,43 +1,56 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { products } from '../data/products';
-import { categories } from '../data/categories';
-import { reviews } from '../data/reviews';
 import ProductCard from '../components/ProductCard';
+import { getProducts, getCategories } from '../api';
+import { reviews } from '../data/reviews';
 
 /**
- * The Home page presents a number of sections inspired by the
- * original Cozy Home landing page.  To keep the implementation
- * maintainable the data used to populate products and categories is
- * imported from static modules.  The layout uses simple CSS
- * flexbox and grid; no external libraries are required.
+ * The Home page mirrors the original Cozy Home landing page but now
+ * retrieves products and categories from the Spring Boot backend.  On
+ * mount it fetches the full product catalogue and top‑level categories
+ * via the API helper.  Static content such as features and
+ * collections remains embedded for clarity.
  */
 function Home() {
-  // Define the feature boxes that appear below the hero.
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    // Load product list
+    getProducts()
+      .then((data) => setProducts(Array.isArray(data) ? data : []))
+      .catch((err) => console.error('Failed to fetch products:', err));
+    // Load category list
+    getCategories()
+      .then((data) => setCategories(Array.isArray(data) ? data : []))
+      .catch((err) => console.error('Failed to fetch categories:', err));
+  }, []);
+
+  // Feature boxes shown below the hero section
   const features = [
     {
-      icon: '🔑',
+      icon: '',
       title: 'Авторизуйтесь',
       subtitle: 'копите и списывайте бонусы',
     },
     {
-      icon: '💳',
+      icon: '',
       title: 'Удобно платить',
       subtitle: 'картой, наличными, СБП или частями',
     },
     {
-      icon: '🚚',
+      icon: '',
       title: 'Бесплатная доставка',
       subtitle: 'при заказе от 5000 ₽',
     },
     {
-      icon: '🏬',
+      icon: '',
       title: 'Пункты выдачи',
       subtitle: 'более 35 000 пунктов',
     },
   ];
 
-  // Sample collections
+  // Sample collections for display.  These are purely decorative.
   const collections = [
     {
       title: 'Cinque Terre',
@@ -127,10 +140,10 @@ function Home() {
         <div className="container mx-auto px-4">
           <h2 className="text-xl font-semibold mb-4">Популярные категории</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {categories.slice(2, 8).map((cat, idx) => (
+            {categories.slice(2, 8).map((cat) => (
               <Link
-                key={cat.slug}
-                to={`/category/${cat.slug}`}
+                key={cat.slug || cat.id}
+                to={`/category/${cat.slug || cat.id}`}
                 className="relative block h-40 sm:h-48 md:h-56 bg-[#e9e7e3] rounded overflow-hidden flex items-center justify-center"
               >
                 <span className="text-white font-semibold text-lg z-10">{cat.name}</span>
@@ -208,6 +221,7 @@ function Home() {
           <h2 className="text-xl font-semibold mb-4">Отзывы</h2>
           <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
             {reviews.map((rev, idx) => {
+              // Find the corresponding product in the current list; fallback to null
               const product = products.find((p) => p.id === rev.productId);
               return (
                 <div
@@ -236,8 +250,7 @@ function Home() {
         <div className="container mx-auto px-4 max-w-2xl text-center">
           <h2 className="text-xl font-semibold">Постельное Белье‑Юг – интернет‑магазин домашнего текстиля и декора</h2>
           <p className="text-base text-muted mt-4">
-            Мы предлагаем постельное бельё и одежду для отдыха собственного производства, а также коллекции
-            декоративных товаров для дома. Наша цель — сделать ваш дом уютным и красивым.
+            Мы предлагаем постельное бельё и одежду для отдыха собственного производства, а также коллекции декоративных товаров для дома. Наша цель — сделать ваш дом уютным и красивым.
           </p>
           <Link to="/about" className="button mt-4 inline-block">
             Подробнее о нас
