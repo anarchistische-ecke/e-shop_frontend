@@ -21,7 +21,7 @@ function AdminCustomers() {
     country: '',
   });
 
-  // Load the initial customer list
+  // Load the customer list on mount
   useEffect(() => {
     getCustomers()
       .then((data) => setCustomers(Array.isArray(data) ? data : []))
@@ -31,7 +31,6 @@ function AdminCustomers() {
   // Handle form submission to create a customer
   const handleAdd = async (e) => {
     e.preventDefault();
-    // Basic validation
     if (!newCustomer.firstName || !newCustomer.lastName || !newCustomer.email) {
       return;
     }

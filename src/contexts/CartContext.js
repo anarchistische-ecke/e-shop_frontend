@@ -8,17 +8,19 @@ import {
 } from '../api';
 
 /**
- * CartContext synchronizes cart state between the front‑end and the
- * Spring Boot backend.  When the provider mounts it attempts to
- * locate an existing cart ID in localStorage.  If none is found it
- * creates a new cart via the API and persists the identifier for
- * subsequent page loads.  All cart operations (add, remove, update)
- * propagate changes to the backend and then refresh the local
- * state to ensure consistency.
+ * CartContext provides a shared cart state across the application.  It
+ * persists a cart ID in localStorage so users retain their cart
+ * between sessions and synchronizes all cart operations with the
+ * Spring Boot backend.  On initial mount it will either reuse an
+ * existing cart ID or create a new cart via the API.  Mutations
+ * propagate to the backend and then refresh local state to ensure
+ * consistency.
  */
 export const CartContext = createContext();
 
 export function CartProvider({ children }) {
+  // Retrieve a previously stored cart ID if it exists.  localStorage
+  // access is guarded to avoid errors during server‑side rendering.
   const [cartId, setCartId] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('cartId') || null;
@@ -27,33 +29,33 @@ export function CartProvider({ children }) {
   });
   const [items, setItems] = useState([]);
 
-  // Initialize the cart on first mount or when cartId changes
+  // Initialise the cart when the provider mounts or when the cartId
+  // changes (e.g. after creating a new cart).  This effect will
+  // create a cart on the backend if none exists and then load
+  // current items.  Errors are logged to the console.
   useEffect(() => {
-    async function initCart() {
+    async function init() {
       try {
         let id = cartId;
         if (!id) {
-          // Create a fresh cart on the backend
+          // Create a fresh cart.  The backend accepts an empty body
+          // when no customer association is needed.
           const cart = await createCart();
           id = cart.id;
           localStorage.setItem('cartId', id);
           setCartId(id);
         }
-        // Fetch current cart contents
         const cart = await getCart(id);
-        // The backend returns an array of cart items.  Each item is
-        // expected to include its own ID, the product/variant and
-        // quantity.  Save this into state.
         setItems(cart.items || []);
       } catch (err) {
-        console.error('Failed to initialize cart:', err);
+        console.error('Failed to initialise cart:', err);
       }
     }
-    initCart();
+    init();
   }, [cartId]);
 
-  // Add a product to the cart.  Accepts a product object from the
-  // front‑end; we treat product.id as the variant ID for the API call.
+  // Add a product to the cart.  The variantId is derived from the
+  // product ID because this demo assumes a single variant per product.
   const addItem = useCallback(
     async (product, quantity = 1) => {
       if (!cartId) return;
@@ -98,15 +100,15 @@ export function CartProvider({ children }) {
     [cartId]
   );
 
-  // Clear the cart by removing each item.  This implementation
-  // iterates through current items and removes them one by one.
+  // Clear the cart by removing all items.  This iterates through the
+  // current items and removes them one by one since the backend has
+  // no bulk clear endpoint.
   const clearCart = useCallback(
     async () => {
       if (!cartId) return;
       try {
-        // Make a copy because removeItem updates state
-        const currentItems = [...items];
-        for (const item of currentItems) {
+        const current = [...items];
+        for (const item of current) {
           await removeCartItem(cartId, item.id);
         }
         setItems([]);
@@ -118,9 +120,7 @@ export function CartProvider({ children }) {
   );
 
   return (
-    <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart }}
-    >
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart }}>
       {children}
     </CartContext.Provider>
   );

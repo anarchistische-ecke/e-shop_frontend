@@ -1,53 +1,107 @@
-import React, { useState } from 'react';
-import { products as initialProducts } from '../data/products';
-import { categories } from '../data/categories';
+import React, { useState, useEffect } from 'react';
+import {
+  getProducts,
+  getCategories,
+  createProduct,
+  addProductVariant,
+} from '../api';
 
 /**
- * AdminProducts renders a management interface for products.  It allows
- * administrators to view, edit, delete and add products.  All
- * operations are maintained in local state; when integrating with a
- * backend you should replace the state updates with API calls.
+ * AdminProducts renders a management interface for products.  It
+ * allows administrators to view, edit, delete and add products.  In
+ * contrast to the earlier static implementation, this version
+ * retrieves the product list and category metadata from the
+ * backend API.  New products are persisted via the API by first
+ * creating the product and then adding a variant with pricing and
+ * stock information.  Editing and deletion remain client‑side only
+ * because the backend currently does not expose update/delete
+ * endpoints for products.
  */
 function AdminProducts() {
-  const [items, setItems] = useState(() => initialProducts.map((p) => ({ ...p })));
+  const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
   const [newItem, setNewItem] = useState({
-    id: '',
     name: '',
     price: '',
     oldPrice: '',
-    category: categories[0].slug,
+    category: '',
     rating: 5,
     description: '',
   });
 
-  // Handle change for editing existing products
+  // Load initial data
+  useEffect(() => {
+    getProducts()
+      .then((data) => setItems(Array.isArray(data) ? data : []))
+      .catch((err) => console.error('Failed to fetch products:', err));
+    getCategories()
+      .then((data) => setCategories(Array.isArray(data) ? data : []))
+      .catch((err) => console.error('Failed to fetch categories:', err));
+  }, []);
+
+  // Slugify a product name: lower‑case, remove non‑alphanumeric chars and
+  // replace spaces with hyphens.  This helper is used when creating
+  // products via the API.
+  const slugify = (str) => {
+    return str
+      .toString()
+      .normalize('NFKD')
+      .replace(/[^\w\s-]/g, '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-');
+  };
+
+  // Handle inline edits for existing products.  Because there is no
+  // backend endpoint to persist updates, changes are stored locally.
   const handleEditChange = (index, field, value) => {
-    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+    setItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
   };
 
   const handleSave = (index) => {
+    // Persisting updates to the backend is not supported.  Exit edit mode.
     setEditingIndex(null);
   };
 
   const handleDelete = (index) => {
+    // Deletion is local only; in a real implementation you would
+    // invoke a DELETE endpoint here.
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleAddNew = (e) => {
+  const handleAddNew = async (e) => {
     e.preventDefault();
     if (!newItem.name || !newItem.price) return;
-    const id = 'n' + Date.now();
-    setItems((prev) => [
-      ...prev,
-      {
-        ...newItem,
-        id,
-        price: Number(newItem.price),
-        oldPrice: newItem.oldPrice ? Number(newItem.oldPrice) : undefined,
-      },
-    ]);
-    setNewItem({ id: '', name: '', price: '', oldPrice: '', category: categories[0].slug, rating: 5, description: '' });
+    try {
+      // Generate a slug from the product name
+      const slug = slugify(newItem.name);
+      // Create the product (without price) via API
+      const createdProduct = await createProduct({
+        name: newItem.name,
+        description: newItem.description,
+        slug,
+      });
+      // Add a single variant representing our product.  Convert the
+      // entered price (in rubles) to kopeks by multiplying by 100.
+      const priceAmount = Math.round(Number(newItem.price) * 100);
+      await addProductVariant(createdProduct.id, {
+        sku: `${slug}-default`,
+        name: newItem.name,
+        amount: priceAmount,
+        currency: 'RUB',
+        stock: 100,
+      });
+      // Refresh the product list
+      const updated = await getProducts();
+      setItems(Array.isArray(updated) ? updated : []);
+      // Reset the new item form
+      setNewItem({ name: '', price: '', oldPrice: '', category: categories[0]?.slug || '', rating: 5, description: '' });
+    } catch (err) {
+      console.error('Failed to create product:', err);
+    }
   };
 
   return (
@@ -66,13 +120,13 @@ function AdminProducts() {
         </thead>
         <tbody>
           {items.map((item, index) => (
-            <tr key={item.id} className="border-b">
+            <tr key={item.id || index} className="border-b">
               {editingIndex === index ? (
                 <>
                   <td className="p-2">
                     <input
                       type="text"
-                      value={item.name}
+                      value={item.name || ''}
                       onChange={(e) => handleEditChange(index, 'name', e.target.value)}
                       className="w-full p-1 border border-gray-300 rounded"
                     />
@@ -80,7 +134,7 @@ function AdminProducts() {
                   <td className="p-2">
                     <input
                       type="number"
-                      value={item.price}
+                      value={item.price || ''}
                       onChange={(e) => handleEditChange(index, 'price', e.target.value)}
                       className="w-full p-1 border border-gray-300 rounded"
                     />
@@ -95,12 +149,12 @@ function AdminProducts() {
                   </td>
                   <td className="p-2">
                     <select
-                      value={item.category}
+                      value={item.category || ''}
                       onChange={(e) => handleEditChange(index, 'category', e.target.value)}
                       className="w-full p-1 border border-gray-300 rounded"
                     >
                       {categories.map((c) => (
-                        <option key={c.slug} value={c.slug}>
+                        <option key={c.slug || c.id} value={c.slug || c.id}>
                           {c.name}
                         </option>
                       ))}
@@ -109,7 +163,7 @@ function AdminProducts() {
                   <td className="p-2">
                     <input
                       type="text"
-                      value={item.description}
+                      value={item.description || ''}
                       onChange={(e) => handleEditChange(index, 'description', e.target.value)}
                       className="w-full p-1 border border-gray-300 rounded"
                     />
@@ -126,9 +180,22 @@ function AdminProducts() {
               ) : (
                 <>
                   <td className="p-2">{item.name}</td>
-                  <td className="p-2">{item.price.toLocaleString('ru-RU')}</td>
-                  <td className="p-2">{item.oldPrice ? item.oldPrice.toLocaleString('ru-RU') : '—'}</td>
-                  <td className="p-2">{categories.find((c) => c.slug === item.category)?.name || item.category}</td>
+                  <td className="p-2">
+                    {typeof item.price === 'object'
+                      ? (item.price.amount / 100).toLocaleString('ru-RU')
+                      : (item.price || 0).toLocaleString('ru-RU')}
+                  </td>
+                  <td className="p-2">
+                    {item.oldPrice
+                      ? typeof item.oldPrice === 'object'
+                        ? (item.oldPrice.amount / 100).toLocaleString('ru-RU')
+                        : item.oldPrice.toLocaleString('ru-RU')
+                      : '—'}
+                  </td>
+                    <td className="p-2">
+                      {/* Try to resolve category name; fallback to slug */}
+                      {categories.find((c) => c.slug === item.category || c.id === item.category)?.name || item.category || '—'}
+                    </td>
                   <td className="p-2">{item.description || '—'}</td>
                   <td className="p-2 space-x-2">
                     <button className="button" onClick={() => setEditingIndex(index)}>
@@ -176,7 +243,7 @@ function AdminProducts() {
             className="flex-1 p-2 border border-gray-300 rounded"
           >
             {categories.map((c) => (
-              <option key={c.slug} value={c.slug}>
+              <option key={c.slug || c.id} value={c.slug || c.id}>
                 {c.name}
               </option>
             ))}

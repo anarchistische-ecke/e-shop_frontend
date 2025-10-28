@@ -12,7 +12,7 @@ function AdminOrders() {
   const [customers, setCustomers] = useState({});
   const [filter, setFilter] = useState('Все');
 
-  // Fetch orders and customers once when the component mounts
+  // Fetch orders and customers once
   useEffect(() => {
     getOrders()
       .then((data) => setOrders(Array.isArray(data) ? data : []))
@@ -30,22 +30,32 @@ function AdminOrders() {
       .catch((err) => console.error('Failed to fetch customers:', err));
   }, []);
 
-  // Handle status update
+  // Update order status
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       await updateOrderStatus(orderId, newStatus);
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
-      );
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
     } catch (err) {
       console.error('Failed to update order status:', err);
     }
   };
 
-  // Apply status filter
-  const filteredOrders = orders.filter((o) =>
-    filter === 'Все' ? true : o.status === filter
-  );
+  const filteredOrders = orders.filter((o) => (filter === 'Все' ? true : o.status === filter));
+
+  // Helper to extract numeric total from order.total
+  const extractTotal = (order) => {
+    const total = order.total;
+    if (typeof total === 'object' && total !== null) {
+      // Some controllers return { totalAmount: number }, others a Money object
+      if (total.amount !== undefined) {
+        return total.amount / 100;
+      }
+      if (total.totalAmount !== undefined) {
+        return total.totalAmount / 100;
+      }
+    }
+    return total || 0;
+  };
 
   return (
     <div className="space-y-4">
@@ -91,11 +101,7 @@ function AdminOrders() {
               <td className="p-2">{order.id}</td>
               <td className="p-2">{customers[order.customerId] || order.customerId}</td>
               <td className="p-2">
-                {/* Convert Money object or numeric total to currency string */}
-                {typeof order.total === 'object'
-                  ? (order.total.amount / 100).toLocaleString('ru-RU')
-                  : (order.total || 0).toLocaleString('ru-RU')}{' '}
-                ₽
+                {extractTotal(order).toLocaleString('ru-RU')} ₽
               </td>
               <td className="p-2">{order.status}</td>
               <td className="p-2">

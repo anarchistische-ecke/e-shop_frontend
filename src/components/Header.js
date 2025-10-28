@@ -1,20 +1,17 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { categories } from '../data/categories';
+import { getCategories } from '../api';
 import { CartContext } from '../contexts/CartContext';
 
 /**
- * The Header component renders a fixed top navigation bar with the store
- * name, a persistent search bar, navigation icons and a supermenu.  The
- * supermenu displays top‑level categories and reveals subcategories on
- * hover.  The cart icon shows a badge with the total quantity and
- * performs a bounce animation when items are added.  An admin icon
- * routes to the admin panel for managing products.  Unicode glyphs
- * represent the icons to avoid pulling in external icon libraries.
+ * Header renders the fixed top navigation bar and supermenu for the
+ * storefront.  It loads category data from the backend so that the
+ * supermenu reflects the current catalogue taxonomy.  The cart
+ * icon displays a badge with the total quantity of items and
+ * bounces briefly whenever new items are added.
  */
 function Header() {
-  // Search term for the persistent search bar.  The bar is always visible
-  // between the store name and the icons.
+  // Search term for the persistent search bar.
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
@@ -23,21 +20,32 @@ function Header() {
   const [isCartBouncing, setIsCartBouncing] = useState(false);
   const prevCountRef = useRef(0);
 
-  // Track which top‑level category is currently hovered to show a dropdown.
-  // When hovering a category its subcategories are displayed in a dropdown
-  // below the supermenu.
+  // Categories loaded from the API.  We assume a flat list of
+  // top‑level categories; if a category has children or a
+  // `subcategories` property it will be used to render a dropdown.
+  const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
 
-  // Create a lookup of categories by slug to easily access subcategories
+  // Fetch categories once on mount
+  useEffect(() => {
+    getCategories()
+      .then((data) => {
+        if (Array.isArray(data)) setCategories(data);
+      })
+      .catch((err) => console.error('Failed to fetch categories:', err));
+  }, []);
+
+  // Build a lookup map for categories by slug to facilitate
+  // retrieving potential children.
   const categoriesMap = React.useMemo(() => {
     const map = {};
     categories.forEach((cat) => {
-      map[cat.slug] = cat;
+      map[cat.slug || cat.id] = cat;
     });
     return map;
-  }, []);
+  }, [categories]);
 
-  // Watch for cart count changes to trigger bounce animation
+  // Trigger bounce animation when items count increases
   useEffect(() => {
     const count = items.reduce((sum, item) => sum + item.quantity, 0);
     if (count > prevCountRef.current) {
@@ -50,8 +58,6 @@ function Header() {
   const handleSearchSubmit = (event) => {
     event.preventDefault();
     if (searchTerm.trim()) {
-      // Redirect to a search results page.  For simplicity we reuse the
-      // category page path and pass the term as a query string.
       navigate(`/category/search?query=${encodeURIComponent(searchTerm.trim())}`);
     }
     setSearchTerm('');
@@ -60,16 +66,14 @@ function Header() {
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-white border-b border-gray-200">
       {/* Top bar with shop name, search bar and icons */}
-      {/* Use mx-auto and max-w-screen-xl instead of the Tailwind container so that
-         the header aligns exactly with the main page content. */}
       <div className="mx-auto max-w-screen-xl px-4 h-16 flex items-center justify-between">
-        {/* Left: shop name */}
+        {/* Shop name */}
         <div className="flex-none">
           <Link to="/" className="font-bold text-xl md:text-2xl text-accent whitespace-nowrap">
             Постельное Белье‑Юг
           </Link>
         </div>
-        {/* Center: search bar centered in available space */}
+        {/* Search bar */}
         <div className="flex-1 flex justify-center">
           <form onSubmit={handleSearchSubmit} className="w-full max-w-lg">
             <input
@@ -81,23 +85,20 @@ function Header() {
             />
           </form>
         </div>
-        {/* Right: icons aligned to the container edge */}
+        {/* Icons */}
         <div className="flex-none flex items-center gap-4 text-xl">
-          {/* Cart icon with badge and bounce animation */}
           <Link
             to="/cart"
             aria-label="Корзина"
             className={`relative transition-transform transform hover:scale-110 active:scale-90 ${isCartBouncing ? 'animate-bounce' : ''}`}
           >
             🛒
-            {/* Badge for item count */}
             {items.reduce((sum, item) => sum + item.quantity, 0) > 0 && (
               <span className="absolute -top-1 -right-2 bg-primary text-white text-xs rounded-full px-1">
                 {items.reduce((sum, item) => sum + item.quantity, 0)}
               </span>
             )}
           </Link>
-          {/* Account icon */}
           <Link
             to="/login"
             aria-label="Личный кабинет"
@@ -107,7 +108,7 @@ function Header() {
           </Link>
         </div>
       </div>
-      {/* Supermenu: a horizontal list of categories centered. On small screens it scrolls horizontally. */}
+      {/* Supermenu */}
       <nav
         className="border-t border-gray-200 bg-white relative"
         onMouseLeave={() => setActiveCategory(null)}
@@ -116,13 +117,13 @@ function Header() {
           <ul className="flex flex-nowrap items-center justify-center gap-6 text-sm">
             {categories.map((cat) => (
               <li
-                key={cat.slug}
+                key={cat.slug || cat.id}
                 className="relative py-2"
-                onMouseEnter={() => setActiveCategory(cat.slug)}
+                onMouseEnter={() => setActiveCategory(cat.slug || cat.id)}
               >
                 <Link
-                  to={`/category/${cat.slug}`}
-                  className={`hover:text-primary transition-colors ${activeCategory === cat.slug ? 'text-primary' : ''}`}
+                  to={`/category/${cat.slug || cat.id}`}
+                  className={`hover:text-primary transition-colors ${activeCategory === (cat.slug || cat.id) ? 'text-primary' : ''}`}
                 >
                   {cat.name}
                 </Link>
@@ -130,21 +131,27 @@ function Header() {
             ))}
           </ul>
         </div>
-        {/* Dropdown for subcategories */}
-        {activeCategory && categoriesMap[activeCategory] && categoriesMap[activeCategory].subcategories && (
-          <div className="absolute left-0 right-0 bg-white border-t border-gray-200 shadow-md py-4 z-50">
-            <div className="mx-auto max-w-screen-xl px-4 flex flex-wrap justify-center gap-4">
-              {categoriesMap[activeCategory].subcategories.map((sub) => (
-                <Link
-                  key={sub}
-                  to={`/category/${activeCategory}`}
-                  className="text-sm text-gray-700 hover:text-primary whitespace-nowrap"
-                >
-                  {sub}
-                </Link>
-              ))}
-            </div>
-          </div>
+        {/* Dropdown of subcategories when available */}
+        {activeCategory && categoriesMap[activeCategory] && (
+          (() => {
+            const subcats = categoriesMap[activeCategory].children || categoriesMap[activeCategory].subcategories;
+            if (!subcats || subcats.length === 0) return null;
+            return (
+              <div className="absolute left-0 right-0 bg-white border-t border-gray-200 shadow-md py-4 z-50">
+                <div className="mx-auto max-w-screen-xl px-4 flex flex-wrap justify-center gap-4">
+                  {subcats.map((sub) => (
+                    <Link
+                      key={typeof sub === 'object' ? sub.slug || sub.id : sub}
+                      to={`/category/${activeCategory}`}
+                      className="text-sm text-gray-700 hover:text-primary whitespace-nowrap"
+                    >
+                      {typeof sub === 'object' ? sub.name : sub}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })()
         )}
       </nav>
     </header>

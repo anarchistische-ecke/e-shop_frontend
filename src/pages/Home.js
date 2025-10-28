@@ -5,28 +5,26 @@ import { getProducts, getCategories } from '../api';
 import { reviews } from '../data/reviews';
 
 /**
- * The Home page mirrors the original Cozy Home landing page but now
- * retrieves products and categories from the Spring Boot backend.  On
- * mount it fetches the full product catalogue and top‑level categories
- * via the API helper.  Static content such as features and
- * collections remains embedded for clarity.
+ * Home page mirrors the landing page of the original shop but
+ * retrieves its product and category data from the backend.  The
+ * layout includes several horizontal carousels, a hero section and
+ * various static sections.  Products are displayed using the
+ * ProductCard component which handles Money objects from the API.
  */
 function Home() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    // Load product list
     getProducts()
       .then((data) => setProducts(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Failed to fetch products:', err));
-    // Load category list
     getCategories()
       .then((data) => setCategories(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Failed to fetch categories:', err));
   }, []);
 
-  // Feature boxes shown below the hero section
+  // Feature boxes below the hero section
   const features = [
     {
       icon: '',
@@ -50,7 +48,7 @@ function Home() {
     },
   ];
 
-  // Sample collections for display.  These are purely decorative.
+  // Sample collections (static descriptive blocks)
   const collections = [
     {
       title: 'Cinque Terre',
@@ -65,7 +63,7 @@ function Home() {
     {
       title: 'Taj Mahal',
       description:
-        'Сочетание утончённой эстетики, природной красоты и восточного колорита — для ценителей ярких акцентов.',
+        'Сочетание утончённой эстетики, природной красоты и восточного колорита — для ценителей ярких акцентов.',
     },
   ];
 
@@ -74,7 +72,7 @@ function Home() {
       {/* Hero section */}
       <section className="bg-secondary border-b border-gray-200">
         <div className="container mx-auto px-4 py-8 md:py-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          {/* Large hero placeholder with call to action */}
+          {/* Left: call to action */}
           <div className="relative h-64 md:h-80 bg-[#e9e7e3] flex items-center justify-center rounded">
             <div className="text-center px-4">
               <h1 className="text-3xl md:text-4xl font-semibold mb-4">Уютные новинки осени</h1>
@@ -86,7 +84,7 @@ function Home() {
               </Link>
             </div>
           </div>
-          {/* Featured product card placeholder */}
+          {/* Right: featured product placeholder */}
           <div className="h-64 md:h-80 bg-white border border-gray-200 rounded p-4 flex flex-col justify-between">
             <div className="bg-[#e9e7e3] h-36 md:h-40 rounded mb-4"></div>
             <div className="flex-1">
@@ -101,7 +99,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Features section */}
+      {/* Features */}
       <section className="bg-white">
         <div className="container mx-auto px-4 py-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
           {features.map((feat) => (
@@ -116,7 +114,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Popular products – horizontal scroll */}
+      {/* Popular products */}
       <section className="py-8">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-4">
@@ -146,14 +144,16 @@ function Home() {
                 to={`/category/${cat.slug || cat.id}`}
                 className="relative block h-40 sm:h-48 md:h-56 bg-[#e9e7e3] rounded overflow-hidden flex items-center justify-center"
               >
-                <span className="text-white font-semibold text-lg z-10">{cat.name}</span>
+                <span className="text-white font-semibold text-lg z-10">
+                  {cat.name}
+                </span>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* New items – horizontal scroll */}
+      {/* New items */}
       <section className="py-8">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-4">
@@ -172,7 +172,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Collections – horizontal scroll */}
+      {/* Collections */}
       <section className="bg-white py-8">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-4">
@@ -201,7 +201,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Special for you – horizontal scroll */}
+      {/* Special for you */}
       <section className="py-8">
         <div className="container mx-auto px-4">
           <h2 className="text-xl font-semibold mb-4">Специально для вас</h2>
@@ -215,13 +215,12 @@ function Home() {
         </div>
       </section>
 
-      {/* Reviews – horizontal scroll */}
+      {/* Reviews */}
       <section className="bg-white py-8">
         <div className="container mx-auto px-4">
           <h2 className="text-xl font-semibold mb-4">Отзывы</h2>
           <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
             {reviews.map((rev, idx) => {
-              // Find the corresponding product in the current list; fallback to null
               const product = products.find((p) => p.id === rev.productId);
               return (
                 <div

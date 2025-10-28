@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams } from 'react-router-dom';
+import { CartContext } from '../contexts/CartContext';
 import { getProduct } from '../api';
 import { reviews } from '../data/reviews';
-import { CartContext } from '../contexts/CartContext';
 
 /**
- * ProductPage renders detailed information about a single product.  It
- * fetches the product from the backend based on the route parameter
- * and allows adding it to the cart using the CartContext.  A simple
- * tabbed interface displays description, customer reviews and a
- * placeholder for technical details.
+ * ProductPage shows detailed information about a single product.  It
+ * fetches the product by ID from the backend, displays pricing,
+ * ratings and description and allows the user to add the item to
+ * their cart.  Customer reviews are currently static sample data.
  */
 function ProductPage() {
   const { id } = useParams();
@@ -17,7 +16,6 @@ function ProductPage() {
   const [activeTab, setActiveTab] = useState('about');
   const { addItem } = useContext(CartContext);
 
-  // Fetch product details when the ID changes
   useEffect(() => {
     getProduct(id)
       .then((data) => setProduct(data))
@@ -27,7 +25,7 @@ function ProductPage() {
       });
   }, [id]);
 
-  // Filter reviews for this product (static sample data)
+  // Filter reviews for this product
   const productReviews = reviews.filter((r) => r.productId === id);
 
   if (!product) {
@@ -41,10 +39,17 @@ function ProductPage() {
     );
   }
 
+  // Derive numeric prices
+  const price = typeof product.price === 'object' ? product.price.amount / 100 : product.price || 0;
+  const oldPrice = product.oldPrice
+    ? (typeof product.oldPrice === 'object' ? product.oldPrice.amount / 100 : product.oldPrice)
+    : null;
+  const rating = product.rating || 0;
+
   return (
     <div className="product-page py-8">
       <div className="container mx-auto px-4 flex flex-wrap gap-8">
-        {/* Image gallery */}
+        {/* Image gallery placeholder */}
         <div className="flex-1 min-w-[280px]">
           <div className="relative pt-[75%] bg-[#e9e7e3] rounded"></div>
           <div className="flex gap-2 mt-2">
@@ -57,26 +62,18 @@ function ProductPage() {
         <div className="flex-1 min-w-[280px]">
           <h1 className="text-2xl font-semibold mb-2">{product.name}</h1>
           <div className="text-primary text-2xl font-semibold mb-2">
-            {/* Price rendering: if the backend returns a Money object with amount and currency
-                fields, convert to local currency formatting.  Otherwise assume it's a number. */}
-            {typeof product.price === 'object'
-              ? (product.price.amount / 100).toLocaleString('ru-RU')
-              : (product.price || 0).toLocaleString('ru-RU')}
-             ₽
-            {product.oldPrice && (
+            {price.toLocaleString('ru-RU')} ₽
+            {oldPrice && (
               <span className="text-lg line-through text-muted ml-2">
-                {typeof product.oldPrice === 'object'
-                  ? (product.oldPrice.amount / 100).toLocaleString('ru-RU')
-                  : product.oldPrice.toLocaleString('ru-RU')}
-                 ₽
+                {oldPrice.toLocaleString('ru-RU')} ₽
               </span>
             )}
           </div>
           <div className="text-primary text-base mb-2">
-            {'★'.repeat(Math.round(product.rating || 0))}{'☆'.repeat(5 - Math.round(product.rating || 0))}
-            <span className="ml-1 text-muted">{(product.rating || 0).toFixed(1)}</span>
+            {'★'.repeat(Math.round(rating))}
+            {'☆'.repeat(5 - Math.round(rating))}
+            <span className="ml-1 text-muted">{rating.toFixed(1)}</span>
           </div>
-          {/* Add to cart button */}
           <button className="button mb-4" onClick={() => addItem(product)}>
             Добавить в корзину
           </button>
@@ -126,7 +123,10 @@ function ProductPage() {
           )}
           {activeTab === 'details' && (
             <div>
-              <p>Здесь будут приведены подробные характеристики товара. Добавьте необходимые поля в объект продукта.</p>
+              <p>
+                Здесь будут приведены подробные характеристики товара. Добавьте необходимые поля в объект
+                продукта на сервере и отобразите их здесь.
+              </p>
             </div>
           )}
         </div>
