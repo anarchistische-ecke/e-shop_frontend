@@ -17,23 +17,52 @@ function Header() {
       .catch((err) => console.error('Failed to fetch categories:', err));
   }, []);
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const query = searchTerm.trim();
+    if (query) {
+      // Navigate to search results page
+      navigate(`/category/search?query=${encodeURIComponent(query)}`);
+      setSearchTerm('');  // clear search input after navigating
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('userToken');
     window.location.href = '/';
   };
 
+  // Total items count in cart (for badge display)
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-white shadow z-10">
+      {/* Top bar: logo, search, icons */}
       <div className="container mx-auto px-4 flex items-center justify-between h-16">
-        {/* Logo and search omitted for brevity */}
-        {/* Icons */}
-        <div className="flex-none flex items-center gap-4 text-xl">
-          <Link
-            to="/cart"
-            aria-label="Корзина"
-            className={`relative transition-transform transform hover:scale-110 active:scale-90 ${isCartBouncing.current ? 'animate-bounce' : ''}`}
+        {/* Logo and search */}
+        <div className="flex items-center gap-4">
+          <Link to="/" className="text-xl font-bold text-primary hover:text-accent">
+            CozyHome
+          </Link>
+          <form onSubmit={handleSearch} className="relative hidden md:block">
+            <input 
+              type="text" 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              placeholder="Поиск товаров..." 
+              className="pl-8 pr-3 py-1 border border-gray-300 rounded w-64" 
+            />
+            <button type="submit" className="absolute left-0 top-0 mt-1 ml-1 text-gray-500">
+              🔍
+            </button>
+          </form>
+        </div>
+        {/* Icons: cart and user account */}
+        <div className="flex items-center gap-4 text-xl">
+          <Link 
+            to="/cart" 
+            aria-label="Корзина" 
+            className={`relative hover:scale-110 active:scale-90 transition-transform ${isCartBouncing.current ? 'animate-bounce' : ''}`}
           >
             🛒
             {totalItems > 0 && (
@@ -42,26 +71,42 @@ function Header() {
               </span>
             )}
           </Link>
-          {typeof window !== 'undefined' && localStorage.getItem('userToken') ? (
+          {localStorage.getItem('userToken') ? (
             <button 
               onClick={handleLogout} 
               aria-label="Выйти" 
-              className="transition-transform transform hover:scale-110 active:scale-90 text-sm"
+              className="text-sm hover:scale-110 active:scale-90 transition-transform"
             >
               Выйти
             </button>
           ) : (
-            <Link
-              to="/login"
-              aria-label="Личный кабинет"
-              className="transition-transform transform hover:scale-110 active:scale-90"
+            <Link 
+              to="/login" 
+              aria-label="Личный кабинет" 
+              className="hover:scale-110 active:scale-90 transition-transform"
             >
               👤
             </Link>
           )}
         </div>
       </div>
-      {/* Supermenu with categories (omitted for brevity) */}
+      {/* Secondary navigation: category menu */}
+      <nav className="bg-secondary border-t border-gray-200">
+        <div className="container mx-auto px-4">
+          <ul className="flex flex-wrap items-center gap-4 py-2 text-sm">
+            {categories.map((cat) => (
+              <li key={cat.slug || cat.id}>
+                <Link 
+                  to={`/category/${cat.slug || cat.id}`} 
+                  className="hover:text-primary"
+                >
+                  {cat.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
     </header>
   );
 }

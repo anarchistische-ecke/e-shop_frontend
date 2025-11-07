@@ -4,23 +4,13 @@ import {
   getCart,
   addItemToCart,
   updateCartItem,
-  removeCartItem,
+  removeCartItem
 } from '../api';
 
-/**
- * CartContext provides a shared cart state across the application.  It
- * persists a cart ID in localStorage so users retain their cart
- * between sessions and synchronizes all cart operations with the
- * Spring Boot backend.  On initial mount it will either reuse an
- * existing cart ID or create a new cart via the API.  Mutations
- * propagate to the backend and then refresh local state to ensure
- * consistency.
- */
 export const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  // Retrieve a previously stored cart ID if it exists.  localStorage
-  // access is guarded to avoid errors during server‑side rendering.
+  // Persist cart ID in localStorage
   const [cartId, setCartId] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('cartId') || null;
@@ -29,17 +19,13 @@ export function CartProvider({ children }) {
   });
   const [items, setItems] = useState([]);
 
-  // Initialise the cart when the provider mounts or when the cartId
-  // changes (e.g. after creating a new cart).  This effect will
-  // create a cart on the backend if none exists and then load
-  // current items.  Errors are logged to the console.
+  // Initialize or fetch the cart on mount
   useEffect(() => {
     async function init() {
       try {
         let id = cartId;
         if (!id) {
-          // Create a fresh cart.  The backend accepts an empty body
-          // when no customer association is needed.
+          // Create a new cart (associate with customer if needed)
           const cart = await createCart();
           id = cart.id;
           localStorage.setItem('cartId', id);
@@ -54,13 +40,13 @@ export function CartProvider({ children }) {
     init();
   }, [cartId]);
 
-  // Add a product to the cart.  The variantId is derived from the
-  // product ID because this demo assumes a single variant per product.
+  // Add item to cart (handles single or multiple variants per product)
   const addItem = useCallback(
-    async (product, quantity = 1) => {
+    async (product, variantId = null, quantity = 1) => {
       if (!cartId) return;
       try {
-        await addItemToCart(cartId, product.id, quantity);
+        const vid = variantId || product.id;
+        await addItemToCart(cartId, vid, quantity);
         const cart = await getCart(cartId);
         setItems(cart.items || []);
       } catch (err) {
@@ -70,7 +56,6 @@ export function CartProvider({ children }) {
     [cartId]
   );
 
-  // Remove an item from the cart by its cart item ID
   const removeItem = useCallback(
     async (cartItemId) => {
       if (!cartId) return;
@@ -85,7 +70,6 @@ export function CartProvider({ children }) {
     [cartId]
   );
 
-  // Update the quantity of an existing cart item
   const updateQuantity = useCallback(
     async (cartItemId, quantity) => {
       if (!cartId || quantity < 1) return;
@@ -100,15 +84,12 @@ export function CartProvider({ children }) {
     [cartId]
   );
 
-  // Clear the cart by removing all items.  This iterates through the
-  // current items and removes them one by one since the backend has
-  // no bulk clear endpoint.
   const clearCart = useCallback(
     async () => {
       if (!cartId) return;
       try {
-        const current = [...items];
-        for (const item of current) {
+        // Remove all items one by one (no bulk delete endpoint)
+        for (const item of items) {
           await removeCartItem(cartId, item.id);
         }
         setItems([]);
