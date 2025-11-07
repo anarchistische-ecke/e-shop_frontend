@@ -1,25 +1,33 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { loginCustomer } from '../api';
 
 /**
- * LoginPage offers two simple ways for a visitor to authenticate:
- * via a one‑time SMS code or using a password.  No real
- * authentication is performed; submitting either form will display
- * a confirmation alert.  This page roughly corresponds to the
- * login/registration modal on the original site.
+ * LoginPage allows a customer to log in via SMS code or password. We have implemented the password flow to authenticate with the backend.
  */
 function LoginPage() {
   const [tab, setTab] = useState('sms');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleSmsSubmit = (e) => {
     e.preventDefault();
     alert('Код отправлен на номер ' + phone);
   };
-  const handlePasswordSubmit = (e) => {
+
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    alert('Вход выполнен');
+    try {
+      const result = await loginCustomer(phone, password);
+      localStorage.setItem('userToken', result.token);
+      alert('Вход выполнен');  
+      navigate('/');
+    } catch (err) {
+      console.error('Failed to login customer:', err);
+      alert('Ошибка входа');   
+    }
   };
 
   return (
@@ -29,21 +37,13 @@ function LoginPage() {
         <div className="flex gap-4 mb-4">
           <button
             onClick={() => setTab('sms')}
-            className={`flex-1 py-2 text-center border-b ${
-              tab === 'sms'
-                ? 'border-b-2 border-primary font-semibold'
-                : 'border-gray-200'
-            }`}
+            className={`flex-1 py-2 text-center border-b ${tab === 'sms' ? 'border-b-2 border-primary font-semibold' : 'border-gray-200'}`}
           >
             Через SMS
           </button>
           <button
             onClick={() => setTab('password')}
-            className={`flex-1 py-2 text-center border-b ${
-              tab === 'password'
-                ? 'border-b-2 border-primary font-semibold'
-                : 'border-gray-200'
-            }`}
+            className={`flex-1 py-2 text-center border-b ${tab === 'password' ? 'border-b-2 border-primary font-semibold' : 'border-gray-200'}`}
           >
             По паролю
           </button>

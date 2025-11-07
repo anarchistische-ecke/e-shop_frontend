@@ -4,18 +4,14 @@ import {
   getCategories,
   createProduct,
   addProductVariant,
+  updateProduct,
+  deleteProduct,
 } from '../api';
 
 /**
- * AdminProducts renders a management interface for products.  It
- * allows administrators to view, edit, delete and add products.  In
- * contrast to the earlier static implementation, this version
- * retrieves the product list and category metadata from the
- * backend API.  New products are persisted via the API by first
- * creating the product and then adding a variant with pricing and
- * stock information.  Editing and deletion remain client‑side only
- * because the backend currently does not expose update/delete
- * endpoints for products.
+ * AdminProducts renders a management interface for products. It retrieves the product list and category metadata from the backend API.
+ * New products are persisted via the API by first creating the product and then adding a variant for price/stock.
+ * Editing and deletion are now persisted via the API as update/delete endpoints have been implemented.
  */
 function AdminProducts() {
   const [items, setItems] = useState([]);
@@ -40,9 +36,7 @@ function AdminProducts() {
       .catch((err) => console.error('Failed to fetch categories:', err));
   }, []);
 
-  // Slugify a product name: lower‑case, remove non‑alphanumeric chars and
-  // replace spaces with hyphens.  This helper is used when creating
-  // products via the API.
+  // Generate a URL-friendly slug from a product name
   const slugify = (str) => {
     return str
       .toString()
@@ -53,39 +47,55 @@ function AdminProducts() {
       .replace(/\s+/g, '-');
   };
 
-  // Handle inline edits for existing products.  Because there is no
-  // backend endpoint to persist updates, changes are stored locally.
   const handleEditChange = (index, field, value) => {
     setItems((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     );
   };
 
-  const handleSave = (index) => {
-    // Persisting updates to the backend is not supported.  Exit edit mode.
-    setEditingIndex(null);
+  const handleSave = async (index) => {
+    try {
+      const product = items[index];
+      // Persist the edited product via API
+      await updateProduct(product.id, {
+        name: product.name,
+        description: product.description,
+        slug: product.slug,
+        category: product.category,
+      });
+      // Refresh the product list to reflect updates
+      const updatedList = await getProducts();
+      setItems(Array.isArray(updatedList) ? updatedList : []);
+    } catch (err) {
+      console.error('Failed to update product:', err);
+    } finally {
+      setEditingIndex(null);
+    }
   };
 
-  const handleDelete = (index) => {
-    // Deletion is local only; in a real implementation you would
-    // invoke a DELETE endpoint here.
-    setItems((prev) => prev.filter((_, i) => i !== index));
+  const handleDelete = async (index) => {
+    try {
+      const product = items[index];
+      await deleteProduct(product.id);
+      setItems((prev) => prev.filter((_, i) => i !== index));
+    } catch (err) {
+      console.error('Failed to delete product:', err);
+    }
   };
 
   const handleAddNew = async (e) => {
     e.preventDefault();
     if (!newItem.name || !newItem.price) return;
     try {
-      // Generate a slug from the product name
+      // Generate a slug for the new product
       const slug = slugify(newItem.name);
-      // Create the product (without price) via API
+      // Create the product via API (excluding price)
       const createdProduct = await createProduct({
         name: newItem.name,
         description: newItem.description,
         slug,
       });
-      // Add a single variant representing our product.  Convert the
-      // entered price (in rubles) to kopeks by multiplying by 100.
+      // Add a default variant with price and stock
       const priceAmount = Math.round(Number(newItem.price) * 100);
       await addProductVariant(createdProduct.id, {
         sku: `${slug}-default`,
@@ -94,11 +104,18 @@ function AdminProducts() {
         currency: 'RUB',
         stock: 100,
       });
-      // Refresh the product list
+      // Reload the product list
       const updated = await getProducts();
       setItems(Array.isArray(updated) ? updated : []);
-      // Reset the new item form
-      setNewItem({ name: '', price: '', oldPrice: '', category: categories[0]?.slug || '', rating: 5, description: '' });
+      // Reset the new product form
+      setNewItem({
+        name: '',
+        price: '',
+        oldPrice: '',
+        category: categories[0]?.slug || '',
+        rating: 5,
+        description: '',
+      });
     } catch (err) {
       console.error('Failed to create product:', err);
     }
@@ -192,10 +209,9 @@ function AdminProducts() {
                         : item.oldPrice.toLocaleString('ru-RU')
                       : '—'}
                   </td>
-                    <td className="p-2">
-                      {/* Try to resolve category name; fallback to slug */}
-                      {categories.find((c) => c.slug === item.category || c.id === item.category)?.name || item.category || '—'}
-                    </td>
+                  <td className="p-2">
+                    {categories.find((c) => c.slug === item.category || c.id === item.category)?.name || item.category || '—'}
+                  </td>
                   <td className="p-2">{item.description || '—'}</td>
                   <td className="p-2 space-x-2">
                     <button className="button" onClick={() => setEditingIndex(index)}>
@@ -211,6 +227,7 @@ function AdminProducts() {
           ))}
         </tbody>
       </table>
+
       <h2 className="text-xl font-semibold mb-4">Добавить новый продукт</h2>
       <form onSubmit={handleAddNew} className="space-y-4 max-w-xl">
         <div className="flex flex-col sm:flex-row gap-2">
@@ -236,11 +253,11 @@ function AdminProducts() {
             className="flex-1 p-2 border border-gray-300 rounded"
           />
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div>
           <select
             value={newItem.category}
             onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
-            className="flex-1 p-2 border border-gray-300 rounded"
+            className="w-full p-2 border border-gray-300 rounded"
           >
             {categories.map((c) => (
               <option key={c.slug || c.id} value={c.slug || c.id}>
@@ -248,18 +265,14 @@ function AdminProducts() {
               </option>
             ))}
           </select>
-          <input
-            type="text"
+        </div>
+        <div>
+          <textarea
             placeholder="Описание"
             value={newItem.description}
             onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-            className="flex-1 p-2 border border-gray-300 rounded"
+            className="w-full p-2 border border-gray-300 rounded"
           />
-        </div>
-        {/* Placeholder for image upload */}
-        <div>
-          <label className="block mb-1">Изображение продукта</label>
-          <input type="file" disabled className="p-2 border border-gray-300 rounded w-full" />
         </div>
         <button type="submit" className="button">
           Добавить

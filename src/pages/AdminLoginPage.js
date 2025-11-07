@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { loginAdmin } from '../api';
 
 /**
- * AdminLoginPage renders a simple login form for administrators.  In this
- * front‑end replica there is no real authentication logic; submitting
- * the form simply stores a flag in localStorage and redirects the
- * administrator back to the page they attempted to access.  When
- * integrating with a backend you would replace the localStorage
- * interaction with API requests and proper authentication flows.
+ * AdminLoginPage renders a login form for administrators. It now integrates with the backend API:
+ * on submit, it sends credentials and stores the returned JWT token for authentication.
  */
 function AdminLoginPage() {
   const [username, setUsername] = useState('');
@@ -16,12 +13,16 @@ function AdminLoginPage() {
   const location = useLocation();
   const from = (location.state && location.state.from) || '/admin';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real application verify credentials with the server here.
-    // For this replica any credentials will succeed.
-    localStorage.setItem('adminAuth', 'true');
-    navigate(from);
+    try {
+      const result = await loginAdmin(username, password);
+      localStorage.setItem('adminToken', result.token);
+      navigate(from);
+    } catch (err) {
+      console.error('Failed to login admin:', err);
+      alert('Ошибка входа');  // "Login error"
+    }
   };
 
   return (
@@ -29,9 +30,7 @@ function AdminLoginPage() {
       <h1 className="text-2xl font-semibold mb-6">Вход в панель администратора</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block mb-1" htmlFor="username">
-            Логин
-          </label>
+          <label className="block mb-1" htmlFor="username">Логин</label>
           <input
             id="username"
             type="text"
@@ -42,9 +41,7 @@ function AdminLoginPage() {
           />
         </div>
         <div>
-          <label className="block mb-1" htmlFor="password">
-            Пароль
-          </label>
+          <label className="block mb-1" htmlFor="password">Пароль</label>
           <input
             id="password"
             type="password"
@@ -54,9 +51,7 @@ function AdminLoginPage() {
             className="w-full p-2 border border-gray-300 rounded"
           />
         </div>
-        <button type="submit" className="button w-full">
-          Войти
-        </button>
+        <button type="submit" className="button w-full">Войти</button>
       </form>
     </div>
   );
