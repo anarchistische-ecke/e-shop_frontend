@@ -1,9 +1,9 @@
-const API_BASE = 'http://localhost:8080';
+const API_BASE = process.env.REACT_APP_API_BASE || '';
 
-// Internal helper for API requests with JSON handling
 async function request(url, options = {}) {
-  const token = (typeof window !== 'undefined' &&
-    (localStorage.getItem('adminToken') || localStorage.getItem('userToken')));
+  const token =
+    typeof window !== 'undefined' &&
+    (localStorage.getItem('adminToken') || localStorage.getItem('userToken'));
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -11,7 +11,9 @@ async function request(url, options = {}) {
   const response = await fetch(`${API_BASE}${url}`, { headers, ...options });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Request failed: ${response.status} ${response.statusText} ${text}`);
+    throw new Error(
+      `Request failed: ${response.status} ${response.statusText} ${text}`
+    );
   }
   if (response.status === 204) return null;
   const contentType = response.headers.get('content-type');
@@ -124,7 +126,9 @@ export async function removeCartItem(cartId, itemId) {
   });
 }
 export async function createOrder(cartId) {
-  return request(`/orders?cartId=${encodeURIComponent(cartId)}`, { method: 'POST' });
+  return request(`/orders?cartId=${encodeURIComponent(cartId)}`, {
+    method: 'POST'
+  });
 }
 export async function getOrders() {
   return request('/orders');
@@ -133,9 +137,12 @@ export async function getOrder(id) {
   return request(`/orders/${id}`);
 }
 export async function updateOrderStatus(id, status) {
-  return request(`/orders/${id}/status?status=${encodeURIComponent(status)}`, {
-    method: 'PUT'
-  });
+  return request(
+    `/orders/${id}/status?status=${encodeURIComponent(status)}`,
+    {
+      method: 'PUT'
+    }
+  );
 }
 
 // Customers and Authentication
