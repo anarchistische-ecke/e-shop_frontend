@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { getProducts, getCategories, getBrands } from '../api';
+import { getProductPrice, moneyToNumber } from '../utils/product';
 
 function CategoryPage() {
   const { slug } = useParams();
@@ -33,14 +34,17 @@ function CategoryPage() {
         if (slug === 'search') {
           // Search across all products by name
           const all = await getProducts();
+          const list = Array.isArray(all) ? all : [];
           const termLower = searchTerm.toLowerCase();
-          setProducts(all.filter((p) => (p.name || '').toLowerCase().includes(termLower)));
+          setProducts(list.filter((p) => (p.name || '').toLowerCase().includes(termLower)));
         } else if (slug === 'popular') {
           const all = await getProducts();
-          setProducts(all.sort((a, b) => (b.rating || 0) - (a.rating || 0)));
+          const list = Array.isArray(all) ? all : [];
+          setProducts(list.sort((a, b) => (b.rating || 0) - (a.rating || 0)));
         } else if (slug === 'new') {
           const all = await getProducts();
-          setProducts(all.slice(-8));  // example: last N products as "new"
+          const list = Array.isArray(all) ? all : [];
+          setProducts(list.slice(-8));  // example: last N products as "new"
         } else if (slug === 'collections') {
           // Collections page could show special grouped products; not implemented
           setProducts([]);
@@ -48,7 +52,7 @@ function CategoryPage() {
           // Filter by category (and brand if applicable)
           const params = brandFilter ? { category: slug, brand: brandFilter } : { category: slug };
           const list = await getProducts(params);
-          setProducts(list);
+          setProducts(Array.isArray(list) ? list : []);
         }
       } catch (err) {
         console.error('Failed to fetch products:', err);
@@ -74,21 +78,8 @@ function CategoryPage() {
   }
 
   // Sorting helpers (extract numeric price values for comparisons)
-  const extractPrice = (prod) => {
-    const price = prod.price;
-    if (typeof price === 'object' && price !== null) {
-      return price.amount / 100;
-    }
-    return price || 0;
-  };
-  const extractOldPrice = (prod) => {
-    const op = prod.oldPrice;
-    if (!op) return 0;
-    if (typeof op === 'object' && op !== null) {
-      return op.amount / 100;
-    }
-    return op;
-  };
+  const extractPrice = (prod) => getProductPrice(prod);
+  const extractOldPrice = (prod) => (prod?.oldPrice ? moneyToNumber(prod.oldPrice) : 0);
 
   const sortFunctions = {
     popular: (a, b) => (b.rating || 0) - (a.rating || 0),

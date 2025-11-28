@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
+import { getPrimaryVariant, getProductPrice, moneyToNumber } from '../utils/product';
 
 /**
  * ProductCard displays a product summary with pricing, rating and an
@@ -10,17 +11,11 @@ import { CartContext } from '../contexts/CartContext';
  * CartContext.
  */
 function ProductCard({ product }) {
-  // Derive numeric price and old price from the product.  The API
-  // may return price fields as Money objects (with amount and
-  // currency) or as plain numbers.
-  const currentPrice = typeof product.price === 'object'
-    ? product.price.amount / 100
-    : product.price || 0;
-  const oldPrice = product.oldPrice
-    ? (typeof product.oldPrice === 'object'
-        ? product.oldPrice.amount / 100
-        : product.oldPrice)
-    : null;
+  const primaryVariant = getPrimaryVariant(product);
+  const currentPrice = primaryVariant?.price
+    ? moneyToNumber(primaryVariant.price)
+    : getProductPrice(product);
+  const oldPrice = product.oldPrice ? moneyToNumber(product.oldPrice) : null;
   const discount = oldPrice
     ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
     : null;
@@ -58,20 +53,20 @@ function ProductCard({ product }) {
             {'☆'.repeat(5 - Math.round(product.rating || 0))}
             <span className="ml-1 text-muted">{(product.rating || 0).toFixed(1)}</span>
           </div>
-          <AddToCartButton product={product} />
+          <AddToCartButton product={product} variantId={primaryVariant?.id} />
         </div>
       </div>
     </div>
   );
 }
 
-function AddToCartButton({ product }) {
+function AddToCartButton({ product, variantId }) {
   const { addItem } = useContext(CartContext);
   const [isBouncing, setIsBouncing] = React.useState(false);
 
   const handleClick = (e) => {
     e.preventDefault();
-    addItem(product);
+    addItem(product, variantId);
     setIsBouncing(true);
     setTimeout(() => setIsBouncing(false), 500);
   };

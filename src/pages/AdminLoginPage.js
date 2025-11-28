@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { loginAdmin } from '../api';
+import { notifyAuthChange } from '../utils/auth';
 
 /**
  * AdminLoginPage renders a login form for administrators. It now integrates with the backend API:
@@ -18,6 +19,7 @@ function AdminLoginPage() {
     try {
       const result = await loginAdmin(username, password);
       localStorage.setItem('adminToken', result.token);
+      notifyAuthChange({ type: 'admin', action: 'login' });
       navigate(from);
     } catch (err) {
       console.error('Failed to login admin:', err);

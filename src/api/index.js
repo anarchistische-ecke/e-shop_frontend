@@ -1,14 +1,34 @@
-const API_BASE = process.env.REACT_APP_API_BASE || '';
+import { notifyAuthChange } from '../utils/auth';
+
+const DEFAULT_API_BASE = 'http://localhost:8080';
+const API_BASE = (process.env.REACT_APP_API_BASE || DEFAULT_API_BASE).replace(/\/$/, '');
+const JSON_TYPE = 'application/json';
+
+function broadcastLogout(reason = 'logout') {
+  if (typeof window === 'undefined') return;
+  const hadAnyToken =
+    localStorage.getItem('adminToken') || localStorage.getItem('userToken');
+  if (hadAnyToken) {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('userToken');
+    notifyAuthChange({ reason });
+  }
+}
 
 async function request(url, options = {}) {
   const token =
     typeof window !== 'undefined' &&
     (localStorage.getItem('adminToken') || localStorage.getItem('userToken'));
   const headers = {
-    'Content-Type': 'application/json',
+    'Content-Type': JSON_TYPE,
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
-  const response = await fetch(`${API_BASE}${url}`, { headers, ...options });
+  const targetUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE}${url}`;
+  const response = await fetch(targetUrl, { headers, ...options });
+  if (response.status === 401) {
+    broadcastLogout('unauthorized');
+    throw new Error('Unauthorized');
+  }
   if (!response.ok) {
     const text = await response.text();
     throw new Error(
@@ -18,7 +38,16 @@ async function request(url, options = {}) {
   if (response.status === 204) return null;
   const contentType = response.headers.get('content-type');
   if (contentType && contentType.includes('application/json')) {
-    return response.json();
+    const text = await response.text();
+    if (!text) {
+      return null;
+    }
+    try {
+      return JSON.parse(text);
+    } catch (err) {
+      console.error(`Failed to parse JSON from ${targetUrl}`, err, text.slice(0, 500));
+      throw new Error(`Failed to parse JSON from ${targetUrl}: ${err.message}`);
+    }
   }
   return response;
 }

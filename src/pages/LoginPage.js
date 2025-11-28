@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginCustomer } from '../api';
+import { notifyAuthChange } from '../utils/auth';
 
 /**
  * LoginPage allows a customer to log in via SMS code or password. We have implemented the password flow to authenticate with the backend.
@@ -9,6 +10,7 @@ function LoginPage() {
   const [tab, setTab] = useState('sms');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
@@ -20,8 +22,9 @@ function LoginPage() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     try {
-      const result = await loginCustomer(phone, password);
+      const result = await loginCustomer(email, password);
       localStorage.setItem('userToken', result.token);
+      notifyAuthChange({ type: 'user', action: 'login' });
       alert('Вход выполнен');  
       navigate('/');
     } catch (err) {
@@ -73,11 +76,11 @@ function LoginPage() {
         {tab === 'password' && (
           <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
             <input
-              type="text"
-              placeholder="Телефон или e‑mail"
+              type="email"
+              placeholder="E‑mail"
               required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="p-2 border border-gray-300 rounded"
             />
             <input

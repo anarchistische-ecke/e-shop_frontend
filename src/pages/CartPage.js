@@ -2,18 +2,17 @@ import React, { useContext } from 'react';
 import { CartContext } from '../contexts/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { createOrder } from '../api';
+import { moneyToNumber } from '../utils/product';
 
 function CartPage() {
   const { items, addItem, removeItem, updateQuantity, clearCart } = useContext(CartContext);
   const navigate = useNavigate();
 
   // Compute cart total amount
-  const total = items.reduce((sum, item) => {
-    const unitPrice = item.unitPrice 
-      ? item.unitPrice.amount / 100 
-      : item.product?.price?.amount / 100 || item.product?.price || 0;
-    return sum + unitPrice * item.quantity;
-  }, 0);
+  const total = items.reduce(
+    (sum, item) => sum + (item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity,
+    0
+  );
 
   const handleCheckout = async () => {
     // Require login before checkout
@@ -61,14 +60,13 @@ function CartPage() {
                   {/* Item details */}
                   <div className="flex-1">
                     <h4 className="text-sm font-medium m-0">
-                      {item.product?.name || item.variantId /* Fallback to variant ID if name not available */}
+                      {item.productInfo?.name || 'Товар'}
                     </h4>
+                    <p className="text-xs text-muted m-0">
+                      {item.productInfo?.variantName ? `Вариант: ${item.productInfo.variantName}` : item.variantId}
+                    </p>
                     <div className="text-primary font-semibold">
-                      {(
-                        item.unitPrice 
-                          ? item.unitPrice.amount / 100 
-                          : item.product?.price?.amount / 100 || item.product?.price || 0
-                      ).toLocaleString('ru-RU')}{' '}
+                      {(item.unitPriceValue || moneyToNumber(item.unitPrice)).toLocaleString('ru-RU')}{' '}
                       ₽
                     </div>
                     <div className="flex items-center mt-1 space-x-2 text-sm">

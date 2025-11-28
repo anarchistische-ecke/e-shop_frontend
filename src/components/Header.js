@@ -2,12 +2,17 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCategories } from '../api';
 import { CartContext } from '../contexts/CartContext';
+import { notifyAuthChange, subscribeToAuthChanges } from '../utils/auth';
 
 function Header() {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
   const { items } = useContext(CartContext);
   const [categories, setCategories] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean(localStorage.getItem('userToken'));
+  });
   const isCartBouncing = useRef(false);
 
   // Load categories for navigation menu
@@ -15,6 +20,13 @@ function Header() {
     getCategories()
       .then((data) => setCategories(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Failed to fetch categories:', err));
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthChanges(() => {
+      setIsLoggedIn(Boolean(localStorage.getItem('userToken')));
+    });
+    return unsubscribe;
   }, []);
 
   const handleSearch = (e) => {
@@ -29,7 +41,8 @@ function Header() {
 
   const handleLogout = () => {
     localStorage.removeItem('userToken');
-    window.location.href = '/';
+    notifyAuthChange({ type: 'user', action: 'logout' });
+    navigate('/');
   };
 
   // Total items count in cart (for badge display)
@@ -71,7 +84,7 @@ function Header() {
               </span>
             )}
           </Link>
-          {localStorage.getItem('userToken') ? (
+          {isLoggedIn ? (
             <button 
               onClick={handleLogout} 
               aria-label="Выйти" 

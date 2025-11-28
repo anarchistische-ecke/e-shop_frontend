@@ -1,10 +1,12 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { notifyAuthChange } from '../utils/auth';
 
 function AdminLayout() {
   const navigate = useNavigate();
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
+    notifyAuthChange({ type: 'admin', action: 'logout' });
     navigate('/');
   };
 

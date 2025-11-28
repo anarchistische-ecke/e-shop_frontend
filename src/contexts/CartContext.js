@@ -4,10 +4,53 @@ import {
   getCart,
   addItemToCart,
   updateCartItem,
-  removeCartItem
+  removeCartItem,
+  getProducts
 } from '../api';
+import { moneyToNumber, getPrimaryVariant } from '../utils/product';
 
 export const CartContext = createContext();
+
+function normalizeVariantsMap(products = []) {
+  const map = {};
+  products.forEach((product) => {
+    const variants = Array.isArray(product.variants)
+      ? product.variants
+      : product.variants
+      ? Array.from(product.variants)
+      : [];
+    variants.forEach((variant) => {
+      if (variant?.id) {
+        map[variant.id] = {
+          productId: product.id,
+          productName: product.name,
+          productSlug: product.slug,
+          variantName: variant.name,
+          variantPrice: variant.price
+        };
+      }
+    });
+  });
+  return map;
+}
+
+function enrichCartItems(items = [], variantMap = {}) {
+  return items.map((item) => {
+    const variantMeta = variantMap[item.variantId];
+    return {
+      ...item,
+      productInfo: variantMeta
+        ? {
+            id: variantMeta.productId,
+            name: variantMeta.productName,
+            slug: variantMeta.productSlug,
+            variantName: variantMeta.variantName
+          }
+        : null,
+      unitPriceValue: moneyToNumber(item.unitPrice || variantMeta?.variantPrice)
+    };
+  });
+}
 
 export function CartProvider({ children }) {
   // Persist cart ID in localStorage
@@ -18,6 +61,35 @@ export function CartProvider({ children }) {
     return null;
   });
   const [items, setItems] = useState([]);
+  const [variantMap, setVariantMap] = useState({});
+
+  const refreshVariantMap = useCallback(async () => {
+    try {
+      const products = await getProducts();
+      const map = normalizeVariantsMap(Array.isArray(products) ? products : []);
+      setVariantMap(map);
+      return map;
+    } catch (err) {
+      console.error('Failed to fetch products for cart context:', err);
+      return variantMap;
+    }
+  }, [variantMap]);
+
+  const syncCart = useCallback(
+    async (id) => {
+      try {
+        const cart = await getCart(id);
+        const map =
+          Object.keys(variantMap).length > 0
+            ? variantMap
+            : await refreshVariantMap();
+        setItems(enrichCartItems(cart.items || [], map));
+      } catch (err) {
+        console.error('Failed to load cart:', err);
+      }
+    },
+    [variantMap, refreshVariantMap]
+  );
 
   // Initialize or fetch the cart on mount
   useEffect(() => {
@@ -25,35 +97,42 @@ export function CartProvider({ children }) {
       try {
         let id = cartId;
         if (!id) {
-          // Create a new cart (associate with customer if needed)
+          // Create a new cart bound to a guest/customer ID
           const cart = await createCart();
           id = cart.id;
           localStorage.setItem('cartId', id);
           setCartId(id);
         }
-        const cart = await getCart(id);
-        setItems(cart.items || []);
+        await syncCart(id);
       } catch (err) {
         console.error('Failed to initialise cart:', err);
       }
     }
     init();
-  }, [cartId]);
+  }, [cartId, syncCart]);
+
+  useEffect(() => {
+    if (!cartId) return;
+    syncCart(cartId);
+  }, [cartId, syncCart]);
 
   // Add item to cart (handles single or multiple variants per product)
   const addItem = useCallback(
     async (product, variantId = null, quantity = 1) => {
       if (!cartId) return;
       try {
-        const vid = variantId || product.id;
-        await addItemToCart(cartId, vid, quantity);
-        const cart = await getCart(cartId);
-        setItems(cart.items || []);
+        const targetVariant = variantId || getPrimaryVariant(product)?.id;
+        if (!targetVariant) {
+          console.error('Product has no variants to add to cart');
+          return;
+        }
+        await addItemToCart(cartId, targetVariant, quantity);
+        await syncCart(cartId);
       } catch (err) {
         console.error('Failed to add item to cart:', err);
       }
     },
-    [cartId]
+    [cartId, syncCart]
   );
 
   const removeItem = useCallback(
@@ -61,13 +140,12 @@ export function CartProvider({ children }) {
       if (!cartId) return;
       try {
         await removeCartItem(cartId, cartItemId);
-        const cart = await getCart(cartId);
-        setItems(cart.items || []);
+        await syncCart(cartId);
       } catch (err) {
         console.error('Failed to remove item from cart:', err);
       }
     },
-    [cartId]
+    [cartId, syncCart]
   );
 
   const updateQuantity = useCallback(
@@ -75,13 +153,12 @@ export function CartProvider({ children }) {
       if (!cartId || quantity < 1) return;
       try {
         await updateCartItem(cartId, cartItemId, quantity);
-        const cart = await getCart(cartId);
-        setItems(cart.items || []);
+        await syncCart(cartId);
       } catch (err) {
         console.error('Failed to update item quantity:', err);
       }
     },
-    [cartId]
+    [cartId, syncCart]
   );
 
   const clearCart = useCallback(
@@ -92,17 +169,22 @@ export function CartProvider({ children }) {
         for (const item of items) {
           await removeCartItem(cartId, item.id);
         }
-        setItems([]);
+        await syncCart(cartId);
       } catch (err) {
         console.error('Failed to clear cart:', err);
       }
     },
-    [cartId, items]
+    [cartId, items, syncCart]
   );
 
-  return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart }}>
-      {children}
-    </CartContext.Provider>
-  );
+  const contextValue = {
+    items,
+    cartId,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart
+  };
+
+  return <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>;
 }
