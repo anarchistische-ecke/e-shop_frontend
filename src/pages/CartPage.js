@@ -55,8 +55,15 @@ function CartPage() {
                   key={item.id} 
                   className="flex items-center gap-4 border-b border-gray-200 py-4"
                 >
-                  {/* Item image placeholder */}
-                  <div className="w-20 h-20 bg-[#e9e7e3] rounded" />
+                  <div className="w-20 h-20 rounded overflow-hidden bg-secondary border border-gray-200 flex-shrink-0">
+                    {item.productInfo?.imageUrl ? (
+                      <img src={item.productInfo.imageUrl} alt={item.productInfo?.name || 'Товар'} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-muted px-2 text-center">
+                        Нет фото
+                      </div>
+                    )}
+                  </div>
                   {/* Item details */}
                   <div className="flex-1">
                     <h4 className="text-sm font-medium m-0">

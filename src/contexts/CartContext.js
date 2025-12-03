@@ -7,7 +7,7 @@ import {
   removeCartItem,
   getProducts
 } from '../api';
-import { moneyToNumber, getPrimaryVariant } from '../utils/product';
+import { moneyToNumber, getPrimaryImageUrl, getPrimaryVariant } from '../utils/product';
 
 export const CartContext = createContext();
 
@@ -26,7 +26,8 @@ function normalizeVariantsMap(products = []) {
           productName: product.name,
           productSlug: product.slug,
           variantName: variant.name,
-          variantPrice: variant.price
+          variantPrice: variant.price,
+          imageUrl: getPrimaryImageUrl(product)
         };
       }
     });
@@ -44,7 +45,8 @@ function enrichCartItems(items = [], variantMap = {}) {
             id: variantMeta.productId,
             name: variantMeta.productName,
             slug: variantMeta.productSlug,
-            variantName: variantMeta.variantName
+            variantName: variantMeta.variantName,
+            imageUrl: variantMeta.imageUrl
           }
         : null,
       unitPriceValue: moneyToNumber(item.unitPrice || variantMeta?.variantPrice)

@@ -20,6 +20,7 @@ function AdminCustomers() {
     postalCode: '',
     country: '',
   });
+  const [search, setSearch] = useState('');
 
   // Load the customer list on mount
   useEffect(() => {
@@ -52,10 +53,46 @@ function AdminCustomers() {
     }
   };
 
+  const filtered = customers.filter((c) => {
+    const term = search.toLowerCase();
+    return (
+      c.firstName?.toLowerCase().includes(term) ||
+      c.lastName?.toLowerCase().includes(term) ||
+      c.email?.toLowerCase().includes(term)
+    );
+  });
+
+  const handleExportCsv = () => {
+    const header = 'Имя,Фамилия,Email\n';
+    const rows = filtered
+      .map((c) => `${c.firstName || ''},${c.lastName || ''},${c.email || ''}`)
+      .join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'customers.csv');
+    link.click();
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Клиенты</h1>
-      <table className="w-full text-sm border border-gray-200">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-wrap gap-3 items-center">
+        <input
+          type="text"
+          placeholder="Поиск по имени или email"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="p-2 border border-gray-300 rounded flex-1 min-w-[200px] text-sm"
+        />
+        <div className="text-sm text-muted">Показано: {filtered.length}</div>
+        <button className="button-gray text-sm" onClick={handleExportCsv} disabled={filtered.length === 0}>
+          Экспорт CSV
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+      <table className="w-full text-sm border border-gray-200 align-top">
         <thead className="bg-secondary">
           <tr>
             <th className="p-2 border-b">ID</th>
@@ -65,7 +102,7 @@ function AdminCustomers() {
           </tr>
         </thead>
         <tbody>
-          {customers.map((c) => (
+          {filtered.map((c) => (
             <tr key={c.id} className="border-b">
               <td className="p-2">{c.id}</td>
               <td className="p-2">{c.firstName}</td>
@@ -73,8 +110,16 @@ function AdminCustomers() {
               <td className="p-2">{c.email}</td>
             </tr>
           ))}
+          {filtered.length === 0 && (
+            <tr>
+              <td colSpan={4} className="p-4 text-center text-muted">
+                Клиенты не найдены
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+      </div>
       <h2 className="text-xl font-semibold">Добавить клиента</h2>
       <form onSubmit={handleAdd} className="space-y-2 max-w-lg">
         <div className="flex gap-2">

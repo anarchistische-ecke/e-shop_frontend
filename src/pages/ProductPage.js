@@ -3,12 +3,14 @@ import { useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
 import { getProduct } from '../api';
 import { reviews } from '../data/reviews';
+import { getPrimaryImageUrl } from '../utils/product';
 
 function ProductPage() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [activeTab, setActiveTab] = useState('about');
+  const [activeImage, setActiveImage] = useState(null);
   const { addItem } = useContext(CartContext);
 
   useEffect(() => {
@@ -19,6 +21,8 @@ function ProductPage() {
         if (data && data.variants && data.variants.length > 0) {
           setSelectedVariant(data.variants[0]);
         }
+        const firstImage = getPrimaryImageUrl(data);
+        setActiveImage(firstImage);
       })
       .catch((err) => {
         console.error('Failed to fetch product:', err);
@@ -41,15 +45,26 @@ function ProductPage() {
   const price = selectedVariant 
     ? (typeof selectedVariant.price === 'object' ? selectedVariant.price.amount / 100 : selectedVariant.price) 
     : (typeof product.price === 'object' ? product.price.amount / 100 : product.price || 0);
+  const availableStock = selectedVariant
+    ? selectedVariant.stock ?? selectedVariant.stockQuantity ?? 0
+    : product.stock ?? product.stockQuantity ?? 0;
   const oldPrice = product.oldPrice 
     ? (typeof product.oldPrice === 'object' ? product.oldPrice.amount / 100 : product.oldPrice) 
     : null;
   const rating = product.rating || 0;
+  const imageGallery = Array.isArray(product.images)
+    ? product.images.map((img) => (typeof img === 'string' ? img : img.url)).filter(Boolean)
+    : [];
+  const mainImage = activeImage || imageGallery[0] || null;
 
   // All reviews for this product (using static sample data for now)
   const productReviews = reviews.filter((r) => r.productId === id);
 
   const handleAddToCart = () => {
+    if (availableStock <= 0) {
+      alert('Товар закончился на складе');
+      return;
+    }
     // Use variant id if available for adding to cart
     const variantId = selectedVariant ? selectedVariant.id : product.id;
     addItem(product, variantId);
@@ -60,10 +75,35 @@ function ProductPage() {
       <div className="container mx-auto px-4 flex flex-wrap gap-8">
         {/* Product image gallery */}
         <div className="flex-1 min-w-[280px]">
-          <div className="relative pt-[75%] bg-[#e9e7e3] rounded mb-2" />
-          <div className="flex gap-2">
-            {Array.from({ length: 4 }).map((_, idx) => (
-              <div key={idx} className="flex-1 pt-[75%] bg-[#f3f1ef] rounded" />
+          <div className="relative w-full aspect-[4/5] bg-gradient-to-br from-secondary to-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
+            {mainImage ? (
+              <img
+                src={mainImage}
+                alt={product.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
+                Изображение появится после загрузки
+              </div>
+            )}
+          </div>
+          <div className="flex gap-3 mt-3 overflow-x-auto pb-2">
+            {(imageGallery.length > 0 ? imageGallery : [null]).map((src, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setActiveImage(src)}
+                className={`w-20 h-20 rounded-lg overflow-hidden border ${src === activeImage ? 'border-primary' : 'border-gray-200'} bg-secondary flex-shrink-0`}
+              >
+                {src ? (
+                  <img src={src} alt={`Изображение ${idx + 1}`} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="w-full h-full flex items-center justify-center text-xs text-muted px-2 text-center">
+                    Пока без фото
+                  </span>
+                )}
+              </button>
             ))}
           </div>
         </div>
@@ -83,6 +123,16 @@ function ProductPage() {
             {'★'.repeat(Math.round(rating))}
             {'☆'.repeat(5 - Math.round(rating))}
             <span className="ml-1 text-muted">{rating.toFixed(1)}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+            <div className="flex items-center gap-2 bg-secondary px-3 py-2 rounded">
+              <span>🚚</span>
+              <span className="text-muted">Доставка от 5000 ₽</span>
+            </div>
+            <div className="flex items-center gap-2 bg-secondary px-3 py-2 rounded">
+              <span>↺</span>
+              <span className="text-muted">Возврат 14 дней</span>
+            </div>
           </div>
 
           {/* Variant selection (if multiple variants) */}
@@ -110,9 +160,16 @@ function ProductPage() {
             </div>
           )}
 
+          <div className="flex items-center gap-3 mb-3 text-sm">
+            <span className={availableStock > 0 ? 'text-green-700' : 'text-red-700'}>
+              {availableStock > 0 ? `В наличии: ${availableStock} шт.` : 'Нет в наличии'}
+            </span>
+          </div>
+
           <button 
-            className="button mb-6" 
+            className="button mb-6 disabled:opacity-50 disabled:cursor-not-allowed" 
             onClick={handleAddToCart}
+            disabled={availableStock <= 0}
           >
             Добавить в корзину
           </button>

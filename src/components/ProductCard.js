@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
-import { getPrimaryVariant, getProductPrice, moneyToNumber } from '../utils/product';
+import { getPrimaryVariant, getPrimaryImageUrl, getProductPrice, moneyToNumber } from '../utils/product';
 
 /**
  * ProductCard displays a product summary with pricing, rating and an
@@ -19,16 +19,27 @@ function ProductCard({ product }) {
   const discount = oldPrice
     ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
     : null;
+  const imageUrl = getPrimaryImageUrl(product);
 
   return (
-    <div className="product-card border border-gray-200 rounded bg-white flex flex-col overflow-hidden transition-transform transform hover:shadow-lg hover:-translate-y-1">
-      <Link
-        to={`/product/${product.id}`}
-        className="block relative pt-[66.66%]"
-      >
-        <div className="absolute inset-0 bg-[#e9e7e3]"></div>
+    <div className="product-card border border-gray-200 rounded-xl bg-white flex flex-col overflow-hidden transition-transform transform hover:shadow-lg hover:-translate-y-1">
+      <Link to={`/product/${product.id}`} className="block relative pt-[66.66%] overflow-hidden">
+        <div className="absolute inset-0">
+          {imageUrl ? (
+            <img src={imageUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-secondary to-white flex items-center justify-center text-muted text-sm">
+              Нет фото
+            </div>
+          )}
+        </div>
+        {discount && (
+          <span className="absolute top-2 left-2 bg-primary text-white text-xs px-2 py-1 rounded-full shadow">
+            −{discount}%
+          </span>
+        )}
       </Link>
-      <div className="p-2 flex flex-col flex-1">
+      <div className="p-3 flex flex-col flex-1 gap-1">
         <div className="flex items-baseline gap-2">
           <span className="text-primary font-semibold">
             {currentPrice.toLocaleString('ru-RU')} ₽
@@ -38,13 +49,8 @@ function ProductCard({ product }) {
               {oldPrice.toLocaleString('ru-RU')} ₽
             </span>
           )}
-          {discount && (
-            <span className="bg-primary text-white text-xs px-1 rounded">
-              −{discount}%
-            </span>
-          )}
         </div>
-        <h5 className="mt-2 mb-1 text-sm font-medium flex-1">
+        <h5 className="mt-1 mb-1 text-sm font-medium flex-1 overflow-hidden text-ellipsis">
           {product.name}
         </h5>
         <div className="flex items-center justify-between">

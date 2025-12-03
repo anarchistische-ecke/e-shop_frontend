@@ -16,6 +16,7 @@ function CategoryPage() {
   const [brands, setBrands] = useState([]);
   const [products, setProducts] = useState([]);
   const [sortKey, setSortKey] = useState('popular');
+  const activeBrand = brands.find((b) => (b.slug || b.id) === brandFilter);
 
   // Load category and brand metadata once
   useEffect(() => {
@@ -106,54 +107,81 @@ function CategoryPage() {
   return (
     <div className="category-page py-8">
       <div className="container mx-auto px-4">
-        <h1 className="text-2xl font-semibold mb-6">{heading}</h1>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+          <div>
+            <h1 className="text-2xl font-semibold">{heading}</h1>
+            <p className="text-sm text-muted">Подберите текстиль и декор по категориям или брендам.</p>
+          </div>
+          {activeBrand && (
+            <button
+              className="text-xs bg-secondary px-3 py-1 rounded-full border border-gray-200 self-start"
+              onClick={() => handleBrandFilterChange('')}
+            >
+              Бренд: {activeBrand.name} ×
+            </button>
+          )}
+        </div>
         {sortedProducts.length > 0 ? (
           <>
-            {/* Filters and sorting controls */}
-            <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              {/* Brand filter dropdown */}
-              <div className="flex items-center">
-                <label htmlFor="brandFilter" className="mr-2 text-sm">Бренд:</label>
-                <select 
-                  id="brandFilter" 
-                  value={brandFilter} 
-                  onChange={(e) => handleBrandFilterChange(e.target.value)} 
-                  className="p-2 border border-gray-300 rounded text-sm"
-                >
-                  <option value="">Все</option>
-                  {brands.map((b) => (
-                    <option key={b.slug || b.id} value={b.slug}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
+            <div className="mb-4 bg-white border border-gray-200 rounded-lg p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shadow-sm">
+              <div>
+                <p className="text-sm font-semibold m-0">Найдено: {sortedProducts.length} товаров</p>
+                <p className="text-xs text-muted m-0">Отфильтруйте по бренду и настройте сортировку.</p>
               </div>
-              {/* Sort dropdown */}
-              <div className="flex items-center">
-                <label htmlFor="sort" className="mr-2 text-sm">Сортировать:</label>
-                <select
-                  id="sort"
-                  value={sortKey}
-                  onChange={(e) => setSortKey(e.target.value)}
-                  className="p-2 border border-gray-300 rounded text-sm"
-                >
-                  <option value="popular">Сначала популярные</option>
-                  <option value="newest">Сначала новые</option>
-                  <option value="cheap">Сначала дешёвые</option>
-                  <option value="expensive">Сначала дорогие</option>
-                  <option value="discount">По размеру скидки</option>
-                </select>
+              <div className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="brandFilter" className="text-sm">Бренд:</label>
+                  <select 
+                    id="brandFilter" 
+                    value={brandFilter} 
+                    onChange={(e) => handleBrandFilterChange(e.target.value)} 
+                    className="p-2 border border-gray-300 rounded text-sm"
+                  >
+                    <option value="">Все</option>
+                    {brands.map((b) => (
+                      <option key={b.slug || b.id} value={b.slug || b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="sort" className="text-sm">Сортировать:</label>
+                  <select
+                    id="sort"
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value)}
+                    className="p-2 border border-gray-300 rounded text-sm"
+                  >
+                    <option value="popular">Сначала популярные</option>
+                    <option value="newest">Сначала новые</option>
+                    <option value="cheap">Сначала дешёвые</option>
+                    <option value="expensive">Сначала дорогие</option>
+                    <option value="discount">По размеру скидки</option>
+                  </select>
+                </div>
               </div>
             </div>
             {/* Product grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {sortedProducts.map((prod) => (
                 <ProductCard key={prod.id} product={prod} />
               ))}
             </div>
           </>
         ) : (
-          <p>Нет товаров{slug !== 'search' ? ' в этой категории.' : ' по данному запросу.'}</p>
+          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center shadow-sm">
+            <p className="text-base font-semibold mb-2">Нет товаров{slug !== 'search' ? ' в этой категории' : ' по запросу'}</p>
+            <p className="text-sm text-muted mb-4">Попробуйте выбрать другой бренд или изменить запрос.</p>
+            <div className="flex justify-center gap-2">
+              <button className="button-gray" onClick={() => handleBrandFilterChange('')}>
+                Сбросить фильтры
+              </button>
+              <button className="button" onClick={() => setSortKey('popular')}>
+                Показать популярные
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

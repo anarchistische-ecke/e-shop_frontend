@@ -31,7 +31,7 @@ function App() {
     <>
       <ScrollToTop />
       <Header />
-      <main className="min-h-[80vh] mt-24">
+      <main className="min-h-[80vh] mt-28">
         <Routes>
           {/* Public user-facing routes */}
           <Route path="/" element={<Home />} />

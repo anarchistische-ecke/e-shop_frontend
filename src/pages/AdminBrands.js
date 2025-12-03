@@ -1,45 +1,65 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getBrands, createBrand, updateBrand, deleteBrand } from '../api';
 
 function AdminBrands() {
   const [brands, setBrands] = useState([]);
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [newBrand, setNewBrand] = useState({ name: '', slug: '', description: '' });
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const slugify = useCallback(
+    (str) =>
+      str
+        .toString()
+        .normalize('NFKD')
+        .replace(/[^\w\s-]/g, '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-'),
+    []
+  );
+
+  const load = useCallback(() => {
+    setLoading(true);
     getBrands()
       .then((data) => setBrands(Array.isArray(data) ? data : []))
-      .catch((err) => console.error('Failed to fetch brands:', err));
+      .catch((err) => console.error('Failed to fetch brands:', err))
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleEditChange = (index, field, value) => {
-    setBrands((prev) =>
-      prev.map((brand, i) => (i === index ? { ...brand, [field]: value } : brand))
-    );
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleEditChange = (id, field, value) => {
+    setBrands((prev) => prev.map((brand) => (brand.id === id ? { ...brand, [field]: value } : brand)));
   };
 
-  const handleSave = async (index) => {
+  const handleSave = async (id) => {
     try {
-      const brand = brands[index];
+      const brand = brands.find((b) => b.id === id);
+      if (!brand) return;
       await updateBrand(brand.id, {
         name: brand.name,
         slug: brand.slug,
         description: brand.description
       });
-      const updatedList = await getBrands();
-      setBrands(Array.isArray(updatedList) ? updatedList : []);
+      load();
     } catch (err) {
       console.error('Failed to update brand:', err);
     } finally {
-      setEditingIndex(null);
+      setEditingId(null);
     }
   };
 
-  const handleDelete = async (index) => {
+  const handleDelete = async (id) => {
     try {
-      const brand = brands[index];
+      const brand = brands.find((b) => b.id === id);
+      if (!brand) return;
+      if (!window.confirm(`Удалить бренд "${brand.name}"?`)) return;
       await deleteBrand(brand.id);
-      setBrands((prev) => prev.filter((_, i) => i !== index));
+      setBrands((prev) => prev.filter((b) => b.id !== id));
     } catch (err) {
       console.error('Failed to delete brand:', err);
     }
@@ -61,28 +81,50 @@ function AdminBrands() {
     }
   };
 
+  const filtered = brands.filter(
+    (b) =>
+      b.name?.toLowerCase().includes(search.toLowerCase()) ||
+      b.slug?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Бренды</h1>
-      <table className="w-full text-sm border border-gray-200">
-        <thead className="bg-secondary">
-          <tr>
-            <th className="p-2 border-b">Название</th>
-            <th className="p-2 border-b">Slug</th>
-            <th className="p-2 border-b">Описание</th>
-            <th className="p-2 border-b">Действия</th>
-          </tr>
-        </thead>
-        <tbody>
-          {brands.map((brand, index) => (
-            <tr key={brand.id || index} className="border-b">
-              {editingIndex === index ? (
+      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-wrap gap-3 items-center">
+        <input
+          type="text"
+          placeholder="Поиск по названию или slug"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 min-w-[200px] p-2 border border-gray-300 rounded"
+        />
+        <div className="text-sm text-muted">
+          Всего: {brands.length} · Показано: {filtered.length}
+        </div>
+        <button className="button-gray text-sm" onClick={load} disabled={loading}>
+          {loading ? 'Обновляем...' : 'Обновить'}
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border border-gray-200 align-top">
+          <thead className="bg-secondary">
+            <tr>
+              <th className="p-2 border-b text-left">Название</th>
+              <th className="p-2 border-b text-left">Slug</th>
+              <th className="p-2 border-b text-left">Описание</th>
+              <th className="p-2 border-b text-left">Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((brand, index) => (
+              <tr key={brand.id || index} className="border-b align-top">
+              {editingId === brand.id ? (
                 <>
                   <td className="p-2">
                     <input 
                       type="text" 
                       value={brand.name} 
-                      onChange={(e) => handleEditChange(index, 'name', e.target.value)}
+                      onChange={(e) => handleEditChange(brand.id, 'name', e.target.value)}
                       className="w-full p-1 border border-gray-300 rounded"
                     />
                   </td>
@@ -90,7 +132,7 @@ function AdminBrands() {
                     <input 
                       type="text" 
                       value={brand.slug} 
-                      onChange={(e) => handleEditChange(index, 'slug', e.target.value)}
+                      onChange={(e) => handleEditChange(brand.id, 'slug', e.target.value)}
                       className="w-full p-1 border border-gray-300 rounded"
                     />
                   </td>
@@ -98,15 +140,15 @@ function AdminBrands() {
                     <input 
                       type="text" 
                       value={brand.description || ''} 
-                      onChange={(e) => handleEditChange(index, 'description', e.target.value)}
+                      onChange={(e) => handleEditChange(brand.id, 'description', e.target.value)}
                       className="w-full p-1 border border-gray-300 rounded"
                     />
                   </td>
                   <td className="p-2">
-                    <button onClick={() => handleSave(index)} className="text-primary mr-2">
+                    <button onClick={() => handleSave(brand.id)} className="text-primary mr-2">
                       Сохранить
                     </button>
-                    <button onClick={() => setEditingIndex(null)} className="text-gray-500">
+                    <button onClick={() => setEditingId(null)} className="text-gray-500">
                       Отмена
                     </button>
                   </td>
@@ -117,10 +159,10 @@ function AdminBrands() {
                   <td className="p-2">{brand.slug}</td>
                   <td className="p-2">{brand.description ? brand.description.substring(0, 40) + '…' : ''}</td>
                   <td className="p-2">
-                    <button onClick={() => setEditingIndex(index)} className="text-primary mr-2">
+                    <button onClick={() => setEditingId(brand.id)} className="text-primary mr-2">
                       Редактировать
                     </button>
-                    <button onClick={() => handleDelete(index)} className="text-red-600">
+                    <button onClick={() => handleDelete(brand.id)} className="text-red-600">
                       Удалить
                     </button>
                   </td>
@@ -128,8 +170,9 @@ function AdminBrands() {
               )}
             </tr>
           ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
 
       <h2 className="text-xl font-semibold">Добавить бренд</h2>
       <form onSubmit={handleAddNew} className="space-y-2 max-w-lg">
@@ -137,7 +180,14 @@ function AdminBrands() {
           type="text" 
           placeholder="Название бренда" 
           value={newBrand.name} 
-          onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })} 
+          onChange={(e) => {
+            const name = e.target.value;
+            const autoSlug =
+              !newBrand.slug || newBrand.slug === slugify(newBrand.name)
+                ? slugify(name)
+                : newBrand.slug;
+            setNewBrand({ ...newBrand, name, slug: autoSlug });
+          }} 
           className="w-full p-2 border border-gray-300 rounded"
           required 
         />
@@ -145,7 +195,7 @@ function AdminBrands() {
           type="text" 
           placeholder="Slug (англ. буквы)" 
           value={newBrand.slug} 
-          onChange={(e) => setNewBrand({ ...newBrand, slug: e.target.value })} 
+          onChange={(e) => setNewBrand({ ...newBrand, slug: e.target.value || slugify(newBrand.name) })} 
           className="w-full p-2 border border-gray-300 rounded"
           required 
         />

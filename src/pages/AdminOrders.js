@@ -11,6 +11,8 @@ function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState({});
   const [filter, setFilter] = useState('Все');
+  const [search, setSearch] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
 
   // Fetch orders and customers once
   useEffect(() => {
@@ -41,6 +43,11 @@ function AdminOrders() {
   };
 
   const filteredOrders = orders.filter((o) => (filter === 'Все' ? true : o.status === filter));
+  const visibleOrders = filteredOrders.filter(
+    (o) =>
+      (o.id || '').toLowerCase().includes(search.toLowerCase()) ||
+      (customers[o.customerId] || '').toLowerCase().includes(search.toLowerCase())
+  );
 
   // Helper to extract numeric total from order.total
   const extractTotal = (order) => {
@@ -60,15 +67,12 @@ function AdminOrders() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Заказы</h1>
-      <div className="flex items-center gap-4">
-        <label htmlFor="filter" className="text-sm text-gray-700">
-          Фильтр:
-        </label>
+      <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
         <select
           id="filter"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="p-2 border border-gray-300 rounded"
+          className="p-2 border border-gray-300 rounded text-sm"
         >
           {['Все', 'PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
             <option key={status} value={status}>
@@ -84,8 +88,17 @@ function AdminOrders() {
             </option>
           ))}
         </select>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Поиск по ID или клиенту"
+          className="p-2 border border-gray-300 rounded flex-1 min-w-[200px] text-sm"
+        />
+        <div className="text-sm text-muted">Показано: {visibleOrders.length}</div>
       </div>
-      <table className="w-full text-sm border border-gray-200">
+      <div className="overflow-x-auto">
+      <table className="w-full text-sm border border-gray-200 align-top">
         <thead className="bg-secondary">
           <tr>
             <th className="p-2 border-b">ID</th>
@@ -96,31 +109,74 @@ function AdminOrders() {
           </tr>
         </thead>
         <tbody>
-          {filteredOrders.map((order) => (
+          {visibleOrders.map((order) => (
             <tr key={order.id} className="border-b">
               <td className="p-2">{order.id}</td>
               <td className="p-2">{customers[order.customerId] || order.customerId}</td>
               <td className="p-2">
                 {extractTotal(order).toLocaleString('ru-RU')} ₽
               </td>
-              <td className="p-2">{order.status}</td>
               <td className="p-2">
-                <select
-                  value={order.status}
-                  onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                  className="p-1 border border-gray-300 rounded"
+                <span
+                  className={`px-2 py-1 rounded-full text-xs ${
+                    order.status === 'DELIVERED'
+                      ? 'bg-green-100 text-green-800'
+                      : order.status === 'PROCESSING'
+                      ? 'bg-amber-100 text-amber-800'
+                      : order.status === 'CANCELLED'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}
                 >
-                  {['PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
+                  {order.status}
+                </span>
+              </td>
+              <td className="p-2 space-y-1">
+                <div className="flex gap-2">
+                  <select
+                    value={order.status}
+                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                    className="p-1 border border-gray-300 rounded text-xs"
+                  >
+                    {['PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="text-xs text-primary underline"
+                    onClick={() => setExpandedId((prev) => (prev === order.id ? null : order.id))}
+                  >
+                    {expandedId === order.id ? 'Скрыть' : 'Подробнее'}
+                  </button>
+                </div>
+                {expandedId === order.id && (
+                  <div className="bg-secondary border border-gray-200 rounded p-2 text-xs mt-1 space-y-1">
+                    <div>Создан: {order.createdAt || '—'}</div>
+                    <div>Позиций: {Array.isArray(order.items) ? order.items.length : '—'}</div>
+                    {Array.isArray(order.items) && order.items.length > 0 && (
+                      <ul className="list-disc pl-4">
+                        {order.items.slice(0, 5).map((item, idx) => (
+                          <li key={idx}>
+                            {item.productName || item.productId} × {item.quantity} —{' '}
+                            {(item.totalPrice?.amount
+                              ? item.totalPrice.amount / 100
+                              : item.totalPrice || 0
+                            ).toLocaleString('ru-RU')}{' '}
+                            ₽
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

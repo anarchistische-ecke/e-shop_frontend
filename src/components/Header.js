@@ -51,56 +51,55 @@ function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 bg-white shadow z-10">
       {/* Top bar: logo, search, icons */}
-      <div className="container mx-auto px-4 flex items-center justify-between h-16">
-        {/* Logo and search */}
+      <div className="container mx-auto px-4 flex flex-col gap-2 py-2">
         <div className="flex items-center gap-4">
-          <Link to="/" className="text-xl font-bold text-primary hover:text-accent">
-            CozyHome
+          <Link to="/" className="text-2xl font-bold text-primary hover:text-accent whitespace-nowrap">
+            Постельное Белье-Юг
           </Link>
-          <form onSubmit={handleSearch} className="relative hidden md:block">
+          <form onSubmit={handleSearch} className="relative flex-1 max-w-3xl">
             <input 
               type="text" 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
               placeholder="Поиск товаров..." 
-              className="pl-8 pr-3 py-1 border border-gray-300 rounded w-64" 
+              className="pl-10 pr-3 py-2 border border-gray-300 rounded-full w-full" 
             />
-            <button type="submit" className="absolute left-0 top-0 mt-1 ml-1 text-gray-500">
+            <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
               🔍
             </button>
           </form>
-        </div>
-        {/* Icons: cart and user account */}
-        <div className="flex items-center gap-4 text-xl">
-          <Link 
-            to="/cart" 
-            aria-label="Корзина" 
-            className={`relative hover:scale-110 active:scale-90 transition-transform ${isCartBouncing.current ? 'animate-bounce' : ''}`}
-          >
-            🛒
-            {totalItems > 0 && (
-              <span className="absolute -top-1 -right-2 bg-primary text-white text-xs rounded-full px-1">
-                {totalItems}
-              </span>
-            )}
-          </Link>
-          {isLoggedIn ? (
-            <button 
-              onClick={handleLogout} 
-              aria-label="Выйти" 
-              className="text-sm hover:scale-110 active:scale-90 transition-transform"
-            >
-              Выйти
-            </button>
-          ) : (
+          {/* Icons: cart and user account */}
+          <div className="flex items-center gap-4 text-xl">
             <Link 
-              to="/login" 
-              aria-label="Личный кабинет" 
-              className="hover:scale-110 active:scale-90 transition-transform"
+              to="/cart" 
+              aria-label="Корзина" 
+              className={`relative hover:scale-110 active:scale-90 transition-transform ${isCartBouncing.current ? 'animate-bounce' : ''}`}
             >
-              👤
+              🛒
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-2 bg-primary text-white text-xs rounded-full px-1">
+                  {totalItems}
+                </span>
+              )}
             </Link>
-          )}
+            {isLoggedIn ? (
+              <button 
+                onClick={handleLogout} 
+                aria-label="Выйти" 
+                className="text-sm hover:scale-110 active:scale-90 transition-transform"
+              >
+                Выйти
+              </button>
+            ) : (
+              <Link 
+                to="/login" 
+                aria-label="Личный кабинет" 
+                className="hover:scale-110 active:scale-90 transition-transform"
+              >
+                👤
+              </Link>
+            )}
+          </div>
         </div>
       </div>
       {/* Secondary navigation: category menu */}

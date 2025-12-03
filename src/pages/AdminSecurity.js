@@ -11,9 +11,13 @@ function AdminSecurity() {
     { id: 2, user: 'admin', action: 'Изменил настройки магазина', date: '2025-09-01 09:30' },
   ]);
   const [twoFA, setTwoFA] = React.useState(false);
+  const [sessionTimeout, setSessionTimeout] = React.useState(30);
+  const [lastBackup, setLastBackup] = React.useState(null);
 
   const handleBackup = () => {
     // In a real app trigger a server backup here
+    const ts = new Date().toISOString();
+    setLastBackup(ts);
     alert('Резервная копия создана');
   };
 
@@ -47,10 +51,22 @@ function AdminSecurity() {
           <input type="checkbox" checked={twoFA} onChange={(e) => setTwoFA(e.target.checked)} />
           <span>Двухфакторная аутентификация</span>
         </label>
+        <div className="mt-3">
+          <label className="block text-sm mb-1">Авто‑выход (минут)</label>
+          <input
+            type="number"
+            value={sessionTimeout}
+            onChange={(e) => setSessionTimeout(e.target.value)}
+            className="p-2 border border-gray-300 rounded w-32"
+          />
+        </div>
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Резервное копирование</h2>
         <button className="button" onClick={handleBackup}>Создать резервную копию</button>
+        <p className="text-xs text-muted mt-1">
+          {lastBackup ? `Последняя копия: ${lastBackup}` : 'Копии ещё не создавались'}
+        </p>
       </div>
     </div>
   );

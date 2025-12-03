@@ -19,12 +19,15 @@ async function request(url, options = {}) {
   const token =
     typeof window !== 'undefined' &&
     (localStorage.getItem('adminToken') || localStorage.getItem('userToken'));
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    'Content-Type': JSON_TYPE,
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+    ...(isFormData ? {} : { 'Content-Type': JSON_TYPE }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {})
   };
   const targetUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE}${url}`;
-  const response = await fetch(targetUrl, { headers, ...options });
+  const response = await fetch(targetUrl, { ...options, headers });
   if (response.status === 401) {
     broadcastLogout('unauthorized');
     throw new Error('Unauthorized');
@@ -113,6 +116,22 @@ export async function addProductVariant(productId, variant) {
     body: JSON.stringify(variant)
   });
 }
+export async function updateProductVariant(productId, variantId, updates) {
+  return request(`/products/${productId}/variants/${variantId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates)
+  });
+}
+export async function adjustStock(variantId, delta, { reason = '', idempotencyKey }) {
+  if (!idempotencyKey) {
+    throw new Error('Idempotency key is required for stock adjustment');
+  }
+  return request('/inventory/adjust', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify({ variantId, delta, reason })
+  });
+}
 export async function updateProduct(productId, updates) {
   return request(`/products/${productId}`, {
     method: 'PUT',
@@ -121,6 +140,19 @@ export async function updateProduct(productId, updates) {
 }
 export async function deleteProduct(productId) {
   return request(`/products/${productId}`, { method: 'DELETE' });
+}
+
+export async function uploadProductImages(productId, files = []) {
+  const formData = new FormData();
+  Array.from(files || []).forEach((file) => formData.append('files', file));
+  return request(`/products/${productId}/images`, {
+    method: 'POST',
+    body: formData
+  });
+}
+
+export async function deleteProductImage(productId, imageId) {
+  return request(`/products/${productId}/images/${imageId}`, { method: 'DELETE' });
 }
 
 // Cart and Orders
@@ -194,5 +226,29 @@ export async function loginCustomer(email, password) {
   return request('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password })
+  });
+}
+export async function loginWithYandex({
+  accessToken = '',
+  yandexId = '',
+  email = '',
+  firstName = '',
+  lastName = ''
+} = {}) {
+  return request('/auth/login/yandex', {
+    method: 'POST',
+    body: JSON.stringify({ accessToken, yandexId, email, firstName, lastName })
+  });
+}
+export async function loginWithVk({
+  accessToken = '',
+  vkUserId = '',
+  email = '',
+  firstName = '',
+  lastName = ''
+} = {}) {
+  return request('/auth/login/vk', {
+    method: 'POST',
+    body: JSON.stringify({ accessToken, vkUserId, email, firstName, lastName })
   });
 }

@@ -76,3 +76,15 @@ export function decimalToMinorUnits(value) {
   }
   return Math.round(parsed * 100);
 }
+
+/**
+ * Get the primary image URL for a product (if provided by the backend).
+ */
+export function getPrimaryImageUrl(product) {
+  if (!product || !product.images) return null;
+  const list = Array.isArray(product.images) ? product.images : Array.from(product.images);
+  if (list.length === 0) return null;
+  const first = list[0];
+  if (typeof first === 'string') return first;
+  return first?.url || null;
+}
