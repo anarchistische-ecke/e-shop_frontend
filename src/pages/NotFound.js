@@ -1,11 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-/**
- * NotFound renders a friendly message when the user navigates to an
- * undefined route.  A link back to the home page helps visitors
- * recover from the error.
- */
 function NotFound() {
   return (
     <div className="not-found py-8">

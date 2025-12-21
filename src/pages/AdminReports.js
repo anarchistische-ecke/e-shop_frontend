@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getOrders } from '../api';
 
-/**
- * AdminReports will provide advanced reporting and analytics.  This
- * placeholder highlights the types of reports that can be generated
- * once the backend exposes the necessary data.
- */
 function AdminReports() {
   const [dateFrom, setDateFrom] = useState('2025-01-01');
   const [dateTo, setDateTo] = useState('2025-12-31');

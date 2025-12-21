@@ -1,10 +1,5 @@
 import React from 'react';
 
-/**
- * AdminPromotions will manage marketing tools such as discounts and
- * coupons, abandoned cart campaigns, email campaigns and gift cards.
- * This placeholder describes the features to be implemented.
- */
 function AdminPromotions() {
   const initialCoupons = [
     { id: 'COZY10', type: 'percent', value: 10, minSpend: 1000, expiry: '2025-12-31', active: true, usageLimit: 100, used: 4 },

@@ -3,20 +3,15 @@ import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { getProducts, getCategories } from '../api';
 import { reviews } from '../data/reviews';
+import { homeHeroDefaults } from '../data/homeHeroDefaults';
 import { getPrimaryImageUrl } from '../utils/product';
 
-/**
- * Home page mirrors the landing page of the original shop but
- * retrieves its product and category data from the backend.  The
- * layout includes several horizontal carousels, a hero section and
- * various static sections.  Products are displayed using the
- * ProductCard component which handles Money objects from the API.
- */
 function Home() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [bannerText, setBannerText] = useState('');
   const [bannerEnabled, setBannerEnabled] = useState(true);
+  const [heroConfig, setHeroConfig] = useState(() => ({ ...homeHeroDefaults }));
 
   useEffect(() => {
     getProducts()
@@ -31,8 +26,28 @@ function Home() {
       setBannerText(storedBanner || '');
       const enabled = localStorage.getItem('adminBannerEnabled');
       setBannerEnabled(enabled === null ? true : enabled === 'true');
+      const storedHero = localStorage.getItem('homeHeroConfig');
+      if (storedHero) {
+        try {
+          const parsed = JSON.parse(storedHero);
+          setHeroConfig({ ...homeHeroDefaults, ...parsed });
+        } catch (err) {
+          console.error('Failed to parse home hero config', err);
+          setHeroConfig({ ...homeHeroDefaults });
+        }
+      }
     }
   }, []);
+
+  const heroTitle = heroConfig.title || homeHeroDefaults.title;
+  const heroAccent = heroConfig.accent || homeHeroDefaults.accent;
+  const heroSubtitle = heroConfig.subtitle || homeHeroDefaults.subtitle;
+  const primaryCtaLabel = heroConfig.primaryCtaLabel || homeHeroDefaults.primaryCtaLabel;
+  const primaryCtaLink = heroConfig.primaryCtaLink || homeHeroDefaults.primaryCtaLink;
+  const secondaryCtaLabel = heroConfig.secondaryCtaLabel || homeHeroDefaults.secondaryCtaLabel;
+  const secondaryCtaLink = heroConfig.secondaryCtaLink || homeHeroDefaults.secondaryCtaLink;
+  const featuredLabel = heroConfig.featuredLabel || homeHeroDefaults.featuredLabel;
+  const badgeText = heroConfig.badge || homeHeroDefaults.badge;
 
   // Feature boxes below the hero section
   const features = [
@@ -40,21 +55,25 @@ function Home() {
       icon: '🎁',
       title: 'Бонусы за покупки',
       subtitle: 'Авторизуйтесь и копите баллы',
+      link: '/info/bonuses',
     },
     {
       icon: '💳',
       title: 'Удобная оплата',
       subtitle: 'Картой, СБП или частями',
+      link: '/info/payment',
     },
     {
       icon: '🚚',
-      title: 'Доставка от 5000 ₽',
+      title: 'Бесплатная доставка от 5000 ₽',
       subtitle: 'Курьером или в пункт выдачи',
+      link: '/info/delivery',
     },
     {
       icon: '🧵',
       title: 'Собственное производство',
       subtitle: 'Контроль качества на каждом этапе',
+      link: '/info/production',
     },
   ];
 
@@ -77,7 +96,8 @@ function Home() {
     },
   ];
 
-  const featuredProduct = products[0] || null;
+  const featuredProduct =
+    products.find((p) => p.id === heroConfig.featuredProductId) || products[0] || null;
   const heroImage = getPrimaryImageUrl(featuredProduct);
 
   return (
@@ -90,26 +110,28 @@ function Home() {
       <section className="container mx-auto px-4 py-10 md:py-14">
         <div className="grid md:grid-cols-2 gap-10 items-center">
           <div className="space-y-4">
-            <p className="uppercase text-xs tracking-widest text-muted">уютная новая коллекция</p>
+            <p className="uppercase text-xs tracking-widest text-muted">{badgeText}</p>
             <h1 className="text-3xl md:text-4xl font-semibold leading-tight">
-              Обновите спальню <span className="text-primary">с акцентом на комфорт</span>
+              {heroTitle} <span className="text-primary">{heroAccent}</span>
             </h1>
-            <p className="text-base text-muted">
-              Натуральные ткани, мягкие цвета и текстуры, продуманные комплекты для спальни и гостиной. Закажите онлайн и получите доставку в удобное место.
-            </p>
+            <p className="text-base text-muted">{heroSubtitle}</p>
             <div className="flex flex-wrap gap-3">
-              <Link to="/category/popular" className="button">Смотреть бестселлеры</Link>
-              <Link to="/category/new" className="button-gray">Новинки</Link>
+              <Link to={primaryCtaLink} className="button">{primaryCtaLabel}</Link>
+              <Link to={secondaryCtaLink} className="button-gray">{secondaryCtaLabel}</Link>
             </div>
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               {features.slice(0, 4).map((feat) => (
-                <div key={feat.title} className="bg-white border border-gray-200 rounded-lg px-3 py-2 flex items-start gap-2 shadow-sm">
+                <Link
+                  key={feat.title}
+                  to={feat.link}
+                  className="bg-white border border-gray-200 rounded-lg px-3 py-2 flex items-start gap-2 shadow-sm hover:border-primary transition-colors"
+                >
                   <span className="text-lg">{feat.icon}</span>
                   <div>
                     <p className="text-sm font-semibold mb-0">{feat.title}</p>
                     <p className="text-xs text-muted mb-0">{feat.subtitle}</p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -124,7 +146,7 @@ function Home() {
             </div>
             <div className="relative p-4 flex items-center justify-between border-t border-gray-100 bg-white/90 backdrop-blur">
               <div>
-                <p className="text-sm text-muted mb-1">Избранный товар</p>
+                <p className="text-sm text-muted mb-1">{featuredLabel}</p>
                 <p className="font-semibold">{featuredProduct?.name || 'Новый плед'}</p>
               </div>
               <Link to={featuredProduct ? `/product/${featuredProduct.id}` : '/category/popular'} className="button text-sm px-3 py-2">
@@ -136,36 +158,36 @@ function Home() {
       </section>
 
       <section className="container mx-auto px-4 pb-10">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
           <h2 className="text-xl font-semibold">Быстрый переход по категориям</h2>
           <Link to="/category/popular" className="text-primary text-sm">В каталог</Link>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {(categories || []).slice(0, 8).map((cat) => (
             <Link
               key={cat.slug || cat.id}
               to={`/category/${cat.slug || cat.id}`}
-              className="px-4 py-3 rounded-full bg-white border border-gray-200 hover:border-primary transition-colors shadow-sm"
+              className="px-4 py-3 rounded-xl bg-white border border-gray-200 hover:border-primary transition-colors shadow-sm"
             >
               <p className="text-sm font-semibold mb-0">{cat.name}</p>
               <p className="text-xs text-muted mb-0">{cat.description || 'Перейти'}</p>
             </Link>
           ))}
           {categories.length === 0 && (
-            <p className="text-sm text-muted">Категории появятся после добавления в админке.</p>
+            <p className="text-sm text-muted col-span-full">Категории появятся после добавления в админке.</p>
           )}
         </div>
       </section>
 
       <section className="py-8 bg-white border-y border-gray-100">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <h2 className="text-xl font-semibold">Популярные товары</h2>
             <Link to="/category/popular" className="text-primary text-sm">
               Смотреть все
             </Link>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
+          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
             {products.slice(0, 8).map((prod) => (
               <div key={prod.id} className="flex-shrink-0 w-64 snap-start">
                 <ProductCard product={prod} />
@@ -179,7 +201,7 @@ function Home() {
       </section>
 
       <section className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
           <h2 className="text-xl font-semibold">Новинки</h2>
           <Link to="/category/new" className="text-primary text-sm">
             Смотреть все
@@ -197,7 +219,7 @@ function Home() {
 
       <section className="bg-white py-8">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <h2 className="text-xl font-semibold">Коллекции</h2>
             <Link to="/category/collections" className="text-primary text-sm">
               Смотреть все
@@ -224,13 +246,13 @@ function Home() {
       </section>
 
       <section className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
           <h2 className="text-xl font-semibold">Отзывы</h2>
           <Link to="/about" className="text-primary text-sm">
             О бренде
           </Link>
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
+        <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
           {reviews.map((rev, idx) => {
             const product = products.find((p) => p.id === rev.productId);
             return (

@@ -1,35 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { getProducts, getOrders } from '../api';
 
-/**
- * AdminDashboard provides a high‑level overview of store performance.
- * It displays summary cards for sales, orders and customers along with
- * simple charts and lists of top products.  In this production‑ready
- * version we fetch the product catalogue from the backend rather than
- * relying on static sample data.  Metrics such as the number of
- * products or top rated items are derived from the fetched list.
- */
 function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
 
   useEffect(() => {
-    // Fetch product catalogue
     getProducts()
       .then((data) => setProducts(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Failed to fetch products:', err));
-    // Fetch orders to derive sales metrics
     getOrders()
       .then((data) => setOrders(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Failed to fetch orders:', err));
   }, []);
 
-  // Derived metrics
   const totalProducts = products.length;
   const topProducts = [...products]
     .sort((a, b) => (b.rating || 0) - (a.rating || 0))
     .slice(0, 5);
-  // Compute total sales and average order value from orders
   let totalSales = 0;
   orders.forEach((o) => {
     const t = o.total;

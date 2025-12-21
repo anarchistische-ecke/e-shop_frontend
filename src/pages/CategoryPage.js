@@ -128,14 +128,14 @@ function CategoryPage() {
                 <p className="text-sm font-semibold m-0">Найдено: {sortedProducts.length} товаров</p>
                 <p className="text-xs text-muted m-0">Отфильтруйте по бренду и настройте сортировку.</p>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap gap-3 w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
                   <label htmlFor="brandFilter" className="text-sm">Бренд:</label>
                   <select 
                     id="brandFilter" 
                     value={brandFilter} 
                     onChange={(e) => handleBrandFilterChange(e.target.value)} 
-                    className="p-2 border border-gray-300 rounded text-sm"
+                    className="p-2 border border-gray-300 rounded text-sm w-full sm:w-auto min-w-[180px]"
                   >
                     <option value="">Все</option>
                     {brands.map((b) => (
@@ -145,13 +145,13 @@ function CategoryPage() {
                     ))}
                   </select>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
                   <label htmlFor="sort" className="text-sm">Сортировать:</label>
                   <select
                     id="sort"
                     value={sortKey}
                     onChange={(e) => setSortKey(e.target.value)}
-                    className="p-2 border border-gray-300 rounded text-sm"
+                    className="p-2 border border-gray-300 rounded text-sm w-full sm:w-auto min-w-[180px]"
                   >
                     <option value="popular">Сначала популярные</option>
                     <option value="newest">Сначала новые</option>

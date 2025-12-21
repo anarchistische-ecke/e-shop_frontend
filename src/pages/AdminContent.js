@@ -1,10 +1,5 @@
 import React from 'react';
 
-/**
- * AdminContent manages static pages and blog posts.  This placeholder
- * outlines the intended capabilities including page editing, blog
- * management, menu configuration and banner updates.
- */
 function AdminContent() {
   const initialPages = React.useMemo(
     () => [

@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getCustomers, createCustomer } from '../api';
 
-/**
- * AdminCustomers lists all registered customers and allows adding new
- * ones.  Editing and deletion are not implemented because the
- * backend exposes only read and create operations.  To extend this
- * component implement corresponding endpoints in the API and wire
- * them up here.
- */
 function AdminCustomers() {
   const [customers, setCustomers] = useState([]);
   const [newCustomer, setNewCustomer] = useState({
@@ -22,14 +15,12 @@ function AdminCustomers() {
   });
   const [search, setSearch] = useState('');
 
-  // Load the customer list on mount
   useEffect(() => {
     getCustomers()
       .then((data) => setCustomers(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Failed to fetch customers:', err));
   }, []);
 
-  // Handle form submission to create a customer
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!newCustomer.firstName || !newCustomer.lastName || !newCustomer.email) {

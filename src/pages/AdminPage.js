@@ -2,14 +2,6 @@ import React, { useState } from 'react';
 import { products as initialProducts } from '../data/products';
 import { categories } from '../data/categories';
 
-/**
- * AdminPage provides a simple interface for managing products.  It allows
- * the shop manager to edit existing items (name, price, old price,
- * category and description), delete items, and add new products.  This
- * functionality is purely front‑end: changes are kept in local state
- * and do not persist across page reloads.  When integrating with a
- * backend you can replace the state updates with API calls.
- */
 function AdminPage() {
   const [items, setItems] = useState(() => initialProducts.map((p) => ({ ...p })));
   const [editingIndex, setEditingIndex] = useState(null);

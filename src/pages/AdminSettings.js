@@ -1,10 +1,5 @@
 import React from 'react';
 
-/**
- * AdminSettings will allow configuring store information, payment
- * gateways, shipping zones, taxes and user roles.  This placeholder
- * hints at future settings forms and toggles.
- */
 function AdminSettings() {
   const [settings, setSettings] = React.useState(() => {
     const storedBannerToggle = typeof window !== 'undefined' ? localStorage.getItem('adminBannerEnabled') : null;

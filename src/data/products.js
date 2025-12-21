@@ -1,109 +1,122 @@
-/**
- * A small sample of products used to populate the various sections
- * throughout the site.  Real data would typically be fetched from
- * a backend API but static samples are adequate for demonstrating
- * the layout and interactivity of the store.  Each product is
- * associated with a top level category via the `category` slug.
- */
 export const products = [
   {
-    id: 'p1',
-    category: 'bedroom',
-    name: 'Постельное белье Cozy Cotton',
-    price: 5499,
-    oldPrice: 10990,
-    rating: 5.0,
-    description:
-      'Мягкое и дышащее постельное белье из натурального хлопка. Идеально подходит для комфортного сна.',
-  },
-  {
-    id: 'p2',
-    category: 'bedroom',
-    name: 'Постельное белье Cozy Bamboo',
-    price: 4999,
-    oldPrice: 9990,
-    rating: 4.7,
-    description:
-      'Комплект из бамбукового волокна с шелковистой текстурой и стойкими окрасками.',
-  },
-  {
-    id: 'p3',
-    category: 'bedroom',
-    name: 'Постельное белье Ballet',
-    price: 2499,
-    oldPrice: 4990,
-    rating: 4.5,
-    description:
-      'Яркий комплект с нежным принтом для детской комнаты. Приятная на ощупь и долговечная ткань.',
-  },
-  {
-    id: 'p4',
-    category: 'fragrances',
-    name: 'Диффузор Пион и пачули',
-    price: 3493,
-    oldPrice: 4990,
-    rating: 5.0,
-    description:
-      'Домашний диффузор с ароматом пиона и пачули создаст уютную атмосферу в любом помещении.',
-  },
-  {
-    id: 'p5',
-    category: 'bedroom',
-    name: 'Покрывало Fogliare серо‑бежевое',
-    price: 6799,
-    oldPrice: 9590,
-    rating: 4.8,
-    description:
-      'Стеганое покрывало приятного серо‑бежевого оттенка. Отлично подойдет для любого интерьера.',
-  },
-  {
-    id: 'p6',
-    category: 'bedroom',
-    name: 'Покрывало Fogliare олива',
-    price: 6799,
-    oldPrice: 9590,
-    rating: 4.7,
-    description:
-      'Стильное покрывало глубокого оливкового цвета добавит яркости вашей спальне.',
-  },
-  {
-    id: 'p7',
-    category: 'bedroom',
-    name: 'Одеяло Cozy Fluff',
-    price: 23999,
-    oldPrice: 39990,
-    rating: 4.5,
-    description:
-      'Пуховое одеяло премиум‑класса для любителей тепла и уюта. В комплект входит удобный чехол для хранения.',
-  },
-  {
-    id: 'p8',
-    category: 'bedroom',
-    name: 'Подушка Cozy Fluff',
-    price: 11999,
-    oldPrice: 19990,
-    rating: 5.0,
-    description:
-      'Воздушная подушка из гипоаллергенного наполнителя обеспечивает поддержку и комфорт во время сна.',
-  },
-  {
-    id: 'p9',
-    category: 'dining',
-    name: 'Набор посуды Cozy Dining',
-    price: 2999,
-    oldPrice: 6999,
+    id: 'set-cinque',
+    slug: 'set-cinque',
+    name: 'Комплект Cinque Terre',
+    category: 'bed-linen',
+    price: 5490,
+    oldPrice: 6290,
     rating: 4.9,
-    description:
-      'Практичный набор посуды для повседневного использования: тарелки, чашки и блюдца в одном комплекте.',
+    description: 'Сатин 100% хлопок в пастельных тонах, вдохновлённых итальянским побережьем.',
+    images: [
+      {
+        id: 'set-cinque-euro-1',
+        url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80',
+        variantId: 'set-cinque-euro'
+      },
+      {
+        id: 'set-cinque-family-1',
+        url: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=900&q=80',
+        variantId: 'set-cinque-family'
+      },
+      {
+        id: 'set-cinque-hero',
+        url: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=900&q=80'
+      }
+    ],
+    variants: [
+      { id: 'set-cinque-euro', name: 'Евро', price: 5490, stock: 14 },
+      { id: 'set-cinque-family', name: 'Семейный', price: 5990, stock: 6 }
+    ]
   },
   {
-    id: 'p10',
-    category: 'fragrances',
-    name: 'Ароматическая свеча Vanilla',
-    price: 999,
-    oldPrice: 1599,
-    rating: 4.8,
-    description:
-      'Свеча с ванильным ароматом и деревянным фитилем придаст вашему дому теплый и уютный запах.',
+    id: 'set-alienor',
+    slug: 'set-alienor',
+    name: 'Комплект Alienor',
+    category: 'bed-linen',
+    price: 4890,
+    oldPrice: 0,
+    rating: 4.7,
+    description: 'Жаккардовый узор и гладкая наволочка для любителей классических интерьеров.',
+    images: [
+      {
+        id: 'set-alienor-hero',
+        url: 'https://images.unsplash.com/photo-1501045661006-fcebe0257c3f?auto=format&fit=crop&w=900&q=80',
+        variantId: 'set-alienor-queen'
+      }
+    ],
+    variants: [{ id: 'set-alienor-queen', name: 'Двуспальный', price: 4890, stock: 10 }]
   },
+  {
+    id: 'throw-tweed',
+    slug: 'throw-tweed',
+    name: 'Плед Tweed Soft',
+    category: 'blankets',
+    price: 3190,
+    oldPrice: 3590,
+    rating: 4.6,
+    description: 'Мягкий плед из микрофибры с лёгким объёмом и твидовым переплетением.',
+    images: [
+      {
+        id: 'throw-tweed-hero',
+        url: 'https://images.unsplash.com/photo-1489278353717-f64c6ee8a4d2?auto=format&fit=crop&w=900&q=80',
+        variantId: 'throw-tweed-130'
+      }
+    ],
+    variants: [{ id: 'throw-tweed-130', name: '130×170 см', price: 3190, stock: 20 }]
+  },
+  {
+    id: 'towel-cloud',
+    slug: 'towel-cloud',
+    name: 'Набор полотенец Cloud',
+    category: 'bath',
+    price: 2190,
+    oldPrice: 2490,
+    rating: 4.5,
+    description: 'Два махровых полотенца плотностью 500 г/м²: мягкие, впитывающие, быстро сохнут.',
+    images: [
+      {
+        id: 'towel-cloud-hero',
+        url: 'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=900&q=80',
+        variantId: 'towel-cloud-set'
+      }
+    ],
+    variants: [{ id: 'towel-cloud-set', name: '50×90 + 70×140', price: 2190, stock: 15 }]
+  },
+  {
+    id: 'kids-stars',
+    slug: 'kids-stars',
+    name: 'Детский комплект Starry Night',
+    category: 'kids',
+    price: 3290,
+    rating: 4.8,
+    description: 'Хлопковый комплект с лампочками-звёздами, дружелюбный к детской коже.',
+    images: [
+      {
+        id: 'kids-stars-hero',
+        url: 'https://images.unsplash.com/photo-1600490036275-35f9a0917483?auto=format&fit=crop&w=900&q=80',
+        variantId: 'kids-stars-1.5'
+      }
+    ],
+    variants: [{ id: 'kids-stars-1.5', name: '1.5-спальный', price: 3290, stock: 12 }]
+  },
+  {
+    id: 'candle-amber',
+    slug: 'candle-amber',
+    name: 'Свеча Amber Home',
+    category: 'decor',
+    price: 1190,
+    rating: 4.4,
+    description: 'Тёплый аромат амбры и сандала, хлопковый фитиль, стеклянная банка.',
+    images: [
+      {
+        id: 'candle-amber-hero',
+        url: 'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80',
+        variantId: 'candle-amber-200'
+      }
+    ],
+    variants: [{ id: 'candle-amber-200', name: '200 мл', price: 1190, stock: 25 }]
+  }
 ];
+
+export default products;

@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getOrders, updateOrderStatus, getCustomers } from '../api';
 
-/**
- * AdminOrders displays a list of all orders retrieved from the backend.
- * Administrators can filter by status and update an order's status
- * directly in the table.  Customer names are resolved by fetching
- * customer metadata on mount.
- */
 function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState({});
@@ -14,7 +8,6 @@ function AdminOrders() {
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
 
-  // Fetch orders and customers once
   useEffect(() => {
     getOrders()
       .then((data) => setOrders(Array.isArray(data) ? data : []))

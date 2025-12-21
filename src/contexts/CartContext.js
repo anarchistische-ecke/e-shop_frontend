@@ -27,7 +27,7 @@ function normalizeVariantsMap(products = []) {
           productSlug: product.slug,
           variantName: variant.name,
           variantPrice: variant.price,
-          imageUrl: getPrimaryImageUrl(product)
+          imageUrl: getPrimaryImageUrl(product, variant.id)
         };
       }
     });
@@ -121,17 +121,24 @@ export function CartProvider({ children }) {
   // Add item to cart (handles single or multiple variants per product)
   const addItem = useCallback(
     async (product, variantId = null, quantity = 1) => {
-      if (!cartId) return;
+      let id = cartId;
       try {
+        if (!id) {
+          const cart = await createCart();
+          id = cart.id;
+          localStorage.setItem('cartId', id);
+          setCartId(id);
+        }
         const targetVariant = variantId || getPrimaryVariant(product)?.id;
         if (!targetVariant) {
           console.error('Product has no variants to add to cart');
           return;
         }
-        await addItemToCart(cartId, targetVariant, quantity);
-        await syncCart(cartId);
+        await addItemToCart(id, targetVariant, quantity);
+        await syncCart(id);
       } catch (err) {
         console.error('Failed to add item to cart:', err);
+        alert('Не удалось добавить товар в корзину. Возможно, товар закончился или недоступен.');
       }
     },
     [cartId, syncCart]
@@ -163,21 +170,18 @@ export function CartProvider({ children }) {
     [cartId, syncCart]
   );
 
-  const clearCart = useCallback(
-    async () => {
-      if (!cartId) return;
-      try {
-        // Remove all items one by one (no bulk delete endpoint)
-        for (const item of items) {
-          await removeCartItem(cartId, item.id);
-        }
-        await syncCart(cartId);
-      } catch (err) {
-        console.error('Failed to clear cart:', err);
+  const clearCart = useCallback(async () => {
+    if (!cartId) return;
+    try {
+      // Remove all items one by one (no bulk delete endpoint)
+      for (const item of items) {
+        await removeCartItem(cartId, item.id);
       }
-    },
-    [cartId, items, syncCart]
-  );
+      await syncCart(cartId);
+    } catch (err) {
+      console.error('Failed to clear cart:', err);
+    }
+  }, [cartId, items, syncCart]);
 
   const contextValue = {
     items,

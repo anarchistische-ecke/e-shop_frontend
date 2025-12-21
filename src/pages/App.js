@@ -22,8 +22,13 @@ import AdminPromotions from './AdminPromotions';
 import AdminReports from './AdminReports';
 import AdminSettings from './AdminSettings';
 import AdminSecurity from './AdminSecurity';
+import AdminMainPage from './AdminMainPage';
 import RequireAdmin from '../components/RequireAdmin';
 import AboutPage from './AboutPage';
+import PaymentInfoPage from './PaymentInfoPage';
+import DeliveryInfoPage from './DeliveryInfoPage';
+import BonusesInfoPage from './BonusesInfoPage';
+import ProductionInfoPage from './ProductionInfoPage';
 import NotFound from './NotFound';
 
 function App() {
@@ -31,7 +36,7 @@ function App() {
     <>
       <ScrollToTop />
       <Header />
-      <main className="min-h-[80vh] mt-28">
+      <main className="min-h-[80vh] mt-32 md:mt-28 lg:mt-24">
         <Routes>
           {/* Public user-facing routes */}
           <Route path="/" element={<Home />} />
@@ -41,6 +46,10 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/info/payment" element={<PaymentInfoPage />} />
+          <Route path="/info/delivery" element={<DeliveryInfoPage />} />
+          <Route path="/info/bonuses" element={<BonusesInfoPage />} />
+          <Route path="/info/production" element={<ProductionInfoPage />} />
           {/* Admin login (public) */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           {/* Protected admin routes (RequireAdmin enforces authentication) */}
@@ -53,6 +62,7 @@ function App() {
             }
           >
             <Route index element={<AdminDashboard />} />
+            <Route path="main" element={<AdminMainPage />} />
             <Route path="products" element={<AdminProducts />} />
             <Route path="categories" element={<AdminCategories />} />
             <Route path="brands" element={<AdminBrands />} />

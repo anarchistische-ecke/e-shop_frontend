@@ -45,10 +45,10 @@ function Footer() {
 
   return (
     <footer className="bg-white border-t border-gray-200 py-8">
-      <div className="container mx-auto px-4 flex flex-wrap gap-8">
+      <div className="container mx-auto px-4 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         {/* Link groups */}
         {groups.map((grp) => (
-          <div key={grp.title} className="flex-1 min-w-[150px]">
+          <div key={grp.title} className="min-w-[180px] space-y-2">
             <h4 className="font-semibold mt-0 mb-2">{grp.title}</h4>
             <ul className="space-y-2">
               {grp.links.map((link) => (
@@ -69,10 +69,10 @@ function Footer() {
           </div>
         ))}
         {/* Newsletter subscription */}
-        <div className="flex-1 min-w-[260px]">
+        <div className="min-w-[240px] space-y-3">
           <h4 className="font-semibold mt-0 mb-2">Подпишитесь на новости Постельное Белье‑Юг</h4>
           <p className="mb-4">Будьте в курсе новинок и специальных предложений.</p>
-          <form onSubmit={(e) => e.preventDefault()} className="flex gap-2">
+          <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
               placeholder="Ваш e‑mail"

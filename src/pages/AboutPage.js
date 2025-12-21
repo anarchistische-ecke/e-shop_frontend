@@ -1,18 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-/**
- * AboutPage replicates the structure and narrative of the original
- * “О компании” page from cozyhome.ru.  It includes descriptive
- * paragraphs about the brand, a row of key metrics, and several
- * informational blocks with alternating imagery (represented here by
- * coloured placeholders) and text.  At the bottom a promotional
- * banner encourages users to download the mobile app with a welcome
- * discount.  You can adjust the content and styling as needed to
- * reflect changes on the original site.
- */
 function AboutPage() {
-  // Check publish flag stored in admin content localStorage
   if (typeof window !== 'undefined') {
     const savedPages = localStorage.getItem('adminPages');
     if (savedPages) {
@@ -28,7 +17,6 @@ function AboutPage() {
           );
         }
       } catch (e) {
-        // ignore parsing errors
       }
     }
   }
@@ -131,12 +119,6 @@ function AboutPage() {
   );
 }
 
-/**
- * InfoBlock is a helper component used to render alternating image/text
- * sections.  It accepts a title, body text, a flag to determine
- * whether the image appears on the left and an optional call‑to‑action
- * button.
- */
 function InfoBlock({ title, text, imageOnLeft = true, cta }) {
   return (
     <section className="py-8">

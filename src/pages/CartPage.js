@@ -47,9 +47,9 @@ function CartPage() {
             для выбора товаров.
           </p>
         ) : (
-          <div className="flex flex-wrap gap-8">
+          <div className="flex flex-col lg:flex-row gap-8">
             {/* Cart items list */}
-            <div className="flex-1 min-w-[280px] max-w-2xl">
+            <div className="w-full lg:flex-1 lg:max-w-2xl">
               {items.map((item) => (
                 <div 
                   key={item.id} 
@@ -102,7 +102,7 @@ function CartPage() {
               ))}
             </div>
             {/* Order summary and actions */}
-            <div className="flex-1 min-w-[250px] max-w-xs border border-gray-200 rounded p-4 bg-white">
+            <div className="w-full lg:flex-1 lg:max-w-xs border border-gray-200 rounded p-4 bg-white">
               <h3 className="text-xl font-semibold mb-3">Сводка заказа</h3>
               <div className="flex justify-between mb-2 text-sm">
                 <span>Товары ({items.length})</span>

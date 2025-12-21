@@ -2,10 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { subscribeToAuthChanges } from '../utils/auth';
 
-/**
- * RequireAdmin checks whether the admin user is authenticated by examining the presence of a JWT token.
- * If no admin token is found, the user is redirected to the admin login page.
- */
 function RequireAdmin({ children }) {
   const location = useLocation();
   const [isAuth, setIsAuth] = useState(() => {

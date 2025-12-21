@@ -1,4 +1,5 @@
 // Utility helpers for dealing with product and price data returned by the backend API.
+// Includes helpers for prices and media attached to products/variants.
 
 /**
  * Convert a Money object (amount in minor units) or primitive value to a float.
@@ -52,6 +53,35 @@ export function getPrimaryVariant(product) {
 }
 
 /**
+ * Normalize various image representations (string or object) into a common shape.
+ * Variant-aware media can specify variantId to scope images to a specific SKU.
+ */
+export function normalizeProductImages(images = []) {
+  const list = Array.isArray(images) ? images : Array.from(images || []);
+  return list
+    .map((img, index) => {
+      if (!img) return null;
+      if (typeof img === 'string') {
+        return {
+          id: `img-${index}`,
+          url: img,
+          variantId: null,
+          alt: ''
+        };
+      }
+      const url = img.url || img.src || img.imageUrl || '';
+      if (!url) return null;
+      return {
+        id: img.id || img._id || img.key || `img-${index}`,
+        url,
+        variantId: img.variantId || img.variant_id || img.variant || null,
+        alt: img.alt || img.label || ''
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
  * Get numeric price for a product by falling back to the first variant.
  */
 export function getProductPrice(product) {
@@ -80,11 +110,14 @@ export function decimalToMinorUnits(value) {
 /**
  * Get the primary image URL for a product (if provided by the backend).
  */
-export function getPrimaryImageUrl(product) {
-  if (!product || !product.images) return null;
-  const list = Array.isArray(product.images) ? product.images : Array.from(product.images);
-  if (list.length === 0) return null;
-  const first = list[0];
-  if (typeof first === 'string') return first;
-  return first?.url || null;
+export function getPrimaryImageUrl(product, variantId = null) {
+  if (!product) return null;
+  const images = normalizeProductImages(product.images);
+  if (images.length === 0) return null;
+  if (variantId) {
+    const match = images.find((img) => img.variantId === variantId);
+    if (match) return match.url;
+  }
+  const generic = images.find((img) => !img.variantId);
+  return (generic || images[0]).url;
 }

@@ -17,6 +17,7 @@ function AdminLayout() {
         <h2 className="font-bold text-lg mb-6">Администрирование</h2>
         <nav className="flex flex-col space-y-2 text-sm">
           <NavLink to="/admin" end>Dashboard</NavLink>
+          <NavLink to="/admin/main">Главная</NavLink>
           <NavLink to="/admin/products">Товары</NavLink>
           <NavLink to="/admin/categories">Категории</NavLink>
           <NavLink to="/admin/brands">Бренды</NavLink>

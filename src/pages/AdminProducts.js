@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   getProducts,
+  getProduct,
   getCategories,
   getBrands,
   createProduct,
   addProductVariant,
+  updateProductVariant,
   updateProduct,
   deleteProduct,
   uploadProductImages,
   deleteProductImage,
+  updateProductImage,
   adjustStock
 } from '../api';
-import { getPrimaryVariant, moneyToNumber, decimalToMinorUnits } from '../utils/product';
+import { getPrimaryVariant, moneyToNumber, decimalToMinorUnits, normalizeProductImages } from '../utils/product';
 
 const EMPTY_VARIANT_FORM = {
   sku: '',
@@ -21,6 +24,17 @@ const EMPTY_VARIANT_FORM = {
   currency: 'RUB'
 };
 
+const buildVariantFormState = (variants = []) =>
+  (variants || []).reduce((acc, v) => {
+    acc[v.id] = {
+      name: v.name || '',
+      price: v.price ? moneyToNumber(v.price) : '',
+      stock: v.stock ?? v.stockQuantity ?? 0,
+      currency: v.price?.currency || 'RUB'
+    };
+    return acc;
+  }, {});
+
 function AdminProducts() {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -28,6 +42,7 @@ function AdminProducts() {
   const [expandedProductId, setExpandedProductId] = useState(null);
   const [variantForms, setVariantForms] = useState({});
   const [uploadingImages, setUploadingImages] = useState({});
+  const [uploadTargets, setUploadTargets] = useState({});
   const [selectedIds, setSelectedIds] = useState([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -52,6 +67,9 @@ function AdminProducts() {
   const [page, setPage] = useState(1);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '', onConfirm: null });
   const [stockAdjustments, setStockAdjustments] = useState({});
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [savingVariant, setSavingVariant] = useState({});
+  const [refreshingProductId, setRefreshingProductId] = useState(null);
 
   const slugify = useCallback(
     (str) =>
@@ -71,11 +89,7 @@ function AdminProducts() {
       : product.variants
       ? Array.from(product.variants)
       : [];
-    const images = Array.isArray(product.images)
-      ? product.images
-      : product.images
-      ? Array.from(product.images)
-      : [];
+    const images = normalizeProductImages(product.images);
     return {
       ...product,
       variants,
@@ -90,6 +104,50 @@ function AdminProducts() {
           : product.brand?.slug || product.brand?.id || ''
     };
   }, []);
+
+  const refreshProduct = useCallback(
+    async (productId, focusVariantId = null) => {
+      if (!productId) return null;
+      try {
+        setRefreshingProductId(productId);
+        const fresh = await getProduct(productId);
+        if (!fresh) return null;
+        const normalized = normalizeProduct(fresh);
+        setItems((prev) =>
+          prev.map((p) => (p.id === productId ? normalized : p))
+        );
+        setEditingProduct((prev) => (prev && prev.id === productId ? normalized : prev));
+        setVariantEditForms((prev) => {
+          const next = { ...prev };
+          const normalizedVariants = normalized.variants || [];
+          normalizedVariants.forEach((v) => {
+            const shouldReplace = focusVariantId ? v.id === focusVariantId || !next[v.id] : !next[v.id];
+            if (shouldReplace) {
+              next[v.id] = {
+                name: v.name || '',
+                price: v.price ? moneyToNumber(v.price) : '',
+                stock: v.stock ?? v.stockQuantity ?? 0,
+                currency: v.price?.currency || 'RUB'
+              };
+            }
+          });
+          Object.keys(next).forEach((key) => {
+            if (!normalizedVariants.some((v) => `${v.id}` === `${key}`)) {
+              delete next[key];
+            }
+          });
+          return next;
+        });
+        return normalized;
+      } catch (err) {
+        console.error('Failed to refresh product:', err);
+        return null;
+      } finally {
+        setRefreshingProductId(null);
+      }
+    },
+    [normalizeProduct]
+  );
 
   const loadProducts = useCallback(async () => {
     try {
@@ -139,23 +197,18 @@ function AdminProducts() {
   };
 
   const openEditModal = (product) => {
+    const normalized = normalizeProduct(product);
     setEditingProduct({
-      ...product,
-      categoryRef: product.categoryRef || '',
-      brandRef: product.brandRef || '',
-      description: product.description || ''
+      ...normalized,
+      categoryRef: normalized.categoryRef || '',
+      brandRef: normalized.brandRef || '',
+      description: normalized.description || ''
     });
-    const map = {};
-    (product.variants || []).forEach((v) => {
-      map[v.id] = {
-        name: v.name,
-        price: v.price ? moneyToNumber(v.price) : '',
-        stock: v.stock ?? v.stockQuantity ?? 0,
-        currency: v.price?.currency || 'RUB'
-      };
+    setVariantEditForms(buildVariantFormState(normalized.variants || []));
+    setModalVariantForm({
+      ...EMPTY_VARIANT_FORM,
+      sku: `${normalized.slug || 'sku'}-${normalized.variants?.length || 0}`
     });
-    setVariantEditForms(map);
-    setModalVariantForm({ ...EMPTY_VARIANT_FORM, sku: `${product.slug || 'sku'}-${product.variants?.length || 0}` });
     setEditModalOpen(true);
   };
 
@@ -259,7 +312,7 @@ function AdminProducts() {
         currency: form.currency || 'RUB',
         stock: Number(form.stock) || 0
       });
-      await loadProducts();
+      await refreshProduct(productId);
       setVariantForms((prev) => ({ ...prev, [productId]: { ...EMPTY_VARIANT_FORM } }));
     } catch (err) {
       console.error('Failed to add variant:', err);
@@ -306,6 +359,7 @@ function AdminProducts() {
             : prev
         );
       }
+      await refreshProduct(productId, variantId); // ensure UI reflects latest stock from backend
     } catch (err) {
       console.error('Failed to adjust stock:', err);
       alert('Не удалось изменить запас. Попробуйте ещё раз.');
@@ -319,6 +373,18 @@ function AdminProducts() {
     }));
   };
 
+  const bumpVariantStock = (variantId, delta) => {
+    setVariantEditForms((prev) => {
+      const current = prev[variantId] || {};
+      const currentValue = Number(current.stock ?? 0);
+      const nextValue = Number.isNaN(currentValue) ? delta : currentValue + delta;
+      return {
+        ...prev,
+        [variantId]: { ...current, stock: nextValue }
+      };
+    });
+  };
+
   const handleSaveVariant = async (productId, variantId) => {
     const form = variantEditForms[variantId];
     if (!form || !form.price) return;
@@ -328,6 +394,7 @@ function AdminProducts() {
       return;
     }
     try {
+      setSavingVariant((prev) => ({ ...prev, [variantId]: true }));
       const payload = {
         name: form.name,
         amount,
@@ -347,9 +414,12 @@ function AdminProducts() {
             }
           : prev
       );
-      await loadProducts();
+      await refreshProduct(productId, variantId);
     } catch (err) {
       console.error('Failed to update variant:', err);
+      alert('Не удалось сохранить вариант. Попробуйте ещё раз.');
+    } finally {
+      setSavingVariant((prev) => ({ ...prev, [variantId]: false }));
     }
   };
 
@@ -374,7 +444,7 @@ function AdminProducts() {
         stock: Number(modalVariantForm.stock) || 0
       });
       setModalVariantForm(EMPTY_VARIANT_FORM);
-      await loadProducts();
+      await refreshProduct(editingProduct.id);
     } catch (err) {
       console.error('Failed to add variant:', err);
     }
@@ -383,6 +453,7 @@ function AdminProducts() {
   const handleModalSave = async () => {
     if (!editingProduct) return;
     try {
+      setSavingProduct(true);
       await updateProduct(editingProduct.id, {
         name: editingProduct.name,
         description: editingProduct.description,
@@ -390,23 +461,24 @@ function AdminProducts() {
         category: editingProduct.categoryRef || undefined,
         brand: editingProduct.brandRef || undefined
       });
-      setEditModalOpen(false);
-      setEditingProduct(null);
-      await loadProducts();
+      await refreshProduct(editingProduct.id);
     } catch (err) {
       console.error('Failed to update product:', err);
+      alert('Не удалось сохранить товар. Попробуйте ещё раз.');
+    } finally {
+      setSavingProduct(false);
     }
   };
 
   const closeConfirm = () => setConfirmDialog({ open: false, message: '', onConfirm: null });
 
-  const handleUploadImages = async (productId, files) => {
+  const handleUploadImages = async (productId, files, variantId = '') => {
     const list = Array.from(files || []);
     if (list.length === 0) return;
     setUploadingImages((prev) => ({ ...prev, [productId]: true }));
     try {
-      await uploadProductImages(productId, list);
-      await loadProducts();
+      await uploadProductImages(productId, list, { variantId: variantId || undefined });
+      await refreshProduct(productId);
     } catch (err) {
       console.error('Failed to upload product images:', err);
     } finally {
@@ -417,9 +489,19 @@ function AdminProducts() {
   const handleDeleteImage = async (productId, imageId) => {
     try {
       await deleteProductImage(productId, imageId);
-      await loadProducts();
+      await refreshProduct(productId);
     } catch (err) {
       console.error('Failed to delete product image:', err);
+    }
+  };
+
+  const handleUpdateImageVariant = async (productId, imageId, variantId) => {
+    try {
+      await updateProductImage(productId, imageId, { variantId: variantId || null });
+      await refreshProduct(productId);
+    } catch (err) {
+      console.error('Failed to update image variant:', err);
+      alert('Не удалось обновить привязку изображения к варианту.');
     }
   };
 
@@ -517,6 +599,12 @@ function AdminProducts() {
     return match ? match.name : value;
   };
 
+  const getVariantLabel = (product, variantId) => {
+    if (!variantId) return 'Общие фото';
+    const match = (product?.variants || []).find((v) => v.id === variantId);
+    return match ? match.name || match.sku || variantId : variantId;
+  };
+
   const renderVariantManager = (product) => {
     const variantForm = variantForms[product.id] || EMPTY_VARIANT_FORM;
     return (
@@ -524,11 +612,14 @@ function AdminProducts() {
         <td colSpan={8} className="p-4">
           <div className="mb-4">
             <h4 className="font-semibold mb-2">Изображения</h4>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {product.images && product.images.length > 0 ? (
-                product.images.map((img) => (
-                  <div key={img.id} className="relative w-24 h-24 rounded overflow-hidden border border-gray-200 bg-white">
-                    <img src={img.url} alt={product.name} className="w-full h-full object-cover" />
+            {product.images && product.images.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
+                {product.images.map((img) => (
+                  <div key={img.id} className="relative rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm">
+                    <img src={img.url} alt={product.name} className="w-full h-28 object-cover" />
+                    <div className="absolute top-2 left-2 bg-white/90 text-[11px] px-2 py-0.5 rounded-full border border-gray-200">
+                      {getVariantLabel(product, img.variantId)}
+                    </div>
                     <button
                       type="button"
                       className="absolute top-1 right-1 bg-white/90 text-xs px-1 rounded shadow"
@@ -536,27 +627,57 @@ function AdminProducts() {
                     >
                       ✕
                     </button>
+                    <div className="p-2 border-t border-gray-100">
+                      <select
+                        className="w-full text-xs border border-gray-300 rounded p-1"
+                        value={img.variantId || ''}
+                        onChange={(e) => handleUpdateImageVariant(product.id, img.id, e.target.value)}
+                      >
+                        <option value="">Общие фото</option>
+                        {product.variants.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted">Пока нет загруженных изображений.</p>
-              )}
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted mb-3">Пока нет загруженных изображений.</p>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className="p-2 border border-gray-300 rounded text-sm"
+                value={uploadTargets[product.id] || ''}
+                onChange={(e) =>
+                  setUploadTargets((prev) => ({ ...prev, [product.id]: e.target.value }))
+                }
+              >
+                <option value="">Общие фото</option>
+                {product.variants.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+              <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-sm bg-white">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    handleUploadImages(product.id, e.target.files, uploadTargets[product.id]);
+                    e.target.value = '';
+                  }}
+                />
+                {uploadingImages[product.id] ? 'Загружаем…' : 'Добавить изображения'}
+              </label>
             </div>
-            <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-sm bg-white">
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  handleUploadImages(product.id, e.target.files);
-                  e.target.value = '';
-                }}
-              />
-              {uploadingImages[product.id] ? 'Загружаем…' : 'Добавить изображения'}
-            </label>
             <p className="text-xs text-muted mt-1">
-              Можно оставить товар без фото и загрузить их позже.
+              Можно оставить товар без фото и загрузить их позже. Выбор варианта выше привяжет фото к конкретному SKU.
             </p>
           </div>
           <h4 className="font-semibold mb-2">Варианты товара</h4>
@@ -656,6 +777,19 @@ function AdminProducts() {
         </td>
       </tr>
     );
+  };
+
+  const editingVariants = editingProduct?.variants || [];
+  const totalStockForEditing = editingVariants.reduce(
+    (sum, v) => sum + (Number(v.stock ?? v.stockQuantity) || 0),
+    0
+  );
+  const primaryVariantForEditing = editingProduct ? getPrimaryVariant(editingProduct) : null;
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setEditingProduct(null);
+    setSavingProduct(false);
+    setSavingVariant({});
   };
 
   return (
@@ -847,195 +981,366 @@ function AdminProducts() {
         </div>
       )}
       {editModalOpen && editingProduct && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Редактирование товара</h3>
-              <button onClick={() => setEditModalOpen(false)} className="text-muted text-sm">Закрыть</button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-              <input
-                type="text"
-                value={editingProduct.name}
-                onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                placeholder="Название"
-                className="p-2 border border-gray-300 rounded"
-              />
-              <input
-                type="text"
-                value={editingProduct.slug}
-                onChange={(e) => setEditingProduct({ ...editingProduct, slug: e.target.value })}
-                placeholder="Slug"
-                className="p-2 border border-gray-300 rounded"
-              />
-              <select
-                value={editingProduct.categoryRef || ''}
-                onChange={(e) => setEditingProduct({ ...editingProduct, categoryRef: e.target.value })}
-                className="p-2 border border-gray-300 rounded"
-              >
-                <option value="">Без категории</option>
-                {categories.map((cat) => (
-                  <option key={cat.slug || cat.id} value={cat.slug || cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={editingProduct.brandRef || ''}
-                onChange={(e) => setEditingProduct({ ...editingProduct, brandRef: e.target.value })}
-                className="p-2 border border-gray-300 rounded"
-              >
-                <option value="">Без бренда</option>
-                {brands.map((b) => (
-                  <option key={b.slug || b.id} value={b.slug || b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-              <textarea
-                value={editingProduct.description || ''}
-                onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                placeholder="Описание"
-                className="p-2 border border-gray-300 rounded md:col-span-2"
-              />
-            </div>
-            <div className="mb-4">
-              <h4 className="font-semibold mb-2">Изображения</h4>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {editingProduct.images && editingProduct.images.length > 0 ? (
-                  editingProduct.images.map((img) => (
-                    <div key={img.id} className="relative w-24 h-24 rounded overflow-hidden border border-gray-200 bg-white">
-                      <img src={img.url} alt={editingProduct.name} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        className="absolute top-1 right-1 bg-white/90 text-xs px-1 rounded shadow"
-                        onClick={() => handleDeleteImage(editingProduct.id, img.id)}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted">Нет изображений</p>
-                )}
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] px-3 py-6"
+          onClick={closeEditModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-6 max-h-[90vh] overflow-y-auto space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="space-y-1">
+                <h3 className="text-xl font-semibold">Редактирование товара</h3>
+                <p className="text-sm text-muted flex flex-wrap gap-2 items-center">
+                  <span className="px-2 py-1 bg-secondary rounded text-xs">slug: {editingProduct.slug}</span>
+                  <span className="px-2 py-1 bg-secondary rounded text-xs">Вариантов: {editingVariants.length}</span>
+                  <span className="px-2 py-1 bg-secondary rounded text-xs">Запас: {totalStockForEditing} шт.</span>
+                  {refreshingProductId === editingProduct.id ? (
+                    <span className="text-primary text-xs animate-pulse">Обновляем данные…</span>
+                  ) : (
+                    <span className="text-green-700 text-xs">Данные актуальны</span>
+                  )}
+                </p>
               </div>
-              <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-sm bg-white">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    handleUploadImages(editingProduct.id, e.target.files);
-                    e.target.value = '';
-                  }}
-                />
-                {uploadingImages[editingProduct.id] ? 'Загружаем…' : 'Добавить изображения'}
-              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  className="button-gray text-sm"
+                  onClick={() => refreshProduct(editingProduct.id)}
+                  disabled={refreshingProductId === editingProduct.id}
+                >
+                  Обновить
+                </button>
+                <button onClick={closeEditModal} className="text-muted text-sm">
+                  Закрыть
+                </button>
+              </div>
             </div>
-            <div className="mb-4">
-              <h4 className="font-semibold mb-2">Варианты</h4>
-              <div className="space-y-3">
-                {(editingProduct.variants || []).map((variant) => {
-                  const form = variantEditForms[variant.id] || {};
-                  return (
-                    <div key={variant.id} className="border border-gray-200 rounded p-3 grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-                      <div>
-                        <label className="block text-xs text-muted">Название</label>
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              <div className="lg:col-span-2 space-y-3">
+                <div className="border border-gray-200 rounded-xl p-4 shadow-sm bg-secondary/40 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-semibold text-sm">Основные данные</h4>
+                    <span className="text-[11px] text-muted">Сохраняются без закрытия</span>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-xs text-muted block">
+                      <span className="mb-1 block">Название</span>
+                      <input
+                        type="text"
+                        value={editingProduct.name}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                        placeholder="Название"
+                        className="p-2 border border-gray-300 rounded w-full"
+                      />
+                    </label>
+                    <label className="text-xs text-muted block">
+                      <span className="mb-1 block">Slug</span>
+                      <input
+                        type="text"
+                        value={editingProduct.slug}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, slug: e.target.value })}
+                        placeholder="Slug"
+                        className="p-2 border border-gray-300 rounded w-full"
+                      />
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <label className="text-xs text-muted block">
+                        <span className="mb-1 block">Категория</span>
+                        <select
+                          value={editingProduct.categoryRef || ''}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, categoryRef: e.target.value })}
+                          className="p-2 border border-gray-300 rounded w-full"
+                        >
+                          <option value="">Без категории</option>
+                          {categories.map((cat) => (
+                            <option key={cat.slug || cat.id} value={cat.slug || cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="text-xs text-muted block">
+                        <span className="mb-1 block">Бренд</span>
+                        <select
+                          value={editingProduct.brandRef || ''}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, brandRef: e.target.value })}
+                          className="p-2 border border-gray-300 rounded w-full"
+                        >
+                          <option value="">Без бренда</option>
+                          {brands.map((b) => (
+                            <option key={b.slug || b.id} value={b.slug || b.id}>
+                              {b.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div className="border border-gray-200 rounded-xl p-4 shadow-sm bg-white space-y-2">
+                  <label className="block text-xs text-muted">
+                    <span className="mb-1 block">Описание</span>
+                    <textarea
+                      value={editingProduct.description || ''}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                      placeholder="Короткое описание для карточки товара"
+                      className="p-2 border border-gray-300 rounded w-full min-h-[120px]"
+                    />
+                  </label>
+                  <p className="text-xs text-muted">
+                    Изменения применяются после сохранения товара. Можно оставить пустым.
+                  </p>
+                </div>
+              </div>
+              <div className="lg:col-span-3 space-y-3">
+                <div className="border border-gray-200 rounded-xl p-4 shadow-sm bg-white space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-semibold">Изображения</h4>
+                    <span className="text-xs text-muted">
+                      {uploadingImages[editingProduct.id] ? 'Загружаем…' : 'Можно менять привязку к вариантам'}
+                    </span>
+                  </div>
+                  {editingProduct.images && editingProduct.images.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {editingProduct.images.map((img) => (
+                        <div key={img.id} className="relative rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm">
+                          <img src={img.url} alt={editingProduct.name} className="w-full h-28 object-cover" />
+                          <div className="absolute top-2 left-2 bg-white/90 text-[11px] px-2 py-0.5 rounded-full border border-gray-200">
+                            {getVariantLabel(editingProduct, img.variantId)}
+                          </div>
+                          <button
+                            type="button"
+                            className="absolute top-1 right-1 bg-white/90 text-xs px-1 rounded shadow"
+                            onClick={() => handleDeleteImage(editingProduct.id, img.id)}
+                          >
+                            ✕
+                          </button>
+                          <div className="p-2 border-t border-gray-100">
+                            <select
+                              className="w-full text-xs border border-gray-300 rounded p-1"
+                              value={img.variantId || ''}
+                              onChange={(e) => handleUpdateImageVariant(editingProduct.id, img.id, e.target.value)}
+                            >
+                              <option value="">Общие фото</option>
+                              {editingProduct.variants.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                  {v.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted mb-3">Нет изображений</p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <select
+                      className="p-2 border border-gray-300 rounded text-sm"
+                      value={uploadTargets[editingProduct.id] || ''}
+                      onChange={(e) =>
+                        setUploadTargets((prev) => ({ ...prev, [editingProduct.id]: e.target.value }))
+                      }
+                    >
+                      <option value="">Общие фото</option>
+                      {editingProduct.variants.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-sm bg-white">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          handleUploadImages(editingProduct.id, e.target.files, uploadTargets[editingProduct.id]);
+                          e.target.value = '';
+                        }}
+                      />
+                      {uploadingImages[editingProduct.id] ? 'Загружаем…' : 'Добавить изображения'}
+                    </label>
+                  </div>
+                </div>
+                <div className="border border-gray-200 rounded-xl p-4 shadow-sm bg-white space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-semibold">Варианты и запасы</h4>
+                    {primaryVariantForEditing && (
+                      <div className="px-3 py-1 bg-secondary rounded text-xs">
+                        Базовая цена: {moneyToNumber(primaryVariantForEditing.price).toLocaleString('ru-RU')} ₽
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted -mt-2">
+                    Сохраняйте каждую строку отдельно. Быстрые кнопки корректируют остатки.
+                  </p>
+                  <div className="space-y-3 divide-y divide-gray-100">
+                    {editingVariants.map((variant) => {
+                      const form = variantEditForms[variant.id] || {};
+                      const originalPrice = variant.price ? moneyToNumber(variant.price) : 0;
+                      const originalStock = Number(variant.stock ?? variant.stockQuantity ?? 0);
+                      const isDirty =
+                        (form.name || '') !== (variant.name || '') ||
+                        Number(form.price || 0) !== Number(originalPrice || 0) ||
+                        Number(form.stock ?? 0) !== originalStock ||
+                        (form.currency || 'RUB') !== (variant.price?.currency || 'RUB');
+                      return (
+                        <div key={variant.id} className="pt-3">
+                          <div className="flex flex-wrap justify-between items-start gap-3 mb-2">
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted">SKU {variant.sku}</p>
+                              <p className="font-semibold">{variant.name || 'Без названия'}</p>
+                              <p className="text-[11px] text-muted">ID: {variant.id}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-1 rounded text-xs ${isDirty ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                {isDirty ? 'Есть изменения' : 'Актуально'}
+                              </span>
+                              {savingVariant[variant.id] && (
+                                <span className="text-primary text-xs animate-pulse">Сохраняем…</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                            <label className="block text-xs text-muted">
+                              <span className="mb-1 block">Название</span>
+                              <input
+                                type="text"
+                                value={form.name || ''}
+                                onChange={(e) => handleVariantEditChange(variant.id, 'name', e.target.value)}
+                                className="p-2 border border-gray-300 rounded w-full"
+                                disabled={savingVariant[variant.id]}
+                              />
+                            </label>
+                            <label className="block text-xs text-muted">
+                              <span className="mb-1 block">Цена, ₽</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={form.price || ''}
+                                onChange={(e) => handleVariantEditChange(variant.id, 'price', e.target.value)}
+                                className="p-2 border border-gray-300 rounded w-full"
+                                disabled={savingVariant[variant.id]}
+                              />
+                              <span className="text-[11px] text-muted mt-1 block">Текущее: {originalPrice.toLocaleString('ru-RU')} ₽</span>
+                            </label>
+                            <label className="block text-xs text-muted">
+                              <span className="mb-1 block">Количество</span>
+                              <input
+                                type="number"
+                                value={form.stock ?? 0}
+                                onChange={(e) => handleVariantEditChange(variant.id, 'stock', e.target.value)}
+                                className="p-2 border border-gray-300 rounded w-full"
+                                disabled={savingVariant[variant.id]}
+                              />
+                              <div className="flex items-center gap-1 mt-1">
+                                {[-5, -1, 1, 5].map((step) => (
+                                  <button
+                                    key={step}
+                                    type="button"
+                                    className="px-2 py-1 border border-gray-200 rounded text-xs hover:bg-secondary"
+                                    onClick={() => bumpVariantStock(variant.id, step)}
+                                    disabled={savingVariant[variant.id]}
+                                  >
+                                    {step > 0 ? `+${step}` : step}
+                                  </button>
+                                ))}
+                              </div>
+                            </label>
+                            <label className="block text-xs text-muted">
+                              <span className="mb-1 block">Валюта</span>
+                              <input
+                                type="text"
+                                value={form.currency || 'RUB'}
+                                onChange={(e) => handleVariantEditChange(variant.id, 'currency', e.target.value)}
+                                className="p-2 border border-gray-300 rounded w-full"
+                                disabled={savingVariant[variant.id]}
+                              />
+                            </label>
+                            <div className="flex flex-col gap-2">
+                              <button
+                                type="button"
+                                className={`button text-sm w-full ${savingVariant[variant.id] ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                onClick={() => handleSaveVariant(editingProduct.id, variant.id)}
+                                disabled={savingVariant[variant.id]}
+                              >
+                                {savingVariant[variant.id] ? 'Сохраняем…' : 'Сохранить вариант'}
+                              </button>
+                              <span className="text-[11px] text-muted text-center">Сохранить изменения по SKU</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {editingVariants.length === 0 && (
+                      <p className="text-sm text-muted">Добавьте варианты ниже.</p>
+                    )}
+                    <div className="pt-3">
+                      <p className="text-xs text-muted mb-2">Новый вариант</p>
+                      <div className="border border-dashed border-gray-300 rounded-lg p-3 grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
                         <input
                           type="text"
-                          value={form.name || ''}
-                          onChange={(e) => handleVariantEditChange(variant.id, 'name', e.target.value)}
-                          className="p-2 border border-gray-300 rounded w-full"
+                          placeholder="SKU"
+                          value={modalVariantForm.sku}
+                          onChange={(e) => handleModalVariantChange('sku', e.target.value)}
+                          className="p-2 border border-gray-300 rounded"
                         />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-muted">Цена</label>
+                        <input
+                          type="text"
+                          placeholder="Название"
+                          value={modalVariantForm.name}
+                          onChange={(e) => handleModalVariantChange('name', e.target.value)}
+                          className="p-2 border border-gray-300 rounded"
+                        />
                         <input
                           type="number"
                           step="0.01"
-                          value={form.price || ''}
-                          onChange={(e) => handleVariantEditChange(variant.id, 'price', e.target.value)}
-                          className="p-2 border border-gray-300 rounded w-full"
+                          placeholder="Цена"
+                          value={modalVariantForm.price}
+                          onChange={(e) => handleModalVariantChange('price', e.target.value)}
+                          className="p-2 border border-gray-300 rounded"
                         />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-muted">Количество</label>
                         <input
                           type="number"
-                          value={form.stock ?? 0}
-                          onChange={(e) => handleVariantEditChange(variant.id, 'stock', e.target.value)}
-                          className="p-2 border border-gray-300 rounded w-full"
+                          placeholder="Остаток"
+                          value={modalVariantForm.stock}
+                          onChange={(e) => handleModalVariantChange('stock', e.target.value)}
+                          className="p-2 border border-gray-300 rounded"
                         />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-muted">Валюта</label>
                         <input
                           type="text"
-                          value={form.currency || 'RUB'}
-                          onChange={(e) => handleVariantEditChange(variant.id, 'currency', e.target.value)}
-                          className="p-2 border border-gray-300 rounded w-full"
+                          placeholder="Валюта"
+                          value={modalVariantForm.currency}
+                          onChange={(e) => handleModalVariantChange('currency', e.target.value)}
+                          className="p-2 border border-gray-300 rounded"
                         />
+                        <button type="button" className="button text-sm" onClick={handleAddVariantInModal}>
+                          Добавить вариант
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        className="button text-sm"
-                        onClick={() => handleSaveVariant(editingProduct.id, variant.id)}
-                      >
-                        Сохранить вариант
-                      </button>
                     </div>
-                  );
-                })}
-                {(!editingProduct.variants || editingProduct.variants.length === 0) && (
-                  <p className="text-sm text-muted">Добавьте варианты ниже в таблице.</p>
-                )}
-                <div className="border border-dashed border-gray-300 rounded p-3 grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
-                  <input
-                    type="text"
-                    placeholder="SKU"
-                    value={modalVariantForm.sku}
-                    onChange={(e) => handleModalVariantChange('sku', e.target.value)}
-                    className="p-2 border border-gray-300 rounded"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Название"
-                    value={modalVariantForm.name}
-                    onChange={(e) => handleModalVariantChange('name', e.target.value)}
-                    className="p-2 border border-gray-300 rounded"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Цена"
-                    value={modalVariantForm.price}
-                    onChange={(e) => handleModalVariantChange('price', e.target.value)}
-                    className="p-2 border border-gray-300 rounded"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Остаток"
-                    value={modalVariantForm.stock}
-                    onChange={(e) => handleModalVariantChange('stock', e.target.value)}
-                    className="p-2 border border-gray-300 rounded"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Валюта"
-                    value={modalVariantForm.currency}
-                    onChange={(e) => handleModalVariantChange('currency', e.target.value)}
-                    className="p-2 border border-gray-300 rounded"
-                  />
-                  <button type="button" className="button text-sm" onClick={handleAddVariantInModal}>
-                    Добавить вариант
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <button className="button-gray" onClick={() => setEditModalOpen(false)}>Отмена</button>
-              <button className="button" onClick={handleModalSave}>Сохранить товар</button>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-muted">
+                Сначала сохраняйте варианты, затем товар, чтобы зафиксировать SEO-поля.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button className="button-gray" onClick={closeEditModal}>Отмена</button>
+                <button
+                  className="button"
+                  onClick={handleModalSave}
+                  disabled={savingProduct || refreshingProductId === editingProduct.id}
+                >
+                  {savingProduct ? 'Сохраняем…' : 'Сохранить товар'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

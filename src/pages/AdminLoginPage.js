@@ -3,10 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { loginAdmin } from '../api';
 import { notifyAuthChange } from '../utils/auth';
 
-/**
- * AdminLoginPage renders a login form for administrators. It now integrates with the backend API:
- * on submit, it sends credentials and stores the returned JWT token for authentication.
- */
 function AdminLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

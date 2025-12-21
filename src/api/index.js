@@ -1,8 +1,12 @@
 import { notifyAuthChange } from '../utils/auth';
 
-const DEFAULT_API_BASE = 'http://localhost:8080';
+const inferBrowserApiBase = () =>
+  (typeof window !== 'undefined' ? window.__API_BASE__ || window.location.origin : null);
+const DEFAULT_API_BASE = inferBrowserApiBase() || 'http://localhost:8080';
 const API_BASE = (process.env.REACT_APP_API_BASE || DEFAULT_API_BASE).replace(/\/$/, '');
 const JSON_TYPE = 'application/json';
+const rawActivityPath = process.env.REACT_APP_ACTIVITY_LOGS_PATH || '/admin/activity';
+const ACTIVITY_LOGS_PATH = (rawActivityPath.startsWith('/') ? rawActivityPath : `/${rawActivityPath}`).replace(/\/$/, '');
 
 function broadcastLogout(reason = 'logout') {
   if (typeof window === 'undefined') return;
@@ -142,9 +146,12 @@ export async function deleteProduct(productId) {
   return request(`/products/${productId}`, { method: 'DELETE' });
 }
 
-export async function uploadProductImages(productId, files = []) {
+export async function uploadProductImages(productId, files = [], { variantId } = {}) {
   const formData = new FormData();
   Array.from(files || []).forEach((file) => formData.append('files', file));
+  if (variantId) {
+    formData.append('variantId', variantId);
+  }
   return request(`/products/${productId}/images`, {
     method: 'POST',
     body: formData
@@ -153,6 +160,13 @@ export async function uploadProductImages(productId, files = []) {
 
 export async function deleteProductImage(productId, imageId) {
   return request(`/products/${productId}/images/${imageId}`, { method: 'DELETE' });
+}
+
+export async function updateProductImage(productId, imageId, updates) {
+  return request(`/products/${productId}/images/${imageId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates)
+  });
 }
 
 // Cart and Orders
@@ -251,4 +265,12 @@ export async function loginWithVk({
     method: 'POST',
     body: JSON.stringify({ accessToken, vkUserId, email, firstName, lastName })
   });
+}
+
+export async function getAdminActivityLogs(params = {}) {
+  const query = new URLSearchParams();
+  if (params.page !== undefined) query.append('page', params.page);
+  if (params.size !== undefined) query.append('size', params.size);
+  const qs = query.toString();
+  return request(`${ACTIVITY_LOGS_PATH}${qs ? `?${qs}` : ''}`);
 }
