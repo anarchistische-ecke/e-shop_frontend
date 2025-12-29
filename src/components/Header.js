@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCategories } from '../api';
 import { CartContext } from '../contexts/CartContext';
@@ -22,6 +22,14 @@ function Header() {
       .then((data) => setCategories(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Failed to fetch categories:', err));
   }, []);
+
+  const navCategories = useMemo(() => {
+    const list = Array.isArray(categories) ? categories : [];
+    return list
+      .filter((cat) => !cat.parentId)
+      .slice()
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || (a.name || '').localeCompare(b.name || ''));
+  }, [categories]);
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges(() => {
@@ -147,7 +155,7 @@ function Header() {
       <nav className={`bg-secondary border-t border-gray-200 ${isMenuOpen ? 'block' : 'hidden'} md:block`}>
         <div className="container mx-auto px-4">
           <ul className="flex md:flex-wrap items-center gap-3 py-3 text-sm overflow-x-auto md:overflow-visible scrollbar-hide">
-            {categories.map((cat) => (
+            {navCategories.map((cat) => (
               <li key={cat.slug || cat.id} className="flex-shrink-0">
                 <Link 
                   to={`/category/${cat.slug || cat.id}`} 
@@ -158,7 +166,7 @@ function Header() {
                 </Link>
               </li>
             ))}
-            {categories.length === 0 && (
+            {navCategories.length === 0 && (
               <li className="text-muted">Категории появятся после добавления в админке.</li>
             )}
           </ul>

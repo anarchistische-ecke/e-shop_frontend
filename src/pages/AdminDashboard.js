@@ -40,7 +40,17 @@ function AdminDashboard() {
     {}
   );
   const topCategories = products.reduce((map, p) => {
-    const key = p.category || p.categoryRef || 'Без категории';
+    const categoryLabels = Array.isArray(p.categories)
+      ? p.categories.map((c) => c?.name || c?.slug || c?.id).filter(Boolean)
+      : [];
+    if (categoryLabels.length > 0) {
+      categoryLabels.forEach((label) => {
+        map[label] = (map[label] || 0) + 1;
+      });
+      return map;
+    }
+    const fallback = p.category || p.categoryRef;
+    const key = fallback || 'Без категории';
     map[key] = (map[key] || 0) + 1;
     return map;
   }, {});

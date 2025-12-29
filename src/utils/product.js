@@ -1,6 +1,29 @@
 // Utility helpers for dealing with product and price data returned by the backend API.
 // Includes helpers for prices and media attached to products/variants.
 
+const inferImageBase = () => {
+  if (typeof window !== 'undefined' && window.__IMAGE_BASE__) {
+    return window.__IMAGE_BASE__;
+  }
+  return (
+    process.env.REACT_APP_IMAGE_BASE ||
+    process.env.REACT_APP_STORAGE_BASE_URL ||
+    process.env.REACT_APP_ASSET_BASE_URL ||
+    ''
+  );
+};
+
+const IMAGE_BASE = inferImageBase().replace(/\/$/, '');
+
+export function resolveImageUrl(value = '') {
+  if (!value) return '';
+  if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) {
+    return value;
+  }
+  if (!IMAGE_BASE) return value;
+  return `${IMAGE_BASE}/${String(value).replace(/^\//, '')}`;
+}
+
 /**
  * Convert a Money object (amount in minor units) or primitive value to a float.
  * @param {object|number|string} value
@@ -64,16 +87,31 @@ export function normalizeProductImages(images = []) {
       if (typeof img === 'string') {
         return {
           id: `img-${index}`,
-          url: img,
+          url: resolveImageUrl(img),
           variantId: null,
           alt: ''
         };
       }
-      const url = img.url || img.src || img.imageUrl || '';
+      const url =
+        img.url ||
+        img.src ||
+        img.imageUrl ||
+        img.image ||
+        img.image_url ||
+        img.path ||
+        img.key ||
+        img.objectKey ||
+        img.object_key ||
+        img.storageKey ||
+        img.storage_key ||
+        img.fileKey ||
+        img.fileName ||
+        img.filename ||
+        '';
       if (!url) return null;
       return {
-        id: img.id || img._id || img.key || `img-${index}`,
-        url,
+        id: img.id || img._id || img.imageId || img.image_id || img.key || `img-${index}`,
+        url: resolveImageUrl(url),
         variantId: img.variantId || img.variant_id || img.variant || null,
         alt: img.alt || img.label || ''
       };
@@ -113,11 +151,34 @@ export function decimalToMinorUnits(value) {
 export function getPrimaryImageUrl(product, variantId = null) {
   if (!product) return null;
   const images = normalizeProductImages(product.images);
-  if (images.length === 0) return null;
   if (variantId) {
     const match = images.find((img) => img.variantId === variantId);
     if (match) return match.url;
   }
-  const generic = images.find((img) => !img.variantId);
-  return (generic || images[0]).url;
+  if (images.length > 0) {
+    const generic = images.find((img) => !img.variantId);
+    return (generic || images[0]).url;
+  }
+  if (variantId) {
+    const variants = toArray(product.variants);
+    const variant = variants.find((v) => v && v.id === variantId);
+    const variantImage = resolveImageUrl(
+      variant?.imageUrl ||
+        variant?.image ||
+        variant?.image_url ||
+        variant?.thumbnailUrl ||
+        variant?.thumbnail ||
+        ''
+    );
+    if (variantImage) return variantImage;
+  }
+  const productImage = resolveImageUrl(
+    product.imageUrl ||
+      product.image ||
+      product.image_url ||
+      product.thumbnailUrl ||
+      product.thumbnail ||
+      ''
+  );
+  return productImage || null;
 }

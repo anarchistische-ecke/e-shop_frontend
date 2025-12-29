@@ -9,10 +9,29 @@
 
 body {
   font-family: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: radial-gradient(circle at 20% 20%, rgba(194, 143, 122, 0.08), transparent 30%),
-    radial-gradient(circle at 80% 0%, rgba(165, 106, 79, 0.08), transparent 28%),
-    #fdfbf8;
-  color: #1f1f1f;
+  background: radial-gradient(circle at 12% 18%, rgba(194, 143, 122, 0.14), transparent 36%),
+    radial-gradient(circle at 88% 6%, rgba(165, 106, 79, 0.12), transparent 32%),
+    linear-gradient(180deg, #fefaf5 0%, #f7efe6 100%);
+  color: #241c18;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@layer base {
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
+  }
+
+  input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  select,
+  textarea {
+    @apply bg-white/90 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition;
+  }
+
+  textarea {
+    @apply leading-relaxed;
+  }
 }
 
 /* Define reusable component classes using Tailwind's @layer directive.  The
@@ -21,11 +40,11 @@ body {
 @layer components {
   .button {
     /* Main action button with subtle scaling on hover/click for feedback */
-    @apply inline-block bg-primary text-white py-2 px-4 rounded hover:bg-accent transition-colors duration-200 transition-transform transform hover:scale-105 active:scale-95;
+    @apply inline-flex items-center justify-center bg-primary text-white py-2.5 px-4 rounded-lg shadow-sm hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all duration-200;
   }
   .button-gray {
     /* A secondary button variant used for less prominent actions. */
-    @apply inline-block bg-muted text-white py-2 px-4 rounded hover:bg-gray-600 transition-colors duration-200 transition-transform transform hover:scale-105 active:scale-95;
+    @apply inline-flex items-center justify-center bg-white text-gray-700 border border-gray-300 py-2.5 px-4 rounded-lg shadow-sm hover:border-primary/40 hover:text-primary hover:-translate-y-0.5 transition-all duration-200;
   }
 }
 

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../api';
 
 function AdminCategories() {
   const [categories, setCategories] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  const [newCategory, setNewCategory] = useState({ name: '', slug: '', description: '' });
+  const [newCategory, setNewCategory] = useState({ name: '', slug: '', description: '', parentId: '' });
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +32,48 @@ function AdminCategories() {
     load();
   }, [load]);
 
+  const categoryOptions = useMemo(() => {
+    const list = Array.isArray(categories) ? categories : [];
+    const byId = new Map(list.map((cat) => [cat.id, cat]));
+    const buildPath = (cat) => {
+      if (!cat) return '';
+      const names = [cat.name || cat.slug || cat.id];
+      let current = cat;
+      let guard = 0;
+      while (current?.parentId && guard < 20) {
+        const parent = byId.get(current.parentId);
+        if (!parent) break;
+        names.unshift(parent.name || parent.slug || parent.id);
+        current = parent;
+        guard += 1;
+      }
+      return names.join(' / ');
+    };
+    return list
+      .slice()
+      .sort((a, b) => (a.fullPath || a.slug || '').localeCompare(b.fullPath || b.slug || ''))
+      .map((cat) => ({
+        value: cat.id,
+        label: buildPath(cat)
+      }));
+  }, [categories]);
+
+  const categoryLabelById = useMemo(() => {
+    const map = {};
+    categoryOptions.forEach((opt) => {
+      map[opt.value] = opt.label;
+    });
+    return map;
+  }, [categoryOptions]);
+
+  const getCategoryLabel = useCallback(
+    (value) => {
+      if (!value) return '—';
+      return categoryLabelById[value] || value;
+    },
+    [categoryLabelById]
+  );
+
   const handleEditChange = (id, field, value) => {
     setCategories((prev) => prev.map((cat) => (cat.id === id ? { ...cat, [field]: value } : cat)));
   };
@@ -43,7 +85,8 @@ function AdminCategories() {
       await updateCategory(cat.id, {
         name: cat.name,
         slug: cat.slug,
-        description: cat.description
+        description: cat.description,
+        parentId: cat.parentId || null
       });
       load();
     } catch (err) {
@@ -72,10 +115,11 @@ function AdminCategories() {
       const created = await createCategory({
         name: newCategory.name,
         slug: newCategory.slug,
-        description: newCategory.description || ''
+        description: newCategory.description || '',
+        parentId: newCategory.parentId || null
       });
       setCategories((prev) => [...prev, created]);
-      setNewCategory({ name: '', slug: '', description: '' });
+      setNewCategory({ name: '', slug: '', description: '', parentId: '' });
     } catch (err) {
       console.error('Failed to create category:', err);
     }
@@ -105,12 +149,104 @@ function AdminCategories() {
           {loading ? 'Обновляем...' : 'Обновить'}
         </button>
       </div>
-      <div className="overflow-x-auto">
+      <div className="md:hidden space-y-3">
+        {filtered.map((cat, index) => (
+          <div key={cat.id || index} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm space-y-2">
+            <div>
+              <span className="text-xs text-muted block">Название</span>
+              {editingId === cat.id ? (
+                <input
+                  type="text"
+                  value={cat.name}
+                  onChange={(e) => handleEditChange(cat.id, 'name', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              ) : (
+                <span className="font-semibold">{cat.name}</span>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-muted block">Slug</span>
+              {editingId === cat.id ? (
+                <input
+                  type="text"
+                  value={cat.slug}
+                  onChange={(e) => handleEditChange(cat.id, 'slug', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              ) : (
+                <span>{cat.slug}</span>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-muted block">Родитель</span>
+              {editingId === cat.id ? (
+                <select
+                  value={cat.parentId || ''}
+                  onChange={(e) => handleEditChange(cat.id, 'parentId', e.target.value || null)}
+                  className="w-full p-2 border border-gray-300 rounded"
+                >
+                  <option value="">Без родителя</option>
+                  {categoryOptions
+                    .filter((opt) => opt.value !== cat.id)
+                    .map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                </select>
+              ) : (
+                <span>{getCategoryLabel(cat.parentId)}</span>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-muted block">Описание</span>
+              {editingId === cat.id ? (
+                <input
+                  type="text"
+                  value={cat.description || ''}
+                  onChange={(e) => handleEditChange(cat.id, 'description', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              ) : (
+                <span>{cat.description ? cat.description.substring(0, 80) + '…' : '—'}</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {editingId === cat.id ? (
+                <>
+                  <button onClick={() => handleSave(cat.id)} className="button text-xs">
+                    Сохранить
+                  </button>
+                  <button onClick={() => setEditingId(null)} className="button-gray text-xs">
+                    Отмена
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => setEditingId(cat.id)} className="button text-xs">
+                    Редактировать
+                  </button>
+                  <button onClick={() => handleDelete(cat.id)} className="button-gray text-xs">
+                    Удалить
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-sm text-muted text-center">Категории не найдены</div>
+        )}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm border border-gray-200 align-top">
           <thead className="bg-secondary">
             <tr>
               <th className="p-2 border-b text-left">Название</th>
               <th className="p-2 border-b text-left">Slug</th>
+              <th className="p-2 border-b text-left">Родитель</th>
               <th className="p-2 border-b text-left">Описание</th>
               <th className="p-2 border-b text-left">Действия</th>
             </tr>
@@ -137,6 +273,22 @@ function AdminCategories() {
                     />
                   </td>
                   <td className="p-2">
+                    <select
+                      value={cat.parentId || ''}
+                      onChange={(e) => handleEditChange(cat.id, 'parentId', e.target.value || null)}
+                      className="w-full p-1 border border-gray-300 rounded"
+                    >
+                      <option value="">Без родителя</option>
+                      {categoryOptions
+                        .filter((opt) => opt.value !== cat.id)
+                        .map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                    </select>
+                  </td>
+                  <td className="p-2">
                     <input 
                       type="text" 
                       value={cat.description || ''} 
@@ -157,6 +309,7 @@ function AdminCategories() {
                 <>
                   <td className="p-2">{cat.name}</td>
                   <td className="p-2">{cat.slug}</td>
+                  <td className="p-2">{getCategoryLabel(cat.parentId)}</td>
                   <td className="p-2">{cat.description ? cat.description.substring(0, 40) + '…' : ''}</td>
                   <td className="p-2">
                     <button onClick={() => setEditingId(cat.id)} className="text-primary mr-2">
@@ -206,6 +359,18 @@ function AdminCategories() {
           onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} 
           className="w-full p-2 border border-gray-300 rounded"
         />
+        <select
+          value={newCategory.parentId}
+          onChange={(e) => setNewCategory({ ...newCategory, parentId: e.target.value })}
+          className="w-full p-2 border border-gray-300 rounded"
+        >
+          <option value="">Без родителя</option>
+          {categoryOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
         <button type="submit" className="button">Добавить</button>
       </form>
     </div>

@@ -99,6 +99,7 @@ function Home() {
   const featuredProduct =
     products.find((p) => p.id === heroConfig.featuredProductId) || products[0] || null;
   const heroImage = getPrimaryImageUrl(featuredProduct);
+  const topCategories = categories.filter((cat) => !cat.parentId);
 
   return (
     <div className="home bg-gradient-to-b from-secondary/80 via-white to-white">
@@ -163,7 +164,7 @@ function Home() {
           <Link to="/category/popular" className="text-primary text-sm">В каталог</Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {(categories || []).slice(0, 8).map((cat) => (
+          {(topCategories || []).slice(0, 8).map((cat) => (
             <Link
               key={cat.slug || cat.id}
               to={`/category/${cat.slug || cat.id}`}
@@ -173,7 +174,7 @@ function Home() {
               <p className="text-xs text-muted mb-0">{cat.description || 'Перейти'}</p>
             </Link>
           ))}
-          {categories.length === 0 && (
+          {topCategories.length === 0 && (
             <p className="text-sm text-muted col-span-full">Категории появятся после добавления в админке.</p>
           )}
         </div>

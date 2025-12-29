@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   getProducts,
   getProduct,
@@ -35,6 +35,39 @@ const buildVariantFormState = (variants = []) =>
     return acc;
   }, {});
 
+function CategoryPicker({ options = [], selected = [], onToggle, emptyLabel = 'Категории не найдены', className = '' }) {
+  const selectedValues = Array.isArray(selected) ? selected : [];
+  return (
+    <div className={`rounded-xl border border-gray-200 bg-white/80 p-2 shadow-inner ${className}`}>
+      {options.length === 0 ? (
+        <p className="text-xs text-muted">{emptyLabel}</p>
+      ) : (
+        options.map((opt) => {
+          const isSelected = selectedValues.includes(opt.value);
+          return (
+            <label
+              key={opt.value}
+              className={`flex items-start gap-2 rounded-lg border px-2 py-1.5 text-sm transition ${
+                isSelected
+                  ? 'border-primary/30 bg-white shadow-sm'
+                  : 'border-transparent hover:bg-secondary/60'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => onToggle(opt.value)}
+                className="mt-1 accent-primary"
+              />
+              <span className="leading-tight">{opt.label}</span>
+            </label>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 function AdminProducts() {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -51,7 +84,7 @@ function AdminProducts() {
   const [newItem, setNewItem] = useState({
     name: '',
     slug: '',
-    category: '',
+    categories: [],
     brand: '',
     description: '',
     variantPrice: '',
@@ -61,7 +94,7 @@ function AdminProducts() {
   });
   const [newItemImages, setNewItemImages] = useState([]);
   const [bulkPrice, setBulkPrice] = useState('');
-  const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkCategories, setBulkCategories] = useState([]);
   const [bulkBrand, setBulkBrand] = useState('');
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
@@ -83,6 +116,58 @@ function AdminProducts() {
     []
   );
 
+  const categoryOptions = useMemo(() => {
+    const list = Array.isArray(categories) ? categories : [];
+    const byId = new Map(list.map((cat) => [cat.id, cat]));
+    const buildPath = (cat) => {
+      if (!cat) return '';
+      const names = [cat.name || cat.slug || cat.id];
+      let current = cat;
+      let guard = 0;
+      while (current?.parentId && guard < 20) {
+        const parent = byId.get(current.parentId);
+        if (!parent) break;
+        names.unshift(parent.name || parent.slug || parent.id);
+        current = parent;
+        guard += 1;
+      }
+      return names.join(' / ');
+    };
+    return list
+      .slice()
+      .sort((a, b) => (a.fullPath || a.slug || '').localeCompare(b.fullPath || b.slug || ''))
+      .map((cat) => ({
+        value: cat.slug || cat.id,
+        label: buildPath(cat),
+        id: cat.id,
+        slug: cat.slug
+      }));
+  }, [categories]);
+
+  const categoryLabelByValue = useMemo(() => {
+    const map = {};
+    categoryOptions.forEach((opt) => {
+      if (opt.value) map[opt.value] = opt.label;
+      if (opt.id) map[opt.id] = opt.label;
+      if (opt.slug) map[opt.slug] = opt.label;
+    });
+    return map;
+  }, [categoryOptions]);
+
+  const formatCategoryList = useCallback(
+    (values) => {
+      const refs = Array.isArray(values) ? values : values ? [values] : [];
+      const labels = refs.map((ref) => categoryLabelByValue[ref] || ref).filter(Boolean);
+      return labels.length ? labels.join(', ') : '—';
+    },
+    [categoryLabelByValue]
+  );
+
+  const toggleCategorySelection = useCallback((list, value) => {
+    const current = Array.isArray(list) ? list : [];
+    return current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+  }, []);
+
   const normalizeProduct = useCallback((product) => {
     const variants = Array.isArray(product.variants)
       ? product.variants
@@ -90,14 +175,23 @@ function AdminProducts() {
       ? Array.from(product.variants)
       : [];
     const images = normalizeProductImages(product.images);
+    const extractCategoryRef = (value) => {
+      if (!value) return '';
+      if (typeof value === 'string') return value;
+      return value.slug || value.id || '';
+    };
+    const categoryRefs = Array.isArray(product.categories)
+      ? product.categories.map(extractCategoryRef).filter(Boolean)
+      : [];
+    if (categoryRefs.length === 0 && product.category) {
+      const fallback = extractCategoryRef(product.category);
+      if (fallback) categoryRefs.push(fallback);
+    }
     return {
       ...product,
       variants,
       images,
-      categoryRef:
-        typeof product.category === 'string'
-          ? product.category
-          : product.category?.slug || product.category?.id || '',
+      categoryRefs: Array.from(new Set(categoryRefs)),
       brandRef:
         typeof product.brand === 'string'
           ? product.brand
@@ -170,7 +264,7 @@ function AdminProducts() {
       .then((data) => {
         const cats = Array.isArray(data) ? data : [];
         setCategories(cats);
-        setNewItem((prev) => ({ ...prev, category: prev.category }));
+        setNewItem((prev) => ({ ...prev, categories: prev.categories || [] }));
       })
       .catch((err) => console.error('Failed to fetch categories:', err));
     getBrands()
@@ -200,7 +294,7 @@ function AdminProducts() {
     const normalized = normalizeProduct(product);
     setEditingProduct({
       ...normalized,
-      categoryRef: normalized.categoryRef || '',
+      categoryRefs: normalized.categoryRefs || [],
       brandRef: normalized.brandRef || '',
       description: normalized.description || ''
     });
@@ -254,7 +348,7 @@ function AdminProducts() {
         name: newItem.name,
         description: newItem.description,
         slug,
-        category: newItem.category || undefined,
+        categories: newItem.categories || [],
         brand: newItem.brand || undefined
       });
       await addProductVariant(created.id, {
@@ -271,7 +365,7 @@ function AdminProducts() {
       setNewItem({
         name: '',
         slug: '',
-        category: '',
+        categories: [],
         brand: '',
         description: '',
         variantPrice: '',
@@ -458,7 +552,7 @@ function AdminProducts() {
         name: editingProduct.name,
         description: editingProduct.description,
         slug: editingProduct.slug,
-        category: editingProduct.categoryRef || undefined,
+        categories: editingProduct.categoryRefs || [],
         brand: editingProduct.brandRef || undefined
       });
       await refreshProduct(editingProduct.id);
@@ -533,7 +627,7 @@ function AdminProducts() {
           name: product.name,
           description: product.description,
           slug: product.slug,
-          category: bulkCategory || undefined,
+          categories: bulkCategories,
           brand: product.brandRef || undefined
         });
       } catch (err) {
@@ -552,7 +646,7 @@ function AdminProducts() {
           name: product.name,
           description: product.description,
           slug: product.slug,
-          category: product.categoryRef || undefined,
+          categories: product.categoryRefs || [],
           brand: bulkBrand || undefined
         });
       } catch (err) {
@@ -587,11 +681,7 @@ function AdminProducts() {
     await loadProducts();
   };
 
-  const getCategoryName = (value) => {
-    if (!value) return '—';
-    const match = categories.find((c) => c.slug === value || c.id === value);
-    return match ? match.name : value;
-  };
+  const getCategoryName = (value) => formatCategoryList(value);
 
   const getBrandName = (value) => {
     if (!value) return '—';
@@ -605,86 +695,122 @@ function AdminProducts() {
     return match ? match.name || match.sku || variantId : variantId;
   };
 
-  const renderVariantManager = (product) => {
+  const renderVariantManagerContent = (product) => {
     const variantForm = variantForms[product.id] || EMPTY_VARIANT_FORM;
     return (
-      <tr key={`${product.id}-variants`} className="bg-gray-50">
-        <td colSpan={8} className="p-4">
-          <div className="mb-4">
-            <h4 className="font-semibold mb-2">Изображения</h4>
-            {product.images && product.images.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
-                {product.images.map((img) => (
-                  <div key={img.id} className="relative rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm">
-                    <img src={img.url} alt={product.name} className="w-full h-28 object-cover" />
-                    <div className="absolute top-2 left-2 bg-white/90 text-[11px] px-2 py-0.5 rounded-full border border-gray-200">
-                      {getVariantLabel(product, img.variantId)}
-                    </div>
-                    <button
-                      type="button"
-                      className="absolute top-1 right-1 bg-white/90 text-xs px-1 rounded shadow"
-                      onClick={() => handleDeleteImage(product.id, img.id)}
+      <>
+        <div className="mb-4">
+          <h4 className="font-semibold mb-2">Изображения</h4>
+          {product.images && product.images.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
+              {product.images.map((img) => (
+                <div key={img.id} className="relative rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm">
+                  <img src={img.url} alt={product.name} className="w-full h-28 object-cover" />
+                  <div className="absolute top-2 left-2 bg-white/90 text-[11px] px-2 py-0.5 rounded-full border border-gray-200">
+                    {getVariantLabel(product, img.variantId)}
+                  </div>
+                  <button
+                    type="button"
+                    className="absolute top-1 right-1 bg-white/90 text-xs px-1 rounded shadow"
+                    onClick={() => handleDeleteImage(product.id, img.id)}
+                  >
+                    ✕
+                  </button>
+                  <div className="p-2 border-t border-gray-100">
+                    <select
+                      className="w-full text-xs border border-gray-300 rounded p-1"
+                      value={img.variantId || ''}
+                      onChange={(e) => handleUpdateImageVariant(product.id, img.id, e.target.value)}
                     >
-                      ✕
-                    </button>
-                    <div className="p-2 border-t border-gray-100">
-                      <select
-                        className="w-full text-xs border border-gray-300 rounded p-1"
-                        value={img.variantId || ''}
-                        onChange={(e) => handleUpdateImageVariant(product.id, img.id, e.target.value)}
-                      >
-                        <option value="">Общие фото</option>
-                        {product.variants.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.name}
-                          </option>
-                        ))}
-                      </select>
+                      <option value="">Общие фото</option>
+                      {product.variants.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted mb-3">Пока нет загруженных изображений.</p>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              className="p-2 border border-gray-300 rounded text-sm"
+              value={uploadTargets[product.id] || ''}
+              onChange={(e) =>
+                setUploadTargets((prev) => ({ ...prev, [product.id]: e.target.value }))
+              }
+            >
+              <option value="">Общие фото</option>
+              {product.variants.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+            <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-sm bg-white">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  handleUploadImages(product.id, e.target.files, uploadTargets[product.id]);
+                  e.target.value = '';
+                }}
+              />
+              {uploadingImages[product.id] ? 'Загружаем…' : 'Добавить изображения'}
+            </label>
+          </div>
+          <p className="text-xs text-muted mt-1">
+            Можно оставить товар без фото и загрузить их позже. Выбор варианта выше привяжет фото к конкретному SKU.
+          </p>
+        </div>
+        <h4 className="font-semibold mb-2">Варианты товара</h4>
+        {product.variants.length === 0 ? (
+          <p className="text-sm text-muted">Пока нет созданных вариантов.</p>
+        ) : (
+          <>
+            <div className="md:hidden space-y-3 mb-4">
+              {product.variants.map((variant) => (
+                <div key={variant.id} className="border border-gray-200 rounded-lg p-3 bg-white space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted">SKU {variant.sku}</p>
+                      <p className="font-semibold break-words">{variant.name || 'Без названия'}</p>
+                    </div>
+                    <div className="text-sm font-semibold text-primary whitespace-nowrap">
+                      {variant.price ? moneyToNumber(variant.price).toLocaleString('ru-RU') : '—'} ₽
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted mb-3">Пока нет загруженных изображений.</p>
-            )}
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                className="p-2 border border-gray-300 rounded text-sm"
-                value={uploadTargets[product.id] || ''}
-                onChange={(e) =>
-                  setUploadTargets((prev) => ({ ...prev, [product.id]: e.target.value }))
-                }
-              >
-                <option value="">Общие фото</option>
-                {product.variants.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-              <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-sm bg-white">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    handleUploadImages(product.id, e.target.files, uploadTargets[product.id]);
-                    e.target.value = '';
-                  }}
-                />
-                {uploadingImages[product.id] ? 'Загружаем…' : 'Добавить изображения'}
-              </label>
+                  <div className="text-sm text-muted">
+                    Остаток: {variant.stock ?? variant.stockQuantity ?? '—'} шт.
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      placeholder="+/-"
+                      value={stockAdjustments[variant.id] ?? ''}
+                      onChange={(e) => handleStockDeltaChange(variant.id, e.target.value)}
+                      className="w-24"
+                    />
+                    <button
+                      type="button"
+                      className="button text-xs"
+                      onClick={() => applyStockAdjustment(product.id, variant.id)}
+                      disabled={!stockAdjustments[variant.id]}
+                    >
+                      Применить
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted">Используйте + / - для пополнения или списания</p>
+                </div>
+              ))}
             </div>
-            <p className="text-xs text-muted mt-1">
-              Можно оставить товар без фото и загрузить их позже. Выбор варианта выше привяжет фото к конкретному SKU.
-            </p>
-          </div>
-          <h4 className="font-semibold mb-2">Варианты товара</h4>
-          {product.variants.length === 0 ? (
-            <p className="text-sm text-muted">Пока нет созданных вариантов.</p>
-          ) : (
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm border border-gray-200 mb-4">
                 <thead className="bg-white">
                   <tr>
@@ -713,7 +839,7 @@ function AdminProducts() {
                             placeholder="+/-"
                             value={stockAdjustments[variant.id] ?? ''}
                             onChange={(e) => handleStockDeltaChange(variant.id, e.target.value)}
-                            className="p-2 border border-gray-300 rounded w-24"
+                            className="w-24"
                           />
                           <button
                             type="button"
@@ -731,53 +857,67 @@ function AdminProducts() {
                 </tbody>
               </table>
             </div>
-          )}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleVariantSubmit(product.id);
-            }}
-            className="grid grid-cols-1 md:grid-cols-5 gap-2"
-          >
-            <input
-              type="text"
-              placeholder="SKU"
-              value={variantForm.sku}
-              onChange={(e) => handleVariantFormChange(product.id, 'sku', e.target.value)}
-              className="p-2 border border-gray-300 rounded"
-              required
-            />
-            <input
-              type="text"
-              placeholder="Название варианта"
-              value={variantForm.name}
-              onChange={(e) => handleVariantFormChange(product.id, 'name', e.target.value)}
-              className="p-2 border border-gray-300 rounded"
-            />
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Цена"
-              value={variantForm.price}
-              onChange={(e) => handleVariantFormChange(product.id, 'price', e.target.value)}
-              className="p-2 border border-gray-300 rounded"
-              required
-            />
-            <input
-              type="number"
-              placeholder="Остаток"
-              value={variantForm.stock}
-              onChange={(e) => handleVariantFormChange(product.id, 'stock', e.target.value)}
-              className="p-2 border border-gray-300 rounded"
-            />
-            <button type="submit" className="button">
-              Добавить вариант
-            </button>
-          </form>
-        </td>
-      </tr>
+          </>
+        )}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleVariantSubmit(product.id);
+          }}
+          className="grid grid-cols-1 md:grid-cols-5 gap-2"
+        >
+          <input
+            type="text"
+            placeholder="SKU"
+            value={variantForm.sku}
+            onChange={(e) => handleVariantFormChange(product.id, 'sku', e.target.value)}
+            className="p-2 border border-gray-300 rounded"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Название варианта"
+            value={variantForm.name}
+            onChange={(e) => handleVariantFormChange(product.id, 'name', e.target.value)}
+            className="p-2 border border-gray-300 rounded"
+          />
+          <input
+            type="number"
+            step="0.01"
+            placeholder="Цена"
+            value={variantForm.price}
+            onChange={(e) => handleVariantFormChange(product.id, 'price', e.target.value)}
+            className="p-2 border border-gray-300 rounded"
+            required
+          />
+          <input
+            type="number"
+            placeholder="Остаток"
+            value={variantForm.stock}
+            onChange={(e) => handleVariantFormChange(product.id, 'stock', e.target.value)}
+            className="p-2 border border-gray-300 rounded"
+          />
+          <button type="submit" className="button">
+            Добавить вариант
+          </button>
+        </form>
+      </>
     );
   };
+
+  const renderVariantManager = (product) => (
+    <tr key={`${product.id}-variants`} className="bg-gray-50">
+      <td colSpan={8} className="p-4">
+        {renderVariantManagerContent(product)}
+      </td>
+    </tr>
+  );
+
+  const renderVariantManagerCard = (product) => (
+    <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
+      {renderVariantManagerContent(product)}
+    </div>
+  );
 
   const editingVariants = editingProduct?.variants || [];
   const totalStockForEditing = editingVariants.reduce(
@@ -791,39 +931,64 @@ function AdminProducts() {
     setSavingProduct(false);
     setSavingVariant({});
   };
+  const pagedItems = items.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold">Управление товарами</h1>
-      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="text-sm text-muted">Выбрано: {selectedIds.length}</div>
-          <button className="button-gray text-sm" onClick={handleBulkDelete} disabled={selectedIds.length === 0}>
-            Удалить выбранные
-          </button>
-          <div className="flex items-center gap-2">
-            <select
-              value={bulkCategory}
-              onChange={(e) => setBulkCategory(e.target.value)}
-              className="p-2 border border-gray-300 rounded text-sm"
+      <div className="bg-white/80 border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="grid gap-4 xl:grid-cols-[minmax(220px,1fr)_minmax(320px,2fr)_minmax(200px,1fr)_minmax(220px,1fr)]">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-widest text-muted">Выбор</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  checked={items.length > 0 && selectedIds.length === items.length}
+                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                />
+                <span>Выбрать все</span>
+              </label>
+              <div className="text-sm text-muted">Выбрано: {selectedIds.length}</div>
+            </div>
+            <button
+              className="button-gray text-sm w-full sm:w-auto"
+              onClick={handleBulkDelete}
+              disabled={selectedIds.length === 0}
             >
-              <option value="">Категория...</option>
-              <option value="">Без категории</option>
-              {categories.map((cat) => (
-                <option key={cat.slug || cat.id} value={cat.slug || cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-            <button className="button text-sm" onClick={handleBulkCategoryChange} disabled={selectedIds.length === 0}>
-              Применить
+              Удалить выбранные
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-widest text-muted">Категории</p>
+            <CategoryPicker
+              options={categoryOptions}
+              selected={bulkCategories}
+              onToggle={(value) => setBulkCategories((prev) => toggleCategorySelection(prev, value))}
+              emptyLabel="Категории ещё не созданы"
+              className="max-h-32 overflow-y-auto"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                className="button text-sm"
+                onClick={handleBulkCategoryChange}
+                disabled={selectedIds.length === 0}
+              >
+                Применить
+              </button>
+              {bulkCategories.length > 0 && (
+                <button className="text-xs text-muted underline" onClick={() => setBulkCategories([])}>
+                  Сбросить
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-widest text-muted">Бренд</p>
             <select
               value={bulkBrand}
               onChange={(e) => setBulkBrand(e.target.value)}
-              className="p-2 border border-gray-300 rounded text-sm"
+              className="w-full"
             >
               <option value="">Бренд...</option>
               <option value="">Без бренда</option>
@@ -833,91 +998,167 @@ function AdminProducts() {
                 </option>
               ))}
             </select>
-            <button className="button text-sm" onClick={handleBulkBrandChange} disabled={selectedIds.length === 0}>
+            <button
+              className="button text-sm w-full sm:w-auto"
+              onClick={handleBulkBrandChange}
+              disabled={selectedIds.length === 0}
+            >
               Применить
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-widest text-muted">Цена</p>
             <input
               type="number"
               step="0.01"
               placeholder="Новая цена"
               value={bulkPrice}
               onChange={(e) => setBulkPrice(e.target.value)}
-              className="p-2 border border-gray-300 rounded text-sm"
+              className="w-full"
             />
-            <button className="button text-sm" onClick={handleBulkPriceChange} disabled={!bulkPrice || selectedIds.length === 0}>
+            <button
+              className="button text-sm w-full sm:w-auto"
+              onClick={handleBulkPriceChange}
+              disabled={!bulkPrice || selectedIds.length === 0}
+            >
               Изменить цену
             </button>
           </div>
         </div>
-        <p className="text-xs text-muted">Массовые действия применяются к выделенным товарам. Цена меняется для основного варианта.</p>
+        <p className="text-xs text-muted">
+          Массовые действия применяются к выделенным товарам. Цена меняется для основного варианта.
+        </p>
       </div>
-      <table className="w-full text-left border border-gray-200 text-sm">
-        <thead className="bg-secondary">
-          <tr>
-            <th className="p-2 border-b w-10">
-              <input
-                type="checkbox"
-                checked={items.length > 0 && selectedIds.length === items.length}
-                onChange={(e) => toggleSelectAll(e.target.checked)}
-              />
-            </th>
-            <th className="p-2 border-b">Название</th>
-            <th className="p-2 border-b">Slug</th>
-            <th className="p-2 border-b">Категория</th>
-            <th className="p-2 border-b">Бренд</th>
-            <th className="p-2 border-b">Варианты</th>
-            <th className="p-2 border-b">Описание</th>
-            <th className="p-2 border-b">Действия</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.slice((page - 1) * pageSize, page * pageSize).map((item, index) => {
-            const primaryVariant = getPrimaryVariant(item);
-            const variantSummary = primaryVariant
-              ? `${moneyToNumber(primaryVariant.price).toLocaleString('ru-RU')} ₽${
-                  item.variants.length > 1 ? ` · ${item.variants.length} шт.` : ''
-                }`
-              : 'Нет вариантов';
-            return (
-              <React.Fragment key={item.id || index}>
-                <tr className="border-b align-top">
-                  <td className="p-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(item.id)}
-                      onChange={() => toggleSelect(item.id)}
-                    />
-                  </td>
-                  <td className="p-2">{item.name}</td>
-                  <td className="p-2 text-xs text-muted">{item.slug}</td>
-                  <td className="p-2">{getCategoryName(item.categoryRef)}</td>
-                  <td className="p-2">{getBrandName(item.brandRef)}</td>
-                  <td className="p-2">{variantSummary}</td>
-                  <td className="p-2">{item.description ? `${item.description.substring(0, 60)}…` : ''}</td>
-                  <td className="p-2 space-y-1">
-                    <button onClick={() => openEditModal(item)} className="text-primary block">
-                      Редактировать
-                    </button>
-                    <button onClick={() => handleDelete(index)} className="text-red-600 block">
-                      Удалить
-                    </button>
-                    <button
-                      onClick={() => toggleVariants(item.id)}
-                      className="text-gray-600 underline text-xs block"
-                    >
-                      {expandedProductId === item.id ? 'Скрыть варианты' : 'Варианты'}
-                    </button>
-                  </td>
-                </tr>
-                {expandedProductId === item.id && renderVariantManager(item)}
-              </React.Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="flex items-center justify-between text-sm">
+      <div className="md:hidden space-y-3">
+        {pagedItems.map((item, index) => {
+          const primaryVariant = getPrimaryVariant(item);
+          const variantSummary = primaryVariant
+            ? `${moneyToNumber(primaryVariant.price).toLocaleString('ru-RU')} ₽${
+                item.variants.length > 1 ? ` · ${item.variants.length} шт.` : ''
+              }`
+            : 'Нет вариантов';
+          return (
+            <div key={item.id || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <label className="flex items-center gap-2 min-w-0 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                  />
+                  <span className="font-semibold break-words leading-snug">{item.name}</span>
+                </label>
+                <span className="text-xs text-muted text-right break-all max-w-[40%]">{item.slug}</span>
+              </div>
+              <div className="grid gap-2 text-sm">
+                <div>
+                  <span className="text-muted text-xs block">Категории</span>
+                  <span>{getCategoryName(item.categoryRefs)}</span>
+                </div>
+                <div>
+                  <span className="text-muted text-xs block">Бренд</span>
+                  <span>{getBrandName(item.brandRef)}</span>
+                </div>
+                <div>
+                  <span className="text-muted text-xs block">Варианты</span>
+                  <span>{variantSummary}</span>
+                </div>
+                <div>
+                  <span className="text-muted text-xs block">Описание</span>
+                  <span>{item.description ? `${item.description.substring(0, 80)}…` : '—'}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => openEditModal(item)} className="button text-xs">
+                  Редактировать
+                </button>
+                <button onClick={() => handleDelete(index)} className="button-gray text-xs">
+                  Удалить
+                </button>
+                <button
+                  onClick={() => toggleVariants(item.id)}
+                  className="text-gray-600 underline text-xs"
+                >
+                  {expandedProductId === item.id ? 'Скрыть варианты' : 'Варианты'}
+                </button>
+              </div>
+              {expandedProductId === item.id && renderVariantManagerCard(item)}
+            </div>
+          );
+        })}
+        {pagedItems.length === 0 && (
+          <div className="text-sm text-muted text-center">Товары не найдены</div>
+        )}
+      </div>
+
+      <div className="hidden md:block">
+        <table className="w-full text-left border border-gray-200 text-sm">
+          <thead className="bg-secondary">
+            <tr>
+              <th className="p-2 border-b w-10">
+                <input
+                  type="checkbox"
+                  checked={items.length > 0 && selectedIds.length === items.length}
+                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                />
+              </th>
+              <th className="p-2 border-b">Название</th>
+              <th className="p-2 border-b">Slug</th>
+              <th className="p-2 border-b">Категории</th>
+              <th className="p-2 border-b">Бренд</th>
+              <th className="p-2 border-b">Варианты</th>
+              <th className="p-2 border-b">Описание</th>
+              <th className="p-2 border-b">Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pagedItems.map((item, index) => {
+              const primaryVariant = getPrimaryVariant(item);
+              const variantSummary = primaryVariant
+                ? `${moneyToNumber(primaryVariant.price).toLocaleString('ru-RU')} ₽${
+                    item.variants.length > 1 ? ` · ${item.variants.length} шт.` : ''
+                  }`
+                : 'Нет вариантов';
+              return (
+                <React.Fragment key={item.id || index}>
+                  <tr className="border-b align-top">
+                    <td className="p-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={() => toggleSelect(item.id)}
+                      />
+                    </td>
+                    <td className="p-2">{item.name}</td>
+                    <td className="p-2 text-xs text-muted">{item.slug}</td>
+                    <td className="p-2">{getCategoryName(item.categoryRefs)}</td>
+                    <td className="p-2">{getBrandName(item.brandRef)}</td>
+                    <td className="p-2">{variantSummary}</td>
+                    <td className="p-2">{item.description ? `${item.description.substring(0, 60)}…` : ''}</td>
+                    <td className="p-2 space-y-1">
+                      <button onClick={() => openEditModal(item)} className="text-primary block">
+                        Редактировать
+                      </button>
+                      <button onClick={() => handleDelete(index)} className="text-red-600 block">
+                        Удалить
+                      </button>
+                      <button
+                        onClick={() => toggleVariants(item.id)}
+                        className="text-gray-600 underline text-xs block"
+                      >
+                        {expandedProductId === item.id ? 'Скрыть варианты' : 'Варианты'}
+                      </button>
+                    </td>
+                  </tr>
+                  {expandedProductId === item.id && renderVariantManager(item)}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
         <div className="flex items-center gap-2">
           <span>На странице:</span>
           <select
@@ -1045,20 +1286,29 @@ function AdminProducts() {
                       />
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <label className="text-xs text-muted block">
-                        <span className="mb-1 block">Категория</span>
-                        <select
-                          value={editingProduct.categoryRef || ''}
-                          onChange={(e) => setEditingProduct({ ...editingProduct, categoryRef: e.target.value })}
-                          className="p-2 border border-gray-300 rounded w-full"
-                        >
-                          <option value="">Без категории</option>
-                          {categories.map((cat) => (
-                            <option key={cat.slug || cat.id} value={cat.slug || cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
+                      <label className="text-xs text-muted block sm:col-span-2">
+                        <span className="mb-1 block">Категории</span>
+                        <CategoryPicker
+                          options={categoryOptions}
+                          selected={editingProduct.categoryRefs || []}
+                          onToggle={(value) =>
+                            setEditingProduct((prev) => ({
+                              ...prev,
+                              categoryRefs: toggleCategorySelection(prev.categoryRefs || [], value)
+                            }))
+                          }
+                          emptyLabel="Категории ещё не созданы"
+                          className="max-h-40 overflow-y-auto"
+                        />
+                        {(editingProduct.categoryRefs || []).length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingProduct((prev) => ({ ...prev, categoryRefs: [] }))}
+                            className="text-[11px] text-muted underline mt-1"
+                          >
+                            Сбросить категории
+                          </button>
+                        )}
                       </label>
                       <label className="text-xs text-muted block">
                         <span className="mb-1 block">Бренд</span>
@@ -1365,38 +1615,52 @@ function AdminProducts() {
             required
           />
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-          <select
-            value={newItem.category}
-            onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
-            className="p-2 border border-gray-300 rounded mb-2 sm:mb-0"
-          >
-            <option value="">Без категории</option>
-            {categories.map((cat) => (
-              <option key={cat.slug || cat.id} value={cat.slug || cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={newItem.brand}
-            onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })}
-            className="p-2 border border-gray-300 rounded mb-2 sm:mb-0"
-          >
-            <option value="">Без бренда</option>
-            {brands.map((b) => (
-              <option key={b.slug || b.id} value={b.slug || b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Описание (необязательно)"
-            value={newItem.description}
-            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-            className="flex-1 p-2 border border-gray-300 rounded"
-          />
+        <div className="space-y-2">
+          <label className="text-xs text-muted block">
+            <span className="mb-1 block">Категории</span>
+            <CategoryPicker
+              options={categoryOptions}
+              selected={newItem.categories || []}
+              onToggle={(value) =>
+                setNewItem((prev) => ({
+                  ...prev,
+                  categories: toggleCategorySelection(prev.categories || [], value)
+                }))
+              }
+              emptyLabel="Категории ещё не созданы"
+              className="max-h-36 overflow-y-auto"
+            />
+            {(newItem.categories || []).length > 0 && (
+              <button
+                type="button"
+                onClick={() => setNewItem((prev) => ({ ...prev, categories: [] }))}
+                className="text-[11px] text-muted underline mt-1"
+              >
+                Сбросить категории
+              </button>
+            )}
+          </label>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+            <select
+              value={newItem.brand}
+              onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })}
+              className="p-2 border border-gray-300 rounded mb-2 sm:mb-0"
+            >
+              <option value="">Без бренда</option>
+              {brands.map((b) => (
+                <option key={b.slug || b.id} value={b.slug || b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="Описание (необязательно)"
+              value={newItem.description}
+              onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+              className="flex-1 p-2 border border-gray-300 rounded"
+            />
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
           <input

@@ -90,85 +90,163 @@ function AdminOrders() {
         />
         <div className="text-sm text-muted">Показано: {visibleOrders.length}</div>
       </div>
-      <div className="overflow-x-auto">
-      <table className="w-full text-sm border border-gray-200 align-top">
-        <thead className="bg-secondary">
-          <tr>
-            <th className="p-2 border-b">ID</th>
-            <th className="p-2 border-b">Клиент</th>
-            <th className="p-2 border-b">Сумма</th>
-            <th className="p-2 border-b">Статус</th>
-            <th className="p-2 border-b">Действия</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visibleOrders.map((order) => (
-            <tr key={order.id} className="border-b">
-              <td className="p-2">{order.id}</td>
-              <td className="p-2">{customers[order.customerId] || order.customerId}</td>
-              <td className="p-2">
-                {extractTotal(order).toLocaleString('ru-RU')} ₽
-              </td>
-              <td className="p-2">
-                <span
-                  className={`px-2 py-1 rounded-full text-xs ${
-                    order.status === 'DELIVERED'
-                      ? 'bg-green-100 text-green-800'
-                      : order.status === 'PROCESSING'
-                      ? 'bg-amber-100 text-amber-800'
-                      : order.status === 'CANCELLED'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  {order.status}
-                </span>
-              </td>
-              <td className="p-2 space-y-1">
-                <div className="flex gap-2">
-                  <select
-                    value={order.status}
-                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    className="p-1 border border-gray-300 rounded text-xs"
-                  >
-                    {['PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
+      <div className="md:hidden space-y-3">
+        {visibleOrders.map((order) => (
+          <div key={order.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs text-muted">Заказ</div>
+                <div className="font-semibold">#{order.id}</div>
+              </div>
+              <span
+                className={`px-2 py-1 rounded-full text-xs ${
+                  order.status === 'DELIVERED'
+                    ? 'bg-green-100 text-green-800'
+                    : order.status === 'PROCESSING'
+                    ? 'bg-amber-100 text-amber-800'
+                    : order.status === 'CANCELLED'
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {order.status}
+              </span>
+            </div>
+            <div className="text-sm space-y-1">
+              <div>
+                <span className="text-muted text-xs block">Клиент</span>
+                <span>{customers[order.customerId] || order.customerId}</span>
+              </div>
+              <div>
+                <span className="text-muted text-xs block">Сумма</span>
+                <span>{extractTotal(order).toLocaleString('ru-RU')} ₽</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={order.status}
+                onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                className="p-2 border border-gray-300 rounded text-xs"
+              >
+                {['PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="text-xs text-primary underline"
+                onClick={() => setExpandedId((prev) => (prev === order.id ? null : order.id))}
+              >
+                {expandedId === order.id ? 'Скрыть' : 'Подробнее'}
+              </button>
+            </div>
+            {expandedId === order.id && (
+              <div className="bg-secondary border border-gray-200 rounded p-2 text-xs mt-1 space-y-1">
+                <div>Создан: {order.createdAt || '—'}</div>
+                <div>Позиций: {Array.isArray(order.items) ? order.items.length : '—'}</div>
+                {Array.isArray(order.items) && order.items.length > 0 && (
+                  <ul className="list-disc pl-4">
+                    {order.items.slice(0, 5).map((item, idx) => (
+                      <li key={idx}>
+                        {item.productName || item.productId} × {item.quantity} —{' '}
+                        {(item.totalPrice?.amount
+                          ? item.totalPrice.amount / 100
+                          : item.totalPrice || 0
+                        ).toLocaleString('ru-RU')}{' '}
+                        ₽
+                      </li>
                     ))}
-                  </select>
-                  <button
-                    className="text-xs text-primary underline"
-                    onClick={() => setExpandedId((prev) => (prev === order.id ? null : order.id))}
-                  >
-                    {expandedId === order.id ? 'Скрыть' : 'Подробнее'}
-                  </button>
-                </div>
-                {expandedId === order.id && (
-                  <div className="bg-secondary border border-gray-200 rounded p-2 text-xs mt-1 space-y-1">
-                    <div>Создан: {order.createdAt || '—'}</div>
-                    <div>Позиций: {Array.isArray(order.items) ? order.items.length : '—'}</div>
-                    {Array.isArray(order.items) && order.items.length > 0 && (
-                      <ul className="list-disc pl-4">
-                        {order.items.slice(0, 5).map((item, idx) => (
-                          <li key={idx}>
-                            {item.productName || item.productId} × {item.quantity} —{' '}
-                            {(item.totalPrice?.amount
-                              ? item.totalPrice.amount / 100
-                              : item.totalPrice || 0
-                            ).toLocaleString('ru-RU')}{' '}
-                            ₽
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                  </ul>
                 )}
-              </td>
+              </div>
+            )}
+          </div>
+        ))}
+        {visibleOrders.length === 0 && (
+          <div className="text-sm text-muted text-center">Заказы не найдены</div>
+        )}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-sm border border-gray-200 align-top">
+          <thead className="bg-secondary">
+            <tr>
+              <th className="p-2 border-b">ID</th>
+              <th className="p-2 border-b">Клиент</th>
+              <th className="p-2 border-b">Сумма</th>
+              <th className="p-2 border-b">Статус</th>
+              <th className="p-2 border-b">Действия</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {visibleOrders.map((order) => (
+              <tr key={order.id} className="border-b">
+                <td className="p-2">{order.id}</td>
+                <td className="p-2">{customers[order.customerId] || order.customerId}</td>
+                <td className="p-2">
+                  {extractTotal(order).toLocaleString('ru-RU')} ₽
+                </td>
+                <td className="p-2">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs ${
+                      order.status === 'DELIVERED'
+                        ? 'bg-green-100 text-green-800'
+                        : order.status === 'PROCESSING'
+                        ? 'bg-amber-100 text-amber-800'
+                        : order.status === 'CANCELLED'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {order.status}
+                  </span>
+                </td>
+                <td className="p-2 space-y-1">
+                  <div className="flex gap-2">
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                      className="p-1 border border-gray-300 rounded text-xs"
+                    >
+                      {['PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className="text-xs text-primary underline"
+                      onClick={() => setExpandedId((prev) => (prev === order.id ? null : order.id))}
+                    >
+                      {expandedId === order.id ? 'Скрыть' : 'Подробнее'}
+                    </button>
+                  </div>
+                  {expandedId === order.id && (
+                    <div className="bg-secondary border border-gray-200 rounded p-2 text-xs mt-1 space-y-1">
+                      <div>Создан: {order.createdAt || '—'}</div>
+                      <div>Позиций: {Array.isArray(order.items) ? order.items.length : '—'}</div>
+                      {Array.isArray(order.items) && order.items.length > 0 && (
+                        <ul className="list-disc pl-4">
+                          {order.items.slice(0, 5).map((item, idx) => (
+                            <li key={idx}>
+                              {item.productName || item.productId} × {item.quantity} —{' '}
+                              {(item.totalPrice?.amount
+                                ? item.totalPrice.amount / 100
+                                : item.totalPrice || 0
+                              ).toLocaleString('ru-RU')}{' '}
+                              ₽
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

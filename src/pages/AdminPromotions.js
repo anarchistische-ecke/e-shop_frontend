@@ -59,48 +59,93 @@ function AdminPromotions() {
         />
         <div className="text-sm text-muted">Активных: {coupons.filter((c) => c.active).length}</div>
       </div>
-      <div className="overflow-x-auto">
-      <table className="w-full text-sm border border-gray-200 align-top">
-        <thead className="bg-secondary">
-          <tr>
-            <th className="p-2 border-b">Код</th>
-            <th className="p-2 border-b">Тип</th>
-            <th className="p-2 border-b">Значение</th>
-            <th className="p-2 border-b">Мин. сумма</th>
-            <th className="p-2 border-b">Срок</th>
-            <th className="p-2 border-b">Активен</th>
-            <th className="p-2 border-b">Использовано</th>
-            <th className="p-2 border-b">Действия</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((c) => (
-            <tr key={c.id} className="border-b">
-              <td className="p-2">{c.id}</td>
-              <td className="p-2">{c.type === 'percent' ? 'Процент' : 'Фиксированная сумма'}</td>
-              <td className="p-2">{c.value}{c.type === 'percent' ? '%' : ' ₽'}</td>
-              <td className="p-2">{c.minSpend.toLocaleString('ru-RU')} ₽</td>
-              <td className="p-2">{c.expiry}</td>
-              <td className="p-2">
+      <div className="md:hidden space-y-3">
+        {filtered.map((c) => (
+          <div key={c.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <span className="text-xs text-muted block">Код</span>
+                <span className="font-semibold">{c.id}</span>
+              </div>
+              <label className="flex items-center gap-2 text-xs">
                 <input type="checkbox" checked={c.active} onChange={() => handleToggle(c.id)} />
-              </td>
-              <td className="p-2 text-xs">
-                {c.used || 0} / {c.usageLimit || '∞'}
-              </td>
-              <td className="p-2 space-x-2">
-                <button className="button-gray" onClick={() => handleDelete(c.id)}>
-                  Удалить
-                </button>
-              </td>
-            </tr>
-          ))}
-          {filtered.length === 0 && (
+                <span>{c.active ? 'Активен' : 'Неактивен'}</span>
+              </label>
+            </div>
+            <div className="grid gap-2 text-sm">
+              <div>
+                <span className="text-xs text-muted block">Тип</span>
+                <span>{c.type === 'percent' ? 'Процент' : 'Фиксированная сумма'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Значение</span>
+                <span>{c.value}{c.type === 'percent' ? '%' : ' ₽'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Мин. сумма</span>
+                <span>{c.minSpend.toLocaleString('ru-RU')} ₽</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Срок</span>
+                <span>{c.expiry}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Использовано</span>
+                <span className="text-xs">{c.used || 0} / {c.usageLimit || '∞'}</span>
+              </div>
+            </div>
+            <button className="button-gray text-xs" onClick={() => handleDelete(c.id)}>
+              Удалить
+            </button>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-sm text-muted text-center">Купоны не найдены</div>
+        )}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-sm border border-gray-200 align-top">
+          <thead className="bg-secondary">
             <tr>
-              <td colSpan={8} className="p-4 text-center text-muted">Купоны не найдены</td>
+              <th className="p-2 border-b">Код</th>
+              <th className="p-2 border-b">Тип</th>
+              <th className="p-2 border-b">Значение</th>
+              <th className="p-2 border-b">Мин. сумма</th>
+              <th className="p-2 border-b">Срок</th>
+              <th className="p-2 border-b">Активен</th>
+              <th className="p-2 border-b">Использовано</th>
+              <th className="p-2 border-b">Действия</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filtered.map((c) => (
+              <tr key={c.id} className="border-b">
+                <td className="p-2">{c.id}</td>
+                <td className="p-2">{c.type === 'percent' ? 'Процент' : 'Фиксированная сумма'}</td>
+                <td className="p-2">{c.value}{c.type === 'percent' ? '%' : ' ₽'}</td>
+                <td className="p-2">{c.minSpend.toLocaleString('ru-RU')} ₽</td>
+                <td className="p-2">{c.expiry}</td>
+                <td className="p-2">
+                  <input type="checkbox" checked={c.active} onChange={() => handleToggle(c.id)} />
+                </td>
+                <td className="p-2 text-xs">
+                  {c.used || 0} / {c.usageLimit || '∞'}
+                </td>
+                <td className="p-2 space-x-2">
+                  <button className="button-gray" onClick={() => handleDelete(c.id)}>
+                    Удалить
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={8} className="p-4 text-center text-muted">Купоны не найдены</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
       <h2 className="text-xl font-semibold">Создать купон</h2>
       <form onSubmit={handleAdd} className="space-y-4 max-w-xl">

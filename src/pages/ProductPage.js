@@ -279,7 +279,9 @@ function ProductPage() {
           {/* Tab panels */}
           {activeTab === 'about' && (
             <div>
-              <p>{product.description || 'Описание отсутствует.'}</p>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
+                {product.description || 'Описание отсутствует.'}
+              </p>
             </div>
           )}
           {activeTab === 'reviews' && (

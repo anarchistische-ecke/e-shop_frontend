@@ -105,7 +105,77 @@ function AdminBrands() {
           {loading ? 'Обновляем...' : 'Обновить'}
         </button>
       </div>
-      <div className="overflow-x-auto">
+      <div className="md:hidden space-y-3">
+        {filtered.map((brand, index) => (
+          <div key={brand.id || index} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm space-y-2">
+            <div>
+              <span className="text-xs text-muted block">Название</span>
+              {editingId === brand.id ? (
+                <input
+                  type="text"
+                  value={brand.name}
+                  onChange={(e) => handleEditChange(brand.id, 'name', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              ) : (
+                <span className="font-semibold">{brand.name}</span>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-muted block">Slug</span>
+              {editingId === brand.id ? (
+                <input
+                  type="text"
+                  value={brand.slug}
+                  onChange={(e) => handleEditChange(brand.id, 'slug', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              ) : (
+                <span>{brand.slug}</span>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-muted block">Описание</span>
+              {editingId === brand.id ? (
+                <input
+                  type="text"
+                  value={brand.description || ''}
+                  onChange={(e) => handleEditChange(brand.id, 'description', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              ) : (
+                <span>{brand.description ? brand.description.substring(0, 80) + '…' : '—'}</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {editingId === brand.id ? (
+                <>
+                  <button onClick={() => handleSave(brand.id)} className="button text-xs">
+                    Сохранить
+                  </button>
+                  <button onClick={() => setEditingId(null)} className="button-gray text-xs">
+                    Отмена
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => setEditingId(brand.id)} className="button text-xs">
+                    Редактировать
+                  </button>
+                  <button onClick={() => handleDelete(brand.id)} className="button-gray text-xs">
+                    Удалить
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-sm text-muted text-center">Бренды не найдены</div>
+        )}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm border border-gray-200 align-top">
           <thead className="bg-secondary">
             <tr>

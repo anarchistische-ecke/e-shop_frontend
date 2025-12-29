@@ -82,38 +82,66 @@ function AdminCustomers() {
           Экспорт CSV
         </button>
       </div>
-      <div className="overflow-x-auto">
-      <table className="w-full text-sm border border-gray-200 align-top">
-        <thead className="bg-secondary">
-          <tr>
-            <th className="p-2 border-b">ID</th>
-            <th className="p-2 border-b">Имя</th>
-            <th className="p-2 border-b">Фамилия</th>
-            <th className="p-2 border-b">E‑mail</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((c) => (
-            <tr key={c.id} className="border-b">
-              <td className="p-2">{c.id}</td>
-              <td className="p-2">{c.firstName}</td>
-              <td className="p-2">{c.lastName}</td>
-              <td className="p-2">{c.email}</td>
-            </tr>
-          ))}
-          {filtered.length === 0 && (
+      <div className="md:hidden space-y-3">
+        {filtered.map((c) => (
+          <div key={c.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-2">
+            <div>
+              <span className="text-xs text-muted block">ID</span>
+              <span className="text-sm">{c.id}</span>
+            </div>
+            <div className="flex flex-col gap-1 text-sm">
+              <div>
+                <span className="text-xs text-muted block">Имя</span>
+                <span>{c.firstName || '—'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Фамилия</span>
+                <span>{c.lastName || '—'}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">E‑mail</span>
+                <span>{c.email || '—'}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-sm text-muted text-center">Клиенты не найдены</div>
+        )}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-sm border border-gray-200 align-top">
+          <thead className="bg-secondary">
             <tr>
-              <td colSpan={4} className="p-4 text-center text-muted">
-                Клиенты не найдены
-              </td>
+              <th className="p-2 border-b">ID</th>
+              <th className="p-2 border-b">Имя</th>
+              <th className="p-2 border-b">Фамилия</th>
+              <th className="p-2 border-b">E‑mail</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filtered.map((c) => (
+              <tr key={c.id} className="border-b">
+                <td className="p-2">{c.id}</td>
+                <td className="p-2">{c.firstName}</td>
+                <td className="p-2">{c.lastName}</td>
+                <td className="p-2">{c.email}</td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={4} className="p-4 text-center text-muted">
+                  Клиенты не найдены
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
       <h2 className="text-xl font-semibold">Добавить клиента</h2>
       <form onSubmit={handleAdd} className="space-y-2 max-w-lg">
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             placeholder="Имя"
@@ -143,7 +171,7 @@ function AdminCustomers() {
           onChange={(e) => setNewCustomer({ ...newCustomer, street: e.target.value })}
           className="w-full p-2 border border-gray-300 rounded"
         />
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             placeholder="Город"
@@ -159,7 +187,7 @@ function AdminCustomers() {
             className="flex-1 p-2 border border-gray-300 rounded"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             placeholder="Почтовый индекс"

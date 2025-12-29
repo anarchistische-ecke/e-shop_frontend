@@ -64,7 +64,7 @@ function AdminSecurity() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Безопасность</h1>
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
           <h2 className="text-xl font-semibold">Журнал активности</h2>
           <div className="flex items-center gap-3 text-xs text-muted">
             {lastUpdated && <span>Обновлено {formatDate(lastUpdated)}</span>}
@@ -77,45 +77,77 @@ function AdminSecurity() {
             </button>
           </div>
         </div>
-        <table className="w-full text-sm border border-gray-200 table-fixed">
-          <thead className="bg-secondary">
-            <tr>
-              <th className="p-2 border-b text-left w-1/4">Пользователь</th>
-              <th className="p-2 border-b text-left w-1/2">Действие</th>
-              <th className="p-2 border-b text-left w-1/4">Дата</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
+        <div className="md:hidden space-y-3">
+          {loading && (
+            <div className="p-3 text-center text-muted text-sm">Загрузка журнала...</div>
+          )}
+          {error && !loading && (
+            <div className="p-3 text-center text-red-600 text-sm">
+              Не удалось загрузить журнал: {error}
+            </div>
+          )}
+          {!loading && !error && logs.length === 0 && (
+            <div className="p-3 text-center text-muted text-sm">Записей пока нет</div>
+          )}
+          {!loading && !error && logs.map((log) => (
+            <div key={log.id} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm space-y-1">
+              <div>
+                <span className="text-xs text-muted block">Пользователь</span>
+                <span className="text-sm">{log.user}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Действие</span>
+                <span className="text-sm">{log.action}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Дата</span>
+                <span className="text-sm">{formatDate(log.date)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:block">
+          <table className="w-full text-sm border border-gray-200 table-fixed">
+            <thead className="bg-secondary">
               <tr>
-                <td className="p-3 text-center text-muted" colSpan={3}>
-                  Загрузка журнала...
-                </td>
+                <th className="p-2 border-b text-left w-1/4">Пользователь</th>
+                <th className="p-2 border-b text-left w-1/2">Действие</th>
+                <th className="p-2 border-b text-left w-1/4">Дата</th>
               </tr>
-            )}
-            {error && !loading && (
-              <tr>
-                <td className="p-3 text-center text-red-600 text-sm" colSpan={3}>
-                  Не удалось загрузить журнал: {error}
-                </td>
-              </tr>
-            )}
-            {!loading && !error && logs.length === 0 && (
-              <tr>
-                <td className="p-3 text-center text-muted" colSpan={3}>
-                  Записей пока нет
-                </td>
-              </tr>
-            )}
-            {!loading && !error && logs.map((log) => (
-              <tr key={log.id} className="border-b">
-                <td className="p-2 align-top truncate" title={log.user}>{log.user}</td>
-                <td className="p-2 align-top truncate" title={log.action}>{log.action}</td>
-                <td className="p-2 align-top whitespace-nowrap">{formatDate(log.date)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td className="p-3 text-center text-muted" colSpan={3}>
+                    Загрузка журнала...
+                  </td>
+                </tr>
+              )}
+              {error && !loading && (
+                <tr>
+                  <td className="p-3 text-center text-red-600 text-sm" colSpan={3}>
+                    Не удалось загрузить журнал: {error}
+                  </td>
+                </tr>
+              )}
+              {!loading && !error && logs.length === 0 && (
+                <tr>
+                  <td className="p-3 text-center text-muted" colSpan={3}>
+                    Записей пока нет
+                  </td>
+                </tr>
+              )}
+              {!loading && !error && logs.map((log) => (
+                <tr key={log.id} className="border-b">
+                  <td className="p-2 align-top truncate" title={log.user}>{log.user}</td>
+                  <td className="p-2 align-top truncate" title={log.action}>{log.action}</td>
+                  <td className="p-2 align-top whitespace-nowrap">{formatDate(log.date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Настройки безопасности</h2>

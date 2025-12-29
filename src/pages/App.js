@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ScrollToTop from '../components/ScrollToTop';
@@ -32,11 +32,20 @@ import ProductionInfoPage from './ProductionInfoPage';
 import NotFound from './NotFound';
 
 function App() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
     <>
       <ScrollToTop />
-      <Header />
-      <main className="min-h-[80vh] mt-32 md:mt-28 lg:mt-24">
+      {!isAdminRoute && <Header />}
+      <main
+        className={
+          isAdminRoute
+            ? 'min-h-screen'
+            : 'min-h-[80vh] mt-32 md:mt-28 lg:mt-24'
+        }
+      >
         <Routes>
           {/* Public user-facing routes */}
           <Route path="/" element={<Home />} />
@@ -78,7 +87,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      <Footer />
+      {!isAdminRoute && <Footer />}
     </>
   );
 }

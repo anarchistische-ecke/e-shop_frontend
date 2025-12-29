@@ -17,6 +17,12 @@ function CategoryPage() {
   const [products, setProducts] = useState([]);
   const [sortKey, setSortKey] = useState('popular');
   const activeBrand = brands.find((b) => (b.slug || b.id) === brandFilter);
+  const activeCategory = categories.find((c) => c.slug === slug || c.id === slug);
+  const childCategories = activeCategory
+    ? categories
+        .filter((c) => c.parentId === activeCategory.id)
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || (a.name || '').localeCompare(b.name || ''))
+    : [];
 
   // Load category and brand metadata once
   useEffect(() => {
@@ -74,8 +80,7 @@ function CategoryPage() {
   } else if (slug === 'collections') {
     heading = 'Коллекции';
   } else {
-    const cat = categories.find((c) => c.slug === slug || c.id === slug);
-    heading = cat ? cat.name : 'Категория';
+    heading = activeCategory ? activeCategory.name : 'Категория';
   }
 
   // Sorting helpers (extract numeric price values for comparisons)
@@ -121,6 +126,22 @@ function CategoryPage() {
             </button>
           )}
         </div>
+        {childCategories.length > 0 && (
+          <div className="mb-4 bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p className="text-sm font-semibold mb-2">Подкатегории</p>
+            <div className="flex flex-wrap gap-2">
+              {childCategories.map((cat) => (
+                <button
+                  key={cat.slug || cat.id}
+                  className="text-xs px-3 py-1 rounded-full border border-gray-200 hover:border-primary hover:text-primary"
+                  onClick={() => navigate(`/category/${cat.slug || cat.id}`)}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {sortedProducts.length > 0 ? (
           <>
             <div className="mb-4 bg-white border border-gray-200 rounded-lg p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shadow-sm">
