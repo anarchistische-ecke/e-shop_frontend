@@ -75,14 +75,6 @@ function AboutPage() {
         imageOnLeft={false}
       />
 
-      <InfoBlock
-        title="Программа лояльности с преференциями для покупателей"
-        text="Участники могут первыми узнавать об акциях, получать дополнительные скидки и
-             бонусы на следующие покупки."
-        imageOnLeft={true}
-        cta={{ label: 'Стать участником', to: '/info/bonuses' }}
-      />
-
       <section className="py-10">
         <div className="container mx-auto px-4 max-w-2xl text-center">
           <h2 className="text-xl font-semibold">Бесплатная доставка</h2>
@@ -99,7 +91,7 @@ function AboutPage() {
               Интернет‑магазин и мобильное приложение Постельное Белье‑Юг
             </h2>
             <ol className="list-decimal list-inside space-y-2 mt-4 text-base text-muted">
-              <li>Оформите заказ не выходя из дома через сайт или мобильное приложение.</li>
+              <li>Оформите заказ не выходя из дома через сайт.</li>
               <li>Платите удобным для вас способом — онлайн или при получении.</li>
               <li>
                 Воспользуйтесь системой быстрых платежей (СБП) или оплатите заказ частями без
