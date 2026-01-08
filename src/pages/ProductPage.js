@@ -216,7 +216,7 @@ function ProductPage() {
   const handlePrevImage = () => selectImageByIndex(activeImageIndex - 1);
 
   return (
-    <div className="product-page py-10 pb-24">
+    <div className="product-page py-6 sm:py-10 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
       <div className="container mx-auto px-4">
         <nav className="text-xs text-muted mb-5">
           <Link to="/" className="hover:text-primary">Главная</Link> /{' '}
@@ -224,14 +224,16 @@ function ProductPage() {
           <span className="text-ink">{product.name}</span>
         </nav>
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+        <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
           <div>
-            <div className="relative w-full aspect-[4/5] rounded-[32px] overflow-hidden border border-white/80 shadow-xl bg-gradient-to-br from-secondary to-white">
+            <div className="relative w-full aspect-[1/1] sm:aspect-[4/5] rounded-3xl sm:rounded-[32px] overflow-hidden border border-white/80 shadow-xl bg-gradient-to-br from-secondary to-white">
               {mainImage ? (
                 <img
                   src={mainImage}
                   alt={product.name}
                   className="absolute inset-0 w-full h-full object-cover"
+                  loading="eager"
+                  decoding="async"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
@@ -247,7 +249,7 @@ function ProductPage() {
                 <>
                   <button
                     type="button"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-ink rounded-full w-10 h-10 shadow border border-ink/10"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-ink rounded-full w-9 h-9 sm:w-10 sm:h-10 shadow border border-ink/10"
                     onClick={handlePrevImage}
                     aria-label="Предыдущее изображение"
                   >
@@ -255,7 +257,7 @@ function ProductPage() {
                   </button>
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-ink rounded-full w-10 h-10 shadow border border-ink/10"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-ink rounded-full w-9 h-9 sm:w-10 sm:h-10 shadow border border-ink/10"
                     onClick={handleNextImage}
                     aria-label="Следующее изображение"
                   >
@@ -265,19 +267,25 @@ function ProductPage() {
               )}
             </div>
 
-            <div className="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-2 sm:gap-3 mt-4 overflow-x-auto pb-2 -mx-1 px-1 sm:mx-0 sm:px-0 scrollbar-hide snap-x snap-mandatory">
               {(orderedImages.length > 0 ? orderedImages : [null]).map((img, idx) => (
                 <button
                   key={img ? img.id || idx : idx}
                   type="button"
                   onClick={() => selectImageByIndex(idx)}
-                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border ${
+                  className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border snap-center ${
                     idx === activeImageIndex ? 'border-primary ring-2 ring-primary/30' : 'border-ink/10'
                   } bg-secondary flex-shrink-0`}
                 >
                   {img ? (
                     <>
-                      <img src={img.url} alt={`Изображение ${idx + 1}`} className="w-full h-full object-cover" />
+                      <img
+                        src={img.url}
+                        alt={`Изображение ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
                       {img.variantId && (
                         <span className="absolute bottom-1 left-1 bg-ink/70 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                           {variantNameById[img.variantId] || 'Вариант'}
@@ -293,9 +301,9 @@ function ProductPage() {
               ))}
             </div>
 
-            <div className="mt-6 grid sm:grid-cols-3 gap-3">
+            <div className="mt-6 grid gap-2 sm:grid-cols-3 sm:gap-3">
               {highlightList.map((item) => (
-                <div key={item} className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 text-sm">
+                <div key={item} className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 text-xs sm:text-sm">
                   {item}
                 </div>
               ))}
@@ -303,9 +311,9 @@ function ProductPage() {
           </div>
 
           <div className="lg:sticky lg:top-24 h-fit">
-            <div className="soft-card p-6">
+            <div className="soft-card p-5 sm:p-6">
               <p className="text-xs uppercase tracking-[0.28em] text-muted">Бестселлер</p>
-              <h1 className="text-2xl font-semibold mt-2 mb-3">{product.name}</h1>
+              <h1 className="text-xl sm:text-2xl font-semibold mt-2 mb-3">{product.name}</h1>
               <div className="flex items-center gap-2 text-sm text-muted mb-3">
                 {rating > 0 ? (
                   <>
@@ -320,10 +328,10 @@ function ProductPage() {
                 )}
               </div>
 
-              <div className="text-primary text-2xl font-semibold mb-2">
+              <div className="text-primary text-xl sm:text-2xl font-semibold mb-2">
                 {subscriptionPrice.toLocaleString('ru-RU')} ₽
                 {oldPrice && (
-                  <span className="text-lg line-through text-muted ml-3">
+                  <span className="text-base sm:text-lg line-through text-muted ml-3">
                     {oldPrice.toLocaleString('ru-RU')} ₽
                   </span>
                 )}
@@ -443,7 +451,7 @@ function ProductPage() {
           </div>
         </div>
 
-        <div className="mt-12">
+        <div className="mt-10 sm:mt-12">
           <div className="border-b border-ink/10 flex flex-wrap gap-6 text-sm">
             <button
               onClick={() => setActiveTab('about')}
@@ -501,12 +509,12 @@ function ProductPage() {
         </div>
 
         {relatedProducts.length > 0 && (
-          <section className="mt-12">
+          <section className="mt-10 sm:mt-12">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold">Дополните набор</h2>
               <Link to="/category/popular" className="text-sm text-primary">Смотреть больше</Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {relatedProducts.map((item) => (
                 <ProductCard key={item.id} product={item} />
               ))}
@@ -515,18 +523,20 @@ function ProductPage() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 border-t border-ink/10 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center gap-3 lg:hidden z-30">
-        <div className="flex-1">
-          <p className="text-xs text-muted">Итого</p>
-          <p className="text-base font-semibold">{subscriptionPrice.toLocaleString('ru-RU')} ₽</p>
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 border-t border-ink/10 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden z-30">
+        <div className="container mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="flex-1">
+            <p className="text-xs text-muted">Итого</p>
+            <p className="text-base font-semibold">{subscriptionPrice.toLocaleString('ru-RU')} ₽</p>
+          </div>
+          <button
+            className="button flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleAddToCart}
+            disabled={availableStock <= 0}
+          >
+            В корзину
+          </button>
         </div>
-        <button
-          className="button flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={handleAddToCart}
-          disabled={availableStock <= 0}
-        >
-          В корзину
-        </button>
       </div>
     </div>
   );

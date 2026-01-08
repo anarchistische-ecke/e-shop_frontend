@@ -15,13 +15,32 @@ const inferImageBase = () => {
 
 const IMAGE_BASE = inferImageBase().replace(/\/$/, '');
 
+const normalizeAssetUrl = (value = '') => {
+  const trimmed = String(value).trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+  let next = trimmed;
+  if (
+    typeof window !== 'undefined' &&
+    window.location?.protocol === 'https:' &&
+    next.startsWith('http://')
+  ) {
+    next = `https://${next.slice('http://'.length)}`;
+  }
+  return encodeURI(next);
+};
+
 export function resolveImageUrl(value = '') {
   if (!value) return '';
-  if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) {
-    return value;
+  const raw = String(value).trim();
+  if (!raw) return '';
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:')) {
+    return normalizeAssetUrl(raw);
   }
-  if (!IMAGE_BASE) return value;
-  return `${IMAGE_BASE}/${String(value).replace(/^\//, '')}`;
+  if (!IMAGE_BASE) return normalizeAssetUrl(raw);
+  return normalizeAssetUrl(`${IMAGE_BASE}/${raw.replace(/^\//, '')}`);
 }
 
 /**
