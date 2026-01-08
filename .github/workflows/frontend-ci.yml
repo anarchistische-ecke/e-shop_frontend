@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  DEPLOY_PREFIX: site
+  DEPLOY_PREFIX: home
 
 jobs:
   build:
