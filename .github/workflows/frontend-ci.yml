@@ -48,13 +48,11 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Configure AWS credentials (Yandex Cloud Object Storage)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.YC_OS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.YC_OS_SECRET_ACCESS_KEY }}
-          aws-region: ru-central1
-
       - name: Upload to Object Storage
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_OS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_OS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ru-central1
+          AWS_EC2_METADATA_DISABLED: "true"
         run: |
           aws s3 sync build s3://${{ secrets.YC_OS_BUCKET }}/ --endpoint-url https://storage.yandexcloud.net --delete
