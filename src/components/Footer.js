@@ -14,81 +14,127 @@ function Footer() {
   const currentYear = new Date().getFullYear();
   const groups = [
     {
-      title: 'Все о Постельное Белье‑Юг',
+      title: 'Каталог',
       links: [
+        { label: 'Бестселлеры', path: '/category/popular' },
+        { label: 'Новинки', path: '/category/new' },
+        { label: 'Коллекции', path: '/category/collections' },
+        { label: 'Подарки до 5000 ₽', path: '/category/popular' },
+      ],
+    },
+    {
+      title: 'Сервис',
+      links: [
+        { label: 'Доставка и самовывоз', path: '/info/delivery' },
+        { label: 'Способы оплаты', path: '/info/payment' },
+        { label: 'Бонусы и лояльность', path: '/info/bonuses' },
+        { label: 'Производство', path: '/info/production' },
         { label: 'О компании', path: '/about' },
-        { label: 'Блог', path: '/blog' },
-        { label: 'Акции и новости', path: '/news' },
       ],
     },
     {
-      title: 'Покупателям',
+      title: 'Аккаунт',
       links: [
-        { label: 'Доставка и самовывоз', path: '/shipping' },
-        { label: 'Пункты выдачи заказов', path: '/pickup' },
-        { label: 'Способы оплаты', path: '/payment' },
-        { label: 'Возврат товара', path: '/returns' },
-        { label: 'Таблица размеров', path: '/sizes' },
-        { label: 'Подарочные сертификаты', path: '/giftcards' },
-        { label: 'Программа лояльности', path: '/loyalty' },
-      ],
-    },
-    {
-      title: 'Свяжитесь с нами',
-      links: [
-        { label: 'Контакты', path: '/contact' },
-        { label: 'Адреса магазинов', path: '/stores' },
-        { label: 'Поставщикам', path: '/suppliers' },
+        { label: 'Войти', path: '/login' },
+        { label: 'Личный кабинет', path: '/account' },
+        { label: 'Корзина', path: '/cart' },
       ],
     },
   ];
+  const pressLogos = ['Vogue', 'AD', 'ELLE Decor', 'Forbes', 'Dom & Interior'];
 
   return (
-    <footer className="bg-white border-t border-gray-200 py-8">
-      <div className="container mx-auto px-4 flex flex-wrap gap-8">
-        {/* Link groups */}
-        {groups.map((grp) => (
-          <div key={grp.title} className="flex-1 min-w-[150px]">
-            <h4 className="font-semibold mt-0 mb-2">{grp.title}</h4>
-            <ul className="space-y-2">
-              {grp.links.map((link) => (
-                <li key={link.label}>
-                  {/* Use Link for internal navigation when possible */}
-                  {link.path.startsWith('/') ? (
-                    <Link to={link.path} className="hover:text-primary">
-                      {link.label}
-                    </Link>
-                  ) : (
-                    <a href="#" className="hover:text-primary">
-                      {link.label}
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ul>
+    <footer className="bg-white/80 border-t border-ink/10">
+      <div className="container mx-auto px-4 py-12 grid gap-10 lg:grid-cols-[1.3fr_1fr_1fr]">
+        <div className="space-y-4">
+          <Link to="/" className="font-display text-2xl font-semibold text-ink">
+            Постельное Белье-Юг
+          </Link>
+          <p className="text-sm text-muted max-w-sm">
+            Спокойный дом начинается с мягких тканей. Мы подбираем натуральные материалы, чтобы
+            отдых был таким же уютным, как объятия любимого пледа.
+          </p>
+          <div className="space-y-2 text-sm text-ink">
+            <p className="m-0">Телефон: +7 (999) 123‑45‑67</p>
+            <p className="m-0">Почта: hello@cozyhome.ru</p>
+            <p className="m-0">Ежедневно, 9:00–21:00</p>
           </div>
-        ))}
-        {/* Newsletter subscription */}
-        <div className="flex-1 min-w-[260px]">
-          <h4 className="font-semibold mt-0 mb-2">Подпишитесь на новости Постельное Белье‑Юг</h4>
-          <p className="mb-4">Будьте в курсе новинок и специальных предложений.</p>
-          <form onSubmit={(e) => e.preventDefault()} className="flex gap-2">
-            <input
-              type="email"
-              placeholder="Ваш e‑mail"
-              required
-              className="flex-1 p-2 border border-gray-300 rounded"
-            />
-            <button type="submit" className="button whitespace-nowrap">
-              Отправить
-            </button>
-          </form>
+          <div className="flex flex-wrap gap-2 text-xs text-muted">
+            <span className="rounded-full bg-white/80 border border-ink/10 px-3 py-1">
+              365‑дневная гарантия счастья
+            </span>
+            <span className="rounded-full bg-white/80 border border-ink/10 px-3 py-1">
+              Бесплатная доставка от 5000 ₽
+            </span>
+          </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          {groups.map((grp) => (
+            <div key={grp.title} className="space-y-3">
+              <h4 className="font-semibold mt-0">{grp.title}</h4>
+              <ul className="space-y-2 text-sm text-muted">
+                {grp.links.map((link) => (
+                  <li key={link.label}>
+                    {link.path.startsWith('/') ? (
+                      <Link to={link.path} className="hover:text-primary">
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a href="#" className="hover:text-primary">
+                        {link.label}
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-semibold mt-0 mb-2">Скидка 10% на первый заказ</h4>
+            <p className="text-sm text-muted mb-4">
+              Подписка на письма о новинках, мягких подборках и сезонных подарках.
+            </p>
+            <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="email"
+                placeholder="Ваш e‑mail"
+                required
+                className="flex-1"
+              />
+              <button type="submit" className="button whitespace-nowrap">
+                Подписаться
+              </button>
+            </form>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-muted mb-2">As Seen In</p>
+            <div className="flex flex-wrap gap-2">
+              {pressLogos.map((logo) => (
+                <span
+                  key={logo}
+                  className="rounded-full border border-ink/10 bg-white/80 px-3 py-1 text-xs text-ink"
+                >
+                  {logo}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-      {/* Bottom bar */}
-      <div className="border-t border-gray-200 mt-8 pt-4">
-        <div className="container mx-auto px-4 flex flex-wrap justify-center items-center">
-          <p className="m-0 text-center">© Постельное Белье‑Юг, 2015–{currentYear}</p>
+
+      <div className="border-t border-ink/10 py-4">
+        <div className="container mx-auto px-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+          <p className="m-0">© Постельное Белье‑Юг, 2015–{currentYear}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Mir</span>
+            <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Visa</span>
+            <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Mastercard</span>
+            <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Apple Pay</span>
+          </div>
         </div>
       </div>
     </footer>

@@ -1,25 +1,34 @@
-/**
- * Sample customer reviews associated with specific products.  Each
- * review includes a name and some placeholder text.  The rating
- * property can be used to render star ratings if desired.
- */
 export const reviews = [
   {
-    productId: 'p1',
-    author: 'Анна',
+    productId: 'set-cinque',
     rating: 5,
-    text: 'Комплект превзошёл ожидания: ткань очень приятная, цвет соответствует описанию, швы ровные.'
+    text: 'Постельное бельё плотное, но гладкое. После стирки не село и цвет остался нежным.',
+    author: 'Анна К.'
   },
   {
-    productId: 'p3',
-    author: 'Игорь',
+    productId: 'throw-tweed',
     rating: 4,
-    text: 'Яркий принт нравится ребёнку, однако хотелось бы больше вариантов размера.'
+    text: 'Очень мягкий плед, подходит для дивана. Хотелось бы чуть плотнее, но в целом супер.',
+    author: 'Ирина Л.'
   },
   {
-    productId: 'p9',
-    author: 'Лейсан',
+    productId: 'towel-cloud',
     rating: 5,
-    text: 'Набор посуды отлично подошёл для нашей семьи: всё аккуратно и красиво упаковано.'
+    text: 'Полотенца действительно быстро сохнут и приятные на ощупь. Хороший набор в ванную.',
+    author: 'Ольга В.'
+  },
+  {
+    productId: 'kids-stars',
+    rating: 5,
+    text: 'Детям понравился рисунок, ткань не электризуется и легко гладится.',
+    author: 'Марина П.'
+  },
+  {
+    productId: 'candle-amber',
+    rating: 4,
+    text: 'Аромат тёплый и не слишком сладкий, отлично для вечера. Банка выглядит аккуратно.',
+    author: 'Светлана С.'
   }
 ];
+
+export default reviews;

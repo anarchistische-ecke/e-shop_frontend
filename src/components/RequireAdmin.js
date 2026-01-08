@@ -1,18 +1,28 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
-/**
- * RequireAdmin checks whether the admin user is authenticated by
- * examining a flag in localStorage.  If the flag is missing the user
- * is redirected to the admin login page.  When authentication is
- * implemented on the server this check should instead query your
- * authentication context or decode a JWT.
- */
 function RequireAdmin({ children }) {
   const location = useLocation();
-  const isAuth = typeof window !== 'undefined' && localStorage.getItem('adminAuth') === 'true';
-  if (!isAuth) {
-    return <Navigate to="/admin/login" state={{ from: location.pathname }} replace />;
+  const { isReady, isAuthenticated, hasRole } = useAuth();
+  const adminRole = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE || 'admin';
+  const adminRoleClient = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE_CLIENT || '';
+  const isAdmin = isAuthenticated && (adminRoleClient
+    ? hasRole(adminRole, { clientId: adminRoleClient })
+    : hasRole(adminRole));
+
+  if (!isReady) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Navigate to="/admin/login" state={{ from: location.pathname }} replace />
+    );
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
   }
   return children;
 }

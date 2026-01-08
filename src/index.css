@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
 /* Tailwind CSS base styles */
 @tailwind base;
 @tailwind components;
@@ -5,16 +7,178 @@
 
 /* Custom overrides and utility classes can be added here if needed. */
 
+:root {
+  --site-header-height: 6.5rem;
+  --catalog-cream: 250 246 240;
+  --catalog-sand: 236 227 216;
+  --catalog-rose: 199 171 150;
+  --catalog-mocha: 153 124 104;
+  --catalog-ink: 44 38 34;
+  --tone-sage: 204 217 210;
+  --tone-sky: 214 226 227;
+  --tone-blush: 243 232 223;
+  --font-display: 'Fraunces', 'Times New Roman', serif;
+  --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background:
+    radial-gradient(circle at 12% 18%, rgba(199, 171, 150, 0.18), transparent 38%),
+    radial-gradient(circle at 88% 6%, rgba(214, 226, 223, 0.22), transparent 36%),
+    radial-gradient(circle at 80% 80%, rgba(243, 232, 223, 0.28), transparent 40%),
+    linear-gradient(180deg, #fbf8f4 0%, #f5eee6 55%, #f8f1ea 100%);
+  color: #2c2622;
+  min-height: 100%;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@layer base {
+  body {
+    @apply text-[15px] md:text-[16px] leading-relaxed;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+
+  h5, h6 {
+    font-family: var(--font-display);
+  }
+
+  :where(
+    input:not([type='checkbox']):not([type='radio']):not([type='file']),
+    select,
+    textarea
+  ) {
+    @apply bg-white/90 border border-ink/10 rounded-xl px-4 py-2.5 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition;
+  }
+
+  :where(textarea) {
+    @apply leading-relaxed;
+  }
+
+  ::selection {
+    background: rgba(176, 124, 99, 0.22);
+  }
+}
+
+@media (max-width: 640px) {
+  :where(
+    input:not([type='checkbox']):not([type='radio']):not([type='file']),
+    select,
+    textarea
+  ) {
+    font-size: 16px;
+  }
+}
+
 /* Define reusable component classes using Tailwind's @layer directive.  The
    `.button` class creates a consistent button style across the app with our
    custom colour palette. */
 @layer components {
   .button {
-    /* Main action button with subtle scaling on hover/click for feedback */
-    @apply inline-block bg-primary text-white py-2 px-4 rounded hover:bg-accent transition-colors duration-200 transition-transform transform hover:scale-105 active:scale-95;
+    /* Main action button with subtle lift and warm shadow */
+    @apply inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(176,124,99,0.28)] hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-[0_18px_32px_rgba(176,124,99,0.3)] transition-all duration-200;
   }
   .button-gray {
     /* A secondary button variant used for less prominent actions. */
-    @apply inline-block bg-muted text-white py-2 px-4 rounded hover:bg-gray-600 transition-colors duration-200 transition-transform transform hover:scale-105 active:scale-95;
+    @apply inline-flex items-center justify-center rounded-full bg-white text-ink border border-ink/10 px-5 py-3 text-sm font-semibold shadow-sm hover:border-primary/40 hover:text-primary hover:-translate-y-0.5 transition-all duration-200;
   }
+  .button-ghost {
+    @apply inline-flex items-center justify-center rounded-full border border-transparent px-4 py-2 text-sm font-semibold text-ink hover:bg-white/70 hover:border-ink/10 transition;
+  }
+  .catalog-hero {
+    background:
+      radial-gradient(circle at 18% 18%, rgba(var(--catalog-rose), 0.24), transparent 55%),
+      radial-gradient(circle at 85% 6%, rgba(var(--tone-sky), 0.32), transparent 50%),
+      linear-gradient(140deg, rgba(var(--catalog-cream), 0.98), rgba(255, 255, 255, 0.92));
+  }
+  .catalog-panel {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 24px 50px rgba(58, 40, 30, 0.08);
+  }
+  .ambient-panel {
+    background:
+      radial-gradient(circle at 10% 15%, rgba(var(--catalog-rose), 0.2), transparent 55%),
+      radial-gradient(circle at 90% 8%, rgba(var(--tone-sage), 0.2), transparent 50%),
+      linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(var(--catalog-sand), 0.95));
+  }
+  .soft-card {
+    @apply rounded-3xl border border-white/80 bg-white/80 shadow-[0_20px_50px_rgba(58,40,30,0.08)];
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .reveal-up {
+    animation: revealUp 0.6s ease-out both;
+  }
+  .float-slow {
+    animation: floatSlow 10s ease-in-out infinite;
+  }
+  .slide-up-panel {
+    animation: slideUp 0.35s ease-out both;
+  }
+}
+
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-up,
+  .float-slow,
+  .slide-up-panel {
+    animation: none !important;
+  }
+}
+
+/* Hide scrollbars on horizontal scrollers used in navigation and product carousels */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }

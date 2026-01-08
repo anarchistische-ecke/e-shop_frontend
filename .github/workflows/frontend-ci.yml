@@ -1,0 +1,60 @@
+name: frontend-ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and build
+        run: |
+          npm run build --if-present
+          npm test --if-present -- --watch=false
+
+  deploy:
+    needs: build
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS credentials (Yandex Cloud Object Storage)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.YC_OS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.YC_OS_SECRET_ACCESS_KEY }}
+          aws-region: ru-central1
+
+      - name: Upload to Object Storage
+        run: |
+          aws s3 sync build s3://${{ secrets.YC_OS_BUCKET }}/ --endpoint-url https://storage.yandexcloud.net --delete

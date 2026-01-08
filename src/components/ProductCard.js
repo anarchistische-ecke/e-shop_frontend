@@ -1,89 +1,142 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
+import { reviews } from '../data/reviews';
+import { getPrimaryVariant, getPrimaryImageUrl, getProductPrice, moneyToNumber } from '../utils/product';
 
 /**
- * Reusable card component to display a single product summary.  The
- * layout roughly follows the cards on the original site: a top image
- * area, pricing information with current and old prices, the
- * product name and a simplified star rating.  Clicking the card
- * navigates to the product details page.
+ * ProductCard displays a product summary with pricing, rating and an
+ * add‑to‑cart button.  It gracefully handles both primitive price
+ * values and Money objects returned by the backend.  When a user
+ * clicks the cart icon the product is added to the cart via the
+ * CartContext.
  */
+const reviewStats = reviews.reduce((acc, review) => {
+  const entry = acc[review.productId] || { total: 0, count: 0 };
+  entry.total += review.rating;
+  entry.count += 1;
+  acc[review.productId] = entry;
+  return acc;
+}, {});
+
 function ProductCard({ product }) {
-  // Compute discount percentage if both prices are provided
-  const discount = product.oldPrice
-    ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
+  const primaryVariant = getPrimaryVariant(product);
+  const currentPrice = primaryVariant?.price
+    ? moneyToNumber(primaryVariant.price)
+    : getProductPrice(product);
+  const oldPrice = product.oldPrice ? moneyToNumber(product.oldPrice) : null;
+  const discount = oldPrice
+    ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
     : null;
+  const imageUrl = getPrimaryImageUrl(product);
+  const rating = product.rating || 0;
+  const reviewCount =
+    product.reviewCount ??
+    product.reviewsCount ??
+    product.reviews_count ??
+    reviewStats[product.id]?.count ??
+    0;
+  const derivedRating = reviewStats[product.id]?.count
+    ? reviewStats[product.id].total / reviewStats[product.id].count
+    : rating;
+  const displayRating = derivedRating || rating;
+
+  const getStockCount = () => {
+    if (!product) return 0;
+    if (product.stock !== undefined || product.stockQuantity !== undefined) {
+      return Number(product.stock ?? product.stockQuantity ?? 0);
+    }
+    const variants = Array.isArray(product.variants) ? product.variants : Array.from(product.variants || []);
+    return variants.reduce(
+      (sum, variant) => sum + Number(variant?.stock ?? variant?.stockQuantity ?? 0),
+      0
+    );
+  };
+
+  const stockCount = getStockCount();
+  const isLowStock = stockCount > 0 && stockCount <= 3;
 
   return (
-    <div className="product-card border border-gray-200 rounded bg-white flex flex-col overflow-hidden transition-transform transform hover:shadow-lg hover:-translate-y-1">
-      <Link
-        to={`/product/${product.id}`}
-        className="block relative pt-[66.66%]"
-      >
-        {/* Placeholder image fills the card area using absolute positioning */}
-        <div className="absolute inset-0 bg-[#e9e7e3]"></div>
-      </Link>
-      <div className="p-2 flex flex-col flex-1">
-        {/* Price row */}
-        <div className="flex items-baseline gap-2">
-          <span className="text-primary font-semibold">
-            {product.price.toLocaleString('ru-RU')} ₽
-          </span>
-          {product.oldPrice && (
-            <span className="line-through text-muted text-sm">
-              {product.oldPrice.toLocaleString('ru-RU')} ₽
-            </span>
+    <div className="product-card group border border-ink/10 rounded-3xl bg-white/90 flex flex-col overflow-hidden transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(44,38,34,0.12)]">
+      <Link to={`/product/${product.id}`} className="block relative pt-[72%] overflow-hidden">
+        <div className="absolute inset-0">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={product.name}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-secondary to-white flex items-center justify-center text-muted text-sm">
+              Нет фото
+            </div>
           )}
+        </div>
+        <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
           {discount && (
-            <span className="bg-primary text-white text-xs px-1 rounded">
+            <span className="bg-primary text-white text-xs px-3 py-1 rounded-full shadow">
               −{discount}%
             </span>
           )}
+          {isLowStock && (
+            <span className="ml-auto bg-white/90 text-ink text-xs px-3 py-1 rounded-full border border-ink/10 shadow-sm">
+              Осталось {stockCount}
+            </span>
+          )}
         </div>
-        {/* Product name */}
-        <h5 className="mt-2 mb-1 text-sm font-medium flex-1">
-          {product.name}
-        </h5>
-        {/* Rating and add to cart button */}
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-primary">
-            {'★'.repeat(Math.round(product.rating))}
-            {'☆'.repeat(5 - Math.round(product.rating))}
-            <span className="ml-1 text-muted">{product.rating.toFixed(1)}</span>
+      </Link>
+      <div className="p-4 flex flex-col flex-1 gap-2">
+        <h5 className="text-base font-semibold leading-snug">{product.name}</h5>
+        <div className="flex items-center gap-2 text-sm text-muted">
+          {displayRating > 0 ? (
+            <>
+              <span className="text-primary">
+                {'★'.repeat(Math.round(displayRating))}
+                {'☆'.repeat(5 - Math.round(displayRating))}
+              </span>
+              <span className="text-ink/70">{displayRating.toFixed(1)}</span>
+              <span className="text-ink/50">({reviewCount})</span>
+            </>
+          ) : (
+            <span className="text-ink/50">Нет отзывов</span>
+          )}
+        </div>
+        <div className="mt-auto flex items-center justify-between">
+          <div className="flex items-baseline gap-2">
+            <span className="text-primary font-semibold">
+              {currentPrice.toLocaleString('ru-RU')} ₽
+            </span>
+            {oldPrice && (
+              <span className="line-through text-muted text-sm">
+                {oldPrice.toLocaleString('ru-RU')} ₽
+              </span>
+            )}
           </div>
-          <AddToCartButton product={product} />
+          <AddToCartButton product={product} variantId={primaryVariant?.id} />
         </div>
       </div>
     </div>
   );
 }
 
-/**
- * Separate component used to hook into the CartContext.  Splitting
- * into its own function avoids recreating the context reference on
- * each card render and keeps the JSX in ProductCard cleaner.
- */
-function AddToCartButton({ product }) {
+function AddToCartButton({ product, variantId }) {
   const { addItem } = useContext(CartContext);
   const [isBouncing, setIsBouncing] = React.useState(false);
 
   const handleClick = (e) => {
     e.preventDefault();
-    addItem(product);
-    // Trigger a temporary bounce animation
+    addItem(product, variantId);
     setIsBouncing(true);
     setTimeout(() => setIsBouncing(false), 500);
   };
 
   return (
     <button
-      className={`add-to-cart-btn bg-primary text-white px-2 py-1 rounded transition-transform transform hover:scale-105 active:scale-95 ${
-        isBouncing ? 'animate-bounce' : ''
-      }`}
+      className={`add-to-cart-btn inline-flex items-center gap-1 rounded-full bg-ink text-white px-3 py-2 text-xs font-semibold shadow-sm transition-transform transform hover:scale-105 active:scale-95 ${isBouncing ? 'animate-bounce' : ''}`}
       onClick={handleClick}
     >
-      🛒
+      <span>В корзину</span>
     </button>
   );
 }
