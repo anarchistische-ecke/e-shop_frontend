@@ -7,6 +7,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  DEPLOY_PREFIX: site
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,6 +27,9 @@ jobs:
         run: npm ci
 
       - name: Lint and build
+        env:
+          PUBLIC_URL: /${{ env.DEPLOY_PREFIX }}
+          REACT_APP_BASENAME: /${{ env.DEPLOY_PREFIX }}
         run: |
           npm run build --if-present
           npm test --if-present -- --watch=false --passWithNoTests
@@ -46,6 +52,9 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          PUBLIC_URL: /${{ env.DEPLOY_PREFIX }}
+          REACT_APP_BASENAME: /${{ env.DEPLOY_PREFIX }}
         run: npm run build
 
       - name: Upload to Object Storage
@@ -55,4 +64,43 @@ jobs:
           AWS_DEFAULT_REGION: ru-central1
           AWS_EC2_METADATA_DISABLED: "true"
         run: |
-          aws s3 sync build s3://${{ secrets.YC_OS_BUCKET }}/ --endpoint-url https://storage.yandexcloud.net --delete
+          aws s3 sync build s3://${{ secrets.YC_OS_BUCKET }}/${DEPLOY_PREFIX}/ --endpoint-url https://storage.yandexcloud.net --delete
+          cat > /tmp/index.html <<EOF
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <title>Redirecting...</title>
+              <script>
+                (function () {
+                  var prefix = "/${DEPLOY_PREFIX}";
+                  var path = window.location.pathname || "/";
+                  if (path.indexOf(prefix) !== 0) {
+                    var target = prefix + path;
+                    if (target === prefix) target = prefix + "/";
+                    window.location.replace(target + window.location.search + window.location.hash);
+                    return;
+                  }
+                  var targetIndex = prefix + "/index.html";
+                  fetch(targetIndex, { cache: "no-store" })
+                    .then(function (res) {
+                      if (!res.ok) throw new Error("index fetch failed");
+                      return res.text();
+                    })
+                    .then(function (html) {
+                      document.open();
+                      document.write(html);
+                      document.close();
+                    })
+                    .catch(function () {
+                      window.location.replace(targetIndex);
+                    });
+                })();
+              </script>
+            </head>
+            <body>
+              Redirecting to <a href="/${DEPLOY_PREFIX}/">site</a>...
+            </body>
+          </html>
+          EOF
+          aws s3 cp /tmp/index.html s3://${{ secrets.YC_OS_BUCKET }}/index.html --endpoint-url https://storage.yandexcloud.net --content-type text/html --cache-control "no-cache"
