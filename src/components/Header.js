@@ -131,25 +131,6 @@ function Header() {
 
   return (
     <header ref={headerRef} className="fixed top-0 left-0 right-0 z-30">
-      <div className="bg-white/80 backdrop-blur border-b border-ink/10">
-        <div className="container mx-auto px-4 py-1.5 flex items-center justify-between gap-2 text-[11px] sm:text-xs text-muted">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <span className="inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-white/80 px-3 py-1 border border-ink/5">
-              🚚 Бесплатная доставка от 5000 ₽
-            </span>
-            <span className="inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-white/80 px-3 py-1 border border-ink/5">
-              ↺ 365 дней на возврат
-            </span>
-            <span className="hidden md:inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-white/80 px-3 py-1 border border-ink/5">
-              ⭐ 150k+ отзывов на 5 звёзд
-            </span>
-          </div>
-          <Link to="/info/delivery" className="hidden sm:inline-flex button-ghost text-xs">
-            Помощь
-          </Link>
-        </div>
-      </div>
-
       <div className="bg-white/95 backdrop-blur border-b border-ink/10 shadow-sm">
         <div className="container mx-auto px-4 flex flex-col gap-3 py-2 sm:py-3">
           <div className="flex items-center justify-between gap-3 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">

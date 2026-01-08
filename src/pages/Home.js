@@ -68,11 +68,6 @@ function Home() {
     },
   ];
 
-  const trustMetrics = [
-    { title: '150k+', subtitle: '5‑звёздочных отзывов от покупателей' },
-    { title: 'Oeko‑Tex', subtitle: 'Сертифицированные ткани без раздражителей' },
-    { title: '4.9', subtitle: 'Средняя оценка качества по опросам' },
-  ];
 
   const seasonalTiles = [
     {
@@ -223,17 +218,6 @@ function Home() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 pb-10">
-        <div className="grid gap-4 md:grid-cols-3">
-          {trustMetrics.map((metric) => (
-            <div key={metric.title} className="soft-card px-6 py-5">
-              <p className="text-2xl font-semibold text-ink">{metric.title}</p>
-              <p className="text-sm text-muted">{metric.subtitle}</p>
-            </div>
-          ))}
         </div>
       </section>
 
