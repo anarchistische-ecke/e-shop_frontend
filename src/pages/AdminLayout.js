@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { notifyAuthChange } from '../utils/auth';
+import { NavLink, Outlet } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 function AdminLayout() {
-  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    notifyAuthChange({ type: 'admin', action: 'logout' });
-    navigate('/');
+    if (typeof window === 'undefined') {
+      logout();
+      return;
+    }
+    logout({ redirectUri: window.location.origin });
   };
 
   const navItems = [
@@ -41,12 +43,14 @@ function AdminLayout() {
             type="button"
             aria-label="Открыть меню"
             onClick={() => setMobileNavOpen(true)}
-            className="inline-flex items-center justify-center rounded border border-gray-200 p-2"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
           >
             <span className="sr-only">Открыть меню</span>
-            <span className="block w-5 h-0.5 bg-gray-800 mb-1" />
-            <span className="block w-5 h-0.5 bg-gray-800 mb-1" />
-            <span className="block w-5 h-0.5 bg-gray-800" />
+            <span className="flex items-center gap-1.5">
+              <span className="block h-1.5 w-1.5 rounded-full bg-primary" />
+              <span className="block h-1.5 w-1.5 rounded-full bg-primary" />
+              <span className="block h-1.5 w-1.5 rounded-full bg-primary" />
+            </span>
           </button>
           <div className="text-sm font-semibold">Администрирование</div>
           <button

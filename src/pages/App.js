@@ -7,6 +7,7 @@ import Home from './Home';
 import CategoryPage from './CategoryPage';
 import ProductPage from './ProductPage';
 import CartPage from './CartPage';
+import CheckoutPage from './CheckoutPage';
 import LoginPage from './LoginPage';
 import AccountPage from './AccountPage';
 import AdminLoginPage from './AdminLoginPage';
@@ -29,6 +30,7 @@ import PaymentInfoPage from './PaymentInfoPage';
 import DeliveryInfoPage from './DeliveryInfoPage';
 import BonusesInfoPage from './BonusesInfoPage';
 import ProductionInfoPage from './ProductionInfoPage';
+import OrderPage from './OrderPage';
 import NotFound from './NotFound';
 
 function App() {
@@ -40,10 +42,11 @@ function App() {
       <ScrollToTop />
       {!isAdminRoute && <Header />}
       <main
-        className={
+        className={isAdminRoute ? 'min-h-screen' : 'min-h-[80vh]'}
+        style={
           isAdminRoute
-            ? 'min-h-screen'
-            : 'min-h-[80vh] mt-32 md:mt-28 lg:mt-24'
+            ? undefined
+            : { paddingTop: 'var(--site-header-height, 7rem)' }
         }
       >
         <Routes>
@@ -52,8 +55,10 @@ function App() {
           <Route path="/category/:slug" element={<CategoryPage />} />
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/order/:token" element={<OrderPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/info/payment" element={<PaymentInfoPage />} />
           <Route path="/info/delivery" element={<DeliveryInfoPage />} />

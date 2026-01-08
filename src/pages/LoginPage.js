@@ -1,46 +1,35 @@
 import React, { useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { loginCustomer } from '../api';
-import { notifyAuthChange } from '../utils/auth';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 function LoginPage() {
-  const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = location.state?.from || '/';
+  const { isAuthenticated, isReady, isConfigured, login } = useAuth();
 
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const yandexAuthUrl = useMemo(() => {
-    const clientId = process.env.REACT_APP_YANDEX_CLIENT_ID || '';
-    const redirectUri =
-      process.env.REACT_APP_YANDEX_REDIRECT_URI || `${window.location.origin}/oauth/yandex/callback`;
-    return clientId
-      ? `https://oauth.yandex.ru/authorize?response_type=token&client_id=${encodeURIComponent(
-          clientId
-        )}&redirect_uri=${encodeURIComponent(redirectUri)}`
-      : null;
-  }, []);
+  const yandexIdp = useMemo(
+    () => process.env.REACT_APP_KEYCLOAK_IDP_YANDEX || 'yandex',
+    []
+  );
+  const vkIdp = useMemo(
+    () => process.env.REACT_APP_KEYCLOAK_IDP_VK || 'vk',
+    []
+  );
 
-  const vkAuthUrl = useMemo(() => {
-    const clientId = process.env.REACT_APP_VK_CLIENT_ID || '';
-    const redirectUri =
-      process.env.REACT_APP_VK_REDIRECT_URI || `${window.location.origin}/oauth/vk/callback`;
-    return clientId
-      ? `https://oauth.vk.com/authorize?client_id=${encodeURIComponent(
-          clientId
-        )}&display=page&redirect_uri=${encodeURIComponent(
-          redirectUri
-        )}&response_type=token&v=5.199&scope=email`
-      : null;
-  }, []);
+  const safeRedirectPath = (path) => {
+    if (typeof path !== 'string') return '/';
+    if (!path.startsWith('/') || path.startsWith('//')) return '/';
+    return path;
+  };
 
-  const handleAuthSuccess = (message) => {
-    notifyAuthChange({ type: 'user', action: 'login' });
-    setStatus({ type: 'success', message });
-    navigate(redirectTo, { replace: true });
+  const buildRedirectUri = () => {
+    if (typeof window === 'undefined') return undefined;
+    const safePath = safeRedirectPath(redirectTo);
+    return `${window.location.origin}${safePath}`;
   };
 
   const handlePasswordSubmit = async (e) => {
@@ -48,37 +37,63 @@ function LoginPage() {
     setIsSubmitting(true);
     setStatus(null);
     try {
-      const result = await loginCustomer(email, password);
-      localStorage.setItem('userToken', result.token);
-      handleAuthSuccess('Вход выполнен по почте и паролю');
+      if (!isConfigured) {
+        throw new Error('Keycloak is not configured');
+      }
+      await login({
+        redirectUri: buildRedirectUri(),
+        loginHint: email || undefined,
+        prompt: 'login'
+      });
     } catch (err) {
-      console.error('Failed to login customer:', err);
-      setStatus({ type: 'error', message: 'Не удалось войти. Проверьте почту и пароль.' });
+      console.error('Failed to start Keycloak login:', err);
+      setStatus({
+        type: 'error',
+        message: 'Не удалось открыть страницу входа. Проверьте настройки Keycloak.'
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const redirectToProvider = (provider) => {
-    const url = provider === 'yandex' ? yandexAuthUrl : vkAuthUrl;
-    if (!url) {
+  const redirectToProvider = async (provider) => {
+    const idpHint = provider === 'yandex' ? yandexIdp : vkIdp;
+    if (!idpHint) {
       setStatus({
         type: 'error',
-        message: 'OAuth настроен не полностью. Проверьте client id/redirect uri.'
+        message: 'Провайдер входа не настроен. Проверьте alias в Keycloak.'
       });
       return;
     }
-    window.location.href = url;
+    try {
+      if (!isConfigured) {
+        throw new Error('Keycloak is not configured');
+      }
+      await login({
+        redirectUri: buildRedirectUri(),
+        idpHint
+      });
+    } catch (err) {
+      console.error('Failed to start social login:', err);
+      setStatus({
+        type: 'error',
+        message: 'Не удалось открыть страницу входа. Проверьте настройки Keycloak.'
+      });
+    }
   };
+
+  if (isReady && isAuthenticated) {
+    return <Navigate to={safeRedirectPath(redirectTo)} replace />;
+  }
 
   return (
     <div className="login-page py-10">
       <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto bg-white/80 border border-primary/20 shadow-xl rounded-2xl p-6 md:p-8">
+        <div className="max-w-4xl mx-auto soft-card p-6 md:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div>
               <p className="text-sm uppercase tracking-[0.2em] text-accent">Вход в аккаунт</p>
-              <h1 className="text-3xl font-semibold">Выберите удобный способ авторизации</h1>
+              <h1 className="text-2xl sm:text-3xl font-semibold">Выберите удобный способ авторизации</h1>
               <p className="text-muted text-sm mt-1">
                 Мы поддерживаем почту с паролем, Yandex ID и VK ID.
               </p>
@@ -99,12 +114,17 @@ function LoginPage() {
               {status.message}
             </div>
           )}
+          {!isConfigured && (
+            <div className="mb-6 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
+              Keycloak не настроен. Заполните переменные окружения и перезапустите приложение.
+            </div>
+          )}
 
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="p-5 border border-secondary rounded-xl bg-white shadow-sm">
+            <div className="p-5 border border-ink/10 rounded-2xl bg-white/90 shadow-sm">
               <h2 className="text-xl font-semibold mb-2">По e‑mail и паролю</h2>
               <p className="text-sm text-muted mb-4">
-                Классический вход, подходит для клиентов без социальных аккаунтов.
+                Вы перейдёте на защищённую страницу Keycloak и введёте пароль там.
               </p>
               <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
                 <div>
@@ -112,30 +132,22 @@ function LoginPage() {
                   <input
                     type="email"
                     placeholder="you@example.com"
-                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="p-3 border border-gray-300 rounded w-full focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="p-3 border border-ink/10 rounded-xl w-full focus:ring-2 focus:ring-primary/30 focus:outline-none"
                   />
                 </div>
-                <div>
-                  <label className="text-sm text-muted block mb-1">Пароль</label>
-                  <input
-                    type="password"
-                    placeholder="Пароль"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="p-3 border border-gray-300 rounded w-full focus:ring-2 focus:ring-primary focus:outline-none"
-                  />
-                </div>
-                <button type="submit" className="button text-center" disabled={isSubmitting}>
-                  {isSubmitting ? 'Входим…' : 'Войти'}
+                <button
+                  type="submit"
+                  className="button text-center"
+                  disabled={isSubmitting || !isConfigured}
+                >
+                  {isSubmitting ? 'Открываем вход…' : 'Войти через Keycloak'}
                 </button>
               </form>
             </div>
 
-            <div className="p-5 border border-primary/30 rounded-xl bg-white shadow-sm flex flex-col justify-between gap-4">
+            <div className="p-5 border border-ink/10 rounded-2xl bg-white/90 shadow-sm flex flex-col justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold mb-2">Войти через соцсети</h3>
                 <p className="text-sm text-muted">
@@ -146,20 +158,20 @@ function LoginPage() {
                 <button
                   type="button"
                   onClick={() => redirectToProvider('yandex')}
-                  className="flex-1 flex items-center justify-center gap-2 border border-primary/30 rounded-lg py-3 px-4 hover:shadow-sm hover:-translate-y-0.5 transition"
+                  disabled={!isConfigured}
+                  aria-label="Войти с Яндекс ID"
+                  className="flex-1 flex items-center justify-center gap-3 rounded-xl bg-black text-white py-3 px-4 shadow-sm transition hover:bg-[#111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCC00] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <span className="h-10 w-10 rounded-full bg-[#fcec4f] flex items-center justify-center text-black font-semibold text-lg">
+                  <span className="h-8 w-8 rounded-full bg-[#FFCC00] flex items-center justify-center text-black font-bold text-base leading-none">
                     Я
                   </span>
-                  <span className="text-sm text-left">
-                    <span className="block font-semibold">Yandex ID</span>
-                    <span className="text-muted">Войти и разрешить доступ</span>
-                  </span>
+                  <span className="text-sm font-semibold tracking-wide">Войти с Яндекс ID</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => redirectToProvider('vk')}
-                  className="flex-1 flex items-center justify-center gap-2 border border-primary/30 rounded-lg py-3 px-4 hover:shadow-sm hover:-translate-y-0.5 transition"
+                  disabled={!isConfigured}
+                  className="flex-1 flex items-center justify-center gap-2 border border-ink/10 rounded-2xl py-3 px-4 hover:shadow-sm hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <span className="h-10 w-10 rounded-full bg-[#2787F5] flex items-center justify-center text-white font-semibold text-lg">
                     VK

@@ -1,23 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { subscribeToAuthChanges } from '../utils/auth';
+import { useAuth } from '../contexts/AuthContext';
 
 function RequireAdmin({ children }) {
   const location = useLocation();
-  const [isAuth, setIsAuth] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return Boolean(localStorage.getItem('adminToken'));
-  });
+  const { isReady, isAuthenticated, hasRole } = useAuth();
+  const adminRole = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE || 'admin';
+  const adminRoleClient = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE_CLIENT || '';
+  const isAdmin = isAuthenticated && (adminRoleClient
+    ? hasRole(adminRole, { clientId: adminRoleClient })
+    : hasRole(adminRole));
 
-  useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges(() => {
-      setIsAuth(Boolean(localStorage.getItem('adminToken')));
-    });
-    return unsubscribe;
-  }, []);
+  if (!isReady) {
+    return null;
+  }
 
-  if (!isAuth) {
-    return <Navigate to="/admin/login" state={{ from: location.pathname }} replace />;
+  if (!isAuthenticated) {
+    return (
+      <Navigate to="/admin/login" state={{ from: location.pathname }} replace />
+    );
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
   }
   return children;
 }

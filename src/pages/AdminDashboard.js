@@ -86,7 +86,7 @@ function AdminDashboard() {
         <div className="bg-white border rounded shadow p-4">
           <h2 className="text-lg font-semibold mb-3">Статус заказов</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-            {['PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
+            {['PENDING', 'PAID', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
               <div key={status} className="p-3 rounded border border-gray-200 bg-secondary/60">
                 <p className="text-muted text-xs mb-1">{status}</p>
                 <p className="text-xl font-semibold">{statusBreakdown[status] || 0}</p>

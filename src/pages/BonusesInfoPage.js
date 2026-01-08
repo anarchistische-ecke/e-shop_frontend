@@ -2,12 +2,13 @@ import React from 'react';
 
 function BonusesInfoPage() {
   return (
-    <div className="container mx-auto px-4 py-10 max-w-4xl">
-      <h1 className="text-3xl font-semibold mb-4">Бонусы за покупки</h1>
+    <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <p className="text-xs uppercase tracking-[0.3em] text-muted">Лояльность</p>
+      <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Бонусы за покупки</h1>
       <p className="text-muted mb-6">
         Лояльность простая: авторизуйтесь, копите баллы и оплачивайте ими до 20% стоимости следующего заказа.
       </p>
-      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
+      <div className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm space-y-3">
         <h2 className="text-lg font-semibold">Как это работает</h2>
         <ul className="list-disc list-inside text-sm text-muted space-y-1">
           <li>1 бонус = 1 рубль. Начисляем после подтверждения доставки.</li>
@@ -17,13 +18,13 @@ function BonusesInfoPage() {
         </ul>
       </div>
       <div className="grid md:grid-cols-2 gap-4 mt-6">
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm">
           <h3 className="font-semibold mb-2">Дополнительные бонусы</h3>
           <p className="text-sm text-muted">
             Дарим за отзывы с фото, участие в опросах и рекомендации друзьям. Размер поощрения зависит от активности.
           </p>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm">
           <h3 className="font-semibold mb-2">Возвраты</h3>
           <p className="text-sm text-muted">
             При возврате товара списанные бонусы возвращаются на счёт после обработки заявки.

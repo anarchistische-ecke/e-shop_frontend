@@ -1,4 +1,4 @@
-import { notifyAuthChange } from '../utils/auth';
+import { clearToken, getAccessToken } from '../auth/keycloak';
 
 const inferBrowserApiBase = () =>
   (typeof window !== 'undefined' ? window.__API_BASE__ || window.location.origin : null);
@@ -10,19 +10,18 @@ const ACTIVITY_LOGS_PATH = (rawActivityPath.startsWith('/') ? rawActivityPath : 
 
 function broadcastLogout(reason = 'logout') {
   if (typeof window === 'undefined') return;
-  const hadAnyToken =
-    localStorage.getItem('adminToken') || localStorage.getItem('userToken');
-  if (hadAnyToken) {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('userToken');
-    notifyAuthChange({ reason });
-  }
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('userToken');
+  clearToken({ type: 'user', action: 'logout', reason });
 }
 
 async function request(url, options = {}) {
-  const token =
-    typeof window !== 'undefined' &&
-    (localStorage.getItem('adminToken') || localStorage.getItem('userToken'));
+  let token = null;
+  try {
+    token = await getAccessToken();
+  } catch (err) {
+    console.warn('Failed to read Keycloak token', err);
+  }
   const isFormData =
     typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
@@ -205,11 +204,32 @@ export async function createOrder(cartId) {
     method: 'POST'
   });
 }
+export async function checkoutCart({ cartId, receiptEmail, returnUrl, orderPageUrl } = {}) {
+  return request('/orders/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl })
+  });
+}
+export async function createAdminOrderLink({ cartId, receiptEmail, orderPageUrl } = {}) {
+  return request('/orders/admin-link', {
+    method: 'POST',
+    body: JSON.stringify({ cartId, receiptEmail, orderPageUrl })
+  });
+}
 export async function getOrders() {
   return request('/orders');
 }
 export async function getOrder(id) {
   return request(`/orders/${id}`);
+}
+export async function getPublicOrder(token) {
+  return request(`/orders/public/${token}`);
+}
+export async function payPublicOrder({ token, receiptEmail, returnUrl } = {}) {
+  return request(`/orders/public/${token}/pay`, {
+    method: 'POST',
+    body: JSON.stringify({ receiptEmail, returnUrl })
+  });
 }
 export async function updateOrderStatus(id, status) {
   return request(
@@ -229,6 +249,24 @@ export async function createCustomer(customer) {
     method: 'POST',
     body: JSON.stringify(customer)
   });
+}
+export async function getCustomerProfile() {
+  return request('/customers/me');
+}
+export async function updateCustomerProfile(updates) {
+  return request('/customers/me', {
+    method: 'PUT',
+    body: JSON.stringify(updates)
+  });
+}
+export async function updateCustomerSubscription(marketingOptIn) {
+  return request('/customers/me/subscription', {
+    method: 'PUT',
+    body: JSON.stringify({ marketingOptIn })
+  });
+}
+export async function getCustomerOrders() {
+  return request('/orders/me');
 }
 export async function loginAdmin(username, password) {
   return request('/auth/admin/login', {

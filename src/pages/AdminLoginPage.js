@@ -1,56 +1,94 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { loginAdmin } from '../api';
-import { notifyAuthChange } from '../utils/auth';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 function AdminLoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state && location.state.from) || '/admin';
+  const redirectTo = (location.state && location.state.from) || '/admin';
+  const { isAuthenticated, isReady, isConfigured, hasRole, login } = useAuth();
+  const [status, setStatus] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const adminRole = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE || 'admin';
+  const adminRoleClient = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE_CLIENT || '';
+  const isAdmin = isAuthenticated && (adminRoleClient
+    ? hasRole(adminRole, { clientId: adminRoleClient })
+    : hasRole(adminRole));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setStatus(null);
     try {
-      const result = await loginAdmin(username, password);
-      localStorage.setItem('adminToken', result.token);
-      notifyAuthChange({ type: 'admin', action: 'login' });
-      navigate(from);
+      if (!isConfigured) {
+        throw new Error('Keycloak is not configured');
+      }
+      await login({
+        redirectUri: buildRedirectUri(),
+        prompt: 'login'
+      });
     } catch (err) {
-      console.error('Failed to login admin:', err);
-      alert('Ошибка входа');  // "Login error"
+      console.error('Failed to start admin login:', err);
+      setStatus({
+        type: 'error',
+        message: 'Не удалось открыть страницу входа. Проверьте настройки Keycloak.'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const safeRedirectPath = (path) => {
+    if (typeof path !== 'string') return '/admin';
+    if (!path.startsWith('/') || path.startsWith('//')) return '/admin';
+    return path;
+  };
+
+  const buildRedirectUri = () => {
+    if (typeof window === 'undefined') return undefined;
+    const safePath = safeRedirectPath(redirectTo);
+    return `${window.location.origin}${safePath}`;
+  };
+
+  if (isReady && isAdmin) {
+    return <Navigate to={safeRedirectPath(redirectTo)} replace />;
+  }
 
   return (
     <div className="container mx-auto max-w-md px-4 py-16">
       <h1 className="text-2xl font-semibold mb-6">Вход в панель администратора</h1>
+      {status && (
+        <div
+          className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+            status.type === 'success'
+              ? 'border-green-300 bg-green-50 text-green-800'
+              : 'border-red-300 bg-red-50 text-red-800'
+          }`}
+        >
+          {status.message}
+        </div>
+      )}
+      {!isConfigured && (
+        <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
+          Keycloak не настроен. Заполните переменные окружения и перезапустите приложение.
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block mb-1" htmlFor="username">Логин</label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            className="w-full p-2 border border-gray-300 rounded"
-          />
-        </div>
-        <div>
-          <label className="block mb-1" htmlFor="password">Пароль</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full p-2 border border-gray-300 rounded"
-          />
-        </div>
-        <button type="submit" className="button w-full">Войти</button>
+        <p className="text-sm text-muted">
+          Авторизация администратора выполняется через Keycloak.
+        </p>
+        <button
+          type="submit"
+          className="button w-full"
+          disabled={isSubmitting || !isConfigured}
+        >
+          {isSubmitting ? 'Открываем вход…' : 'Войти через Keycloak'}
+        </button>
       </form>
+      {isReady && isAuthenticated && !isAdmin && (
+        <p className="mt-4 text-sm text-red-600">
+          У вашей учётной записи нет прав администратора.
+        </p>
+      )}
     </div>
   );
 }

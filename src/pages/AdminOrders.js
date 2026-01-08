@@ -67,15 +67,17 @@ function AdminOrders() {
           onChange={(e) => setFilter(e.target.value)}
           className="p-2 border border-gray-300 rounded text-sm"
         >
-          {['Все', 'PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
-            <option key={status} value={status}>
-              {status === 'PENDING'
-                ? 'Новый'
-                : status === 'PROCESSING'
-                ? 'В обработке'
-                : status === 'DELIVERED'
-                ? 'Доставлен'
-                : status === 'CANCELLED'
+        {['Все', 'PENDING', 'PAID', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
+          <option key={status} value={status}>
+            {status === 'PENDING'
+              ? 'Новый'
+              : status === 'PAID'
+              ? 'Оплачен'
+              : status === 'PROCESSING'
+              ? 'В обработке'
+              : status === 'DELIVERED'
+              ? 'Доставлен'
+              : status === 'CANCELLED'
                 ? 'Отменён'
                 : status}
             </option>
@@ -102,6 +104,8 @@ function AdminOrders() {
                 className={`px-2 py-1 rounded-full text-xs ${
                   order.status === 'DELIVERED'
                     ? 'bg-green-100 text-green-800'
+                    : order.status === 'PAID'
+                    ? 'bg-emerald-100 text-emerald-800'
                     : order.status === 'PROCESSING'
                     ? 'bg-amber-100 text-amber-800'
                     : order.status === 'CANCELLED'
@@ -128,7 +132,7 @@ function AdminOrders() {
                 onChange={(e) => handleStatusChange(order.id, e.target.value)}
                 className="p-2 border border-gray-300 rounded text-xs"
               >
-                {['PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
+                {['PENDING', 'PAID', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
                   <option key={status} value={status}>
                     {status}
                   </option>
@@ -140,6 +144,16 @@ function AdminOrders() {
               >
                 {expandedId === order.id ? 'Скрыть' : 'Подробнее'}
               </button>
+              {order.publicToken && (
+                <a
+                  href={`/order/${order.publicToken}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-primary underline"
+                >
+                  Ссылка клиента
+                </a>
+              )}
             </div>
             {expandedId === order.id && (
               <div className="bg-secondary border border-gray-200 rounded p-2 text-xs mt-1 space-y-1">
@@ -189,14 +203,16 @@ function AdminOrders() {
                 </td>
                 <td className="p-2">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      order.status === 'DELIVERED'
-                        ? 'bg-green-100 text-green-800'
-                        : order.status === 'PROCESSING'
-                        ? 'bg-amber-100 text-amber-800'
-                        : order.status === 'CANCELLED'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-gray-100 text-gray-700'
+                  className={`px-2 py-1 rounded-full text-xs ${
+                    order.status === 'DELIVERED'
+                      ? 'bg-green-100 text-green-800'
+                      : order.status === 'PAID'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : order.status === 'PROCESSING'
+                      ? 'bg-amber-100 text-amber-800'
+                      : order.status === 'CANCELLED'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-gray-100 text-gray-700'
                     }`}
                   >
                     {order.status}
@@ -209,11 +225,11 @@ function AdminOrders() {
                       onChange={(e) => handleStatusChange(order.id, e.target.value)}
                       className="p-1 border border-gray-300 rounded text-xs"
                     >
-                      {['PENDING', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
+                    {['PENDING', 'PAID', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
                     </select>
                     <button
                       className="text-xs text-primary underline"
@@ -221,6 +237,16 @@ function AdminOrders() {
                     >
                       {expandedId === order.id ? 'Скрыть' : 'Подробнее'}
                     </button>
+                    {order.publicToken && (
+                      <a
+                        href={`/order/${order.publicToken}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-primary underline"
+                      >
+                        Ссылка клиента
+                      </a>
+                    )}
                   </div>
                   {expandedId === order.id && (
                     <div className="bg-secondary border border-gray-200 rounded p-2 text-xs mt-1 space-y-1">
