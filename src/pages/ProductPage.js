@@ -174,6 +174,29 @@ function ProductPage() {
     product.care || 'Уход: деликатная стирка при 30°',
   ];
 
+  const specificationSections = useMemo(() => {
+    const raw = product?.specifications;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((section) => {
+        if (!section) return null;
+        const items = Array.isArray(section.items)
+          ? section.items
+              .map((item) => ({
+                label: item?.label || '',
+                value: item?.value || '',
+              }))
+              .filter((item) => item.label || item.value)
+          : [];
+        return {
+          title: section.title || '',
+          description: section.description || '',
+          items,
+        };
+      })
+      .filter((section) => section && (section.title || section.description || section.items.length > 0));
+  }, [product]);
+
   const bundleItems = relatedProducts.slice(0, 3);
   const bundleAddOnTotal = bundleItems.reduce((sum, item) => {
     if (!bundleSelections[item.id]) return sum;
@@ -498,12 +521,46 @@ function ProductPage() {
             </div>
           )}
           {activeTab === 'details' && (
-            <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
-              {specList.map((item) => (
-                <div key={item} className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3">
-                  {item}
+            <div className="mt-4">
+              {specificationSections.length > 0 ? (
+                <div className="space-y-8">
+                  {specificationSections.map((section, idx) => (
+                    <div key={`${section.title || 'section'}-${idx}`}>
+                      {section.title && (
+                        <h3 className="text-sm font-semibold text-ink mb-3">
+                          {section.title}
+                        </h3>
+                      )}
+                      {section.items.length > 0 && (
+                        <dl className="space-y-2">
+                          {section.items.map((item, itemIdx) => (
+                            <div
+                              key={`${item.label || 'item'}-${itemIdx}`}
+                              className="grid grid-cols-1 sm:grid-cols-[180px_minmax(0,1fr)] gap-1 sm:gap-6 text-sm"
+                            >
+                              <dt className="text-muted">{item.label || '—'}</dt>
+                              <dd className="text-ink">{item.value || '—'}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+                      {section.description && (
+                        <p className="mt-3 text-sm leading-relaxed text-ink/80 whitespace-pre-line">
+                          {section.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                  {specList.map((item) => (
+                    <div key={item} className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
