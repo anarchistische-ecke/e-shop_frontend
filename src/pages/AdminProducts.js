@@ -24,6 +24,171 @@ const EMPTY_VARIANT_FORM = {
   currency: 'RUB'
 };
 
+const normalizeSpecSections = (sections) => {
+  if (!Array.isArray(sections)) return [];
+  return sections.map((section) => ({
+    title: section?.title || '',
+    description: section?.description || '',
+    items: Array.isArray(section?.items)
+      ? section.items.map((item) => ({
+          label: item?.label || '',
+          value: item?.value || ''
+        }))
+      : []
+  }));
+};
+
+const sanitizeSpecSections = (sections) =>
+  normalizeSpecSections(sections)
+    .map((section) => ({
+      title: section.title.trim(),
+      description: section.description.trim(),
+      items: section.items
+        .map((item) => ({
+          label: item.label.trim(),
+          value: item.value.trim()
+        }))
+        .filter((item) => item.label || item.value)
+    }))
+    .filter((section) => section.title || section.description || section.items.length > 0);
+
+function SpecificationEditor({ value = [], onChange, compact = false }) {
+  const sections = normalizeSpecSections(value);
+  const updateSections = (next) => onChange(next);
+
+  const addSection = () => {
+    updateSections([
+      ...sections,
+      { title: '', description: '', items: [{ label: '', value: '' }] }
+    ]);
+  };
+
+  const removeSection = (index) => {
+    updateSections(sections.filter((_, idx) => idx !== index));
+  };
+
+  const updateSectionField = (index, field, fieldValue) => {
+    updateSections(
+      sections.map((section, idx) =>
+        idx === index ? { ...section, [field]: fieldValue } : section
+      )
+    );
+  };
+
+  const addItem = (sectionIndex) => {
+    updateSections(
+      sections.map((section, idx) =>
+        idx === sectionIndex
+          ? { ...section, items: [...(section.items || []), { label: '', value: '' }] }
+          : section
+      )
+    );
+  };
+
+  const removeItem = (sectionIndex, itemIndex) => {
+    updateSections(
+      sections.map((section, idx) =>
+        idx === sectionIndex
+          ? { ...section, items: section.items.filter((_, itemIdx) => itemIdx !== itemIndex) }
+          : section
+      )
+    );
+  };
+
+  const updateItem = (sectionIndex, itemIndex, field, fieldValue) => {
+    updateSections(
+      sections.map((section, idx) =>
+        idx === sectionIndex
+          ? {
+              ...section,
+              items: section.items.map((item, itemIdx) =>
+                itemIdx === itemIndex ? { ...item, [field]: fieldValue } : item
+              )
+            }
+          : section
+      )
+    );
+  };
+
+  return (
+    <div className={`space-y-3 ${compact ? '' : 'bg-white border border-gray-200 rounded-xl p-4 shadow-sm'}`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="font-semibold">Технические характеристики</h4>
+          <p className="text-xs text-muted">
+            Добавьте разделы и пары параметр/значение. Для блока «Уход» используйте описание.
+          </p>
+        </div>
+        <button type="button" className="button-gray text-sm" onClick={addSection}>
+          Добавить раздел
+        </button>
+      </div>
+      {sections.length === 0 ? (
+        <div className="text-sm text-muted">Разделы не добавлены.</div>
+      ) : (
+        <div className="space-y-3">
+          {sections.map((section, sectionIndex) => (
+            <div key={`spec-${sectionIndex}`} className="rounded-xl border border-gray-200 bg-white/80 p-3 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Название раздела"
+                  value={section.title}
+                  onChange={(e) => updateSectionField(sectionIndex, 'title', e.target.value)}
+                  className="flex-1 p-2 border border-gray-300 rounded"
+                />
+                <button
+                  type="button"
+                  className="text-xs text-red-600 underline"
+                  onClick={() => removeSection(sectionIndex)}
+                >
+                  Удалить раздел
+                </button>
+              </div>
+              <textarea
+                placeholder="Описание раздела (опционально)"
+                value={section.description}
+                onChange={(e) => updateSectionField(sectionIndex, 'description', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded min-h-[80px]"
+              />
+              <div className="space-y-2">
+                {(section.items || []).map((item, itemIndex) => (
+                  <div key={`spec-${sectionIndex}-item-${itemIndex}`} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-start">
+                    <input
+                      type="text"
+                      placeholder="Параметр"
+                      value={item.label}
+                      onChange={(e) => updateItem(sectionIndex, itemIndex, 'label', e.target.value)}
+                      className="p-2 border border-gray-300 rounded"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Значение"
+                      value={item.value}
+                      onChange={(e) => updateItem(sectionIndex, itemIndex, 'value', e.target.value)}
+                      className="p-2 border border-gray-300 rounded"
+                    />
+                    <button
+                      type="button"
+                      className="text-xs text-muted underline"
+                      onClick={() => removeItem(sectionIndex, itemIndex)}
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="text-xs text-primary underline" onClick={() => addItem(sectionIndex)}>
+                Добавить строку
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const buildVariantFormState = (variants = []) =>
   (variants || []).reduce((acc, v) => {
     acc[v.id] = {
@@ -87,6 +252,7 @@ function AdminProducts() {
     categories: [],
     brand: '',
     description: '',
+    specifications: [],
     variantPrice: '',
     variantSku: '',
     variantStock: 0,
@@ -191,6 +357,7 @@ function AdminProducts() {
       ...product,
       variants,
       images,
+      specifications: normalizeSpecSections(product.specifications),
       categoryRefs: Array.from(new Set(categoryRefs)),
       brandRef:
         typeof product.brand === 'string'
@@ -296,7 +463,8 @@ function AdminProducts() {
       ...normalized,
       categoryRefs: normalized.categoryRefs || [],
       brandRef: normalized.brandRef || '',
-      description: normalized.description || ''
+      description: normalized.description || '',
+      specifications: normalized.specifications || []
     });
     setVariantEditForms(buildVariantFormState(normalized.variants || []));
     setModalVariantForm({
@@ -349,7 +517,8 @@ function AdminProducts() {
         description: newItem.description,
         slug,
         categories: newItem.categories || [],
-        brand: newItem.brand || undefined
+        brand: newItem.brand || undefined,
+        specifications: sanitizeSpecSections(newItem.specifications)
       });
       await addProductVariant(created.id, {
         sku,
@@ -368,6 +537,7 @@ function AdminProducts() {
         categories: [],
         brand: '',
         description: '',
+        specifications: [],
         variantPrice: '',
         variantSku: '',
         variantStock: 0,
@@ -553,7 +723,8 @@ function AdminProducts() {
         description: editingProduct.description,
         slug: editingProduct.slug,
         categories: editingProduct.categoryRefs || [],
-        brand: editingProduct.brandRef || undefined
+        brand: editingProduct.brandRef || undefined,
+        specifications: sanitizeSpecSections(editingProduct.specifications)
       });
       await refreshProduct(editingProduct.id);
     } catch (err) {
@@ -907,7 +1078,7 @@ function AdminProducts() {
 
   const renderVariantManager = (product) => (
     <tr key={`${product.id}-variants`} className="bg-gray-50">
-      <td colSpan={8} className="p-4">
+      <td colSpan={6} className="p-4">
         {renderVariantManagerContent(product)}
       </td>
     </tr>
@@ -936,99 +1107,104 @@ function AdminProducts() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold">Управление товарами</h1>
-      <div className="bg-white/80 border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <div className="grid gap-4 xl:grid-cols-[minmax(220px,1fr)_minmax(320px,2fr)_minmax(200px,1fr)_minmax(220px,1fr)]">
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-widest text-muted">Выбор</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-muted">
-                <input
-                  type="checkbox"
-                  checked={items.length > 0 && selectedIds.length === items.length}
-                  onChange={(e) => toggleSelectAll(e.target.checked)}
-                />
-                <span>Выбрать все</span>
-              </label>
-              <div className="text-sm text-muted">Выбрано: {selectedIds.length}</div>
-            </div>
-            <button
-              className="button-gray text-sm w-full sm:w-auto"
-              onClick={handleBulkDelete}
-              disabled={selectedIds.length === 0}
-            >
-              Удалить выбранные
-            </button>
-          </div>
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-widest text-muted">Категории</p>
-            <CategoryPicker
-              options={categoryOptions}
-              selected={bulkCategories}
-              onToggle={(value) => setBulkCategories((prev) => toggleCategorySelection(prev, value))}
-              emptyLabel="Категории ещё не созданы"
-              className="max-h-32 overflow-y-auto"
-            />
-            <div className="flex items-center gap-2">
+      <details className="bg-white/80 border border-gray-200 rounded-2xl shadow-sm" open>
+        <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-ink">
+          Массовые действия
+        </summary>
+        <div className="px-5 pb-5 space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[minmax(220px,1fr)_minmax(320px,2fr)_minmax(200px,1fr)_minmax(220px,1fr)]">
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-widest text-muted">Выбор</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    checked={items.length > 0 && selectedIds.length === items.length}
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                  />
+                  <span>Выбрать все</span>
+                </label>
+                <div className="text-sm text-muted">Выбрано: {selectedIds.length}</div>
+              </div>
               <button
-                className="button text-sm"
-                onClick={handleBulkCategoryChange}
+                className="button-gray text-sm w-full sm:w-auto"
+                onClick={handleBulkDelete}
+                disabled={selectedIds.length === 0}
+              >
+                Удалить выбранные
+              </button>
+            </div>
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-widest text-muted">Категории</p>
+              <CategoryPicker
+                options={categoryOptions}
+                selected={bulkCategories}
+                onToggle={(value) => setBulkCategories((prev) => toggleCategorySelection(prev, value))}
+                emptyLabel="Категории ещё не созданы"
+                className="max-h-32 overflow-y-auto"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  className="button text-sm"
+                  onClick={handleBulkCategoryChange}
+                  disabled={selectedIds.length === 0}
+                >
+                  Применить
+                </button>
+                {bulkCategories.length > 0 && (
+                  <button className="text-xs text-muted underline" onClick={() => setBulkCategories([])}>
+                    Сбросить
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-widest text-muted">Бренд</p>
+              <select
+                value={bulkBrand}
+                onChange={(e) => setBulkBrand(e.target.value)}
+                className="w-full"
+              >
+                <option value="">Бренд...</option>
+                <option value="">Без бренда</option>
+                {brands.map((b) => (
+                  <option key={b.slug || b.id} value={b.slug || b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="button text-sm w-full sm:w-auto"
+                onClick={handleBulkBrandChange}
                 disabled={selectedIds.length === 0}
               >
                 Применить
               </button>
-              {bulkCategories.length > 0 && (
-                <button className="text-xs text-muted underline" onClick={() => setBulkCategories([])}>
-                  Сбросить
-                </button>
-              )}
+            </div>
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-widest text-muted">Цена</p>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Новая цена"
+                value={bulkPrice}
+                onChange={(e) => setBulkPrice(e.target.value)}
+                className="w-full"
+              />
+              <button
+                className="button text-sm w-full sm:w-auto"
+                onClick={handleBulkPriceChange}
+                disabled={!bulkPrice || selectedIds.length === 0}
+              >
+                Изменить цену
+              </button>
             </div>
           </div>
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-widest text-muted">Бренд</p>
-            <select
-              value={bulkBrand}
-              onChange={(e) => setBulkBrand(e.target.value)}
-              className="w-full"
-            >
-              <option value="">Бренд...</option>
-              <option value="">Без бренда</option>
-              {brands.map((b) => (
-                <option key={b.slug || b.id} value={b.slug || b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            <button
-              className="button text-sm w-full sm:w-auto"
-              onClick={handleBulkBrandChange}
-              disabled={selectedIds.length === 0}
-            >
-              Применить
-            </button>
-          </div>
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-widest text-muted">Цена</p>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Новая цена"
-              value={bulkPrice}
-              onChange={(e) => setBulkPrice(e.target.value)}
-              className="w-full"
-            />
-            <button
-              className="button text-sm w-full sm:w-auto"
-              onClick={handleBulkPriceChange}
-              disabled={!bulkPrice || selectedIds.length === 0}
-            >
-              Изменить цену
-            </button>
-          </div>
+          <p className="text-xs text-muted">
+            Массовые действия применяются к выделенным товарам. Цена меняется для основного варианта.
+          </p>
         </div>
-        <p className="text-xs text-muted">
-          Массовые действия применяются к выделенным товарам. Цена меняется для основного варианта.
-        </p>
-      </div>
+      </details>
       <div className="md:hidden space-y-3">
         {pagedItems.map((item, index) => {
           const primaryVariant = getPrimaryVariant(item);
@@ -1038,7 +1214,7 @@ function AdminProducts() {
               }`
             : 'Нет вариантов';
           return (
-            <div key={item.id || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
+            <div key={item.id || index} className="soft-card p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <label className="flex items-center gap-2 min-w-0 flex-1">
                   <input
@@ -1048,26 +1224,31 @@ function AdminProducts() {
                   />
                   <span className="font-semibold break-words leading-snug">{item.name}</span>
                 </label>
-                <span className="text-xs text-muted text-right break-all max-w-[40%]">{item.slug}</span>
+                <span className="text-[11px] text-muted text-right break-all max-w-[40%]">{item.slug}</span>
               </div>
               <div className="grid gap-2 text-sm">
-                <div>
-                  <span className="text-muted text-xs block">Категории</span>
-                  <span>{getCategoryName(item.categoryRefs)}</span>
-                </div>
-                <div>
-                  <span className="text-muted text-xs block">Бренд</span>
-                  <span>{getBrandName(item.brandRef)}</span>
-                </div>
                 <div>
                   <span className="text-muted text-xs block">Варианты</span>
                   <span>{variantSummary}</span>
                 </div>
-                <div>
-                  <span className="text-muted text-xs block">Описание</span>
-                  <span>{item.description ? `${item.description.substring(0, 80)}…` : '—'}</span>
-                </div>
               </div>
+              <details className="rounded-xl border border-ink/10 bg-white/80 p-3">
+                <summary className="text-xs text-muted cursor-pointer">Детали товара</summary>
+                <div className="mt-2 grid gap-2 text-sm">
+                  <div>
+                    <span className="text-muted text-xs block">Категории</span>
+                    <span>{getCategoryName(item.categoryRefs)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted text-xs block">Бренд</span>
+                    <span>{getBrandName(item.brandRef)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted text-xs block">Описание</span>
+                    <span>{item.description ? `${item.description.substring(0, 80)}…` : '—'}</span>
+                  </div>
+                </div>
+              </details>
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => openEditModal(item)} className="button text-xs">
                   Редактировать
@@ -1102,12 +1283,10 @@ function AdminProducts() {
                   onChange={(e) => toggleSelectAll(e.target.checked)}
                 />
               </th>
-              <th className="p-2 border-b">Название</th>
-              <th className="p-2 border-b">Slug</th>
+              <th className="p-2 border-b">Товар</th>
               <th className="p-2 border-b">Категории</th>
               <th className="p-2 border-b">Бренд</th>
               <th className="p-2 border-b">Варианты</th>
-              <th className="p-2 border-b">Описание</th>
               <th className="p-2 border-b">Действия</th>
             </tr>
           </thead>
@@ -1129,12 +1308,13 @@ function AdminProducts() {
                         onChange={() => toggleSelect(item.id)}
                       />
                     </td>
-                    <td className="p-2">{item.name}</td>
-                    <td className="p-2 text-xs text-muted">{item.slug}</td>
-                    <td className="p-2">{getCategoryName(item.categoryRefs)}</td>
-                    <td className="p-2">{getBrandName(item.brandRef)}</td>
+                    <td className="p-2">
+                      <div className="font-semibold">{item.name}</div>
+                      <div className="text-xs text-muted">{item.slug}</div>
+                    </td>
+                    <td className="p-2 text-xs text-muted">{getCategoryName(item.categoryRefs)}</td>
+                    <td className="p-2 text-xs text-muted">{getBrandName(item.brandRef)}</td>
                     <td className="p-2">{variantSummary}</td>
-                    <td className="p-2">{item.description ? `${item.description.substring(0, 60)}…` : ''}</td>
                     <td className="p-2 space-y-1">
                       <button onClick={() => openEditModal(item)} className="text-primary block">
                         Редактировать
@@ -1342,15 +1522,22 @@ function AdminProducts() {
                     Изменения применяются после сохранения товара. Можно оставить пустым.
                   </p>
                 </div>
+                <SpecificationEditor
+                  value={editingProduct.specifications || []}
+                  onChange={(next) =>
+                    setEditingProduct((prev) => (prev ? { ...prev, specifications: next } : prev))
+                  }
+                />
               </div>
               <div className="lg:col-span-3 space-y-3">
-                <div className="border border-gray-200 rounded-xl p-4 shadow-sm bg-white space-y-3">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-semibold">Изображения</h4>
+                <details className="border border-gray-200 rounded-xl shadow-sm bg-white" open>
+                  <summary className="cursor-pointer px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold">Изображения</span>
                     <span className="text-xs text-muted">
                       {uploadingImages[editingProduct.id] ? 'Загружаем…' : 'Можно менять привязку к вариантам'}
                     </span>
-                  </div>
+                  </summary>
+                  <div className="px-4 pb-4 space-y-3">
                   {editingProduct.images && editingProduct.images.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {editingProduct.images.map((img) => (
@@ -1415,20 +1602,22 @@ function AdminProducts() {
                       {uploadingImages[editingProduct.id] ? 'Загружаем…' : 'Добавить изображения'}
                     </label>
                   </div>
-                </div>
-                <div className="border border-gray-200 rounded-xl p-4 shadow-sm bg-white space-y-3">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-semibold">Варианты и запасы</h4>
-                    {primaryVariantForEditing && (
-                      <div className="px-3 py-1 bg-secondary rounded text-xs">
-                        Базовая цена: {moneyToNumber(primaryVariantForEditing.price).toLocaleString('ru-RU')} ₽
-                      </div>
-                    )}
                   </div>
-                  <p className="text-xs text-muted -mt-2">
-                    Сохраняйте каждую строку отдельно. Быстрые кнопки корректируют остатки.
-                  </p>
-                  <div className="space-y-3 divide-y divide-gray-100">
+                </details>
+                <details className="border border-gray-200 rounded-xl shadow-sm bg-white" open>
+                  <summary className="cursor-pointer px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold">Варианты и запасы</span>
+                    {primaryVariantForEditing && (
+                      <span className="px-3 py-1 bg-secondary rounded text-xs">
+                        Базовая цена: {moneyToNumber(primaryVariantForEditing.price).toLocaleString('ru-RU')} ₽
+                      </span>
+                    )}
+                  </summary>
+                  <div className="px-4 pb-4 space-y-3">
+                    <p className="text-xs text-muted">
+                      Сохраняйте каждую строку отдельно. Быстрые кнопки корректируют остатки.
+                    </p>
+                    <div className="space-y-3 divide-y divide-gray-100">
                     {editingVariants.map((variant) => {
                       const form = variantEditForms[variant.id] || {};
                       const originalPrice = variant.price ? moneyToNumber(variant.price) : 0;
@@ -1573,8 +1762,9 @@ function AdminProducts() {
                         </button>
                       </div>
                     </div>
+                    </div>
                   </div>
-                </div>
+                </details>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -1595,128 +1785,137 @@ function AdminProducts() {
           </div>
         </div>
       )}
-      <h2 className="text-xl font-semibold">Добавить новый товар</h2>
-      <form onSubmit={handleAddNew} className="space-y-2 max-w-3xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-          <input
-            type="text"
-            placeholder="Название"
-            value={newItem.name}
-            onChange={(e) => handleNewItemChange('name', e.target.value)}
-            className="flex-1 p-2 border border-gray-300 rounded mb-2 sm:mb-0"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Slug"
-            value={newItem.slug}
-            onChange={(e) => handleNewItemChange('slug', e.target.value)}
-            className="flex-1 p-2 border border-gray-300 rounded"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs text-muted block">
-            <span className="mb-1 block">Категории</span>
-            <CategoryPicker
-              options={categoryOptions}
-              selected={newItem.categories || []}
-              onToggle={(value) =>
-                setNewItem((prev) => ({
-                  ...prev,
-                  categories: toggleCategorySelection(prev.categories || [], value)
-                }))
-              }
-              emptyLabel="Категории ещё не созданы"
-              className="max-h-36 overflow-y-auto"
-            />
-            {(newItem.categories || []).length > 0 && (
-              <button
-                type="button"
-                onClick={() => setNewItem((prev) => ({ ...prev, categories: [] }))}
-                className="text-[11px] text-muted underline mt-1"
-              >
-                Сбросить категории
-              </button>
-            )}
-          </label>
+      <details className="bg-white/80 border border-gray-200 rounded-2xl shadow-sm" open>
+        <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-ink">
+          Добавить новый товар
+        </summary>
+        <form onSubmit={handleAddNew} className="px-5 pb-5 space-y-2 max-w-3xl">
           <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-            <select
-              value={newItem.brand}
-              onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })}
-              className="p-2 border border-gray-300 rounded mb-2 sm:mb-0"
-            >
-              <option value="">Без бренда</option>
-              {brands.map((b) => (
-                <option key={b.slug || b.id} value={b.slug || b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
             <input
               type="text"
-              placeholder="Описание (необязательно)"
-              value={newItem.description}
-              onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+              placeholder="Название"
+              value={newItem.name}
+              onChange={(e) => handleNewItemChange('name', e.target.value)}
+              className="flex-1 p-2 border border-gray-300 rounded mb-2 sm:mb-0"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Slug"
+              value={newItem.slug}
+              onChange={(e) => handleNewItemChange('slug', e.target.value)}
+              className="flex-1 p-2 border border-gray-300 rounded"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs text-muted block">
+              <span className="mb-1 block">Категории</span>
+              <CategoryPicker
+                options={categoryOptions}
+                selected={newItem.categories || []}
+                onToggle={(value) =>
+                  setNewItem((prev) => ({
+                    ...prev,
+                    categories: toggleCategorySelection(prev.categories || [], value)
+                  }))
+                }
+                emptyLabel="Категории ещё не созданы"
+                className="max-h-36 overflow-y-auto"
+              />
+              {(newItem.categories || []).length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setNewItem((prev) => ({ ...prev, categories: [] }))}
+                  className="text-[11px] text-muted underline mt-1"
+                >
+                  Сбросить категории
+                </button>
+              )}
+            </label>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              <select
+                value={newItem.brand}
+                onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })}
+                className="p-2 border border-gray-300 rounded mb-2 sm:mb-0"
+              >
+                <option value="">Без бренда</option>
+                {brands.map((b) => (
+                  <option key={b.slug || b.id} value={b.slug || b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Описание (необязательно)"
+                value={newItem.description}
+                onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                className="flex-1 p-2 border border-gray-300 rounded"
+              />
+            </div>
+          </div>
+          <SpecificationEditor
+            value={newItem.specifications || []}
+            onChange={(next) => setNewItem((prev) => ({ ...prev, specifications: next }))}
+            compact
+          />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+            <input
+              type="text"
+              placeholder="SKU варианта"
+              value={newItem.variantSku}
+              onChange={(e) => setNewItem({ ...newItem, variantSku: e.target.value })}
+              className="flex-1 p-2 border border-gray-300 rounded mb-2 sm:mb-0"
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Цена варианта"
+              value={newItem.variantPrice}
+              onChange={(e) => setNewItem({ ...newItem, variantPrice: e.target.value })}
+              className="flex-1 p-2 border border-gray-300 rounded mb-2 sm:mb-0"
+              required
+            />
+            <input
+              type="number"
+              placeholder="Количество"
+              value={newItem.variantStock}
+              onChange={(e) => setNewItem({ ...newItem, variantStock: e.target.value })}
               className="flex-1 p-2 border border-gray-300 rounded"
             />
           </div>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-          <input
-            type="text"
-            placeholder="SKU варианта"
-            value={newItem.variantSku}
-            onChange={(e) => setNewItem({ ...newItem, variantSku: e.target.value })}
-            className="flex-1 p-2 border border-gray-300 rounded mb-2 sm:mb-0"
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Цена варианта"
-            value={newItem.variantPrice}
-            onChange={(e) => setNewItem({ ...newItem, variantPrice: e.target.value })}
-            className="flex-1 p-2 border border-gray-300 rounded mb-2 sm:mb-0"
-            required
-          />
-          <input
-            type="number"
-            placeholder="Количество"
-            value={newItem.variantStock}
-            onChange={(e) => setNewItem({ ...newItem, variantStock: e.target.value })}
-            className="flex-1 p-2 border border-gray-300 rounded"
-          />
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-          <label className="flex-1 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer bg-white text-sm">
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                setNewItemImages(Array.from(e.target.files || []));
-                e.target.value = '';
-              }}
-            />
-            {newItemImages.length > 0
-              ? `Выбрано файлов: ${newItemImages.length}`
-              : 'Загрузить изображения (опционально)'}
-          </label>
-          {newItemImages.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setNewItemImages([])}
-              className="text-xs text-muted underline"
-            >
-              Очистить выбор
-            </button>
-          )}
-        </div>
-        <button type="submit" className="button">
-          Добавить товар
-        </button>
-      </form>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+            <label className="flex-1 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer bg-white text-sm">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  setNewItemImages(Array.from(e.target.files || []));
+                  e.target.value = '';
+                }}
+              />
+              {newItemImages.length > 0
+                ? `Выбрано файлов: ${newItemImages.length}`
+                : 'Загрузить изображения (опционально)'}
+            </label>
+            {newItemImages.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setNewItemImages([])}
+                className="text-xs text-muted underline"
+              >
+                Очистить выбор
+              </button>
+            )}
+          </div>
+          <button type="submit" className="button">
+            Добавить товар
+          </button>
+        </form>
+      </details>
     </div>
   );
 }
