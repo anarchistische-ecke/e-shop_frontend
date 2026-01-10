@@ -160,33 +160,37 @@ function SpecificationEditor({ value = [], onChange, compact = false }) {
                 {(section.items || []).map((item, itemIndex) => (
                   <div
                     key={`spec-${sectionIndex}-item-${itemIndex}`}
-                    className="grid grid-cols-1 sm:grid-cols-[200px_minmax(0,1fr)] gap-2 items-start"
+                    className="rounded-xl border border-ink/10 bg-white/90 p-3"
                   >
-                    <input
-                      type="text"
-                      placeholder="Параметр (например: Размер)"
-                      value={item.label}
-                      onChange={(e) => updateItem(sectionIndex, itemIndex, 'label', e.target.value)}
-                      className="p-2 border border-gray-300 rounded"
-                    />
-                    <div className="space-y-2">
-                      <textarea
-                        placeholder="Значение (Enter = новая строка)"
-                        value={item.value}
-                        onChange={(e) => updateItem(sectionIndex, itemIndex, 'value', e.target.value)}
-                        onKeyDown={handleValueKeyDown}
-                        rows={4}
-                        className="p-2 border border-gray-300 rounded min-h-[110px] resize-y"
-                      />
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          className="text-xs text-muted underline"
-                          onClick={() => removeItem(sectionIndex, itemIndex)}
-                        >
-                          Удалить
-                        </button>
+                    <div className="flex items-start gap-4">
+                      <div className="w-40">
+                        <input
+                          type="text"
+                          placeholder="Параметр (например: Размер)"
+                          value={item.label}
+                          onChange={(e) => updateItem(sectionIndex, itemIndex, 'label', e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded"
+                        />
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <textarea
+                          placeholder="Значение (Enter = новая строка)"
+                          value={item.value}
+                          onChange={(e) => updateItem(sectionIndex, itemIndex, 'value', e.target.value)}
+                          onKeyDown={handleValueKeyDown}
+                          rows={4}
+                          className="w-full p-2 border border-gray-300 rounded min-h-[120px] resize-y leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        className="text-xs text-muted underline"
+                        onClick={() => removeItem(sectionIndex, itemIndex)}
+                      >
+                        Удалить
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1584,12 +1588,6 @@ function AdminProducts() {
                     Изменения применяются после сохранения товара. Можно оставить пустым.
                   </p>
                 </div>
-                <SpecificationEditor
-                  value={editingProduct.specifications || []}
-                  onChange={(next) =>
-                    setEditingProduct((prev) => (prev ? { ...prev, specifications: next } : prev))
-                  }
-                />
               </div>
               <div className="lg:col-span-3 space-y-3">
                 <details className="border border-gray-200 rounded-xl shadow-sm bg-white" open>
@@ -1829,6 +1827,12 @@ function AdminProducts() {
                 </details>
               </div>
             </div>
+            <SpecificationEditor
+              value={editingProduct.specifications || []}
+              onChange={(next) =>
+                setEditingProduct((prev) => (prev ? { ...prev, specifications: next } : prev))
+              }
+            />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-sm text-muted">
                 Сначала сохраняйте варианты, затем товар, чтобы зафиксировать SEO-поля.
