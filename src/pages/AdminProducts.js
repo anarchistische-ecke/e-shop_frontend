@@ -233,6 +233,28 @@ function CategoryPicker({ options = [], selected = [], onToggle, emptyLabel = '�
   );
 }
 
+function BulkActionPill({ label, isActive, children, panelClassName = '' }) {
+  return (
+    <details className="relative">
+      <summary
+        className={`list-none inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition cursor-pointer [&::-webkit-details-marker]:hidden ${
+          isActive
+            ? 'border-primary/50 bg-primary/10 text-primary'
+            : 'border-ink/10 bg-white/90 text-ink'
+        }`}
+      >
+        <span>{label}</span>
+        <span className="text-xs">▾</span>
+      </summary>
+      <div
+        className={`absolute left-0 mt-2 w-72 max-w-[90vw] rounded-2xl border border-ink/10 bg-white/95 p-4 shadow-xl z-20 ${panelClassName}`}
+      >
+        {children}
+      </div>
+    </details>
+  );
+}
+
 function AdminProducts() {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -1107,63 +1129,73 @@ function AdminProducts() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold">Управление товарами</h1>
-      <details className="bg-white/80 border border-gray-200 rounded-2xl shadow-sm" open>
-        <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-ink">
-          Массовые действия
-        </summary>
-        <div className="px-5 pb-5 space-y-4">
-          <div className="grid gap-4 xl:grid-cols-[minmax(220px,1fr)_minmax(320px,2fr)_minmax(200px,1fr)_minmax(220px,1fr)]">
+      <div className="border-y border-ink/10 py-4">
+        <p className="text-[11px] uppercase tracking-[0.28em] text-muted mb-3">Массовые действия</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <BulkActionPill
+            label={selectedIds.length > 0 ? `Выбор (${selectedIds.length})` : 'Выбор'}
+            isActive={selectedIds.length > 0}
+          >
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-widest text-muted">Выбор</p>
-              <div className="flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-muted">
-                  <input
-                    type="checkbox"
-                    checked={items.length > 0 && selectedIds.length === items.length}
-                    onChange={(e) => toggleSelectAll(e.target.checked)}
-                  />
-                  <span>Выбрать все</span>
-                </label>
-                <div className="text-sm text-muted">Выбрано: {selectedIds.length}</div>
-              </div>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Выбор</p>
+              <label className="flex items-center gap-3 rounded-2xl border border-ink/10 bg-white/90 px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary"
+                  checked={items.length > 0 && selectedIds.length === items.length}
+                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                />
+                <span>Выбрать все</span>
+              </label>
+              <div className="text-xs text-muted">Выбрано: {selectedIds.length}</div>
               <button
-                className="button-gray text-sm w-full sm:w-auto"
+                className="button-gray text-sm w-full"
                 onClick={handleBulkDelete}
                 disabled={selectedIds.length === 0}
               >
                 Удалить выбранные
               </button>
             </div>
+          </BulkActionPill>
+
+          <BulkActionPill
+            label={bulkCategories.length > 0 ? `Категории (${bulkCategories.length})` : 'Категории'}
+            isActive={bulkCategories.length > 0}
+            panelClassName="w-[320px]"
+          >
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-widest text-muted">Категории</p>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Категории</p>
               <CategoryPicker
                 options={categoryOptions}
                 selected={bulkCategories}
                 onToggle={(value) => setBulkCategories((prev) => toggleCategorySelection(prev, value))}
                 emptyLabel="Категории ещё не созданы"
-                className="max-h-32 overflow-y-auto"
+                className="max-h-36 overflow-y-auto"
               />
               <div className="flex items-center gap-2">
                 <button
-                  className="button text-sm"
+                  className="button text-sm w-full sm:w-auto"
                   onClick={handleBulkCategoryChange}
                   disabled={selectedIds.length === 0}
                 >
                   Применить
                 </button>
                 {bulkCategories.length > 0 && (
-                  <button className="text-xs text-muted underline" onClick={() => setBulkCategories([])}>
+                  <button className="text-xs text-primary" onClick={() => setBulkCategories([])}>
                     Сбросить
                   </button>
                 )}
               </div>
             </div>
+          </BulkActionPill>
+
+          <BulkActionPill label="Бренд" isActive={Boolean(bulkBrand)}>
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-widest text-muted">Бренд</p>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Бренд</p>
               <select
                 value={bulkBrand}
                 onChange={(e) => setBulkBrand(e.target.value)}
-                className="w-full"
+                className="w-full text-sm"
               >
                 <option value="">Бренд...</option>
                 <option value="">Без бренда</option>
@@ -1173,38 +1205,55 @@ function AdminProducts() {
                   </option>
                 ))}
               </select>
-              <button
-                className="button text-sm w-full sm:w-auto"
-                onClick={handleBulkBrandChange}
-                disabled={selectedIds.length === 0}
-              >
-                Применить
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="button text-sm w-full sm:w-auto"
+                  onClick={handleBulkBrandChange}
+                  disabled={selectedIds.length === 0}
+                >
+                  Применить
+                </button>
+                {bulkBrand && (
+                  <button className="text-xs text-primary" onClick={() => setBulkBrand('')}>
+                    Сбросить
+                  </button>
+                )}
+              </div>
             </div>
+          </BulkActionPill>
+
+          <BulkActionPill label="Цена" isActive={Boolean(bulkPrice)}>
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-widest text-muted">Цена</p>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Цена</p>
               <input
                 type="number"
                 step="0.01"
                 placeholder="Новая цена"
                 value={bulkPrice}
                 onChange={(e) => setBulkPrice(e.target.value)}
-                className="w-full"
+                className="w-full text-sm"
               />
-              <button
-                className="button text-sm w-full sm:w-auto"
-                onClick={handleBulkPriceChange}
-                disabled={!bulkPrice || selectedIds.length === 0}
-              >
-                Изменить цену
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="button text-sm w-full sm:w-auto"
+                  onClick={handleBulkPriceChange}
+                  disabled={!bulkPrice || selectedIds.length === 0}
+                >
+                  Изменить цену
+                </button>
+                {bulkPrice && (
+                  <button className="text-xs text-primary" onClick={() => setBulkPrice('')}>
+                    Сбросить
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-          <p className="text-xs text-muted">
-            Массовые действия применяются к выделенным товарам. Цена меняется для основного варианта.
-          </p>
+          </BulkActionPill>
         </div>
-      </details>
+        <p className="mt-3 text-xs text-muted">
+          Массовые действия применяются к выделенным товарам. Цена меняется для основного варианта.
+        </p>
+      </div>
       <div className="md:hidden space-y-3">
         {pagedItems.map((item, index) => {
           const primaryVariant = getPrimaryVariant(item);
