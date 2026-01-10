@@ -55,8 +55,8 @@ function Home() {
       subtitle: 'Сатин, лен и бамбук с мягкой фактурой.',
     },
     {
-      title: '365 дней на возврат и тест',
-      subtitle: 'Попробуйте дома и верните, если не влюбитесь.',
+      title: '14 дней на возврат',
+      subtitle: 'Если что-то не подошло — оформим возврат по правилам.',
     },
     {
       title: 'Бесплатная доставка от 5000 ₽',
@@ -81,24 +81,6 @@ function Home() {
       subtitle: 'Тёплые фактуры и спокойные оттенки',
       cta: 'Смотреть пледы',
       link: '/category/new',
-    },
-  ];
-
-  const collections = [
-    {
-      title: 'Cinque Terre',
-      description:
-        'Пастельные оттенки сатина и лаконичные принты, вдохновлённые средиземноморскими побережьями.',
-    },
-    {
-      title: 'Alienor',
-      description:
-        'Мягкий жаккард и изысканные орнаменты с европейским характером.',
-    },
-    {
-      title: 'Taj Mahal',
-      description:
-        'Тактильная роскошь и восточная эстетика для выразительных интерьеров.',
     },
   ];
 
@@ -372,32 +354,6 @@ function Home() {
               <div className="col-span-full text-sm text-muted">Новинки появятся после добавления товаров.</div>
             )}
           </div>
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-10">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-          <h2 className="text-2xl font-semibold">Коллекции</h2>
-          <Link to="/category/collections" className="text-primary text-sm">
-            Смотреть все
-          </Link>
-        </div>
-        <div className="grid md:grid-cols-3 gap-4">
-          {collections.map((coll) => (
-            <div
-              key={coll.title}
-              className="rounded-3xl border border-ink/10 overflow-hidden bg-white/90 shadow-sm"
-            >
-              <div className="h-40 bg-gradient-to-br from-[#f3ebe3] to-[#e6d9cd]" />
-              <div className="p-5 flex flex-col gap-2">
-                <h4 className="font-semibold">{coll.title}</h4>
-                <p className="text-sm text-muted flex-1">{coll.description}</p>
-                <Link to="/category/collections" className="text-primary text-sm">
-                  Смотреть коллекцию →
-                </Link>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

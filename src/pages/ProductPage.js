@@ -426,7 +426,7 @@ function ProductPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span>↺</span>
-                <span>365 дней на возврат без вопросов</span>
+                <span>14 дней на возврат без вопросов</span>
               </div>
               <div className="flex items-center gap-2">
                 <span>♻️</span>
