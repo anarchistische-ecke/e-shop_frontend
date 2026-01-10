@@ -161,12 +161,11 @@ function SpecificationEditor({ value = [], onChange, compact = false }) {
                       onChange={(e) => updateItem(sectionIndex, itemIndex, 'label', e.target.value)}
                       className="p-2 border border-gray-300 rounded"
                     />
-                    <input
-                      type="text"
-                      placeholder="Значение"
+                    <textarea
+                      placeholder="Значение (можно с переносами строк)"
                       value={item.value}
                       onChange={(e) => updateItem(sectionIndex, itemIndex, 'value', e.target.value)}
-                      className="p-2 border border-gray-300 rounded"
+                      className="p-2 border border-gray-300 rounded min-h-[72px] resize-y"
                     />
                     <button
                       type="button"
