@@ -158,29 +158,36 @@ function SpecificationEditor({ value = [], onChange, compact = false }) {
               />
               <div className="space-y-2">
                 {(section.items || []).map((item, itemIndex) => (
-                  <div key={`spec-${sectionIndex}-item-${itemIndex}`} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-start">
+                  <div
+                    key={`spec-${sectionIndex}-item-${itemIndex}`}
+                    className="grid grid-cols-1 sm:grid-cols-[200px_minmax(0,1fr)] gap-2 items-start"
+                  >
                     <input
                       type="text"
-                      placeholder="Параметр"
+                      placeholder="Параметр (например: Размер)"
                       value={item.label}
                       onChange={(e) => updateItem(sectionIndex, itemIndex, 'label', e.target.value)}
                       className="p-2 border border-gray-300 rounded"
                     />
-                    <textarea
-                      placeholder="Значение (можно с переносами строк)"
-                      value={item.value}
-                      onChange={(e) => updateItem(sectionIndex, itemIndex, 'value', e.target.value)}
-                      onKeyDown={handleValueKeyDown}
-                      rows={3}
-                      className="p-2 border border-gray-300 rounded min-h-[72px] resize-y"
-                    />
-                    <button
-                      type="button"
-                      className="text-xs text-muted underline"
-                      onClick={() => removeItem(sectionIndex, itemIndex)}
-                    >
-                      Удалить
-                    </button>
+                    <div className="space-y-2">
+                      <textarea
+                        placeholder="Значение (Enter = новая строка)"
+                        value={item.value}
+                        onChange={(e) => updateItem(sectionIndex, itemIndex, 'value', e.target.value)}
+                        onKeyDown={handleValueKeyDown}
+                        rows={4}
+                        className="p-2 border border-gray-300 rounded min-h-[110px] resize-y"
+                      />
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          className="text-xs text-muted underline"
+                          onClick={() => removeItem(sectionIndex, itemIndex)}
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
