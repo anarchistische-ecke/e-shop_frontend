@@ -18,7 +18,6 @@ function Footer() {
       links: [
         { label: 'Бестселлеры', path: '/category/popular' },
         { label: 'Новинки', path: '/category/new' },
-        { label: 'Коллекции', path: '/category/collections' },
       ],
     },
     {
@@ -29,6 +28,7 @@ function Footer() {
         { label: 'Бонусы и лояльность', path: '/info/bonuses' },
         { label: 'Производство', path: '/info/production' },
         { label: 'О компании', path: '/about' },
+        { label: 'Пользовательское соглашение и оферта', path: '/info/legal' },
       ],
     },
     {
@@ -42,8 +42,9 @@ function Footer() {
   ];
   return (
     <footer className="bg-white/80 border-t border-ink/10">
-      <div className="container mx-auto px-4 py-12 grid gap-10 lg:grid-cols-[1.3fr_1fr]">
-        <div className="space-y-4">
+      <div className="container mx-auto px-4 py-10">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-4 lg:max-w-sm">
           <Link to="/" className="font-display text-2xl font-semibold text-ink">
             Постельное Белье-Юг
           </Link>
@@ -55,31 +56,39 @@ function Footer() {
             <p className="m-0">Телефон: +7 (999) 123‑45‑67</p>
             <p className="m-0">Почта: hello@cozyhome.ru</p>
           </div>
-        </div>
-
-        <div className="grid gap-6 sm:grid-cols-2">
-          {groups.map((grp) => (
-            <div key={grp.title} className="space-y-3">
-              <h4 className="font-semibold mt-0">{grp.title}</h4>
-              <ul className="space-y-2 text-sm text-muted">
-                {grp.links.map((link) => (
-                  <li key={link.label}>
-                    {link.path.startsWith('/') ? (
-                      <Link to={link.path} className="hover:text-primary">
-                        {link.label}
-                      </Link>
-                    ) : (
-                      <a href="#" className="hover:text-primary">
-                        {link.label}
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
+          <div className="pt-2 space-y-2">
+            <p className="text-xs uppercase tracking-[0.24em] text-muted">Юридическая информация</p>
+            <div className="text-xs text-ink space-y-1">
+              <p className="m-0">ИП Касьянова И.Л.</p>
+              <p className="m-0">ИНН 081407505907</p>
+              <p className="m-0">ОГРНИП 325080000035116</p>
             </div>
-          ))}
+          </div>
         </div>
 
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {groups.map((grp) => (
+              <div key={grp.title} className="space-y-3">
+                <h4 className="font-semibold mt-0">{grp.title}</h4>
+                <ul className="space-y-2 text-sm text-muted">
+                  {grp.links.map((link) => (
+                    <li key={link.label}>
+                      {link.path.startsWith('/') ? (
+                        <Link to={link.path} className="hover:text-primary">
+                          {link.label}
+                        </Link>
+                      ) : (
+                        <a href="#" className="hover:text-primary">
+                          {link.label}
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="border-t border-ink/10 py-4">

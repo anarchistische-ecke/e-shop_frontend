@@ -30,6 +30,7 @@ import PaymentInfoPage from './PaymentInfoPage';
 import DeliveryInfoPage from './DeliveryInfoPage';
 import BonusesInfoPage from './BonusesInfoPage';
 import ProductionInfoPage from './ProductionInfoPage';
+import LegalInfoPage from './LegalInfoPage';
 import OrderPage from './OrderPage';
 import NotFound from './NotFound';
 
@@ -64,6 +65,7 @@ function App() {
           <Route path="/info/delivery" element={<DeliveryInfoPage />} />
           <Route path="/info/bonuses" element={<BonusesInfoPage />} />
           <Route path="/info/production" element={<ProductionInfoPage />} />
+          <Route path="/info/legal" element={<LegalInfoPage />} />
           {/* Admin login (public) */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           {/* Protected admin routes (RequireAdmin enforces authentication) */}

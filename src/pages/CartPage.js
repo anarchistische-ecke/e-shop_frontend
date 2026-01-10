@@ -231,7 +231,7 @@ function CartPage() {
               )}
               <div className="soft-card p-4 text-sm space-y-2">
                 <p className="font-semibold">Почему с нами спокойно</p>
-                <p className="text-muted">Бесплатная доставка от 5000 ₽ и возврат в течение 365 дней.</p>
+                <p className="text-muted">Бесплатная доставка от 5000 ₽ и возврат в течение 14 дней.</p>
                 <p className="text-muted">Поддержка работает ежедневно с 9:00 до 21:00.</p>
               </div>
             </div>
