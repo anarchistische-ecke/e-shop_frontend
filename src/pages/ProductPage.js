@@ -137,6 +137,28 @@ function ProductPage() {
   const mainImage = activeImage?.url || null;
 
   const productReviews = reviews.filter((r) => r.productId === id);
+  const specificationSections = useMemo(() => {
+    const raw = product?.specifications;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((section) => {
+        if (!section) return null;
+        const items = Array.isArray(section.items)
+          ? section.items
+              .map((item) => ({
+                label: item?.label || '',
+                value: item?.value || '',
+              }))
+              .filter((item) => item.label || item.value)
+          : [];
+        return {
+          title: section.title || '',
+          description: section.description || '',
+          items,
+        };
+      })
+      .filter((section) => section && (section.title || section.description || section.items.length > 0));
+  }, [product]);
 
   if (!product) {
     return (
@@ -173,29 +195,6 @@ function ProductPage() {
     product.color ? `Цвет: ${product.color}` : 'Стабильные оттенки после стирки',
     product.care || 'Уход: деликатная стирка при 30°',
   ];
-
-  const specificationSections = useMemo(() => {
-    const raw = product?.specifications;
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .map((section) => {
-        if (!section) return null;
-        const items = Array.isArray(section.items)
-          ? section.items
-              .map((item) => ({
-                label: item?.label || '',
-                value: item?.value || '',
-              }))
-              .filter((item) => item.label || item.value)
-          : [];
-        return {
-          title: section.title || '',
-          description: section.description || '',
-          items,
-        };
-      })
-      .filter((section) => section && (section.title || section.description || section.items.length > 0));
-  }, [product]);
 
   const bundleItems = relatedProducts.slice(0, 3);
   const bundleAddOnTotal = bundleItems.reduce((sum, item) => {
