@@ -4,7 +4,7 @@ import ProductCard from '../components/ProductCard';
 import { getProducts, getCategories } from '../api';
 import { reviews } from '../data/reviews';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
-import { getPrimaryImageUrl, getProductPrice } from '../utils/product';
+import { getPrimaryImageUrl, getProductPrice, resolveImageUrl } from '../utils/product';
 
 function Home() {
   const [products, setProducts] = useState([]);
@@ -245,7 +245,11 @@ function Home() {
               const countLabel = count ? `${count} товаров` : 'Подборка';
               const catKey = resolveCategoryKey(cat);
               const previewProduct = categoryMeta.heroMap[catKey];
+              const categoryImage = resolveImageUrl(
+                cat.imageUrl || cat.image || cat.image_url || cat.thumbnail || ''
+              );
               const previewImage = getPrimaryImageUrl(previewProduct);
+              const tileImage = categoryImage || previewImage;
               return (
                 <Link
                   key={cat.slug || cat.id}
@@ -263,8 +267,8 @@ function Home() {
                     </div>
                     <div className="rounded-xl overflow-hidden border border-white/70 bg-white/80">
                       <div className="relative pt-[68%]">
-                        {previewImage ? (
-                          <img src={previewImage} alt={cat.name} className="absolute inset-0 h-full w-full object-cover" />
+                        {tileImage ? (
+                          <img src={tileImage} alt={cat.name} className="absolute inset-0 h-full w-full object-cover" />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">
                             Фото появится позже
