@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../api';
+import { resolveImageUrl } from '../utils/product';
 
 function AdminCategories() {
   const [categories, setCategories] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  const [newCategory, setNewCategory] = useState({ name: '', slug: '', description: '', parentId: '' });
+  const [newCategory, setNewCategory] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    imageUrl: '',
+    parentId: ''
+  });
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -86,6 +93,7 @@ function AdminCategories() {
         name: cat.name,
         slug: cat.slug,
         description: cat.description,
+        imageUrl: cat.imageUrl || '',
         parentId: cat.parentId || null
       });
       load();
@@ -116,10 +124,11 @@ function AdminCategories() {
         name: newCategory.name,
         slug: newCategory.slug,
         description: newCategory.description || '',
+        imageUrl: newCategory.imageUrl || '',
         parentId: newCategory.parentId || null
       });
       setCategories((prev) => [...prev, created]);
-      setNewCategory({ name: '', slug: '', description: '', parentId: '' });
+      setNewCategory({ name: '', slug: '', description: '', imageUrl: '', parentId: '' });
     } catch (err) {
       console.error('Failed to create category:', err);
     }
@@ -212,6 +221,37 @@ function AdminCategories() {
                 <span>{cat.description ? cat.description.substring(0, 80) + '…' : '—'}</span>
               )}
             </div>
+            <div>
+              <span className="text-xs text-muted block">Фото</span>
+              {editingId === cat.id ? (
+                <div className="space-y-2">
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={cat.imageUrl || ''}
+                    onChange={(e) => handleEditChange(cat.id, 'imageUrl', e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                  {cat.imageUrl ? (
+                    <img
+                      src={resolveImageUrl(cat.imageUrl)}
+                      alt={cat.name}
+                      className="h-20 w-full rounded-lg object-cover border border-gray-200"
+                    />
+                  ) : (
+                    <span className="text-xs text-muted">—</span>
+                  )}
+                </div>
+              ) : cat.imageUrl ? (
+                <img
+                  src={resolveImageUrl(cat.imageUrl)}
+                  alt={cat.name}
+                  className="h-16 w-full rounded-lg object-cover border border-gray-200"
+                />
+              ) : (
+                <span>—</span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {editingId === cat.id ? (
                 <>
@@ -248,6 +288,7 @@ function AdminCategories() {
               <th className="p-2 border-b text-left">Slug</th>
               <th className="p-2 border-b text-left">Родитель</th>
               <th className="p-2 border-b text-left">Описание</th>
+              <th className="p-2 border-b text-left">Фото</th>
               <th className="p-2 border-b text-left">Действия</th>
             </tr>
           </thead>
@@ -297,6 +338,26 @@ function AdminCategories() {
                     />
                   </td>
                   <td className="p-2">
+                    <div className="space-y-2">
+                      <input
+                        type="url"
+                        placeholder="https://..."
+                        value={cat.imageUrl || ''}
+                        onChange={(e) => handleEditChange(cat.id, 'imageUrl', e.target.value)}
+                        className="w-full p-1 border border-gray-300 rounded"
+                      />
+                      {cat.imageUrl ? (
+                        <img
+                          src={resolveImageUrl(cat.imageUrl)}
+                          alt={cat.name}
+                          className="h-16 w-24 rounded-lg object-cover border border-gray-200"
+                        />
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-2">
                     <button onClick={() => handleSave(cat.id)} className="text-primary mr-2">
                       Сохранить
                     </button>
@@ -311,6 +372,17 @@ function AdminCategories() {
                   <td className="p-2">{cat.slug}</td>
                   <td className="p-2">{getCategoryLabel(cat.parentId)}</td>
                   <td className="p-2">{cat.description ? cat.description.substring(0, 40) + '…' : ''}</td>
+                  <td className="p-2">
+                    {cat.imageUrl ? (
+                      <img
+                        src={resolveImageUrl(cat.imageUrl)}
+                        alt={cat.name}
+                        className="h-12 w-16 rounded-lg object-cover border border-gray-200"
+                      />
+                    ) : (
+                      <span className="text-xs text-muted">—</span>
+                    )}
+                  </td>
                   <td className="p-2">
                     <button onClick={() => setEditingId(cat.id)} className="text-primary mr-2">
                       Редактировать
@@ -357,6 +429,13 @@ function AdminCategories() {
           placeholder="Описание (необязательно)" 
           value={newCategory.description} 
           onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} 
+          className="w-full p-2 border border-gray-300 rounded"
+        />
+        <input
+          type="url"
+          placeholder="Ссылка на изображение (https://...)"
+          value={newCategory.imageUrl}
+          onChange={(e) => setNewCategory({ ...newCategory, imageUrl: e.target.value })}
           className="w-full p-2 border border-gray-300 rounded"
         />
         <select
