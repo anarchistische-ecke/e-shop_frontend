@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getCategories, createCategory, updateCategory, deleteCategory } from '../api';
+import { getCategories, createCategory, updateCategory, deleteCategory, uploadCategoryImage } from '../api';
 import { resolveImageUrl } from '../utils/product';
 
 function AdminCategories() {
@@ -9,9 +9,13 @@ function AdminCategories() {
     name: '',
     slug: '',
     description: '',
-    imageUrl: '',
     parentId: ''
   });
+  const [categoryImageFiles, setCategoryImageFiles] = useState({});
+  const [uploadingCategoryImages, setUploadingCategoryImages] = useState({});
+  const [newCategoryImageFile, setNewCategoryImageFile] = useState(null);
+  const [newCategoryImagePreview, setNewCategoryImagePreview] = useState('');
+  const [newCategoryUploading, setNewCategoryUploading] = useState(false);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -38,6 +42,16 @@ function AdminCategories() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!newCategoryImageFile) {
+      setNewCategoryImagePreview('');
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(newCategoryImageFile);
+    setNewCategoryImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [newCategoryImageFile]);
 
   const categoryOptions = useMemo(() => {
     const list = Array.isArray(categories) ? categories : [];
@@ -85,6 +99,27 @@ function AdminCategories() {
     setCategories((prev) => prev.map((cat) => (cat.id === id ? { ...cat, [field]: value } : cat)));
   };
 
+  const handleCategoryImageUpload = async (categoryId) => {
+    const file = categoryImageFiles[categoryId];
+    if (!file) return;
+    setUploadingCategoryImages((prev) => ({ ...prev, [categoryId]: true }));
+    try {
+      const updated = await uploadCategoryImage(categoryId, file);
+      setCategories((prev) =>
+        prev.map((cat) => (cat.id === categoryId ? { ...cat, ...updated } : cat))
+      );
+      setCategoryImageFiles((prev) => {
+        const next = { ...prev };
+        delete next[categoryId];
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to upload category image:', err);
+    } finally {
+      setUploadingCategoryImages((prev) => ({ ...prev, [categoryId]: false }));
+    }
+  };
+
   const handleSave = async (id) => {
     try {
       const cat = categories.find((c) => c.id === id);
@@ -93,7 +128,6 @@ function AdminCategories() {
         name: cat.name,
         slug: cat.slug,
         description: cat.description,
-        imageUrl: cat.imageUrl || '',
         parentId: cat.parentId || null
       });
       load();
@@ -124,11 +158,22 @@ function AdminCategories() {
         name: newCategory.name,
         slug: newCategory.slug,
         description: newCategory.description || '',
-        imageUrl: newCategory.imageUrl || '',
         parentId: newCategory.parentId || null
       });
-      setCategories((prev) => [...prev, created]);
-      setNewCategory({ name: '', slug: '', description: '', imageUrl: '', parentId: '' });
+      let saved = created;
+      if (newCategoryImageFile) {
+        setNewCategoryUploading(true);
+        try {
+          saved = await uploadCategoryImage(created.id, newCategoryImageFile);
+        } catch (err) {
+          console.error('Failed to upload category image:', err);
+        } finally {
+          setNewCategoryUploading(false);
+        }
+      }
+      setCategories((prev) => [...prev, saved]);
+      setNewCategory({ name: '', slug: '', description: '', parentId: '' });
+      setNewCategoryImageFile(null);
     } catch (err) {
       console.error('Failed to create category:', err);
     }
@@ -223,26 +268,7 @@ function AdminCategories() {
             </div>
             <div>
               <span className="text-xs text-muted block">Фото</span>
-              {editingId === cat.id ? (
-                <div className="space-y-2">
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={cat.imageUrl || ''}
-                    onChange={(e) => handleEditChange(cat.id, 'imageUrl', e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                  {cat.imageUrl ? (
-                    <img
-                      src={resolveImageUrl(cat.imageUrl)}
-                      alt={cat.name}
-                      className="h-20 w-full rounded-lg object-cover border border-gray-200"
-                    />
-                  ) : (
-                    <span className="text-xs text-muted">—</span>
-                  )}
-                </div>
-              ) : cat.imageUrl ? (
+              {cat.imageUrl ? (
                 <img
                   src={resolveImageUrl(cat.imageUrl)}
                   alt={cat.name}
@@ -250,6 +276,36 @@ function AdminCategories() {
                 />
               ) : (
                 <span>—</span>
+              )}
+              {editingId === cat.id && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-xs bg-white">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCategoryImageFiles((prev) => ({ ...prev, [cat.id]: file }));
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                    {categoryImageFiles[cat.id] ? 'Фото выбрано' : 'Выбрать фото'}
+                  </label>
+                  <button
+                    type="button"
+                    className="button text-xs"
+                    onClick={() => handleCategoryImageUpload(cat.id)}
+                    disabled={!categoryImageFiles[cat.id] || uploadingCategoryImages[cat.id]}
+                  >
+                    {uploadingCategoryImages[cat.id] ? 'Загружаем…' : 'Загрузить'}
+                  </button>
+                  {categoryImageFiles[cat.id] && (
+                    <span className="text-xs text-muted">{categoryImageFiles[cat.id].name}</span>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -339,13 +395,6 @@ function AdminCategories() {
                   </td>
                   <td className="p-2">
                     <div className="space-y-2">
-                      <input
-                        type="url"
-                        placeholder="https://..."
-                        value={cat.imageUrl || ''}
-                        onChange={(e) => handleEditChange(cat.id, 'imageUrl', e.target.value)}
-                        className="w-full p-1 border border-gray-300 rounded"
-                      />
                       {cat.imageUrl ? (
                         <img
                           src={resolveImageUrl(cat.imageUrl)}
@@ -354,6 +403,34 @@ function AdminCategories() {
                         />
                       ) : (
                         <span className="text-xs text-muted">—</span>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-xs bg-white">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setCategoryImageFiles((prev) => ({ ...prev, [cat.id]: file }));
+                              }
+                              e.target.value = '';
+                            }}
+                          />
+                          {categoryImageFiles[cat.id] ? 'Фото выбрано' : 'Выбрать фото'}
+                        </label>
+                        <button
+                          type="button"
+                          className="button text-xs"
+                          onClick={() => handleCategoryImageUpload(cat.id)}
+                          disabled={!categoryImageFiles[cat.id] || uploadingCategoryImages[cat.id]}
+                        >
+                          {uploadingCategoryImages[cat.id] ? 'Загружаем…' : 'Загрузить'}
+                        </button>
+                      </div>
+                      {categoryImageFiles[cat.id] && (
+                        <span className="text-xs text-muted">{categoryImageFiles[cat.id].name}</span>
                       )}
                     </div>
                   </td>
@@ -431,13 +508,39 @@ function AdminCategories() {
           onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} 
           className="w-full p-2 border border-gray-300 rounded"
         />
-        <input
-          type="url"
-          placeholder="Ссылка на изображение (https://...)"
-          value={newCategory.imageUrl}
-          onChange={(e) => setNewCategory({ ...newCategory, imageUrl: e.target.value })}
-          className="w-full p-2 border border-gray-300 rounded"
-        />
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.28em] text-muted">Фото категории</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-xs bg-white">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setNewCategoryImageFile(file);
+                  }
+                  e.target.value = '';
+                }}
+              />
+              {newCategoryImageFile ? 'Фото выбрано' : 'Выбрать фото'}
+            </label>
+            {newCategoryImageFile && (
+              <span className="text-xs text-muted">{newCategoryImageFile.name}</span>
+            )}
+          </div>
+          {newCategoryImagePreview && (
+            <img
+              src={newCategoryImagePreview}
+              alt={newCategory.name || 'Новая категория'}
+              className="h-20 w-32 rounded-lg object-cover border border-gray-200"
+            />
+          )}
+          <p className="text-xs text-muted">
+            Фото загрузится сразу после создания категории.
+          </p>
+        </div>
         <select
           value={newCategory.parentId}
           onChange={(e) => setNewCategory({ ...newCategory, parentId: e.target.value })}
@@ -450,7 +553,13 @@ function AdminCategories() {
             </option>
           ))}
         </select>
-        <button type="submit" className="button">Добавить</button>
+        <button type="submit" className="button" disabled={newCategoryUploading}>
+          {newCategoryUploading
+            ? 'Загружаем…'
+            : newCategoryImageFile
+              ? 'Добавить и загрузить'
+              : 'Добавить'}
+        </button>
       </form>
     </div>
   );

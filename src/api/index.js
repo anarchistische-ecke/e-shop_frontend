@@ -77,6 +77,14 @@ export async function updateCategory(categoryId, updates) {
 export async function deleteCategory(categoryId) {
   return request(`/categories/${categoryId}`, { method: 'DELETE' });
 }
+export async function uploadCategoryImage(categoryId, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request(`/categories/${categoryId}/image`, {
+    method: 'POST',
+    body: formData
+  });
+}
 
 export async function getBrands() {
   return request('/brands');
