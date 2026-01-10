@@ -55,6 +55,11 @@ const sanitizeSpecSections = (sections) =>
 function SpecificationEditor({ value = [], onChange, compact = false }) {
   const sections = normalizeSpecSections(value);
   const updateSections = (next) => onChange(next);
+  const handleValueKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.stopPropagation();
+    }
+  };
 
   const addSection = () => {
     updateSections([
@@ -165,6 +170,8 @@ function SpecificationEditor({ value = [], onChange, compact = false }) {
                       placeholder="Значение (можно с переносами строк)"
                       value={item.value}
                       onChange={(e) => updateItem(sectionIndex, itemIndex, 'value', e.target.value)}
+                      onKeyDown={handleValueKeyDown}
+                      rows={3}
                       className="p-2 border border-gray-300 rounded min-h-[72px] resize-y"
                     />
                     <button
