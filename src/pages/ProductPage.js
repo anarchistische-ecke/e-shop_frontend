@@ -538,7 +538,9 @@ function ProductPage() {
                               className="grid grid-cols-1 sm:grid-cols-[180px_minmax(0,1fr)] gap-1 sm:gap-6 text-sm"
                             >
                               <dt className="text-muted">{item.label || '—'}</dt>
-                              <dd className="text-ink">{item.value || '—'}</dd>
+                              <dd className="text-ink whitespace-pre-line break-words">
+                                {item.value || '—'}
+                              </dd>
                             </div>
                           ))}
                         </dl>
