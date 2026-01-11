@@ -291,6 +291,7 @@ function AdminProducts() {
     categories: [],
     brand: '',
     description: '',
+    isActive: true,
     specifications: [],
     variantPrice: '',
     variantSku: '',
@@ -308,6 +309,7 @@ function AdminProducts() {
   const [savingProduct, setSavingProduct] = useState(false);
   const [savingVariant, setSavingVariant] = useState({});
   const [refreshingProductId, setRefreshingProductId] = useState(null);
+  const [visibilityUpdating, setVisibilityUpdating] = useState({});
 
   const slugify = useCallback(
     (str) =>
@@ -396,6 +398,7 @@ function AdminProducts() {
       ...product,
       variants,
       images,
+      isActive: product?.isActive ?? product?.is_active ?? true,
       specifications: normalizeSpecSections(product.specifications),
       categoryRefs: Array.from(new Set(categoryRefs)),
       brandRef:
@@ -410,7 +413,7 @@ function AdminProducts() {
       if (!productId) return null;
       try {
         setRefreshingProductId(productId);
-        const fresh = await getProduct(productId);
+        const fresh = await getProduct(productId, { includeInactive: true });
         if (!fresh) return null;
         const normalized = normalizeProduct(fresh);
         setItems((prev) =>
@@ -451,7 +454,7 @@ function AdminProducts() {
 
   const loadProducts = useCallback(async () => {
     try {
-      const data = await getProducts();
+      const data = await getProducts({ includeInactive: true });
       const normalized = Array.isArray(data) ? data.map(normalizeProduct) : [];
       setItems(normalized);
       setSelectedIds((prev) => prev.filter((id) => normalized.some((p) => p.id === id)));
@@ -540,6 +543,38 @@ function AdminProducts() {
     });
   };
 
+  const buildProductPayload = (product, overrides = {}) => ({
+    name: product?.name || '',
+    description: product?.description || '',
+    slug: product?.slug || '',
+    categories: product?.categoryRefs || [],
+    brand: product?.brandRef || undefined,
+    specifications: sanitizeSpecSections(product?.specifications || []),
+    isActive: product?.isActive !== false,
+    ...overrides
+  });
+
+  const handleToggleVisibility = async (product) => {
+    if (!product?.id) return;
+    const currentIsActive = product.isActive !== false;
+    const nextIsActive = !currentIsActive;
+    setVisibilityUpdating((prev) => ({ ...prev, [product.id]: true }));
+    try {
+      await updateProduct(product.id, buildProductPayload(product, { isActive: nextIsActive }));
+      setItems((prev) =>
+        prev.map((item) => (item.id === product.id ? { ...item, isActive: nextIsActive } : item))
+      );
+      setEditingProduct((prev) =>
+        prev && prev.id === product.id ? { ...prev, isActive: nextIsActive } : prev
+      );
+    } catch (err) {
+      console.error('Failed to update product visibility:', err);
+      alert('Не удалось изменить видимость товара. Попробуйте ещё раз.');
+    } finally {
+      setVisibilityUpdating((prev) => ({ ...prev, [product.id]: false }));
+    }
+  };
+
   const handleAddNew = async (e) => {
     e.preventDefault();
     if (!newItem.name || !newItem.variantPrice) return;
@@ -557,6 +592,7 @@ function AdminProducts() {
         slug,
         categories: newItem.categories || [],
         brand: newItem.brand || undefined,
+        isActive: newItem.isActive !== false,
         specifications: sanitizeSpecSections(newItem.specifications)
       });
       await addProductVariant(created.id, {
@@ -576,6 +612,7 @@ function AdminProducts() {
         categories: [],
         brand: '',
         description: '',
+        isActive: true,
         specifications: [],
         variantPrice: '',
         variantSku: '',
@@ -757,14 +794,7 @@ function AdminProducts() {
     if (!editingProduct) return;
     try {
       setSavingProduct(true);
-      await updateProduct(editingProduct.id, {
-        name: editingProduct.name,
-        description: editingProduct.description,
-        slug: editingProduct.slug,
-        categories: editingProduct.categoryRefs || [],
-        brand: editingProduct.brandRef || undefined,
-        specifications: sanitizeSpecSections(editingProduct.specifications)
-      });
+      await updateProduct(editingProduct.id, buildProductPayload(editingProduct));
       await refreshProduct(editingProduct.id);
     } catch (err) {
       console.error('Failed to update product:', err);
@@ -833,13 +863,7 @@ function AdminProducts() {
       try {
         const product = items.find((p) => p.id === id);
         if (!product) continue;
-        await updateProduct(id, {
-          name: product.name,
-          description: product.description,
-          slug: product.slug,
-          categories: bulkCategories,
-          brand: product.brandRef || undefined
-        });
+        await updateProduct(id, buildProductPayload(product, { categories: bulkCategories }));
       } catch (err) {
         console.error('Failed to bulk change category for', id, err);
       }
@@ -852,13 +876,7 @@ function AdminProducts() {
       try {
         const product = items.find((p) => p.id === id);
         if (!product) continue;
-        await updateProduct(id, {
-          name: product.name,
-          description: product.description,
-          slug: product.slug,
-          categories: product.categoryRefs || [],
-          brand: bulkBrand || undefined
-        });
+        await updateProduct(id, buildProductPayload(product, { brand: bulkBrand || undefined }));
       } catch (err) {
         console.error('Failed to bulk change brand for', id, err);
       }
@@ -1280,15 +1298,32 @@ function AdminProducts() {
               }`
             : 'Нет вариантов';
           return (
-            <div key={item.id || index} className="soft-card p-4 space-y-3">
+            <div
+              key={item.id || index}
+              className={`soft-card p-4 space-y-3 ${item.isActive === false ? 'opacity-70' : ''}`}
+            >
               <div className="flex items-start justify-between gap-3">
-                <label className="flex items-center gap-2 min-w-0 flex-1">
+                <label className="flex items-start gap-2 min-w-0 flex-1">
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(item.id)}
                     onChange={() => toggleSelect(item.id)}
+                    className="mt-1"
                   />
-                  <span className="font-semibold break-words leading-snug">{item.name}</span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold break-words leading-snug">{item.name}</span>
+                      <span
+                        className={`text-[10px] uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border ${
+                          item.isActive === false
+                            ? 'border-red-200 text-red-600 bg-red-50'
+                            : 'border-emerald-200 text-emerald-700 bg-emerald-50'
+                        }`}
+                      >
+                        {item.isActive === false ? 'Скрыт' : 'Активен'}
+                      </span>
+                    </div>
+                  </div>
                 </label>
                 <span className="text-[11px] text-muted text-right break-all max-w-[40%]">{item.slug}</span>
               </div>
@@ -1318,6 +1353,17 @@ function AdminProducts() {
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => openEditModal(item)} className="button text-xs">
                   Редактировать
+                </button>
+                <button
+                  onClick={() => handleToggleVisibility(item)}
+                  className="button-gray text-xs"
+                  disabled={visibilityUpdating[item.id]}
+                >
+                  {visibilityUpdating[item.id]
+                    ? 'Обновляем…'
+                    : item.isActive === false
+                    ? 'Показать'
+                    : 'Скрыть'}
                 </button>
                 <button onClick={() => handleDelete(index)} className="button-gray text-xs">
                   Удалить
@@ -1366,7 +1412,7 @@ function AdminProducts() {
                 : 'Нет вариантов';
               return (
                 <React.Fragment key={item.id || index}>
-                  <tr className="border-b align-top">
+                  <tr className={`border-b align-top ${item.isActive === false ? 'opacity-70' : ''}`}>
                     <td className="p-2">
                       <input
                         type="checkbox"
@@ -1375,7 +1421,18 @@ function AdminProducts() {
                       />
                     </td>
                     <td className="p-2">
-                      <div className="font-semibold">{item.name}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="font-semibold">{item.name}</div>
+                        <span
+                          className={`text-[10px] uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border ${
+                            item.isActive === false
+                              ? 'border-red-200 text-red-600 bg-red-50'
+                              : 'border-emerald-200 text-emerald-700 bg-emerald-50'
+                          }`}
+                        >
+                          {item.isActive === false ? 'Скрыт' : 'Активен'}
+                        </span>
+                      </div>
                       <div className="text-xs text-muted">{item.slug}</div>
                     </td>
                     <td className="p-2 text-xs text-muted">{getCategoryName(item.categoryRefs)}</td>
@@ -1384,6 +1441,17 @@ function AdminProducts() {
                     <td className="p-2 space-y-1">
                       <button onClick={() => openEditModal(item)} className="text-primary block">
                         Редактировать
+                      </button>
+                      <button
+                        onClick={() => handleToggleVisibility(item)}
+                        className="text-gray-600 block"
+                        disabled={visibilityUpdating[item.id]}
+                      >
+                        {visibilityUpdating[item.id]
+                          ? 'Обновляем…'
+                          : item.isActive === false
+                          ? 'Показать'
+                          : 'Скрыть'}
                       </button>
                       <button onClick={() => handleDelete(index)} className="text-red-600 block">
                         Удалить
@@ -1556,23 +1624,34 @@ function AdminProducts() {
                           </button>
                         )}
                       </label>
-                      <label className="text-xs text-muted block">
-                        <span className="mb-1 block">Бренд</span>
-                        <select
-                          value={editingProduct.brandRef || ''}
-                          onChange={(e) => setEditingProduct({ ...editingProduct, brandRef: e.target.value })}
-                          className="p-2 border border-gray-300 rounded w-full"
-                        >
-                          <option value="">Без бренда</option>
-                          {brands.map((b) => (
-                            <option key={b.slug || b.id} value={b.slug || b.id}>
-                              {b.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
+                    <label className="text-xs text-muted block">
+                      <span className="mb-1 block">Бренд</span>
+                      <select
+                        value={editingProduct.brandRef || ''}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, brandRef: e.target.value })}
+                        className="p-2 border border-gray-300 rounded w-full"
+                      >
+                        <option value="">Без бренда</option>
+                        {brands.map((b) => (
+                          <option key={b.slug || b.id} value={b.slug || b.id}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   </div>
+                  <label className="flex items-center gap-2 text-xs text-muted">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-primary"
+                      checked={editingProduct.isActive !== false}
+                      onChange={(e) =>
+                        setEditingProduct({ ...editingProduct, isActive: e.target.checked })
+                      }
+                    />
+                    <span>Показывать на сайте</span>
+                  </label>
+                </div>
                 </div>
                 <div className="border border-gray-200 rounded-xl p-4 shadow-sm bg-white space-y-2">
                   <label className="block text-xs text-muted">
@@ -1921,6 +2000,15 @@ function AdminProducts() {
               />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={newItem.isActive !== false}
+              onChange={(e) => setNewItem({ ...newItem, isActive: e.target.checked })}
+            />
+            <span>Показывать на сайте</span>
+          </label>
           <SpecificationEditor
             value={newItem.specifications || []}
             onChange={(next) => setNewItem((prev) => ({ ...prev, specifications: next }))}

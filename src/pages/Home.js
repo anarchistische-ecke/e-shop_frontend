@@ -68,6 +68,11 @@ function Home() {
     },
   ];
 
+  const visibleProducts = useMemo(
+    () => products.filter((product) => product?.isActive !== false),
+    [products]
+  );
+
 
   const seasonalTiles = [
     {
@@ -111,17 +116,17 @@ function Home() {
   const categoryMeta = useMemo(() => {
     const counts = {};
     const heroMap = {};
-    products.forEach((product) => {
+    visibleProducts.forEach((product) => {
       const key = resolveProductCategoryKey(product);
       if (!key) return;
       counts[key] = (counts[key] || 0) + 1;
       if (!heroMap[key]) heroMap[key] = product;
     });
     return { counts, heroMap };
-  }, [products]);
+  }, [visibleProducts]);
 
   const featuredProduct =
-    products.find((p) => p.id === heroConfig.featuredProductId) || products[0] || null;
+    visibleProducts.find((p) => p.id === heroConfig.featuredProductId) || visibleProducts[0] || null;
   const heroImage = getPrimaryImageUrl(featuredProduct);
   const featuredPrice = featuredProduct ? getProductPrice(featuredProduct) : null;
   const topCategories = categories.filter((cat) => !cat.parentId);
@@ -291,10 +296,10 @@ function Home() {
           </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {products.slice(0, 8).map((prod) => (
+          {visibleProducts.slice(0, 8).map((prod) => (
             <ProductCard key={prod.id} product={prod} />
           ))}
-          {products.length === 0 && (
+          {visibleProducts.length === 0 && (
             <div className="text-sm text-muted">Добавьте товары в каталоге, чтобы показать их здесь.</div>
           )}
         </div>
@@ -347,10 +352,10 @@ function Home() {
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {products.slice(0, 4).map((prod) => (
+            {visibleProducts.slice(0, 4).map((prod) => (
               <ProductCard key={prod.id} product={prod} />
             ))}
-            {products.length === 0 && (
+            {visibleProducts.length === 0 && (
               <div className="col-span-full text-sm text-muted">Новинки появятся после добавления товаров.</div>
             )}
           </div>
@@ -366,7 +371,7 @@ function Home() {
         </div>
         <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
           {reviews.map((rev, idx) => {
-            const product = products.find((p) => p.id === rev.productId);
+            const product = visibleProducts.find((p) => p.id === rev.productId);
             return (
               <div
                 key={idx}
