@@ -2,6 +2,7 @@
   padding: 3.5rem 0 4.5rem;
   background: #fff;
   color: #2c2622;
+  --legal-gutter: 24px;
 }
 
 .legal-page .ch-container {
@@ -36,16 +37,15 @@
 .ch-row {
   display: flex;
   flex-wrap: wrap;
+  margin-left: calc(var(--legal-gutter, 24px) / -2);
+  margin-right: calc(var(--legal-gutter, 24px) / -2);
   align-items: flex-start;
-  margin-left: -12px;
-  margin-right: -12px;
-  row-gap: 16px;
 }
 
 .ch-row > [class*='ch-col-'] {
-  padding-left: 12px;
-  padding-right: 12px;
   min-width: 0;
+  padding-left: calc(var(--legal-gutter, 24px) / 2);
+  padding-right: calc(var(--legal-gutter, 24px) / 2);
 }
 
 .ch-row--astart {
@@ -56,15 +56,14 @@
   align-items: center;
 }
 
-.ch-col-auto {
-  flex: 0 0 auto;
-  width: auto;
-  max-width: none;
-}
-
 .ch-col-24 {
   flex: 0 0 100%;
   max-width: 100%;
+}
+
+.ch-col-22 {
+  flex: 0 0 91.6667%;
+  max-width: 91.6667%;
 }
 
 .ch-col-20 {
@@ -107,6 +106,12 @@
   max-width: 29.1667%;
 }
 
+.ch-col-auto {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 100%;
+}
+
 @media (min-width: 768px) {
   .ch-col-md-2 {
     flex: 0 0 8.3333%;
@@ -123,7 +128,7 @@
   .ch-col-md-auto {
     flex: 0 0 auto;
     width: auto;
-    max-width: none;
+    max-width: 100%;
   }
 }
 
@@ -154,7 +159,7 @@
   .ch-col-xl-auto {
     flex: 0 0 auto;
     width: auto;
-    max-width: none;
+    max-width: 100%;
   }
   .ch-row--xl-center {
     justify-content: center;
@@ -303,7 +308,6 @@
   background: #fff;
   padding: 16px;
   box-shadow: none;
-  height: fit-content;
 }
 
 .terms_sale__btn {
@@ -405,12 +409,15 @@
 }
 
 [id] {
-  scroll-margin-top: 120px;
+  scroll-margin-top: calc(var(--site-header-height, 6.5rem) + 32px);
 }
 
 @media (min-width: 1024px) {
   .legal-terms .ch-col-lg-7 {
+    position: sticky;
+    top: calc(var(--site-header-height, 6.5rem) + 16px);
     align-self: flex-start;
+    z-index: 2;
   }
   .terms_sale__btn {
     display: none;
@@ -420,10 +427,7 @@
     flex-direction: column;
   }
   .terms_sale__wrapper {
-    position: sticky;
-    top: calc(var(--site-header-height, 6.5rem) + 16px);
-    align-self: flex-start;
-    z-index: 2;
+    position: relative;
   }
 }
 
