@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   getProducts,
   getProduct,
@@ -279,6 +279,7 @@ function AdminProducts() {
   const [expandedProductId, setExpandedProductId] = useState(null);
   const [variantForms, setVariantForms] = useState({});
   const [uploadingImages, setUploadingImages] = useState({});
+  const [uploadStatus, setUploadStatus] = useState({});
   const [uploadTargets, setUploadTargets] = useState({});
   const [selectedIds, setSelectedIds] = useState([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -310,6 +311,8 @@ function AdminProducts() {
   const [savingVariant, setSavingVariant] = useState({});
   const [refreshingProductId, setRefreshingProductId] = useState(null);
   const [visibilityUpdating, setVisibilityUpdating] = useState({});
+  const [bulkVisibilityUpdating, setBulkVisibilityUpdating] = useState(false);
+  const initialEditSnapshotRef = useRef(null);
 
   const slugify = useCallback(
     (str) =>
@@ -322,6 +325,31 @@ function AdminProducts() {
         .replace(/\s+/g, '-'),
     []
   );
+
+  const MAX_IMAGE_SIZE_MB = 10;
+  const MAX_IMAGE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
+  const setUploadState = useCallback((productId, state, message = '', count = 0) => {
+    if (!productId) return;
+    setUploadStatus((prev) => ({
+      ...prev,
+      [productId]: { state, message, count, updatedAt: Date.now() }
+    }));
+  }, []);
+
+  const buildEditSnapshot = useCallback((product) => {
+    if (!product) return null;
+    const categories = Array.isArray(product.categoryRefs) ? product.categoryRefs.slice().sort() : [];
+    return {
+      name: product.name || '',
+      slug: product.slug || '',
+      description: product.description || '',
+      brandRef: product.brandRef || '',
+      categoryRefs: categories,
+      specifications: normalizeSpecSections(product.specifications),
+      isActive: product.isActive !== false
+    };
+  }, []);
 
   const categoryOptions = useMemo(() => {
     const list = Array.isArray(categories) ? categories : [];
@@ -508,6 +536,7 @@ function AdminProducts() {
       description: normalized.description || '',
       specifications: normalized.specifications || []
     });
+    initialEditSnapshotRef.current = JSON.stringify(buildEditSnapshot(normalized));
     setVariantEditForms(buildVariantFormState(normalized.variants || []));
     setModalVariantForm({
       ...EMPTY_VARIANT_FORM,
@@ -795,7 +824,10 @@ function AdminProducts() {
     try {
       setSavingProduct(true);
       await updateProduct(editingProduct.id, buildProductPayload(editingProduct));
-      await refreshProduct(editingProduct.id);
+      const refreshed = await refreshProduct(editingProduct.id);
+      if (refreshed) {
+        initialEditSnapshotRef.current = JSON.stringify(buildEditSnapshot(refreshed));
+      }
     } catch (err) {
       console.error('Failed to update product:', err);
       alert('Не удалось сохранить товар. Попробуйте ещё раз.');
@@ -809,12 +841,55 @@ function AdminProducts() {
   const handleUploadImages = async (productId, files, variantId = '') => {
     const list = Array.from(files || []);
     if (list.length === 0) return;
+    const invalidFiles = list.filter((file) => !file.type.startsWith('image/'));
+    const oversizedFiles = list.filter((file) => file.size > MAX_IMAGE_BYTES);
+    const validFiles = list.filter(
+      (file) => file.type.startsWith('image/') && file.size <= MAX_IMAGE_BYTES
+    );
+    if (validFiles.length === 0) {
+      const reasonParts = [];
+      if (invalidFiles.length) {
+        reasonParts.push(`не изображение: ${invalidFiles.length}`);
+      }
+      if (oversizedFiles.length) {
+        reasonParts.push(`слишком большие: ${oversizedFiles.length}`);
+      }
+      const reason = reasonParts.length ? `Причина: ${reasonParts.join(', ')}.` : '';
+      setUploadState(
+        productId,
+        'error',
+        `Файлы не загружены. ${reason || 'Проверьте формат и размер файла.'}`
+      );
+      alert('Не удалось загрузить изображения. Проверьте формат и размер файлов.');
+      return;
+    }
+    const skippedNotes = [];
+    if (invalidFiles.length) {
+      skippedNotes.push(`не изображение: ${invalidFiles.length}`);
+    }
+    if (oversizedFiles.length) {
+      skippedNotes.push(`слишком большие: ${oversizedFiles.length}`);
+    }
+    const skippedNote = skippedNotes.length ? ` Пропущено: ${skippedNotes.join(', ')}.` : '';
+    setUploadState(productId, 'uploading', `Загружаем ${validFiles.length} шт…`);
     setUploadingImages((prev) => ({ ...prev, [productId]: true }));
     try {
-      await uploadProductImages(productId, list, { variantId: variantId || undefined });
+      await uploadProductImages(productId, validFiles, { variantId: variantId || undefined });
+      setUploadState(productId, 'syncing', 'Подтверждаем сохранение…');
       await refreshProduct(productId);
+      setUploadState(
+        productId,
+        'done',
+        `Готово: загружено ${validFiles.length} шт.${skippedNote}`
+      );
     } catch (err) {
       console.error('Failed to upload product images:', err);
+      setUploadState(
+        productId,
+        'error',
+        'Ошибка загрузки. Проверьте соединение и попробуйте снова.'
+      );
+      alert('Не удалось загрузить изображения. Попробуйте ещё раз.');
     } finally {
       setUploadingImages((prev) => ({ ...prev, [productId]: false }));
     }
@@ -856,6 +931,24 @@ function AdminProducts() {
         await loadProducts();
       }
     });
+  };
+
+  const handleBulkVisibilityChange = async (isActive) => {
+    if (selectedIds.length === 0) return;
+    setBulkVisibilityUpdating(true);
+    try {
+      for (const id of selectedIds) {
+        const product = items.find((p) => p.id === id);
+        if (!product) continue;
+        await updateProduct(id, buildProductPayload(product, { isActive }));
+      }
+      await loadProducts();
+    } catch (err) {
+      console.error('Failed to bulk update visibility', err);
+      alert('Не удалось обновить видимость товаров. Попробуйте ещё раз.');
+    } finally {
+      setBulkVisibilityUpdating(false);
+    }
   };
 
   const handleBulkCategoryChange = async () => {
@@ -923,6 +1016,25 @@ function AdminProducts() {
     return match ? match.name || match.sku || variantId : variantId;
   };
 
+  const renderUploadStatus = (productId, className = '') => {
+    const status = uploadStatus[productId];
+    if (!status || status.state === 'idle') return null;
+    const message = status.message || '';
+    if (status.state === 'error') {
+      return <div className={`text-xs text-red-600 ${className}`}>{message}</div>;
+    }
+    if (status.state === 'done') {
+      return <div className={`text-xs text-emerald-700 ${className}`}>{message || 'Загрузка завершена'}</div>;
+    }
+    const isSyncing = status.state === 'syncing';
+    return (
+      <div className={`flex items-center gap-2 text-xs text-primary ${className}`}>
+        <span className="h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <span>{message || (isSyncing ? 'Сохраняем изменения…' : 'Загружаем изображения…')}</span>
+      </div>
+    );
+  };
+
   const renderVariantManagerContent = (product) => {
     const variantForm = variantForms[product.id] || EMPTY_VARIANT_FORM;
     return (
@@ -979,12 +1091,17 @@ function AdminProducts() {
                 </option>
               ))}
             </select>
-            <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-sm bg-white">
+            <label
+              className={`inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded text-sm bg-white ${
+                uploadingImages[product.id] ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-primary'
+              }`}
+            >
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 className="hidden"
+                disabled={uploadingImages[product.id]}
                 onChange={(e) => {
                   handleUploadImages(product.id, e.target.files, uploadTargets[product.id]);
                   e.target.value = '';
@@ -993,9 +1110,13 @@ function AdminProducts() {
               {uploadingImages[product.id] ? 'Загружаем…' : 'Добавить изображения'}
             </label>
           </div>
-          <p className="text-xs text-muted mt-1">
-            Можно оставить товар без фото и загрузить их позже. Выбор варианта выше привяжет фото к конкретному SKU.
-          </p>
+          <div className="pt-2 space-y-1">
+            {renderUploadStatus(product.id)}
+            <p className="text-xs text-muted">
+              PNG/JPG, до {MAX_IMAGE_SIZE_MB} MB. Можно оставить товар без фото и загрузить их позже. Выбор варианта выше
+              привяжет фото к конкретному SKU.
+            </p>
+          </div>
         </div>
         <h4 className="font-semibold mb-2">Варианты товара</h4>
         {product.variants.length === 0 ? (
@@ -1148,6 +1269,41 @@ function AdminProducts() {
   );
 
   const editingVariants = editingProduct?.variants || [];
+  const isVariantDirty = useCallback(
+    (variant) => {
+      if (!variant) return false;
+      const form = variantEditForms[variant.id];
+      if (!form) return false;
+      const originalPrice = variant.price ? moneyToNumber(variant.price) : 0;
+      const originalStock = Number(variant.stock ?? variant.stockQuantity ?? 0);
+      const originalCurrency = variant.price?.currency || 'RUB';
+      return (
+        (form.name || '') !== (variant.name || '') ||
+        Number(form.price || 0) !== Number(originalPrice || 0) ||
+        Number(form.stock ?? 0) !== originalStock ||
+        (form.currency || 'RUB') !== originalCurrency
+      );
+    },
+    [variantEditForms]
+  );
+  const hasDirtyVariants = useMemo(
+    () => editingVariants.some((variant) => isVariantDirty(variant)),
+    [editingVariants, isVariantDirty]
+  );
+  const hasNewVariantInput = useMemo(() => {
+    const form = modalVariantForm || EMPTY_VARIANT_FORM;
+    const currencyDirty = form.currency && form.currency !== 'RUB';
+    const stockDirty = Number(form.stock || 0) !== 0;
+    return Boolean(form.sku || form.name || form.price || currencyDirty || stockDirty);
+  }, [modalVariantForm]);
+  const hasUnsavedProductChanges = useMemo(() => {
+    if (!editingProduct) return false;
+    const snapshot = buildEditSnapshot(editingProduct);
+    if (!snapshot) return false;
+    if (!initialEditSnapshotRef.current) return false;
+    return JSON.stringify(snapshot) !== initialEditSnapshotRef.current;
+  }, [buildEditSnapshot, editingProduct]);
+  const hasUnsavedChanges = hasUnsavedProductChanges || hasDirtyVariants || hasNewVariantInput;
   const totalStockForEditing = editingVariants.reduce(
     (sum, v) => sum + (Number(v.stock ?? v.stockQuantity) || 0),
     0
@@ -1158,6 +1314,30 @@ function AdminProducts() {
     setEditingProduct(null);
     setSavingProduct(false);
     setSavingVariant({});
+    initialEditSnapshotRef.current = null;
+  };
+  const requestCloseEditModal = () => {
+    if (!editingProduct) {
+      closeEditModal();
+      return;
+    }
+    if (uploadingImages[editingProduct.id]) {
+      setConfirmDialog({
+        open: true,
+        message: 'Идёт загрузка изображений. Дождитесь завершения перед закрытием окна.',
+        onConfirm: null
+      });
+      return;
+    }
+    if (hasUnsavedChanges) {
+      setConfirmDialog({
+        open: true,
+        message: 'Есть несохранённые изменения. Закрыть без сохранения?',
+        onConfirm: closeEditModal
+      });
+      return;
+    }
+    closeEditModal();
   };
   const pagedItems = items.slice((page - 1) * pageSize, page * pageSize);
 
@@ -1183,6 +1363,22 @@ function AdminProducts() {
                 <span>Выбрать все</span>
               </label>
               <div className="text-xs text-muted">Выбрано: {selectedIds.length}</div>
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  className="button text-sm w-full"
+                  onClick={() => handleBulkVisibilityChange(true)}
+                  disabled={selectedIds.length === 0 || bulkVisibilityUpdating}
+                >
+                  {bulkVisibilityUpdating ? 'Обновляем…' : 'Показать выбранные'}
+                </button>
+                <button
+                  className="button-gray text-sm w-full"
+                  onClick={() => handleBulkVisibilityChange(false)}
+                  disabled={selectedIds.length === 0 || bulkVisibilityUpdating}
+                >
+                  {bulkVisibilityUpdating ? 'Обновляем…' : 'Скрыть выбранные'}
+                </button>
+              </div>
               <button
                 className="button-gray text-sm w-full"
                 onClick={handleBulkDelete}
@@ -1538,7 +1734,7 @@ function AdminProducts() {
       {editModalOpen && editingProduct && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] px-3 py-6"
-          onClick={closeEditModal}
+          onClick={requestCloseEditModal}
         >
           <div
             className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-6 max-h-[90vh] overflow-y-auto space-y-4"
@@ -1557,6 +1753,22 @@ function AdminProducts() {
                     <span className="text-green-700 text-xs">Данные актуальны</span>
                   )}
                 </p>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  {hasUnsavedChanges ? (
+                    <span className="px-2 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-700">
+                      Есть несохранённые изменения
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700">
+                      Все изменения сохранены
+                    </span>
+                  )}
+                  {uploadingImages[editingProduct.id] && (
+                    <span className="px-2 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary">
+                      Загрузка изображений…
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1566,7 +1778,7 @@ function AdminProducts() {
                 >
                   Обновить
                 </button>
-                <button onClick={closeEditModal} className="text-muted text-sm">
+                <button onClick={requestCloseEditModal} className="text-muted text-sm">
                   Закрыть
                 </button>
               </div>
@@ -1727,12 +1939,19 @@ function AdminProducts() {
                         </option>
                       ))}
                     </select>
-                    <label className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary text-sm bg-white">
+                    <label
+                      className={`inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded text-sm bg-white ${
+                        uploadingImages[editingProduct.id]
+                          ? 'cursor-not-allowed opacity-60'
+                          : 'cursor-pointer hover:border-primary'
+                      }`}
+                    >
                       <input
                         type="file"
                         accept="image/*"
                         multiple
                         className="hidden"
+                        disabled={uploadingImages[editingProduct.id]}
                         onChange={(e) => {
                           handleUploadImages(editingProduct.id, e.target.files, uploadTargets[editingProduct.id]);
                           e.target.value = '';
@@ -1740,6 +1959,12 @@ function AdminProducts() {
                       />
                       {uploadingImages[editingProduct.id] ? 'Загружаем…' : 'Добавить изображения'}
                     </label>
+                  </div>
+                  <div className="pt-2 space-y-1">
+                    {renderUploadStatus(editingProduct.id)}
+                    <p className="text-xs text-muted">
+                      PNG/JPG, до {MAX_IMAGE_SIZE_MB} MB. Изображения сохраняются автоматически после загрузки.
+                    </p>
                   </div>
                   </div>
                 </details>
@@ -1917,7 +2142,7 @@ function AdminProducts() {
                 Сначала сохраняйте варианты, затем товар, чтобы зафиксировать SEO-поля.
               </p>
               <div className="flex justify-end gap-2">
-                <button className="button-gray" onClick={closeEditModal}>Отмена</button>
+                <button className="button-gray" onClick={requestCloseEditModal}>Отмена</button>
                 <button
                   className="button"
                   onClick={handleModalSave}
