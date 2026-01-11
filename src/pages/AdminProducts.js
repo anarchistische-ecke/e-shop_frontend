@@ -313,6 +313,7 @@ function AdminProducts() {
   const [visibilityUpdating, setVisibilityUpdating] = useState({});
   const [bulkVisibilityUpdating, setBulkVisibilityUpdating] = useState(false);
   const initialEditSnapshotRef = useRef(null);
+  const initialModalVariantRef = useRef(null);
 
   const slugify = useCallback(
     (str) =>
@@ -348,6 +349,21 @@ function AdminProducts() {
       categoryRefs: categories,
       specifications: normalizeSpecSections(product.specifications),
       isActive: product.isActive !== false
+    };
+  }, []);
+
+  const normalizeVariantDraft = useCallback((form = {}) => {
+    const rawPrice = form.price === null || form.price === undefined ? '' : String(form.price);
+    const rawCurrency = (form.currency || 'RUB').trim();
+    const rawSku = (form.sku || '').trim();
+    const rawName = (form.name || '').trim();
+    const rawStock = Number(form.stock || 0);
+    return {
+      sku: rawSku,
+      name: rawName,
+      price: rawPrice,
+      stock: Number.isNaN(rawStock) ? 0 : rawStock,
+      currency: rawCurrency || 'RUB'
     };
   }, []);
 
@@ -538,10 +554,12 @@ function AdminProducts() {
     });
     initialEditSnapshotRef.current = JSON.stringify(buildEditSnapshot(normalized));
     setVariantEditForms(buildVariantFormState(normalized.variants || []));
-    setModalVariantForm({
+    const initialModalVariant = {
       ...EMPTY_VARIANT_FORM,
       sku: `${normalized.slug || 'sku'}-${normalized.variants?.length || 0}`
-    });
+    };
+    setModalVariantForm(initialModalVariant);
+    initialModalVariantRef.current = JSON.stringify(normalizeVariantDraft(initialModalVariant));
     setEditModalOpen(true);
   };
 
@@ -813,6 +831,7 @@ function AdminProducts() {
         stock: Number(modalVariantForm.stock) || 0
       });
       setModalVariantForm(EMPTY_VARIANT_FORM);
+      initialModalVariantRef.current = JSON.stringify(normalizeVariantDraft(EMPTY_VARIANT_FORM));
       await refreshProduct(editingProduct.id);
     } catch (err) {
       console.error('Failed to add variant:', err);
@@ -1291,11 +1310,10 @@ function AdminProducts() {
     [editingVariants, isVariantDirty]
   );
   const hasNewVariantInput = useMemo(() => {
-    const form = modalVariantForm || EMPTY_VARIANT_FORM;
-    const currencyDirty = form.currency && form.currency !== 'RUB';
-    const stockDirty = Number(form.stock || 0) !== 0;
-    return Boolean(form.sku || form.name || form.price || currencyDirty || stockDirty);
-  }, [modalVariantForm]);
+    if (!initialModalVariantRef.current) return false;
+    const normalized = normalizeVariantDraft(modalVariantForm || EMPTY_VARIANT_FORM);
+    return JSON.stringify(normalized) !== initialModalVariantRef.current;
+  }, [modalVariantForm, normalizeVariantDraft]);
   const hasUnsavedProductChanges = useMemo(() => {
     if (!editingProduct) return false;
     const snapshot = buildEditSnapshot(editingProduct);
@@ -1315,6 +1333,7 @@ function AdminProducts() {
     setSavingProduct(false);
     setSavingVariant({});
     initialEditSnapshotRef.current = null;
+    initialModalVariantRef.current = null;
   };
   const requestCloseEditModal = () => {
     if (!editingProduct) {
