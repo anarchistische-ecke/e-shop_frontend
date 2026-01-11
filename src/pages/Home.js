@@ -53,18 +53,22 @@ function Home() {
     {
       title: 'Натуральные ткани без компромиссов',
       subtitle: 'Сатин, лен и бамбук с мягкой фактурой.',
+      link: '/info/production',
     },
     {
       title: '14 дней на возврат',
       subtitle: 'Если что-то не подошло — оформим возврат по правилам.',
+      link: '/usloviya-prodazhi',
     },
     {
       title: 'Бесплатная доставка от 5000 ₽',
       subtitle: 'Курьером или в пункт выдачи, без доплат.',
+      link: '/info/delivery',
     },
     {
       title: 'Собственное производство',
       subtitle: 'Контроль качества на каждом этапе пошива.',
+      link: '/info/production',
     },
   ];
 
@@ -160,13 +164,15 @@ function Home() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               {heroHighlights.map((feat) => (
-                <div
+                <Link
                   key={feat.title}
-                  className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 shadow-sm"
+                  to={feat.link}
+                  className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  aria-label={feat.title}
                 >
                   <p className="text-sm font-semibold mb-1">{feat.title}</p>
                   <p className="text-xs text-muted mb-0">{feat.subtitle}</p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
