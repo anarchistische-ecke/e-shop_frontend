@@ -31,6 +31,12 @@ import DeliveryInfoPage from './DeliveryInfoPage';
 import BonusesInfoPage from './BonusesInfoPage';
 import ProductionInfoPage from './ProductionInfoPage';
 import LegalInfoPage from './LegalInfoPage';
+import PrivacyPolicyPage from './legal/PrivacyPolicyPage';
+import UserAgreementPage from './legal/UserAgreementPage';
+import AdsConsentPage from './legal/AdsConsentPage';
+import CookiesPolicyPage from './legal/CookiesPolicyPage';
+import PersonalDataConsentPage from './legal/PersonalDataConsentPage';
+import SalesTermsPage from './legal/SalesTermsPage';
 import OrderPage from './OrderPage';
 import NotFound from './NotFound';
 
@@ -66,6 +72,24 @@ function App() {
           <Route path="/info/bonuses" element={<BonusesInfoPage />} />
           <Route path="/info/production" element={<ProductionInfoPage />} />
           <Route path="/info/legal" element={<LegalInfoPage />} />
+          <Route
+            path="/konfidentsialnost-i-zashchita-informatsii"
+            element={<PrivacyPolicyPage />}
+          />
+          <Route
+            path="/polzovatelskoe-soglashenie"
+            element={<UserAgreementPage />}
+          />
+          <Route
+            path="/soglasie-na-poluchenie-reklamy"
+            element={<AdsConsentPage />}
+          />
+          <Route path="/usloviya-prodazhi" element={<SalesTermsPage />} />
+          <Route path="/cookies" element={<CookiesPolicyPage />} />
+          <Route
+            path="/soglasie-na-obrabotku-pd"
+            element={<PersonalDataConsentPage />}
+          />
           {/* Admin login (public) */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           {/* Protected admin routes (RequireAdmin enforces authentication) */}

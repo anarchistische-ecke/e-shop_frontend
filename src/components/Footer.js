@@ -28,7 +28,7 @@ function Footer() {
         { label: 'Бонусы и лояльность', path: '/info/bonuses' },
         { label: 'Производство', path: '/info/production' },
         { label: 'О компании', path: '/about' },
-        { label: 'Пользовательское соглашение и оферта', path: '/info/legal' },
+        { label: 'Публичная оферта', path: '/usloviya-prodazhi' },
       ],
     },
     {
@@ -53,16 +53,48 @@ function Footer() {
             отдых был таким же уютным, как объятия любимого пледа.
           </p>
           <div className="space-y-2 text-sm text-ink">
-            <p className="m-0">Телефон: +7 (999) 123‑45‑67</p>
-            <p className="m-0">Почта: hello@cozyhome.ru</p>
+            <p className="m-0">Телефон: +7 961 466‑88‑33</p>
+            <p className="m-0">Почта: postel-yug@yandex.ru</p>
           </div>
-          <div className="pt-2 space-y-2">
+          <div className="pt-2 space-y-3">
             <p className="text-xs uppercase tracking-[0.24em] text-muted">Юридическая информация</p>
             <div className="text-xs text-ink space-y-1">
               <p className="m-0">ИП Касьянова И.Л.</p>
               <p className="m-0">ИНН 081407505907</p>
               <p className="m-0">ОГРНИП 325080000035116</p>
             </div>
+            <ul className="text-xs text-muted space-y-1">
+              <li>
+                <Link to="/konfidentsialnost-i-zashchita-informatsii" className="hover:text-primary">
+                  Политика обработки персональных данных
+                </Link>
+              </li>
+              <li>
+                <Link to="/polzovatelskoe-soglashenie" className="hover:text-primary">
+                  Пользовательское соглашение
+                </Link>
+              </li>
+              <li>
+                <Link to="/soglasie-na-obrabotku-pd" className="hover:text-primary">
+                  Согласие на обработку персональных данных
+                </Link>
+              </li>
+              <li>
+                <Link to="/soglasie-na-poluchenie-reklamy" className="hover:text-primary">
+                  Согласие на получение рекламы
+                </Link>
+              </li>
+              <li>
+                <Link to="/cookies" className="hover:text-primary">
+                  Политика файлов cookie
+                </Link>
+              </li>
+              <li>
+                <Link to="/usloviya-prodazhi" className="hover:text-primary">
+                  Условия продажи
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 

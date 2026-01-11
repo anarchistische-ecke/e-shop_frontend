@@ -493,7 +493,7 @@ function AccountPage() {
                       type="tel"
                       value={profile.phone}
                       onChange={handleProfileChange('phone')}
-                      placeholder="+7 (999) 000-00-00"
+                      placeholder="+7 961 000-00-00"
                       className="w-full pr-10"
                       readOnly
                     />
@@ -515,8 +515,8 @@ function AccountPage() {
                 </div>
                 <p className="text-xs text-muted leading-relaxed md:pt-8">
                   Для изменения номера телефона обратитесь в службу поддержки по телефону
-                  <span className="text-primary"> 8 (800) 777-18-72</span> или напишите
-                  письмо на <span className="text-primary">info@cozyhome.ru</span>.
+                  <span className="text-primary"> +7 961 466-88-33</span> или напишите
+                  письмо на <span className="text-primary">postel-yug@yandex.ru</span>.
                 </p>
               </div>
 

@@ -30,7 +30,7 @@ function PaymentInfoPage() {
         <ul className="list-disc list-inside text-sm text-muted space-y-1">
           <li>Чеки отправляем на e‑mail и в личный кабинет.</li>
           <li>При отмене заказа возврат оформляется тем же способом оплаты.</li>
-          <li>Вопросы по оплате: support@example.com или +7 (999) 123‑45‑67.</li>
+          <li>Вопросы по оплате: postel-yug@yandex.ru или +7 961 466‑88‑33.</li>
         </ul>
       </div>
     </div>

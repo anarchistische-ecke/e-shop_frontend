@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import App from './pages/App';
 import './index.css';
+import './styles/legal.css';
 
 const resolveBasename = () => {
   const raw = process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '';

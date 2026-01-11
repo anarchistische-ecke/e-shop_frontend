@@ -5,8 +5,8 @@ function AdminSettings() {
     const storedBannerToggle = typeof window !== 'undefined' ? localStorage.getItem('adminBannerEnabled') : null;
     return {
       storeName: 'Постельное Белье‑Юг',
-      email: 'info@example.com',
-      phone: '+7 (999) 123‑45‑67',
+      email: 'postel-yug@yandex.ru',
+      phone: '+7 961 466‑88‑33',
       address: 'Москва, ул. Пример, 1',
       currency: 'RUB',
       shippingRate: 300,
