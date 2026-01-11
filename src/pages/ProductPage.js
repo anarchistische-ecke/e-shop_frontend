@@ -32,6 +32,12 @@ function ProductPage() {
   useEffect(() => {
     getProduct(id)
       .then((data) => {
+        if (data?.isActive === false) {
+          setProduct(null);
+          setSelectedVariant(null);
+          setActiveImageIndex(0);
+          return;
+        }
         setProduct(data);
         if (data && data.variants && data.variants.length > 0) {
           setSelectedVariant(data.variants[0]);

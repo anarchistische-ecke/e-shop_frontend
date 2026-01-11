@@ -109,11 +109,13 @@ export async function getProducts(params = {}) {
   const query = new URLSearchParams();
   if (params.category) query.append('category', params.category);
   if (params.brand) query.append('brand', params.brand);
+  if (params.includeInactive) query.append('includeInactive', 'true');
   const qs = query.toString();
   return request(`/products${qs ? `?${qs}` : ''}`);
 }
-export async function getProduct(id) {
-  return request(`/products/${id}`);
+export async function getProduct(id, params = {}) {
+  const qs = params.includeInactive ? '?includeInactive=true' : '';
+  return request(`/products/${id}${qs}`);
 }
 export async function createProduct(product) {
   return request('/products', {

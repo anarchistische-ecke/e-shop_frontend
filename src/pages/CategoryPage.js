@@ -55,25 +55,28 @@ function CategoryPage() {
   useEffect(() => {
     async function fetchData() {
       try {
+        const filterActive = (list) => list.filter((product) => product?.isActive !== false);
         if (slug === 'search') {
           const all = await getProducts();
           const list = Array.isArray(all) ? all : [];
           const termLower = searchTerm.toLowerCase();
-          setProducts(list.filter((p) => (p.name || '').toLowerCase().includes(termLower)));
+          setProducts(
+            filterActive(list).filter((p) => (p.name || '').toLowerCase().includes(termLower))
+          );
         } else if (slug === 'popular') {
           const all = await getProducts();
           const list = Array.isArray(all) ? all : [];
-          setProducts(list);
+          setProducts(filterActive(list));
         } else if (slug === 'new') {
           const all = await getProducts();
           const list = Array.isArray(all) ? all : [];
-          setProducts(list);
+          setProducts(filterActive(list));
         } else if (slug === 'collections') {
           setProducts([]);
         } else {
           const params = brandFilter ? { category: slug, brand: brandFilter } : { category: slug };
           const list = await getProducts(params);
-          setProducts(Array.isArray(list) ? list : []);
+          setProducts(filterActive(Array.isArray(list) ? list : []));
         }
       } catch (err) {
         console.error('Failed to fetch products:', err);
