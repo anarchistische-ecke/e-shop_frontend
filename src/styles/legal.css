@@ -381,9 +381,23 @@
 }
 
 .terms_sale__delivery-img {
-  margin-right: 12px;
-  max-height: 22px;
+  margin-right: 0;
+  max-height: 28px;
   width: auto;
+}
+
+.terms_sale__delivery-logos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.terms_sale__delivery-logos img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-height: 28px;
 }
 
 .terms_sale__text--item {

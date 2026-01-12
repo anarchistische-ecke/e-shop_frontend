@@ -30,6 +30,7 @@ import PaymentInfoPage from './PaymentInfoPage';
 import DeliveryInfoPage from './DeliveryInfoPage';
 import BonusesInfoPage from './BonusesInfoPage';
 import ProductionInfoPage from './ProductionInfoPage';
+import CataloguePage from './CataloguePage';
 import LegalInfoPage from './LegalInfoPage';
 import PrivacyPolicyPage from './legal/PrivacyPolicyPage';
 import UserAgreementPage from './legal/UserAgreementPage';
@@ -71,6 +72,7 @@ function App() {
           <Route path="/info/delivery" element={<DeliveryInfoPage />} />
           <Route path="/info/bonuses" element={<BonusesInfoPage />} />
           <Route path="/info/production" element={<ProductionInfoPage />} />
+          <Route path="/catalog" element={<CataloguePage />} />
           <Route path="/info/legal" element={<LegalInfoPage />} />
           <Route
             path="/konfidentsialnost-i-zashchita-informatsii"
