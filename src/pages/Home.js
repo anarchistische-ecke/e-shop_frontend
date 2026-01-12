@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { getProducts, getCategories } from '../api';
-import { reviews } from '../data/reviews';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
 import { getPrimaryImageUrl, getProductPrice, resolveImageUrl } from '../utils/product';
 
@@ -12,6 +11,7 @@ function Home() {
   const [bannerText, setBannerText] = useState('');
   const [bannerEnabled, setBannerEnabled] = useState(true);
   const [heroConfig, setHeroConfig] = useState(() => ({ ...homeHeroDefaults }));
+  const categoryRowRef = useRef(null);
 
   useEffect(() => {
     getProducts()
@@ -53,18 +53,22 @@ function Home() {
     {
       title: 'Натуральные ткани без компромиссов',
       subtitle: 'Сатин, лен и бамбук с мягкой фактурой.',
+      link: '/info/production',
     },
     {
       title: '14 дней на возврат',
       subtitle: 'Если что-то не подошло — оформим возврат по правилам.',
+      link: '/usloviya-prodazhi#return',
     },
     {
       title: 'Бесплатная доставка от 5000 ₽',
       subtitle: 'Курьером или в пункт выдачи, без доплат.',
+      link: '/info/delivery',
     },
     {
       title: 'Собственное производство',
       subtitle: 'Контроль качества на каждом этапе пошива.',
+      link: '/info/production',
     },
   ];
 
@@ -136,7 +140,12 @@ function Home() {
     return String(category.slug || category.id || category.name || '');
   };
 
-  const featuredReview = reviews[0];
+  const scrollCategories = (direction) => {
+    const scroller = categoryRowRef.current;
+    if (!scroller) return;
+    const scrollAmount = Math.max(260, scroller.clientWidth * 0.75);
+    scroller.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+  };
 
   return (
     <div className="home">
@@ -160,13 +169,15 @@ function Home() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               {heroHighlights.map((feat) => (
-                <div
+                <Link
                   key={feat.title}
-                  className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 shadow-sm"
+                  to={feat.link}
+                  className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  aria-label={feat.title}
                 >
                   <p className="text-sm font-semibold mb-1">{feat.title}</p>
                   <p className="text-xs text-muted mb-0">{feat.subtitle}</p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -221,69 +232,101 @@ function Home() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link to="/category/popular" className="button">В каталог</Link>
+              <Link to="/catalog" className="button">В каталог</Link>
               <Link to="/category/new" className="button-gray">Новинки</Link>
             </div>
           </div>
-          <div className="relative z-10 mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {(topCategories || []).slice(0, 8).map((cat, idx) => {
-              const accent = categoryAccents[idx % categoryAccents.length];
-              const count = categoryMeta.counts[cat.id] || categoryMeta.counts[cat.slug] || 0;
-              const countLabel = count ? `${count} товаров` : 'Подборка';
-              const catKey = resolveCategoryKey(cat);
-              const previewProduct = categoryMeta.heroMap[catKey];
-              const categoryImage = resolveImageUrl(
-                cat.imageUrl || cat.image || cat.image_url || cat.thumbnail || ''
-              );
-              const previewImage = getPrimaryImageUrl(previewProduct);
-              const tileImage = categoryImage || previewImage;
-              return (
-                <Link
-                  key={cat.slug || cat.id}
-                  to={`/category/${cat.slug || cat.id}`}
-                  className={`group relative overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br ${accent.gradient} p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl reveal-up`}
-                  style={{ animationDelay: `${idx * 70}ms` }}
-                >
-                  <div
-                    className={`absolute -top-10 -right-10 h-24 w-24 rounded-full ${accent.orb} blur-2xl opacity-70 transition group-hover:opacity-90`}
-                  />
-                  <div className="relative z-10 flex h-full flex-col gap-3">
-                    <div className="flex items-center justify-between text-xs uppercase tracking-[0.18em] text-muted">
-                      <span>Раздел</span>
-                      <span className="tracking-normal normal-case">{countLabel}</span>
-                    </div>
-                    <div className="rounded-xl overflow-hidden border border-white/70 bg-white/80">
-                      <div className="relative pt-[68%]">
-                        {tileImage ? (
-                          <img src={tileImage} alt={cat.name} className="absolute inset-0 h-full w-full object-cover" />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">
-                            Фото появится позже
+          <div className="relative z-10 mt-6">
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white/90 via-white/50 to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white/90 via-white/50 to-transparent" />
+              <div
+                id="category-carousel"
+                ref={categoryRowRef}
+                className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scroll-smooth scrollbar-hide cursor-grab active:cursor-grabbing"
+              >
+                {(topCategories || []).map((cat, idx) => {
+                  const accent = categoryAccents[idx % categoryAccents.length];
+                  const count = categoryMeta.counts[cat.id] || categoryMeta.counts[cat.slug] || 0;
+                  const countLabel = count ? `${count} товаров` : 'Подборка';
+                  const catKey = resolveCategoryKey(cat);
+                  const previewProduct = categoryMeta.heroMap[catKey];
+                  const categoryImage = resolveImageUrl(
+                    cat.imageUrl || cat.image || cat.image_url || cat.thumbnail || ''
+                  );
+                  const previewImage = getPrimaryImageUrl(previewProduct);
+                  const tileImage = categoryImage || previewImage;
+                  return (
+                    <Link
+                      key={cat.slug || cat.id}
+                      to={`/category/${cat.slug || cat.id}`}
+                      className={`group relative flex-shrink-0 w-[260px] sm:w-[300px] lg:w-[320px] snap-start overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br ${accent.gradient} p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 reveal-up`}
+                      style={{ animationDelay: `${idx * 70}ms` }}
+                    >
+                      <div
+                        className={`absolute -top-10 -right-10 h-24 w-24 rounded-full ${accent.orb} blur-2xl opacity-70 transition group-hover:opacity-90`}
+                      />
+                      <div className="relative z-10 flex h-full flex-col gap-3">
+                        <div className="flex items-center justify-between text-xs uppercase tracking-[0.18em] text-muted">
+                          <span>Раздел</span>
+                          <span className="tracking-normal normal-case">{countLabel}</span>
+                        </div>
+                        <div className="rounded-xl overflow-hidden border border-white/70 bg-white/80">
+                          <div className="relative pt-[68%]">
+                            {tileImage ? (
+                              <img src={tileImage} alt={cat.name} className="absolute inset-0 h-full w-full object-cover" />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">
+                                Фото появится позже
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold mb-1">{cat.name}</p>
+                          <p className="text-xs text-muted mb-0">
+                            {cat.description || 'Текстиль и детали для вашего пространства.'}
+                          </p>
+                        </div>
+                        <div className="mt-auto flex items-center justify-between text-sm font-medium text-primary">
+                          <span>Смотреть</span>
+                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-white/80 shadow-sm transition-transform duration-300 group-hover:translate-x-1">
+                            →
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold mb-1">{cat.name}</p>
-                      <p className="text-xs text-muted mb-0">
-                        {cat.description || 'Текстиль и детали для вашего пространства.'}
-                      </p>
-                    </div>
-                    <div className="mt-auto flex items-center justify-between text-sm font-medium text-primary">
-                      <span>Смотреть</span>
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-white/80 shadow-sm transition-transform duration-300 group-hover:translate-x-1">
-                        →
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-            {topCategories.length === 0 && (
-              <p className="text-sm text-muted col-span-full">
-                Категории появятся после добавления в админке.
-              </p>
-            )}
+                    </Link>
+                  );
+                })}
+                {topCategories.length === 0 && (
+                  <p className="text-sm text-muted">
+                    Категории появятся после добавления в админке.
+                  </p>
+                )}
+              </div>
+              {topCategories.length > 3 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => scrollCategories(-1)}
+                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/90 text-ink shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                    aria-label="Прокрутить категории влево"
+                    aria-controls="category-carousel"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollCategories(1)}
+                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/90 text-ink shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                    aria-label="Прокрутить категории вправо"
+                    aria-controls="category-carousel"
+                  >
+                    →
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -360,44 +403,6 @@ function Home() {
             )}
           </div>
         </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-10">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-          <h2 className="text-2xl font-semibold">Отзывы</h2>
-          <Link to="/about" className="text-primary text-sm">
-            История бренда
-          </Link>
-        </div>
-        <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
-          {reviews.map((rev, idx) => {
-            const product = visibleProducts.find((p) => p.id === rev.productId);
-            return (
-              <div
-                key={idx}
-                className="flex-shrink-0 w-72 bg-white/90 border border-ink/10 rounded-2xl overflow-hidden snap-start shadow-sm"
-              >
-                <div className="p-5 flex flex-col justify-between h-full">
-                  <div className="mb-3">
-                    <h4 className="text-base font-semibold mb-1">{product ? product.name : 'Товар'}</h4>
-                    <div className="text-primary text-sm mb-2">
-                      {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
-                    </div>
-                    <p className="text-sm mb-3">{rev.text}</p>
-                  </div>
-                  <p className="text-xs text-muted italic m-0">— {rev.author}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {featuredReview && (
-          <div className="mt-6 rounded-3xl border border-ink/10 bg-white/90 p-6 shadow-sm">
-            <p className="text-sm uppercase tracking-[0.28em] text-muted">Слова наших клиентов</p>
-            <p className="text-lg font-semibold mt-2">“{featuredReview.text}”</p>
-            <p className="text-sm text-muted mt-2">— {featuredReview.author}</p>
-          </div>
-        )}
       </section>
 
       <section className="py-12">
