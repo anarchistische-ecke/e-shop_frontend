@@ -416,7 +416,7 @@ function Home() {
               стиль вашего дома: фильтры по категориям, брендам и готовые подборки облегчают выбор.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
-              <Link to="/about" className="button">Подробнее о нас</Link>
+              <Link to="/catalog" className="button">В каталог</Link>
               <Link to="/info/production" className="button-gray">О производстве</Link>
             </div>
           </div>

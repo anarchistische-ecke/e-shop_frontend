@@ -28,7 +28,6 @@ function Footer() {
         { label: 'Способы оплаты', path: '/info/payment' },
         { label: 'Бонусы и лояльность', path: '/info/bonuses' },
         { label: 'Производство', path: '/info/production' },
-        { label: 'О компании', path: '/about' },
       ],
     },
     {

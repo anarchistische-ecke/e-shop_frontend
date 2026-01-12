@@ -3,14 +3,22 @@ import React from 'react';
 function AdminContent() {
   const initialPages = React.useMemo(
     () => [
-      { id: 'p01', title: 'О нас', slug: 'about', content: 'Содержание страницы О нас...', published: true },
       { id: 'p02', title: 'Контакты', slug: 'contact', content: 'Содержание страницы Контакты...', published: true },
     ],
     []
   );
+  const sanitizePages = React.useCallback(
+    (list) => (Array.isArray(list) ? list.filter((page) => page?.slug !== 'about') : []),
+    []
+  );
   const [pages, setPages] = React.useState(() => {
     const saved = localStorage.getItem('adminPages');
-    return saved ? JSON.parse(saved) : initialPages;
+    if (!saved) return initialPages;
+    try {
+      return sanitizePages(JSON.parse(saved));
+    } catch (err) {
+      return initialPages;
+    }
   });
   const [editingId, setEditingId] = React.useState(null);
   const [newPage, setNewPage] = React.useState({ title: '', slug: '', content: '', published: true });
