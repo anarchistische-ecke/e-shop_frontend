@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getCategories, createCategory, updateCategory, deleteCategory, uploadCategoryImage } from '../api';
 import { resolveImageUrl } from '../utils/product';
+import { compressImageFile, formatBytes } from '../utils/imageCompression';
 
 function AdminCategories() {
   const [categories, setCategories] = useState([]);
@@ -13,11 +14,16 @@ function AdminCategories() {
   });
   const [categoryImageFiles, setCategoryImageFiles] = useState({});
   const [uploadingCategoryImages, setUploadingCategoryImages] = useState({});
+  const [categoryImageNotices, setCategoryImageNotices] = useState({});
   const [newCategoryImageFile, setNewCategoryImageFile] = useState(null);
   const [newCategoryImagePreview, setNewCategoryImagePreview] = useState('');
   const [newCategoryUploading, setNewCategoryUploading] = useState(false);
+  const [newCategoryImageNotice, setNewCategoryImageNotice] = useState(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const MAX_CATEGORY_IMAGE_MB = 20;
+  const MAX_CATEGORY_IMAGE_BYTES = MAX_CATEGORY_IMAGE_MB * 1024 * 1024;
 
   const slugify = useCallback(
     (str) =>
@@ -46,6 +52,7 @@ function AdminCategories() {
   useEffect(() => {
     if (!newCategoryImageFile) {
       setNewCategoryImagePreview('');
+      setNewCategoryImageNotice(null);
       return undefined;
     }
     const previewUrl = URL.createObjectURL(newCategoryImageFile);
@@ -102,6 +109,16 @@ function AdminCategories() {
   const handleCategoryImageUpload = async (categoryId) => {
     const file = categoryImageFiles[categoryId];
     if (!file) return;
+    if (file.size > MAX_CATEGORY_IMAGE_BYTES) {
+      setCategoryImageNotices((prev) => ({
+        ...prev,
+        [categoryId]: {
+          tone: 'error',
+          message: `Файл слишком большой. Максимум ${MAX_CATEGORY_IMAGE_MB} МБ.`
+        }
+      }));
+      return;
+    }
     setUploadingCategoryImages((prev) => ({ ...prev, [categoryId]: true }));
     try {
       const updated = await uploadCategoryImage(categoryId, file);
@@ -113,11 +130,104 @@ function AdminCategories() {
         delete next[categoryId];
         return next;
       });
+      setCategoryImageNotices((prev) => ({
+        ...prev,
+        [categoryId]: { tone: 'success', message: 'Изображение загружено.' }
+      }));
     } catch (err) {
       console.error('Failed to upload category image:', err);
+      setCategoryImageNotices((prev) => ({
+        ...prev,
+        [categoryId]: {
+          tone: 'error',
+          message: 'Ошибка загрузки. Попробуйте ещё раз.'
+        }
+      }));
     } finally {
       setUploadingCategoryImages((prev) => ({ ...prev, [categoryId]: false }));
     }
+  };
+
+  const handleCategoryFilePick = useCallback(
+    async (categoryId, file) => {
+      if (!file) return;
+      setCategoryImageNotices((prev) => ({
+        ...prev,
+        [categoryId]: { tone: 'info', message: 'Подготовка изображения…' }
+      }));
+      const result = await compressImageFile(file, {
+        maxBytes: MAX_CATEGORY_IMAGE_BYTES,
+        maxDimension: 2400,
+        minDimension: 1200
+      });
+      if (result.error) {
+        const message =
+          result.error === 'unsupported'
+            ? 'Формат не поддерживается. Используйте JPG или PNG.'
+            : result.error === 'too-large'
+              ? `Даже после сжатия файл больше ${MAX_CATEGORY_IMAGE_MB} МБ.`
+              : 'Не удалось обработать изображение.';
+        setCategoryImageNotices((prev) => ({
+          ...prev,
+          [categoryId]: { tone: 'error', message }
+        }));
+        return;
+      }
+      setCategoryImageFiles((prev) => ({ ...prev, [categoryId]: result.file }));
+      if (result.didCompress) {
+        setCategoryImageNotices((prev) => ({
+          ...prev,
+          [categoryId]: {
+            tone: 'success',
+            message: `Сжато до ${formatBytes(result.finalSize)} (было ${formatBytes(result.originalSize)}).`
+          }
+        }));
+      } else {
+        setCategoryImageNotices((prev) => ({
+          ...prev,
+          [categoryId]: { tone: 'info', message: 'Файл готов к загрузке.' }
+        }));
+      }
+    },
+    [MAX_CATEGORY_IMAGE_BYTES, MAX_CATEGORY_IMAGE_MB]
+  );
+
+  const handleNewCategoryFilePick = useCallback(
+    async (file) => {
+      if (!file) return;
+      setNewCategoryImageNotice({ tone: 'info', message: 'Подготовка изображения…' });
+      const result = await compressImageFile(file, {
+        maxBytes: MAX_CATEGORY_IMAGE_BYTES,
+        maxDimension: 2400,
+        minDimension: 1200
+      });
+      if (result.error) {
+        const message =
+          result.error === 'unsupported'
+            ? 'Формат не поддерживается. Используйте JPG или PNG.'
+            : result.error === 'too-large'
+              ? `Даже после сжатия файл больше ${MAX_CATEGORY_IMAGE_MB} МБ.`
+              : 'Не удалось обработать изображение.';
+        setNewCategoryImageNotice({ tone: 'error', message });
+        return;
+      }
+      setNewCategoryImageFile(result.file);
+      if (result.didCompress) {
+        setNewCategoryImageNotice({
+          tone: 'success',
+          message: `Сжато до ${formatBytes(result.finalSize)} (было ${formatBytes(result.originalSize)}).`
+        });
+      } else {
+        setNewCategoryImageNotice({ tone: 'info', message: 'Файл готов к загрузке.' });
+      }
+    },
+    [MAX_CATEGORY_IMAGE_BYTES, MAX_CATEGORY_IMAGE_MB]
+  );
+
+  const noticeClass = (tone) => {
+    if (tone === 'error') return 'text-red-600';
+    if (tone === 'success') return 'text-emerald-700';
+    return 'text-muted';
   };
 
   const handleSave = async (id) => {
@@ -153,6 +263,13 @@ function AdminCategories() {
   const handleAddNew = async (e) => {
     e.preventDefault();
     if (!newCategory.name || !newCategory.slug) return;
+    if (newCategoryImageFile && newCategoryImageFile.size > MAX_CATEGORY_IMAGE_BYTES) {
+      setNewCategoryImageNotice({
+        tone: 'error',
+        message: `Файл слишком большой. Максимум ${MAX_CATEGORY_IMAGE_MB} МБ.`
+      });
+      return;
+    }
     try {
       const created = await createCategory({
         name: newCategory.name,
@@ -165,8 +282,16 @@ function AdminCategories() {
         setNewCategoryUploading(true);
         try {
           saved = await uploadCategoryImage(created.id, newCategoryImageFile);
+          setNewCategoryImageNotice({
+            tone: 'success',
+            message: 'Изображение загружено.'
+          });
         } catch (err) {
           console.error('Failed to upload category image:', err);
+          setNewCategoryImageNotice({
+            tone: 'error',
+            message: 'Не удалось загрузить изображение.'
+          });
         } finally {
           setNewCategoryUploading(false);
         }
@@ -287,7 +412,7 @@ function AdminCategories() {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          setCategoryImageFiles((prev) => ({ ...prev, [cat.id]: file }));
+                          handleCategoryFilePick(cat.id, file);
                         }
                         e.target.value = '';
                       }}
@@ -304,6 +429,11 @@ function AdminCategories() {
                   </button>
                   {categoryImageFiles[cat.id] && (
                     <span className="text-xs text-muted">{categoryImageFiles[cat.id].name}</span>
+                  )}
+                  {categoryImageNotices[cat.id]?.message && (
+                    <span className={`text-xs ${noticeClass(categoryImageNotices[cat.id].tone)}`}>
+                      {categoryImageNotices[cat.id].message}
+                    </span>
                   )}
                 </div>
               )}
@@ -413,7 +543,7 @@ function AdminCategories() {
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                setCategoryImageFiles((prev) => ({ ...prev, [cat.id]: file }));
+                                handleCategoryFilePick(cat.id, file);
                               }
                               e.target.value = '';
                             }}
@@ -431,6 +561,11 @@ function AdminCategories() {
                       </div>
                       {categoryImageFiles[cat.id] && (
                         <span className="text-xs text-muted">{categoryImageFiles[cat.id].name}</span>
+                      )}
+                      {categoryImageNotices[cat.id]?.message && (
+                        <span className={`text-xs ${noticeClass(categoryImageNotices[cat.id].tone)}`}>
+                          {categoryImageNotices[cat.id].message}
+                        </span>
                       )}
                     </div>
                   </td>
@@ -519,7 +654,7 @@ function AdminCategories() {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    setNewCategoryImageFile(file);
+                    handleNewCategoryFilePick(file);
                   }
                   e.target.value = '';
                 }}
@@ -528,6 +663,11 @@ function AdminCategories() {
             </label>
             {newCategoryImageFile && (
               <span className="text-xs text-muted">{newCategoryImageFile.name}</span>
+            )}
+            {newCategoryImageNotice?.message && (
+              <span className={`text-xs ${noticeClass(newCategoryImageNotice.tone)}`}>
+                {newCategoryImageNotice.message}
+              </span>
             )}
           </div>
           {newCategoryImagePreview && (
