@@ -25,7 +25,6 @@ import AdminSettings from './AdminSettings';
 import AdminSecurity from './AdminSecurity';
 import AdminMainPage from './AdminMainPage';
 import RequireAdmin from '../components/RequireAdmin';
-import AboutPage from './AboutPage';
 import PaymentInfoPage from './PaymentInfoPage';
 import DeliveryInfoPage from './DeliveryInfoPage';
 import BonusesInfoPage from './BonusesInfoPage';
@@ -67,7 +66,6 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/order/:token" element={<OrderPage />} />
-          <Route path="/about" element={<AboutPage />} />
           <Route path="/info/payment" element={<PaymentInfoPage />} />
           <Route path="/info/delivery" element={<DeliveryInfoPage />} />
           <Route path="/info/bonuses" element={<BonusesInfoPage />} />
