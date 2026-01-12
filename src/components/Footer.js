@@ -43,9 +43,9 @@ function Footer() {
   return (
     <footer className="bg-white/80 border-t border-ink/10">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-5xl py-8">
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:items-start">
-            <div className="space-y-4">
+        <div className="mx-auto max-w-6xl py-6">
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr_0.9fr] lg:items-start">
+            <div className="space-y-3">
               <Link to="/" className="font-display text-2xl font-semibold text-ink">
                 Постельное Белье-Юг
               </Link>
@@ -57,46 +57,47 @@ function Footer() {
                 <p className="m-0">Телефон: +7 961 466‑88‑33</p>
                 <p className="m-0">Почта: postel-yug@yandex.ru</p>
               </div>
-              <div className="pt-1 space-y-3">
-                <p className="text-xs uppercase tracking-[0.24em] text-muted">Юридическая информация</p>
-                <div className="text-xs text-ink space-y-1">
-                  <p className="m-0">ИП Касьянова И.Л.</p>
-                  <p className="m-0">ИНН 081407505907</p>
-                  <p className="m-0">ОГРНИП 325080000035116</p>
-                </div>
-                <ul className="text-xs text-muted space-y-1">
-                  <li>
-                    <Link to="/konfidentsialnost-i-zashchita-informatsii" className="hover:text-primary">
-                      Политика обработки персональных данных
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/polzovatelskoe-soglashenie" className="hover:text-primary">
-                      Пользовательское соглашение
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/soglasie-na-obrabotku-pd" className="hover:text-primary">
-                      Согласие на обработку персональных данных
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/soglasie-na-poluchenie-reklamy" className="hover:text-primary">
-                      Согласие на получение рекламы
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/cookies" className="hover:text-primary">
-                      Политика файлов cookie
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/usloviya-prodazhi" className="hover:text-primary">
-                      Условия продажи
-                    </Link>
-                  </li>
-                </ul>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-[0.24em] text-muted">Юридическая информация</p>
+              <div className="text-xs text-ink space-y-1">
+                <p className="m-0">ИП Касьянова И.Л.</p>
+                <p className="m-0">ИНН 081407505907</p>
+                <p className="m-0">ОГРНИП 325080000035116</p>
               </div>
+              <ul className="text-xs text-muted space-y-1">
+                <li>
+                  <Link to="/konfidentsialnost-i-zashchita-informatsii" className="hover:text-primary">
+                    Политика обработки персональных данных
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/polzovatelskoe-soglashenie" className="hover:text-primary">
+                    Пользовательское соглашение
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/soglasie-na-obrabotku-pd" className="hover:text-primary">
+                    Согласие на обработку персональных данных
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/soglasie-na-poluchenie-reklamy" className="hover:text-primary">
+                    Согласие на получение рекламы
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/cookies" className="hover:text-primary">
+                    Политика файлов cookie
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/usloviya-prodazhi" className="hover:text-primary">
+                    Условия продажи
+                  </Link>
+                </li>
+              </ul>
             </div>
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -125,9 +126,9 @@ function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-ink/10 py-4">
+      <div className="border-t border-ink/10 py-3">
         <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-5xl flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+          <div className="mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
             <p className="m-0">© Постельное Белье‑Юг, 2015–{currentYear}</p>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Mir</span>
