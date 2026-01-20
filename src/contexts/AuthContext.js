@@ -9,6 +9,7 @@ import {
   parseJwtPayload,
   setSession
 } from '../auth/session';
+import { isKeycloakConfigured, logout as keycloakLogout } from '../auth/keycloak';
 
 const AuthContext = createContext({
   isReady: false,
@@ -25,6 +26,27 @@ const normalizeRole = (role) => {
   if (!role) return '';
   if (role.startsWith('ROLE_')) return role;
   return `ROLE_${role.toUpperCase()}`;
+};
+
+const resolveBasePath = () => {
+  const raw = process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '';
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const path = new URL(raw).pathname.replace(/\/$/, '');
+      return path === '/' ? '' : path;
+    } catch (err) {
+      return '';
+    }
+  }
+  const normalized = raw.replace(/\/$/, '');
+  return normalized === '/' ? '' : normalized;
+};
+
+const buildRedirectUri = (path) => {
+  if (typeof window === 'undefined') return undefined;
+  const base = resolveBasePath();
+  return `${window.location.origin}${base}${path}`;
 };
 
 export function AuthProvider({ children }) {
@@ -94,6 +116,14 @@ export function AuthProvider({ children }) {
   }, [syncState]);
 
   const logout = useCallback(async () => {
+    if (typeof window !== 'undefined' && isKeycloakConfigured()) {
+      try {
+        await keycloakLogout({ redirectUri: buildRedirectUri('/') });
+        return;
+      } catch (err) {
+        console.warn('Keycloak logout failed, falling back to local logout', err);
+      }
+    }
     clearSession();
     await syncState();
   }, [syncState]);
