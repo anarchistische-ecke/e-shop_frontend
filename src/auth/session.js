@@ -1,4 +1,5 @@
 import { notifyAuthChange } from '../utils/auth';
+import { getAccessToken as getKeycloakAccessToken, isKeycloakConfigured } from './keycloak';
 
 const TOKEN_KEY = 'authToken';
 const PROFILE_KEY = 'authProfile';
@@ -70,7 +71,17 @@ export const clearSession = () => {
   notifyAuthChange({ type: 'session', action: 'logout' });
 };
 
-export const getAccessToken = async () => getStoredToken();
+export const getAccessToken = async () => {
+  if (typeof window !== 'undefined' && isKeycloakConfigured()) {
+    try {
+      const keycloakToken = await getKeycloakAccessToken();
+      if (keycloakToken) return keycloakToken;
+    } catch (err) {
+      console.warn('Failed to read Keycloak token', err);
+    }
+  }
+  return getStoredToken();
+};
 
 export const buildTokenProfile = ({ profile, payload }) => {
   if (!profile && !payload) return null;
