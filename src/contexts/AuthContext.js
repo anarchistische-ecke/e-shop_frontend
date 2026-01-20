@@ -48,22 +48,6 @@ export function AuthProvider({ children }) {
     setIsReady(true);
   }, []);
 
-  useEffect(() => {
-    syncState();
-  }, [syncState]);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges(() => {
-      syncState();
-    });
-    return unsubscribe;
-  }, [syncState]);
-
-  useEffect(() => {
-    if (!tokenPayload || profile) return;
-    refreshProfile().catch((err) => console.warn('Failed to refresh profile', err));
-  }, [tokenPayload, profile, refreshProfile]);
-
   const refreshProfile = useCallback(async () => {
     const token = await getAccessToken();
     if (!token) return null;
@@ -85,6 +69,22 @@ export function AuthProvider({ children }) {
     }
     return data;
   }, []);
+
+  useEffect(() => {
+    syncState();
+  }, [syncState]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthChanges(() => {
+      syncState();
+    });
+    return unsubscribe;
+  }, [syncState]);
+
+  useEffect(() => {
+    if (!tokenPayload || profile) return;
+    refreshProfile().catch((err) => console.warn('Failed to refresh profile', err));
+  }, [tokenPayload, profile, refreshProfile]);
 
   const login = useCallback(async ({ token, profile: nextProfile } = {}) => {
     if (!token) return;
