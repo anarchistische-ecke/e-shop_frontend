@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { loginAdmin } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
 
 function AdminLoginPage() {
   const location = useLocation();
@@ -13,6 +14,7 @@ function AdminLoginPage() {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const adminRole = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE || 'admin';
   const isAdmin = isAuthenticated && hasRole(adminRole);
+  const useKeycloak = isKeycloakConfigured();
 
   const safeRedirectPath = (path) => {
     if (typeof path !== 'string') return '/admin';
@@ -20,14 +22,40 @@ function AdminLoginPage() {
     return path;
   };
 
+  const buildRedirectUri = (path) => {
+    if (typeof window === 'undefined') return undefined;
+    const rawBase = process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '';
+    const base = rawBase.replace(/\/$/, '');
+    const normalizedBase = base && base !== '/' ? base : '';
+    return `${window.location.origin}${normalizedBase}${path}`;
+  };
+
   const handleChange = (field) => (event) => {
     setCredentials((prev) => ({ ...prev, [field]: event.target.value }));
+  };
+
+  const handleKeycloakLogin = async () => {
+    setIsSubmitting(true);
+    setStatus(null);
+    try {
+      await keycloakLogin({
+        redirectUri: buildRedirectUri(safeRedirectPath(redirectTo))
+      });
+    } catch (err) {
+      console.error('Keycloak login failed:', err);
+      setStatus({ type: 'error', message: 'Не удалось открыть страницу входа.' });
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsSubmitting(true);
     setStatus(null);
+    if (useKeycloak) {
+      await handleKeycloakLogin();
+      return;
+    }
     if (!credentials.username.trim() || !credentials.password) {
       setStatus({ type: 'error', message: 'Введите логин и пароль администратора.' });
       setIsSubmitting(false);
@@ -83,31 +111,47 @@ function AdminLoginPage() {
           {status.message}
         </div>
       )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <label className="block text-sm">
-          <span className="text-muted">Логин</span>
-          <input
-            type="text"
-            value={credentials.username}
-            onChange={handleChange('username')}
-            placeholder="admin"
-            className="mt-2 w-full"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-muted">Пароль</span>
-          <input
-            type="password"
-            value={credentials.password}
-            onChange={handleChange('password')}
-            placeholder="Введите пароль"
-            className="mt-2 w-full"
-          />
-        </label>
-        <button type="submit" className="button w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Входим…' : 'Войти'}
-        </button>
-      </form>
+      {useKeycloak ? (
+        <div className="space-y-4">
+          <p className="text-sm text-muted">
+            Авторизация выполняется через Keycloak.
+          </p>
+          <button
+            type="button"
+            className="button w-full"
+            onClick={handleKeycloakLogin}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Перенаправляем…' : 'Войти через Keycloak'}
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block text-sm">
+            <span className="text-muted">Логин</span>
+            <input
+              type="text"
+              value={credentials.username}
+              onChange={handleChange('username')}
+              placeholder="admin"
+              className="mt-2 w-full"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-muted">Пароль</span>
+            <input
+              type="password"
+              value={credentials.password}
+              onChange={handleChange('password')}
+              placeholder="Введите пароль"
+              className="mt-2 w-full"
+            />
+          </label>
+          <button type="submit" className="button w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Входим…' : 'Войти'}
+          </button>
+        </form>
+      )}
       {isReady && isAuthenticated && !isAdmin && (
         <p className="mt-4 text-sm text-red-600">
           У вашей учётной записи нет прав администратора.
