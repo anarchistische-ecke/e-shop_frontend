@@ -75,11 +75,11 @@ function CartPage() {
   };
 
   return (
-    <div className="cart-page py-10">
+    <div className="cart-page py-8 md:py-10">
       <div className="container mx-auto px-4">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-muted">Корзина</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-accent">Корзина</p>
             <h1 className="text-2xl sm:text-3xl font-semibold">Ваши товары для уюта</h1>
             <p className="text-sm text-muted mt-1">Проверьте состав заказа и добавьте подарок к комплекту.</p>
           </div>
@@ -104,9 +104,9 @@ function CartPage() {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-3xl border border-ink/10 bg-white/90 p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm"
+                  className="rounded-[26px] border border-white/70 bg-white/85 p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-[0_18px_40px_rgba(43,39,34,0.1)]"
                 >
-                  <div className="w-full sm:w-24 h-24 rounded-2xl overflow-hidden bg-secondary border border-ink/10 flex-shrink-0">
+                  <div className="w-full sm:w-24 h-24 rounded-2xl overflow-hidden bg-sand/60 border border-white/70 flex-shrink-0">
                     {item.productInfo?.imageUrl ? (
                       <img src={item.productInfo.imageUrl} alt={item.productInfo?.name || 'Товар'} className="w-full h-full object-cover" />
                     ) : (
@@ -120,11 +120,11 @@ function CartPage() {
                     <p className="text-xs text-muted mt-1">
                       {item.productInfo?.variantName ? `Вариант: ${item.productInfo.variantName}` : item.variantId}
                     </p>
-                    <div className="text-primary font-semibold mt-2">
+                    <div className="text-accent font-semibold mt-2">
                       {(item.unitPriceValue || moneyToNumber(item.unitPrice)).toLocaleString('ru-RU')} ₽
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
-                      <div className="flex items-center gap-2 rounded-full border border-ink/10 bg-white/90 px-3 py-1">
+                      <div className="flex items-center gap-2 rounded-2xl border border-ink/10 bg-white/85 px-3 py-1">
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           className="text-lg leading-none"
@@ -183,7 +183,7 @@ function CartPage() {
               {isAdmin && (
                 <div className="soft-card p-5 space-y-4">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-muted">Инструменты менеджера</p>
+                    <p className="text-xs uppercase tracking-[0.3em] text-accent">Инструменты менеджера</p>
                     <h3 className="text-lg font-semibold mt-2">Ссылка на оплату для клиента</h3>
                     <p className="text-sm text-muted mt-1">
                       Сформируйте заказ и отправьте клиенту ссылку на оплату и страницу заказа.
@@ -208,7 +208,7 @@ function CartPage() {
                     {isCreatingLink ? 'Создаём ссылку…' : 'Создать ссылку на оплату'}
                   </button>
                   {adminLink && (
-                    <div className="rounded-2xl border border-ink/10 bg-white/90 p-3 text-xs break-all">
+                    <div className="rounded-2xl border border-white/70 bg-white/85 p-3 text-xs break-all shadow-sm">
                       <div className="text-muted mb-2">Ссылка для клиента</div>
                       <div className="font-semibold">{adminLink}</div>
                       <button type="button" className="button-ghost text-xs mt-2" onClick={handleCopyLink}>

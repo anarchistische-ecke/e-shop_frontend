@@ -107,7 +107,7 @@ function Header() {
       return;
     }
     setIsAccountMenuOpen(false);
-    logout({ redirectUri: window.location.origin });
+    logout();
     navigate('/');
   };
 
@@ -130,14 +130,14 @@ function Header() {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <header ref={headerRef} className="fixed top-0 left-0 right-0 z-30">
-      <div className="bg-white/95 backdrop-blur border-b border-ink/10 shadow-sm">
-        <div className="container mx-auto px-4 flex flex-col gap-3 py-2 sm:py-3">
+    <header ref={headerRef} className="fixed top-0 left-0 right-0 z-40">
+      <div className="bg-white/85 backdrop-blur-xl border-b border-ink/10 shadow-[0_12px_28px_rgba(43,39,34,0.08)]">
+        <div className="container mx-auto px-4 flex flex-col gap-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-3 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
             <div className="flex items-center gap-3 md:justify-self-start">
               <button
                 type="button"
-                className="md:hidden h-10 w-10 inline-flex items-center justify-center rounded-full border border-ink/10 bg-white/80 hover:border-primary text-lg"
+                className="md:hidden h-11 w-11 inline-flex items-center justify-center rounded-2xl border border-ink/10 bg-white/90 text-lg shadow-sm hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition"
                 onClick={() => setIsMenuOpen((prev) => !prev)}
                 aria-label="Открыть меню"
                 aria-expanded={isMenuOpen}
@@ -146,7 +146,7 @@ function Header() {
               </button>
               <Link
                 to="/"
-                className="font-display text-lg sm:text-2xl font-semibold text-ink hover:text-primary whitespace-nowrap"
+                className="font-display text-xl sm:text-2xl lg:text-3xl font-semibold text-ink tracking-tight hover:text-primary whitespace-nowrap"
               >
                 Постельное Белье-Юг
               </Link>
@@ -160,27 +160,27 @@ function Header() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Поиск мягкого текстиля, комплектов и подарков"
-                className="pl-12 pr-4 py-3 border border-ink/10 rounded-full w-full bg-white/90 shadow-sm focus:ring-2 focus:ring-primary/30 focus:outline-none"
+                className="pl-12 pr-4 py-3 border border-ink/10 rounded-2xl w-full bg-white/85 shadow-[0_10px_24px_rgba(43,39,34,0.08)] focus:ring-2 focus:ring-primary/30 focus:outline-none"
               />
               <button
                 type="submit"
-                className="absolute left-4 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center text-ink/60"
+                className="absolute left-4 top-1/2 -translate-y-1/2 h-9 w-9 inline-flex items-center justify-center rounded-full bg-sand/60 text-ink/70 hover:text-primary transition"
                 aria-label="Искать"
               >
                 <span className="text-base leading-none">🔍</span>
               </button>
             </form>
-            <div className="flex items-center gap-3 text-sm md:justify-self-end">
+            <div className="flex items-center gap-2 sm:gap-3 text-sm md:justify-self-end">
               <Link
                 to="/cart"
                 aria-label="Корзина"
-                className={`relative inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white/80 px-3 py-2 text-ink hover:border-primary/40 transition ${isCartBouncing.current ? 'animate-bounce' : ''}`}
+                className={`relative inline-flex items-center gap-2 rounded-2xl border border-ink/10 bg-white/85 px-3 py-2 text-ink shadow-[0_10px_20px_rgba(43,39,34,0.06)] hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 transition ${isCartBouncing.current ? 'animate-bounce' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <span className="text-lg">🛍</span>
                 <span className="hidden sm:inline">Корзина</span>
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[11px] rounded-full px-1.5">
+                  <span className="absolute -top-1 -right-1 bg-accent text-white text-[11px] rounded-full px-1.5">
                     {totalItems}
                   </span>
                 )}
@@ -190,11 +190,11 @@ function Header() {
                   <Link
                     to="/account"
                     aria-label="Личный кабинет"
-                    className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white/80 px-2.5 py-1.5 text-ink hover:border-primary/40 transition"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-ink/10 bg-white/85 px-2.5 py-1.5 text-ink shadow-[0_10px_20px_rgba(43,39,34,0.06)] hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 transition"
                     onClick={handleAccountTrigger}
                     aria-expanded={isAccountMenuOpen}
                   >
-                    <span className="h-9 w-9 inline-flex items-center justify-center rounded-full bg-secondary text-ink">
+                    <span className="h-9 w-9 inline-flex items-center justify-center rounded-2xl bg-sand/70 text-accent">
                       <svg
                         viewBox="0 0 24 24"
                         className="h-5 w-5"
@@ -218,8 +218,8 @@ function Header() {
                         : 'translate-y-2 opacity-0 pointer-events-none'
                     } group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-focus-within:pointer-events-auto`}
                   >
-                    <div className="rounded-3xl border border-ink/10 bg-white/95 shadow-[0_24px_50px_rgba(44,38,34,0.16)] overflow-hidden">
-                      <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-ink/10">
+                    <div className="rounded-[26px] border border-ink/10 bg-white/96 shadow-[0_24px_60px_rgba(43,39,34,0.18)] overflow-hidden">
+                      <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-ink/10 bg-sand/40">
                         <div>
                           <p className="text-base font-semibold leading-tight">{displayName}</p>
                           <p className="text-xs text-muted mt-1">{displayPhone}</p>
@@ -227,7 +227,7 @@ function Header() {
                         <button
                           type="button"
                           onClick={handleLogout}
-                          className="h-9 w-9 inline-flex items-center justify-center rounded-full border border-ink/10 text-ink/70 hover:text-primary hover:border-primary/40 transition"
+                          className="h-9 w-9 inline-flex items-center justify-center rounded-2xl border border-ink/10 text-ink/70 hover:text-primary hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 transition"
                           aria-label="Выйти"
                         >
                           <svg
@@ -250,7 +250,7 @@ function Header() {
                         <Link
                           to="/account#profile"
                           onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-secondary/70 transition"
+                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
                         >
                           <svg
                             viewBox="0 0 24 24"
@@ -270,7 +270,7 @@ function Header() {
                         <Link
                           to="/account#bonuses"
                           onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-secondary/70 transition"
+                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
                         >
                           <svg
                             viewBox="0 0 24 24"
@@ -290,7 +290,7 @@ function Header() {
                         <Link
                           to="/account#promocodes"
                           onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-secondary/70 transition"
+                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
                         >
                           <svg
                             viewBox="0 0 24 24"
@@ -311,7 +311,7 @@ function Header() {
                         <Link
                           to="/account#referral"
                           onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-secondary/70 transition"
+                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
                         >
                           <svg
                             viewBox="0 0 24 24"
@@ -333,7 +333,7 @@ function Header() {
                         <Link
                           to="/account#orders"
                           onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-secondary/70 transition"
+                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
                         >
                           <svg
                             viewBox="0 0 24 24"
@@ -353,7 +353,7 @@ function Header() {
                         <Link
                           to="/account#purchases"
                           onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-secondary/70 transition"
+                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
                         >
                           <svg
                             viewBox="0 0 24 24"
@@ -379,7 +379,7 @@ function Header() {
                 <Link
                   to="/login"
                   aria-label="Личный кабинет"
-                  className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white/80 px-3 py-2 text-ink hover:border-primary/40 transition"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-ink/10 bg-white/85 px-3 py-2 text-ink shadow-[0_10px_20px_rgba(43,39,34,0.06)] hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 transition"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <span className="text-lg">👤</span>
@@ -394,11 +394,11 @@ function Header() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Поиск товаров..."
-              className="pl-12 pr-4 py-3 border border-ink/10 rounded-full w-full bg-white/90 shadow-sm focus:ring-2 focus:ring-primary/30 focus:outline-none"
+              className="pl-12 pr-4 py-3 border border-ink/10 rounded-2xl w-full bg-white/85 shadow-[0_10px_24px_rgba(43,39,34,0.08)] focus:ring-2 focus:ring-primary/30 focus:outline-none"
             />
             <button
               type="submit"
-              className="absolute left-4 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center text-ink/60"
+              className="absolute left-4 top-1/2 -translate-y-1/2 h-9 w-9 inline-flex items-center justify-center rounded-full bg-sand/60 text-ink/70 hover:text-primary transition"
               aria-label="Искать"
             >
               <span className="text-base leading-none">🔍</span>
@@ -407,13 +407,13 @@ function Header() {
         </div>
       </div>
 
-      <nav className={`bg-white/80 border-b border-ink/10 ${isMenuOpen ? 'block' : 'hidden'} md:block`}>
+      <nav className={`bg-white/80 backdrop-blur border-b border-ink/10 ${isMenuOpen ? 'block' : 'hidden'} md:block`} aria-label="Категории">
         <div className="container mx-auto px-4">
-          <ul className="flex md:flex-wrap items-center gap-2 py-2 sm:py-3 text-sm overflow-x-auto md:overflow-visible scrollbar-hide">
+          <ul className="flex md:flex-wrap items-center gap-2.5 py-2.5 sm:py-3 text-sm overflow-x-auto md:overflow-visible scrollbar-hide">
             <li className="flex-shrink-0">
               <Link
                 to="/category/popular"
-                className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white/80 px-3 py-1.5 hover:text-primary hover:border-primary/40 transition"
+                className="inline-flex items-center gap-2 rounded-2xl border border-ink/10 bg-white/85 px-3 py-2 hover:text-primary hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 transition"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Лучшее
@@ -423,7 +423,7 @@ function Header() {
               <li key={cat.slug || cat.id} className="flex-shrink-0">
                 <Link
                   to={`/category/${cat.slug || cat.id}`}
-                  className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white/80 px-3 py-1.5 hover:text-primary hover:border-primary/40 transition"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-ink/10 bg-white/85 px-3 py-2 hover:text-primary hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 transition"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {cat.name}

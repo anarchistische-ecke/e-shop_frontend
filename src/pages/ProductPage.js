@@ -244,7 +244,7 @@ function ProductPage() {
   const handlePrevImage = () => selectImageByIndex(activeImageIndex - 1);
 
   return (
-    <div className="product-page py-6 sm:py-10 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
+    <div className="product-page py-8 sm:py-10 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
       <div className="container mx-auto px-4">
         <nav className="text-xs text-muted mb-5">
           <Link to="/" className="hover:text-primary">Главная</Link> /{' '}
@@ -254,7 +254,7 @@ function ProductPage() {
 
         <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
           <div>
-            <div className="relative w-full aspect-[1/1] sm:aspect-[4/5] rounded-3xl sm:rounded-[32px] overflow-hidden border border-white/80 shadow-xl bg-gradient-to-br from-secondary to-white">
+            <div className="relative w-full aspect-[1/1] sm:aspect-[4/5] rounded-[28px] sm:rounded-[32px] overflow-hidden border border-white/80 shadow-[0_24px_60px_rgba(43,39,34,0.16)] bg-gradient-to-br from-sand/70 to-white">
               {mainImage ? (
                 <img
                   src={mainImage}
@@ -269,7 +269,7 @@ function ProductPage() {
                 </div>
               )}
               {activeImage?.variantId && (
-                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur rounded-full px-3 py-1 text-xs font-medium border border-ink/10 shadow-sm">
+                <div className="absolute top-4 left-4 bg-white/85 backdrop-blur rounded-2xl px-3 py-1 text-xs font-medium border border-ink/10 shadow-sm">
                   Вариант: {variantNameById[activeImage.variantId] || activeImage.variantId}
                 </div>
               )}
@@ -277,7 +277,7 @@ function ProductPage() {
                 <>
                   <button
                     type="button"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-ink rounded-full w-9 h-9 sm:w-10 sm:h-10 shadow border border-ink/10"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-ink rounded-2xl w-9 h-9 sm:w-10 sm:h-10 shadow border border-ink/10"
                     onClick={handlePrevImage}
                     aria-label="Предыдущее изображение"
                   >
@@ -285,7 +285,7 @@ function ProductPage() {
                   </button>
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-ink rounded-full w-9 h-9 sm:w-10 sm:h-10 shadow border border-ink/10"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-ink rounded-2xl w-9 h-9 sm:w-10 sm:h-10 shadow border border-ink/10"
                     onClick={handleNextImage}
                     aria-label="Следующее изображение"
                   >
@@ -303,7 +303,7 @@ function ProductPage() {
                   onClick={() => selectImageByIndex(idx)}
                   className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border snap-center ${
                     idx === activeImageIndex ? 'border-primary ring-2 ring-primary/30' : 'border-ink/10'
-                  } bg-secondary flex-shrink-0`}
+                  } bg-sand/60 flex-shrink-0`}
                 >
                   {img ? (
                     <>
@@ -315,7 +315,7 @@ function ProductPage() {
                         decoding="async"
                       />
                       {img.variantId && (
-                        <span className="absolute bottom-1 left-1 bg-ink/70 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                        <span className="absolute bottom-1 left-1 bg-accent/80 text-white text-[10px] px-1.5 py-0.5 rounded-2xl">
                           {variantNameById[img.variantId] || 'Вариант'}
                         </span>
                       )}
@@ -331,7 +331,7 @@ function ProductPage() {
 
             <div className="mt-6 grid gap-2 sm:grid-cols-3 sm:gap-3">
               {highlightList.map((item) => (
-                <div key={item} className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 text-xs sm:text-sm">
+                <div key={item} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 text-xs sm:text-sm shadow-sm">
                   {item}
                 </div>
               ))}
@@ -340,7 +340,7 @@ function ProductPage() {
 
           <div className="lg:sticky lg:top-24 h-fit">
             <div className="soft-card p-5 sm:p-6">
-              <p className="text-xs uppercase tracking-[0.28em] text-muted">Бестселлер</p>
+              <p className="text-xs uppercase tracking-[0.28em] text-accent">Бестселлер</p>
               <h1 className="text-xl sm:text-2xl font-semibold mt-2 mb-3">{product.name}</h1>
               <div className="flex items-center gap-2 text-sm text-muted mb-3">
                 {rating > 0 ? (
@@ -356,7 +356,7 @@ function ProductPage() {
                 )}
               </div>
 
-              <div className="text-primary text-xl sm:text-2xl font-semibold mb-2">
+              <div className="text-accent text-xl sm:text-2xl font-semibold mb-2">
                 {subscriptionPrice.toLocaleString('ru-RU')} ₽
                 {oldPrice && (
                   <span className="text-base sm:text-lg line-through text-muted ml-3">
@@ -378,10 +378,10 @@ function ProductPage() {
                         <button
                           key={variant.id}
                           type="button"
-                          className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                          className={`rounded-2xl border px-3 py-1.5 text-sm transition ${
                             isActive
                               ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-ink/10 bg-white/90'
+                              : 'border-ink/10 bg-white/85'
                           }`}
                           onClick={() => setSelectedVariant(variant)}
                         >
@@ -512,7 +512,7 @@ function ProductPage() {
             <div className="mt-4 space-y-3">
               {productReviews.length > 0 ? (
                 productReviews.map((rev, idx) => (
-                  <div key={idx} className="rounded-2xl border border-ink/10 bg-white/80 p-4">
+                  <div key={idx} className="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm">
                     <div className="text-primary text-sm">
                       {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
                     </div>
@@ -562,7 +562,7 @@ function ProductPage() {
               ) : (
                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
                   {specList.map((item) => (
-                    <div key={item} className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3">
+                    <div key={item} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 shadow-sm">
                       {item}
                     </div>
                   ))}
@@ -587,7 +587,7 @@ function ProductPage() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 border-t border-ink/10 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden z-30">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-ink/10 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden z-30">
         <div className="container mx-auto px-4 py-3 flex items-center gap-3">
           <div className="flex-1">
             <p className="text-xs text-muted">Итого</p>

@@ -4,13 +4,6 @@ import { CartContext } from '../contexts/CartContext';
 import { reviews } from '../data/reviews';
 import { getPrimaryVariant, getPrimaryImageUrl, getProductPrice, moneyToNumber } from '../utils/product';
 
-/**
- * ProductCard displays a product summary with pricing, rating and an
- * add‑to‑cart button.  It gracefully handles both primitive price
- * values and Money objects returned by the backend.  When a user
- * clicks the cart icon the product is added to the cart via the
- * CartContext.
- */
 const reviewStats = reviews.reduce((acc, review) => {
   const entry = acc[review.productId] || { total: 0, count: 0 };
   entry.total += review.rating;
@@ -57,22 +50,23 @@ function ProductCard({ product }) {
   const isLowStock = stockCount > 0 && stockCount <= 3;
 
   return (
-    <div className="product-card group border border-ink/10 rounded-3xl bg-white/90 flex flex-col overflow-hidden transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(44,38,34,0.12)]">
-      <Link to={`/product/${product.id}`} className="block relative pt-[72%] overflow-hidden">
+    <div className="product-card group border border-ink/10 rounded-[26px] bg-white/90 flex flex-col overflow-hidden transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_22px_45px_rgba(43,39,34,0.14)]">
+      <Link to={`/product/${product.id}`} className="block relative pt-[74%] overflow-hidden">
         <div className="absolute inset-0">
           {imageUrl ? (
             <img
               src={imageUrl}
               alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
               loading="lazy"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-secondary to-white flex items-center justify-center text-muted text-sm">
+            <div className="w-full h-full bg-gradient-to-br from-sand/60 to-white flex items-center justify-center text-muted text-sm">
               Нет фото
             </div>
           )}
         </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/35 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
           {discount && (
             <span className="bg-primary text-white text-xs px-3 py-1 rounded-full shadow">
@@ -104,7 +98,7 @@ function ProductCard({ product }) {
         </div>
         <div className="mt-auto flex items-center justify-between">
           <div className="flex items-baseline gap-2">
-            <span className="text-primary font-semibold">
+            <span className="text-accent font-semibold">
               {currentPrice.toLocaleString('ru-RU')} ₽
             </span>
             {oldPrice && (
@@ -133,7 +127,7 @@ function AddToCartButton({ product, variantId }) {
 
   return (
     <button
-      className={`add-to-cart-btn inline-flex items-center gap-1 rounded-full bg-ink text-white px-3 py-2 text-xs font-semibold shadow-sm transition-transform transform hover:scale-105 active:scale-95 ${isBouncing ? 'animate-bounce' : ''}`}
+      className={`add-to-cart-btn inline-flex items-center gap-1 rounded-2xl bg-accent text-white px-3 py-2 text-xs font-semibold shadow-[0_10px_20px_rgba(47,61,50,0.24)] transition-transform transform hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${isBouncing ? 'animate-bounce' : ''}`}
       onClick={handleClick}
     >
       <span>В корзину</span>

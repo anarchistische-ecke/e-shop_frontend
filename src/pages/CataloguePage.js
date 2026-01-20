@@ -4,12 +4,12 @@ import { getCategories } from '../api';
 import { resolveImageUrl } from '../utils/product';
 
 const categoryAccents = [
-  { gradient: 'from-[#f7f1ea] via-white to-[#f1e6dd]', orb: 'bg-[#e6d7ca]' },
-  { gradient: 'from-[#f9f5f0] via-white to-[#efe3d9]', orb: 'bg-[#e3d2c2]' },
-  { gradient: 'from-[#f5efe8] via-white to-[#e9ded4]', orb: 'bg-[#d9c9bb]' },
-  { gradient: 'from-[#f4f0ea] via-white to-[#e6d9cd]', orb: 'bg-[#d6c5b5]' },
-  { gradient: 'from-[#f6f1eb] via-white to-[#eadfd5]', orb: 'bg-[#dbcabb]' },
-  { gradient: 'from-[#f8f2ee] via-white to-[#efe2d9]', orb: 'bg-[#e1d0c1]' },
+  { gradient: 'from-[#f6f1ea] via-white to-[#efe4d7]', orb: 'bg-[#e2d2c1]' },
+  { gradient: 'from-[#f4f1ea] via-white to-[#e8efe8]', orb: 'bg-[#d7e6db]' },
+  { gradient: 'from-[#f7f2ec] via-white to-[#efe7de]', orb: 'bg-[#e6d5c4]' },
+  { gradient: 'from-[#f2efe7] via-white to-[#e6ece5]', orb: 'bg-[#d2dfd5]' },
+  { gradient: 'from-[#f8f2ec] via-white to-[#efe6db]', orb: 'bg-[#e6d8c7]' },
+  { gradient: 'from-[#f1efe7] via-white to-[#e4ece6]', orb: 'bg-[#d1dfd4]' },
 ];
 
 function CataloguePage() {
@@ -45,12 +45,12 @@ function CataloguePage() {
   return (
     <div className="catalogue-page">
       <section className="container mx-auto px-4 py-10 md:py-14">
-        <div className="ambient-panel relative overflow-hidden rounded-3xl border border-white/70 bg-white/70 px-6 py-8 md:px-10 md:py-12 shadow-xl">
+        <div className="ambient-panel relative overflow-hidden rounded-[28px] border border-white/70 bg-white/70 px-6 py-8 md:px-10 md:py-12 shadow-[0_24px_60px_rgba(43,39,34,0.12)]">
           <div className="absolute -top-20 right-10 h-40 w-40 rounded-full bg-primary/20 blur-3xl float-slow pointer-events-none" />
           <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-sky/60 blur-3xl float-slow pointer-events-none" />
           <div className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div>
-              <p className="text-xs uppercase tracking-[0.32em] text-muted">Каталог</p>
+              <p className="text-xs uppercase tracking-[0.32em] text-accent">Каталог</p>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold mt-2">
                 Выберите раздел и найдите тот самый уют
               </h1>
@@ -83,7 +83,7 @@ function CataloguePage() {
               ].map((item) => (
                 <div
                   key={item.title}
-                  className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm reveal-up"
+                  className="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-[0_12px_24px_rgba(43,39,34,0.08)] reveal-up"
                 >
                   <p className="text-sm font-semibold">{item.title}</p>
                   <p className="text-xs text-muted mt-1">{item.text}</p>
@@ -97,7 +97,7 @@ function CataloguePage() {
       <section className="container mx-auto px-4 pb-16">
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-muted">Разделы</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-accent">Разделы</p>
             <h2 className="text-2xl md:text-3xl font-semibold">Категории для каждого настроения</h2>
           </div>
           <Link to="/" className="button-ghost">На главную</Link>
@@ -112,12 +112,12 @@ function CataloguePage() {
               <Link
                 key={cat.slug || cat.id}
                 to={`/category/${cat.slug || cat.id}`}
-                className={`group relative overflow-hidden rounded-3xl border border-white/70 bg-gradient-to-br ${accent.gradient} p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 reveal-up`}
+                className={`group relative overflow-hidden rounded-[26px] border border-white/70 bg-gradient-to-br ${accent.gradient} p-5 shadow-[0_16px_36px_rgba(43,39,34,0.1)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_45px_rgba(43,39,34,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 reveal-up`}
                 style={{ animationDelay: `${idx * 60}ms` }}
               >
                 <div className={`absolute -top-14 -right-10 h-28 w-28 rounded-full ${accent.orb} blur-3xl opacity-70 transition group-hover:opacity-90`} />
                 <div className="relative z-10 flex h-full flex-col gap-4">
-                  <div className="rounded-2xl overflow-hidden border border-white/70 bg-white/80">
+                  <div className="rounded-2xl overflow-hidden border border-white/70 bg-white/85">
                     <div className="relative pt-[62%]">
                       {categoryImage ? (
                         <img
@@ -140,7 +140,7 @@ function CataloguePage() {
                   </div>
                   <div className="mt-auto flex items-center justify-between text-sm font-semibold text-primary">
                     <span>Открыть категорию</span>
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/80 shadow-sm transition-transform duration-300 group-hover:translate-x-1">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/70 bg-white/85 shadow-sm transition-transform duration-300 group-hover:translate-x-1">
                       →
                     </span>
                   </div>

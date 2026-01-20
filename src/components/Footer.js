@@ -1,15 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-/**
- * The Footer component contains grouped lists of informational links,
- * contact details and a simple newsletter subscription form.  In the
- * original site the footer also displays social network and payment
- * logos; here we replicate their presence using placeholder text.  At
- * the very bottom we render the copyright notice.  For any link that
- * doesn’t yet exist in this replica we still provide a clickable
- * placeholder that navigates nowhere.
- */
 function Footer() {
   const currentYear = new Date().getFullYear();
   const groups = [
@@ -40,59 +31,63 @@ function Footer() {
     },
   ];
   return (
-    <footer className="bg-white/80 border-t border-ink/10">
+    <footer className="bg-accent text-white border-t border-white/10">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-6xl py-6">
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr_0.9fr] lg:items-start">
+        <div className="mx-auto max-w-6xl py-8 md:py-10">
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr_0.9fr] lg:items-start">
             <div className="space-y-3">
-              <Link to="/" className="font-display text-2xl font-semibold text-ink">
+              <Link to="/" className="font-display text-2xl font-semibold tracking-tight text-white">
                 Постельное Белье-Юг
               </Link>
-              <p className="text-sm text-muted max-w-sm">
+              <p className="text-sm text-white/70 max-w-sm">
                 Спокойный дом начинается с мягких тканей. Мы подбираем натуральные материалы, чтобы
                 отдых был таким же уютным, как объятия любимого пледа.
               </p>
-              <div className="space-y-1 text-sm text-ink">
-                <p className="m-0">Телефон: +7 961 466‑88‑33</p>
-                <p className="m-0">Почта: postel-yug@yandex.ru</p>
+              <div className="space-y-2 text-sm">
+                <p className="m-0 inline-flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-1.5">
+                  Телефон: +7 961 466‑88‑33
+                </p>
+                <p className="m-0 inline-flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-1.5">
+                  Почта: postel-yug@yandex.ru
+                </p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.24em] text-muted">Юридическая информация</p>
-              <div className="text-xs text-ink space-y-1">
+              <p className="text-xs uppercase tracking-[0.24em] text-white/60">Юридическая информация</p>
+              <div className="text-xs text-white/75 space-y-1">
                 <p className="m-0">ИП Касьянова И.Л.</p>
                 <p className="m-0">ИНН 081407505907</p>
                 <p className="m-0">ОГРНИП 325080000035116</p>
               </div>
-              <ul className="text-xs text-muted space-y-1">
+              <ul className="text-xs text-white/70 space-y-1">
                 <li>
-                  <Link to="/konfidentsialnost-i-zashchita-informatsii" className="hover:text-primary">
+                  <Link to="/konfidentsialnost-i-zashchita-informatsii" className="hover:text-white">
                     Политика обработки персональных данных
                   </Link>
                 </li>
                 <li>
-                  <Link to="/polzovatelskoe-soglashenie" className="hover:text-primary">
+                  <Link to="/polzovatelskoe-soglashenie" className="hover:text-white">
                     Пользовательское соглашение
                   </Link>
                 </li>
                 <li>
-                  <Link to="/soglasie-na-obrabotku-pd" className="hover:text-primary">
+                  <Link to="/soglasie-na-obrabotku-pd" className="hover:text-white">
                     Согласие на обработку персональных данных
                   </Link>
                 </li>
                 <li>
-                  <Link to="/soglasie-na-poluchenie-reklamy" className="hover:text-primary">
+                  <Link to="/soglasie-na-poluchenie-reklamy" className="hover:text-white">
                     Согласие на получение рекламы
                   </Link>
                 </li>
                 <li>
-                  <Link to="/cookies" className="hover:text-primary">
+                  <Link to="/cookies" className="hover:text-white">
                     Политика файлов cookie
                   </Link>
                 </li>
                 <li>
-                  <Link to="/usloviya-prodazhi" className="hover:text-primary">
+                  <Link to="/usloviya-prodazhi" className="hover:text-white">
                     Условия продажи
                   </Link>
                 </li>
@@ -102,16 +97,16 @@ function Footer() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {groups.map((grp) => (
                 <div key={grp.title} className="space-y-3">
-                  <h4 className="font-semibold mt-0">{grp.title}</h4>
-                  <ul className="space-y-2 text-sm text-muted">
+                  <h4 className="font-semibold mt-0 text-white">{grp.title}</h4>
+                  <ul className="space-y-2 text-sm text-white/75">
                     {grp.links.map((link) => (
                       <li key={link.label}>
                         {link.path.startsWith('/') ? (
-                          <Link to={link.path} className="hover:text-primary">
+                          <Link to={link.path} className="hover:text-white">
                             {link.label}
                           </Link>
                         ) : (
-                          <a href="#" className="hover:text-primary">
+                          <a href="#" className="hover:text-white">
                             {link.label}
                           </a>
                         )}
@@ -125,15 +120,14 @@ function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-ink/10 py-3">
+      <div className="border-t border-white/10 py-4">
         <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+          <div className="mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-2 text-xs text-white/60">
             <p className="m-0">© Постельное Белье‑Юг, 2015–{currentYear}</p>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Mir</span>
-              <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Visa</span>
-              <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Mastercard</span>
-              <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Apple Pay</span>
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Mir</span>
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Visa</span>
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Mastercard</span>
             </div>
           </div>
         </div>

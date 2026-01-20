@@ -86,11 +86,11 @@ function CheckoutPage() {
   };
 
   return (
-    <div className="checkout-page py-10">
+    <div className="checkout-page py-8 md:py-10">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-muted">Оплата заказа</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-accent">Оплата заказа</p>
             <h1 className="text-2xl sm:text-3xl font-semibold">Подтвердите детали и перейдите к оплате</h1>
             <p className="text-sm text-muted mt-1">
               Мы отправим чек и детали заказа на вашу почту.
@@ -144,7 +144,7 @@ function CheckoutPage() {
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white/90 px-4 py-3 text-sm"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/85 px-4 py-3 text-sm shadow-sm"
                   >
                     <div>
                       <div className="font-semibold">

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
 
 /* Tailwind CSS base styles */
 @tailwind base;
@@ -9,16 +9,16 @@
 
 :root {
   --site-header-height: 6.5rem;
-  --catalog-cream: 250 246 240;
-  --catalog-sand: 236 227 216;
-  --catalog-rose: 199 171 150;
-  --catalog-mocha: 153 124 104;
-  --catalog-ink: 44 38 34;
-  --tone-sage: 204 217 210;
-  --tone-sky: 214 226 227;
-  --tone-blush: 243 232 223;
-  --font-display: 'Fraunces', 'Times New Roman', serif;
-  --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  --catalog-cream: 249 244 236;
+  --catalog-sand: 231 221 206;
+  --catalog-rose: 198 115 92;
+  --catalog-mocha: 110 92 78;
+  --catalog-ink: 43 39 34;
+  --tone-sage: 211 223 215;
+  --tone-sky: 217 229 223;
+  --tone-blush: 244 235 226;
+  --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-body: 'Manrope', 'Segoe UI', sans-serif;
 }
 
 html {
@@ -29,11 +29,11 @@ html {
 body {
   font-family: var(--font-body);
   background:
-    radial-gradient(circle at 12% 18%, rgba(199, 171, 150, 0.18), transparent 38%),
-    radial-gradient(circle at 88% 6%, rgba(214, 226, 223, 0.22), transparent 36%),
-    radial-gradient(circle at 80% 80%, rgba(243, 232, 223, 0.28), transparent 40%),
-    linear-gradient(180deg, #fbf8f4 0%, #f5eee6 55%, #f8f1ea 100%);
-  color: #2c2622;
+    radial-gradient(circle at 10% 14%, rgba(var(--catalog-rose), 0.22), transparent 45%),
+    radial-gradient(circle at 88% 8%, rgba(var(--tone-sage), 0.32), transparent 42%),
+    radial-gradient(circle at 72% 86%, rgba(var(--tone-blush), 0.5), transparent 46%),
+    linear-gradient(180deg, #fbf7f1 0%, #f5eee6 50%, #efe7de 100%);
+  color: #2b2722;
   min-height: 100%;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -47,7 +47,7 @@ body {
 
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.015em;
+    letter-spacing: -0.01em;
   }
 
   h5, h6 {
@@ -59,7 +59,7 @@ body {
     select,
     textarea
   ) {
-    @apply bg-white/90 border border-ink/10 rounded-xl px-4 py-2.5 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition;
+    @apply bg-white/85 border border-ink/10 rounded-2xl px-4 py-2.5 text-sm text-ink shadow-[0_10px_20px_rgba(43,39,34,0.08)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition;
   }
 
   :where(textarea) {
@@ -67,7 +67,7 @@ body {
   }
 
   ::selection {
-    background: rgba(176, 124, 99, 0.22);
+    background: rgba(182, 91, 74, 0.22);
   }
 }
 
@@ -86,37 +86,37 @@ body {
    custom colour palette. */
 @layer components {
   .button {
-    /* Main action button with subtle lift and warm shadow */
-    @apply inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(176,124,99,0.28)] hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-[0_18px_32px_rgba(176,124,99,0.3)] transition-all duration-200;
+    /* Main action button with warm gradient lift */
+    @apply inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(182,91,74,0.35)] hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_22px_40px_rgba(182,91,74,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200;
   }
   .button-gray {
     /* A secondary button variant used for less prominent actions. */
-    @apply inline-flex items-center justify-center rounded-full bg-white text-ink border border-ink/10 px-5 py-3 text-sm font-semibold shadow-sm hover:border-primary/40 hover:text-primary hover:-translate-y-0.5 transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-2xl bg-white/85 text-ink border border-ink/10 px-5 py-3 text-sm font-semibold shadow-[0_12px_24px_rgba(43,39,34,0.12)] hover:border-primary/40 hover:text-primary hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200;
   }
   .button-ghost {
-    @apply inline-flex items-center justify-center rounded-full border border-transparent px-4 py-2 text-sm font-semibold text-ink hover:bg-white/70 hover:border-ink/10 transition;
+    @apply inline-flex items-center justify-center rounded-2xl border border-transparent px-4 py-2 text-sm font-semibold text-ink/80 hover:bg-white/70 hover:border-ink/10 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition;
   }
   .catalog-hero {
     background:
-      radial-gradient(circle at 18% 18%, rgba(var(--catalog-rose), 0.24), transparent 55%),
-      radial-gradient(circle at 85% 6%, rgba(var(--tone-sky), 0.32), transparent 50%),
-      linear-gradient(140deg, rgba(var(--catalog-cream), 0.98), rgba(255, 255, 255, 0.92));
+      radial-gradient(circle at 18% 18%, rgba(var(--catalog-rose), 0.26), transparent 55%),
+      radial-gradient(circle at 85% 8%, rgba(var(--tone-sky), 0.36), transparent 50%),
+      linear-gradient(140deg, rgba(var(--catalog-cream), 0.98), rgba(255, 255, 255, 0.9));
   }
   .catalog-panel {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 24px 50px rgba(58, 40, 30, 0.08);
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 24px 60px rgba(43, 39, 34, 0.12);
   }
   .ambient-panel {
     background:
-      radial-gradient(circle at 10% 15%, rgba(var(--catalog-rose), 0.2), transparent 55%),
-      radial-gradient(circle at 90% 8%, rgba(var(--tone-sage), 0.2), transparent 50%),
-      linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(var(--catalog-sand), 0.95));
+      radial-gradient(circle at 8% 12%, rgba(var(--catalog-rose), 0.24), transparent 55%),
+      radial-gradient(circle at 90% 12%, rgba(var(--tone-sage), 0.25), transparent 50%),
+      linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(var(--catalog-sand), 0.96));
   }
   .soft-card {
-    @apply rounded-3xl border border-white/80 bg-white/80 shadow-[0_20px_50px_rgba(58,40,30,0.08)];
+    @apply rounded-[28px] border border-white/80 bg-white/88 shadow-[0_24px_50px_rgba(43,39,34,0.1)];
   }
 }
 
@@ -125,7 +125,7 @@ body {
     font-family: var(--font-display);
   }
   .reveal-up {
-    animation: revealUp 0.6s ease-out both;
+    animation: revealUp 0.7s ease-out both;
   }
   .float-slow {
     animation: floatSlow 10s ease-in-out infinite;
@@ -138,7 +138,7 @@ body {
 @keyframes revealUp {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(22px);
   }
   to {
     opacity: 1;
@@ -151,14 +151,14 @@ body {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-10px);
   }
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(40px);
+    transform: translateY(32px);
   }
   to {
     opacity: 1;

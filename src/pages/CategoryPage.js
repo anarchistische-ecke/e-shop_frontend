@@ -523,16 +523,16 @@ function CategoryPage() {
   const FilterPill = ({ label, isActive, children }) => (
     <details className="relative">
       <summary
-        className={`list-none inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition cursor-pointer [&::-webkit-details-marker]:hidden ${
+        className={`list-none inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm transition cursor-pointer [&::-webkit-details-marker]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
           isActive
             ? 'border-primary/50 bg-primary/10 text-primary'
-            : 'border-ink/10 bg-white/90 text-ink'
+            : 'border-ink/10 bg-white/85 text-ink'
         }`}
       >
         <span>{label}</span>
         <span className="text-xs">▾</span>
       </summary>
-      <div className="absolute left-0 mt-2 w-72 max-w-[90vw] rounded-2xl border border-ink/10 bg-white/95 p-4 shadow-xl z-20">
+      <div className="absolute left-0 mt-2 w-72 max-w-[90vw] rounded-2xl border border-ink/10 bg-white/96 p-4 shadow-[0_18px_40px_rgba(43,39,34,0.16)] z-20">
         {children}
       </div>
     </details>
@@ -552,13 +552,13 @@ function CategoryPage() {
 
     return (
       <Link to={`/product/${product.id}`} className="group block">
-        <div className="relative rounded-[28px] border border-ink/10 bg-white overflow-hidden shadow-sm">
-          <div className="relative pt-[72%] bg-secondary">
+        <div className="relative rounded-[26px] border border-ink/10 bg-white/90 overflow-hidden shadow-[0_18px_40px_rgba(43,39,34,0.12)]">
+          <div className="relative pt-[72%] bg-sand/60">
             {imageUrl ? (
               <img
                 src={imageUrl}
                 alt={product.name}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">
@@ -566,7 +566,7 @@ function CategoryPage() {
               </div>
             )}
           </div>
-          <span className="absolute bottom-3 left-3 rounded-md bg-primary text-white text-xs px-2.5 py-1 shadow">
+          <span className="absolute bottom-3 left-3 rounded-full bg-primary text-white text-xs px-3 py-1 shadow">
             {badgeText}
           </span>
         </div>
@@ -612,7 +612,7 @@ function CategoryPage() {
   };
 
   return (
-    <div className="category-page relative overflow-hidden py-10">
+    <div className="category-page relative overflow-hidden py-8 md:py-10">
       <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
       <div className="container mx-auto px-4">
@@ -659,7 +659,7 @@ function CategoryPage() {
                 <button
                   key={key}
                   type="button"
-                  className="rounded-full border border-ink/10 bg-white/90 px-4 py-2 text-sm hover:border-primary/50 hover:text-primary transition"
+                  className="rounded-2xl border border-ink/10 bg-white/85 px-4 py-2 text-sm hover:border-primary/50 hover:text-primary transition"
                   onClick={() => navigate(`/category/${cat.slug || cat.id}`)}
                 >
                   {cat.name}
@@ -820,10 +820,10 @@ function CategoryPage() {
 
               <button
                 type="button"
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
+                className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm transition ${
                   activeFilters.length > 0
                     ? 'border-primary/50 bg-primary/10 text-primary'
-                    : 'border-ink/10 bg-white/90 text-ink'
+                    : 'border-ink/10 bg-white/85 text-ink'
                 }`}
                 onClick={() => setIsFilterOpen(true)}
               >
@@ -841,7 +841,7 @@ function CategoryPage() {
                   id="sort"
                   value={sortKey}
                   onChange={(e) => setSortKey(e.target.value)}
-                  className="min-w-[200px] rounded-full bg-white/90 border border-ink/10 px-4 py-2 text-sm"
+                  className="min-w-[200px] rounded-2xl bg-white/85 border border-ink/10 px-4 py-2 text-sm"
                 >
                   <option value="popular">Сначала популярные</option>
                   <option value="newest">Сначала новые</option>
@@ -858,7 +858,7 @@ function CategoryPage() {
                   id="perPage"
                   value={itemsPerPage}
                   onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                  className="min-w-[120px] rounded-full bg-white/90 border border-ink/10 px-4 py-2 text-sm"
+                  className="min-w-[120px] rounded-2xl bg-white/85 border border-ink/10 px-4 py-2 text-sm"
                 >
                   {perPageOptions.map((option) => (
                     <option key={option} value={option}>
@@ -867,11 +867,11 @@ function CategoryPage() {
                   ))}
                 </select>
               </div>
-              <div className="flex items-center gap-1 rounded-full border border-ink/10 bg-white/80 p-1">
+              <div className="flex items-center gap-1 rounded-2xl border border-ink/10 bg-white/85 p-1">
                 <button
                   type="button"
                   onClick={() => setViewMode('grid')}
-                  className={`h-9 w-9 rounded-full flex items-center justify-center transition ${
+                  className={`h-9 w-9 rounded-2xl flex items-center justify-center transition ${
                     viewMode === 'grid' ? 'bg-primary text-white' : 'text-ink/60 hover:text-primary'
                   }`}
                   aria-label="Крупная сетка"
@@ -885,7 +885,7 @@ function CategoryPage() {
                 <button
                   type="button"
                   onClick={() => setViewMode('compact')}
-                  className={`h-9 w-9 rounded-full flex items-center justify-center transition ${
+                  className={`h-9 w-9 rounded-2xl flex items-center justify-center transition ${
                     viewMode === 'compact' ? 'bg-primary text-white' : 'text-ink/60 hover:text-primary'
                   }`}
                   aria-label="Компактная сетка"
