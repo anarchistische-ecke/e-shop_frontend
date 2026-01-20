@@ -116,7 +116,7 @@ body {
       linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(var(--catalog-sand), 0.96));
   }
   .soft-card {
-    @apply rounded-[28px] border border-white/80 bg-white/88 shadow-[0_24px_50px_rgba(43,39,34,0.1)];
+    @apply rounded-[28px] border border-white/80 bg-white/90 shadow-[0_24px_50px_rgba(43,39,34,0.1)];
   }
 }
 
