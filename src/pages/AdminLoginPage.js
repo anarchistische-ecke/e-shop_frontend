@@ -35,7 +35,27 @@ function AdminLoginPage() {
     }
     try {
       const response = await loginAdmin(credentials.username.trim(), credentials.password);
-      await login({ token: response?.token, profile: { username: credentials.username.trim() } });
+      const token =
+        (typeof response === 'string' ? response : null) ||
+        response?.token ||
+        response?.access_token ||
+        response?.accessToken ||
+        response?.id_token ||
+        response?.idToken ||
+        response?.token?.access_token ||
+        response?.token?.accessToken ||
+        response?.token?.token ||
+        response?.token?.id_token ||
+        response?.token?.idToken ||
+        '';
+      if (!token) {
+        setStatus({
+          type: 'error',
+          message: 'Не удалось получить токен. Проверьте настройки авторизации.'
+        });
+        return;
+      }
+      await login({ token, profile: { username: credentials.username.trim() } });
       navigate(safeRedirectPath(redirectTo), { replace: true });
     } catch (err) {
       console.error('Admin login failed:', err);
