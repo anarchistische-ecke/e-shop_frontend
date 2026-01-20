@@ -1,7 +1,7 @@
 .legal-page {
   padding: 3.5rem 0 4.5rem;
-  background: #fff;
-  color: #2c2622;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2b2722;
   --legal-gutter: 24px;
 }
 
@@ -26,12 +26,12 @@
 }
 
 .legal-page a {
-  color: #b07c63;
+  color: #b65b4a;
   text-decoration: none;
 }
 
 .legal-page a:hover {
-  color: #965f47;
+  color: #9d4d3d;
 }
 
 .ch-row {
@@ -177,14 +177,14 @@
   font-family: var(--font-body);
   font-size: clamp(1.8rem, 2.6vw, 2.6rem);
   font-weight: 600;
-  color: #2c2622;
+  color: #2b2722;
   margin: 0;
 }
 
 .ch-seoblock h2 {
   font-size: 1rem;
   font-weight: 500;
-  color: #6f6a64;
+  color: #6f6a62;
   margin: 0;
 }
 
@@ -192,13 +192,13 @@
   font-weight: 600;
   font-size: 1.05rem;
   margin: 0;
-  color: #2c2622;
+  color: #2b2722;
 }
 
 .privacy_policy__description,
 .terms_sale__text {
   margin: 0;
-  color: #3f3732;
+  color: #3b342e;
   font-size: 0.95rem;
   line-height: 1.6;
 }
@@ -210,13 +210,13 @@
 }
 
 .privacy_policy__list li::marker {
-  color: #b07c63;
+  color: #b65b4a;
 }
 
 .privacy_policy__item {
   position: relative;
   padding-left: 0;
-  color: #3f3732;
+  color: #3b342e;
   font-size: 0.95rem;
   line-height: 1.6;
 }
@@ -228,10 +228,10 @@
 .privacy_policy__user {
   font-weight: 600;
   margin: 0;
-  color: #2c2622;
+  color: #2b2722;
   font-size: 1.05rem;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(176, 124, 99, 0.35);
+  border-bottom: 1px solid rgba(182, 91, 74, 0.35);
 }
 
 .privacy_policy__alert,
@@ -240,8 +240,8 @@
   gap: 12px;
   align-items: flex-start;
   border-radius: 14px;
-  border: 1px solid #eadfd3;
-  background: #f8f4ef;
+  border: 1px solid #e7ddce;
+  background: #f6efe8;
   padding: 16px;
   box-shadow: none;
 }
@@ -251,7 +251,7 @@
   flex: 0 0 auto;
   width: 20px;
   height: 20px;
-  color: #b07c63;
+  color: #b65b4a;
 }
 
 .gift-card__number,
@@ -259,13 +259,13 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 1px solid #eadfd3;
-  background: #f6f1eb;
+  border: 1px solid #e7ddce;
+  background: #f4efe7;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  color: #b07c63;
+  color: #b65b4a;
 }
 
 .ch-catalog-category__file {
@@ -274,17 +274,17 @@
   gap: 14px;
   padding: 14px 18px;
   border-radius: 14px;
-  border: 1px solid #eadfd3;
-  background: #fbf8f4;
+  border: 1px solid #e7ddce;
+  background: #faf6f0;
   box-shadow: none;
-  color: #2c2622;
+  color: #2b2722;
 }
 
 .ch-catalog-category__file-icon {
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  border: 1px solid #eadfd3;
+  border: 1px solid #e7ddce;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -298,13 +298,13 @@
 
 .ch-catalog-category__file-size {
   font-size: 0.8rem;
-  color: #8b847c;
+  color: #7a726b;
 }
 
 .terms_sale__wrapper {
   position: relative;
   border-radius: 16px;
-  border: 1px solid #eadfd3;
+  border: 1px solid #e7ddce;
   background: #fff;
   padding: 16px;
   box-shadow: none;
@@ -313,7 +313,7 @@
 .terms_sale__btn {
   width: 100%;
   border-radius: 999px;
-  border: 1px solid #eadfd3;
+  border: 1px solid #e7ddce;
   padding: 10px 16px;
   font-weight: 600;
   background: #fff;
@@ -349,16 +349,16 @@
 .terms_sale__link {
   display: block;
   padding: 8px 0;
-  color: #2c2622;
+  color: #2b2722;
   font-size: 0.95rem;
 }
 
 .terms_sale__link:hover {
-  color: #b07c63;
+  color: #b65b4a;
 }
 
 .terms_sale__link.--active {
-  color: #b07c63;
+  color: #b65b4a;
   font-weight: 600;
 }
 
@@ -366,17 +366,17 @@
   font-family: var(--font-body);
   font-size: 1.4rem;
   font-weight: 600;
-  color: #2c2622;
+  color: #2b2722;
 }
 
 .terms_sale__subtitle {
   font-weight: 600;
-  color: #2c2622;
+  color: #2b2722;
 }
 
 .terms_sale__hr {
   height: 1px;
-  background: #eadfd3;
+  background: #e7ddce;
   margin-top: 16px;
 }
 
@@ -411,7 +411,7 @@
 }
 
 .legal-page ul:not(.terms_sale__list):not(.privacy_policy__list) li::marker {
-  color: #b07c63;
+  color: #b65b4a;
 }
 
 .legal-page ul:not(.terms_sale__list):not(.privacy_policy__list) li:not([class*='ch-mb-']) {

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 function NotFound() {
   return (
-    <div className="not-found py-10">
+    <div className="not-found py-8 md:py-12">
       <div className="container mx-auto px-4 text-center">
         <div className="soft-card p-8">
           <h1 className="text-2xl sm:text-3xl font-semibold mb-2">404 — Страница не найдена</h1>

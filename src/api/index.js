@@ -1,4 +1,4 @@
-import { clearToken, getAccessToken } from '../auth/keycloak';
+import { clearSession, getAccessToken } from '../auth/session';
 
 const inferBrowserApiBase = () =>
   (typeof window !== 'undefined' ? window.__API_BASE__ || window.location.origin : null);
@@ -12,7 +12,7 @@ function broadcastLogout(reason = 'logout') {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('adminToken');
   localStorage.removeItem('userToken');
-  clearToken({ type: 'user', action: 'logout', reason });
+  clearSession();
 }
 
 async function request(url, options = {}) {
@@ -20,7 +20,7 @@ async function request(url, options = {}) {
   try {
     token = await getAccessToken();
   } catch (err) {
-    console.warn('Failed to read Keycloak token', err);
+    console.warn('Failed to read access token', err);
   }
   const isFormData =
     typeof FormData !== 'undefined' && options.body instanceof FormData;
@@ -288,6 +288,24 @@ export async function loginCustomer(email, password) {
   return request('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password })
+  });
+}
+export async function registerCustomer(payload) {
+  return request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+export async function requestEmailVerification(email) {
+  return request('/customers/verify/request', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+}
+export async function confirmEmailVerification(email, code) {
+  return request('/customers/verify/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ email, code })
   });
 }
 export async function loginWithYandex({

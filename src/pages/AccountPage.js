@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import {
   getCustomerOrders,
-  getCustomerProfile,
   updateCustomerProfile,
   updateCustomerSubscription
 } from '../api';
@@ -168,7 +167,7 @@ const SECTION_LABELS = {
 };
 
 function AccountPage() {
-  const { isAuthenticated, isReady, tokenParsed, logout } = useAuth();
+  const { isAuthenticated, isReady, tokenParsed, logout, refreshProfile } = useAuth();
   const [orders, setOrders] = useState([]);
   const [activeSection, setActiveSection] = useState('profile');
   const [profile, setProfile] = useState({
@@ -221,7 +220,7 @@ function AccountPage() {
     if (!isAuthenticated) return;
     let mounted = true;
     setIsProfileLoading(true);
-    getCustomerProfile()
+    refreshProfile()
       .then((data) => {
         if (!mounted || !data) return;
         setProfile((prev) => ({
@@ -384,7 +383,7 @@ function AccountPage() {
       logout();
       return;
     }
-    logout({ redirectUri: window.location.origin });
+    logout();
   };
 
   const handleCopyCode = async () => {

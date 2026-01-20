@@ -10,7 +10,7 @@ function AdminLayout() {
       logout();
       return;
     }
-    logout({ redirectUri: window.location.origin });
+    logout();
   };
 
   const navItems = [

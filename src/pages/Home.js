@@ -94,10 +94,10 @@ function Home() {
   ];
 
   const categoryAccents = [
-    { gradient: 'from-[#f7f1ea] via-white to-[#f1e6dd]', orb: 'bg-[#e6d7ca]' },
-    { gradient: 'from-[#f9f5f0] via-white to-[#efe3d9]', orb: 'bg-[#e3d2c2]' },
-    { gradient: 'from-[#f5efe8] via-white to-[#e9ded4]', orb: 'bg-[#d9c9bb]' },
-    { gradient: 'from-[#f4f0ea] via-white to-[#e6d9cd]', orb: 'bg-[#d6c5b5]' },
+    { gradient: 'from-[#f6f1ea] via-white to-[#efe4d7]', orb: 'bg-[#e2d2c1]' },
+    { gradient: 'from-[#f4f1ea] via-white to-[#e8efe8]', orb: 'bg-[#d7e6db]' },
+    { gradient: 'from-[#f7f2ec] via-white to-[#efe7de]', orb: 'bg-[#e6d5c4]' },
+    { gradient: 'from-[#f2efe7] via-white to-[#e6ece5]', orb: 'bg-[#d2dfd5]' },
   ];
 
   const resolveProductCategoryKey = (product) => {
@@ -155,64 +155,68 @@ function Home() {
         </div>
       )}
 
-      <section className="container mx-auto px-4 py-10 md:py-14">
-        <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-8 lg:gap-10 items-center">
-          <div className="space-y-6">
-            <p className="uppercase text-xs tracking-[0.4em] text-muted">{badgeText}</p>
-            <h1 className="text-2xl sm:text-3xl md:text-5xl font-semibold leading-tight">
-              {heroTitle} <span className="text-primary">{heroAccent}</span>
-            </h1>
-            <p className="text-base text-muted max-w-xl">{heroSubtitle}</p>
-            <div className="flex flex-wrap gap-3">
-              <Link to={primaryCtaLink} className="button">{primaryCtaLabel}</Link>
-              <Link to={secondaryCtaLink} className="button-gray">{secondaryCtaLabel}</Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              {heroHighlights.map((feat) => (
-                <Link
-                  key={feat.title}
-                  to={feat.link}
-                  className="rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                  aria-label={feat.title}
-                >
-                  <p className="text-sm font-semibold mb-1">{feat.title}</p>
-                  <p className="text-xs text-muted mb-0">{feat.subtitle}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative">
-            <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/20 blur-3xl" />
-            <div className="absolute -bottom-10 left-6 h-32 w-32 rounded-full bg-sky/70 blur-3xl" />
-            <div className="relative rounded-[32px] overflow-hidden border border-white/80 shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-white/60 pointer-events-none" />
-              <div className="relative pt-[108%] sm:pt-[120%]">
-                {heroImage ? (
-                  <img src={heroImage} alt={featuredProduct?.name || 'Товар'} className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
-                    Добавьте фото товара, чтобы показать его здесь
-                  </div>
-                )}
+      <section className="container mx-auto px-4 py-8 md:py-12">
+        <div className="catalog-hero relative overflow-hidden rounded-[32px] border border-white/70 p-6 md:p-10 shadow-[0_30px_70px_rgba(43,39,34,0.14)]">
+          <div className="absolute -top-20 right-10 h-48 w-48 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 left-6 h-40 w-40 rounded-full bg-sky/70 blur-3xl pointer-events-none" />
+          <div className="relative z-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-8 lg:gap-10 items-center">
+            <div className="space-y-6">
+              <p className="uppercase text-xs tracking-[0.4em] text-accent">{badgeText}</p>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight">
+                {heroTitle} <span className="text-primary">{heroAccent}</span>
+              </h1>
+              <p className="text-sm sm:text-base text-muted max-w-xl">{heroSubtitle}</p>
+              <div className="flex flex-wrap gap-3">
+                <Link to={primaryCtaLink} className="button">{primaryCtaLabel}</Link>
+                <Link to={secondaryCtaLink} className="button-gray">{secondaryCtaLabel}</Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                {heroHighlights.map((feat) => (
+                  <Link
+                    key={feat.title}
+                    to={feat.link}
+                    className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 shadow-[0_12px_24px_rgba(43,39,34,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(43,39,34,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    aria-label={feat.title}
+                  >
+                    <p className="text-sm font-semibold mb-1">{feat.title}</p>
+                    <p className="text-xs text-muted mb-0">{feat.subtitle}</p>
+                  </Link>
+                ))}
               </div>
             </div>
-            <div className="mt-4 sm:mt-0 sm:absolute sm:-bottom-6 sm:left-6 sm:right-6 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-xl backdrop-blur">
-              <p className="text-xs uppercase tracking-[0.28em] text-muted">{featuredLabel}</p>
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="font-semibold mb-1">{featuredProduct?.name || 'Новый комплект'}</p>
-                  {featuredPrice ? (
-                    <p className="text-sm text-muted m-0">
-                      от {featuredPrice.toLocaleString('ru-RU')} ₽
-                    </p>
+
+            <div className="relative">
+              <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/20 blur-3xl" />
+              <div className="absolute -bottom-10 left-6 h-32 w-32 rounded-full bg-sky/70 blur-3xl" />
+              <div className="relative rounded-[30px] overflow-hidden border border-white/80 shadow-[0_30px_60px_rgba(43,39,34,0.2)]">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-white/60 pointer-events-none" />
+                <div className="relative pt-[108%] sm:pt-[120%]">
+                  {heroImage ? (
+                    <img src={heroImage} alt={featuredProduct?.name || 'Товар'} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
-                    <p className="text-sm text-muted m-0">В наличии любимые оттенки</p>
+                    <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
+                      Добавьте фото товара, чтобы показать его здесь
+                    </div>
                   )}
                 </div>
-                <Link to={featuredProduct ? `/product/${featuredProduct.id}` : '/category/popular'} className="button-ghost text-primary">
-                  Подробнее →
-                </Link>
+              </div>
+              <div className="mt-4 sm:mt-0 sm:absolute sm:-bottom-6 sm:left-6 sm:right-6 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-[0_18px_40px_rgba(43,39,34,0.16)] backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.28em] text-muted">{featuredLabel}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold mb-1">{featuredProduct?.name || 'Новый комплект'}</p>
+                    {featuredPrice ? (
+                      <p className="text-sm text-muted m-0">
+                        от {featuredPrice.toLocaleString('ru-RU')} ₽
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted m-0">В наличии любимые оттенки</p>
+                    )}
+                  </div>
+                  <Link to={featuredProduct ? `/product/${featuredProduct.id}` : '/category/popular'} className="button-ghost text-primary">
+                    Подробнее →
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -220,12 +224,12 @@ function Home() {
       </section>
 
       <section className="container mx-auto px-4 pb-12">
-        <div className="ambient-panel relative overflow-hidden rounded-3xl border border-white/70 bg-white/70 backdrop-blur-lg px-6 py-8 md:px-10 md:py-10 shadow-xl">
+        <div className="ambient-panel relative overflow-hidden rounded-[28px] border border-white/70 bg-white/70 backdrop-blur-lg px-6 py-8 md:px-10 md:py-10 shadow-[0_24px_60px_rgba(43,39,34,0.12)]">
           <div className="absolute -top-16 right-6 h-32 w-32 rounded-full bg-primary/20 blur-3xl float-slow pointer-events-none" />
           <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-sky/60 blur-3xl float-slow pointer-events-none" />
           <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs uppercase tracking-[0.32em] text-muted">Категории</p>
+              <p className="text-xs uppercase tracking-[0.32em] text-accent">Категории</p>
               <h2 className="text-2xl md:text-3xl font-semibold">Тихие подборки для уютного дома</h2>
               <p className="text-sm text-muted mt-2">
                 Быстрый доступ к текстилю для спальни, ванной и детской — без лишнего шума.
@@ -260,7 +264,7 @@ function Home() {
                     <Link
                       key={cat.slug || cat.id}
                       to={`/category/${cat.slug || cat.id}`}
-                      className={`group relative flex-shrink-0 w-[260px] sm:w-[300px] lg:w-[320px] snap-start overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br ${accent.gradient} p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 reveal-up`}
+                      className={`group relative flex-shrink-0 w-[260px] sm:w-[300px] lg:w-[320px] snap-start overflow-hidden rounded-[24px] border border-white/70 bg-gradient-to-br ${accent.gradient} p-4 shadow-[0_16px_36px_rgba(43,39,34,0.1)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_45px_rgba(43,39,34,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 reveal-up`}
                       style={{ animationDelay: `${idx * 70}ms` }}
                     >
                       <div
@@ -271,7 +275,7 @@ function Home() {
                           <span>Раздел</span>
                           <span className="tracking-normal normal-case">{countLabel}</span>
                         </div>
-                        <div className="rounded-xl overflow-hidden border border-white/70 bg-white/80">
+                        <div className="rounded-2xl overflow-hidden border border-white/70 bg-white/85">
                           <div className="relative pt-[68%]">
                             {tileImage ? (
                               <img src={tileImage} alt={cat.name} className="absolute inset-0 h-full w-full object-cover" />
@@ -290,7 +294,7 @@ function Home() {
                         </div>
                         <div className="mt-auto flex items-center justify-between text-sm font-medium text-primary">
                           <span>Смотреть</span>
-                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-white/80 shadow-sm transition-transform duration-300 group-hover:translate-x-1">
+                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-white/70 bg-white/85 shadow-sm transition-transform duration-300 group-hover:translate-x-1">
                             →
                           </span>
                         </div>
@@ -309,7 +313,7 @@ function Home() {
                   <button
                     type="button"
                     onClick={() => scrollCategories(-1)}
-                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/90 text-ink shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-ink shadow-sm transition hover:-translate-y-1 hover:shadow-md"
                     aria-label="Прокрутить категории влево"
                     aria-controls="category-carousel"
                   >
@@ -318,7 +322,7 @@ function Home() {
                   <button
                     type="button"
                     onClick={() => scrollCategories(1)}
-                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/90 text-ink shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-ink shadow-sm transition hover:-translate-y-1 hover:shadow-md"
                     aria-label="Прокрутить категории вправо"
                     aria-controls="category-carousel"
                   >
@@ -351,7 +355,7 @@ function Home() {
       <section className="container mx-auto px-4 py-10">
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="soft-card p-6 md:p-8">
-            <p className="text-xs uppercase tracking-[0.3em] text-muted">Комплект недели</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-accent">Комплект недели</p>
             <h3 className="text-2xl font-semibold mt-2">Соберите идеальную спальню за один клик</h3>
             <p className="text-sm text-muted mt-3 max-w-xl">
               Добавьте популярный комплект с наволочками и простынёй на резинке. Мы собрали
@@ -359,7 +363,7 @@ function Home() {
             </p>
             <div className="mt-4 grid sm:grid-cols-3 gap-3 text-sm">
               {['Комплект простыней', 'Пододеяльник 200×220', '2 наволочки 50×70'].map((item) => (
-                <div key={item} className="rounded-2xl border border-ink/10 bg-white/80 px-3 py-3 text-center">
+                <div key={item} className="rounded-2xl border border-white/70 bg-white/85 px-3 py-3 text-center shadow-sm">
                   {item}
                 </div>
               ))}
@@ -370,10 +374,10 @@ function Home() {
             </div>
           </div>
           <div className="soft-card p-6 md:p-8">
-            <p className="text-xs uppercase tracking-[0.3em] text-muted">Сезонные подборки</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-accent">Сезонные подборки</p>
             <div className="mt-4 space-y-4">
               {seasonalTiles.map((tile) => (
-                <div key={tile.title} className="rounded-2xl border border-ink/10 bg-white/80 p-4">
+                <div key={tile.title} className="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm">
                   <h4 className="text-lg font-semibold">{tile.title}</h4>
                   <p className="text-sm text-muted mt-1">{tile.subtitle}</p>
                   <Link to={tile.link} className="text-sm text-primary mt-2 inline-flex items-center gap-2">
@@ -386,7 +390,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="bg-white/80 border-y border-ink/10 py-10">
+      <section className="bg-white/75 border-y border-ink/10 py-10">
         <div className="container mx-auto px-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <h2 className="text-2xl font-semibold">Новинки с мягким характером</h2>
