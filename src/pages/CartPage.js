@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { CartContext } from '../contexts/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { createAdminOrderLink } from '../api';
+import { createManagerOrderLink } from '../api';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,15 +9,12 @@ function CartPage() {
   const { items, removeItem, updateQuantity, clearCart } = useContext(CartContext);
   const navigate = useNavigate();
   const { isAuthenticated, hasRole } = useAuth();
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminLink, setAdminLink] = useState('');
-  const [adminStatus, setAdminStatus] = useState(null);
+  const [managerEmail, setManagerEmail] = useState('');
+  const [managerLink, setManagerLink] = useState('');
+  const [managerStatus, setManagerStatus] = useState(null);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
-  const adminRole = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE || 'admin';
-  const adminRoleClient = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE_CLIENT || '';
-  const isAdmin = isAuthenticated && (adminRoleClient
-    ? hasRole(adminRole, { clientId: adminRoleClient })
-    : hasRole(adminRole));
+  const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
+  const isManager = isAuthenticated && hasRole(managerRole);
 
   const total = items.reduce(
     (sum, item) => sum + (item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity,
@@ -28,33 +25,42 @@ function CartPage() {
     navigate('/checkout');
   };
 
-  const handleCreateAdminLink = async () => {
-    const email = adminEmail.trim();
-    if (!email) {
-      setAdminStatus({
+  const handleCreateManagerLink = async ({ sendEmail, copyAfter = false } = {}) => {
+    const email = managerEmail.trim();
+    if (sendEmail && !email) {
+      setManagerStatus({
         type: 'error',
         message: 'Укажите email клиента для отправки ссылки.'
       });
       return;
     }
     setIsCreatingLink(true);
-    setAdminStatus(null);
+    setManagerStatus(null);
     try {
       const cartId = localStorage.getItem('cartId');
-      const response = await createAdminOrderLink({
+      const response = await createManagerOrderLink({
         cartId,
-        receiptEmail: email,
-        orderPageUrl: `${window.location.origin}/order/{token}`
+        receiptEmail: email || null,
+        orderPageUrl: `${window.location.origin}/order/{token}`,
+        sendEmail: Boolean(sendEmail)
       });
       const link = `${window.location.origin}/order/${response.publicToken}`;
-      setAdminLink(link);
-      setAdminStatus({
+      setManagerLink(link);
+      if (copyAfter && navigator.clipboard) {
+        await navigator.clipboard.writeText(link);
+        setManagerStatus({
+          type: 'success',
+          message: 'Ссылка создана и скопирована.'
+        });
+        return;
+      }
+      setManagerStatus({
         type: 'success',
-        message: 'Ссылка создана и отправлена клиенту.'
+        message: sendEmail ? 'Ссылка создана и отправлена клиенту.' : 'Ссылка создана.'
       });
     } catch (err) {
-      console.error('Failed to create admin order link:', err);
-      setAdminStatus({
+      console.error('Failed to create manager order link:', err);
+      setManagerStatus({
         type: 'error',
         message: 'Не удалось создать ссылку. Попробуйте ещё раз.'
       });
@@ -64,13 +70,13 @@ function CartPage() {
   };
 
   const handleCopyLink = async () => {
-    if (!adminLink) return;
+    if (!managerLink) return;
     try {
-      await navigator.clipboard.writeText(adminLink);
-      setAdminStatus({ type: 'success', message: 'Ссылка скопирована.' });
+      await navigator.clipboard.writeText(managerLink);
+      setManagerStatus({ type: 'success', message: 'Ссылка скопирована.' });
     } catch (err) {
       console.error('Failed to copy link:', err);
-      setAdminStatus({ type: 'error', message: 'Не удалось скопировать ссылку.' });
+      setManagerStatus({ type: 'error', message: 'Не удалось скопировать ссылку.' });
     }
   };
 
@@ -173,14 +179,16 @@ function CartPage() {
                   <span>Итого</span>
                   <span>{total.toLocaleString('ru-RU')} ₽</span>
                 </div>
-                <button className="button w-full mb-2" onClick={handleCheckout}>
-                  Оформить заказ
-                </button>
+                {!isManager && (
+                  <button className="button w-full mb-2" onClick={handleCheckout}>
+                    Оформить заказ
+                  </button>
+                )}
                 <button className="button-gray w-full" onClick={clearCart}>
                   Очистить корзину
                 </button>
               </div>
-              {isAdmin && (
+              {isManager && (
                 <div className="soft-card p-5 space-y-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-accent">Инструменты менеджера</p>
@@ -190,41 +198,51 @@ function CartPage() {
                     </p>
                   </div>
                   <label className="text-sm">
-                    <span className="text-muted">Email клиента</span>
+                    <span className="text-muted">Email клиента (для отправки)</span>
                     <input
                       type="email"
                       className="mt-2 w-full"
                       placeholder="client@example.com"
-                      value={adminEmail}
-                      onChange={(event) => setAdminEmail(event.target.value)}
+                      value={managerEmail}
+                      onChange={(event) => setManagerEmail(event.target.value)}
                     />
                   </label>
-                  <button
-                    type="button"
-                    className="button w-full"
-                    onClick={handleCreateAdminLink}
-                    disabled={isCreatingLink}
-                  >
-                    {isCreatingLink ? 'Создаём ссылку…' : 'Создать ссылку на оплату'}
-                  </button>
-                  {adminLink && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      className="button w-full"
+                      onClick={() => handleCreateManagerLink({ sendEmail: true })}
+                      disabled={isCreatingLink}
+                    >
+                      {isCreatingLink ? 'Создаём ссылку…' : 'Отправить ссылку'}
+                    </button>
+                    <button
+                      type="button"
+                      className="button-gray w-full"
+                      onClick={() => handleCreateManagerLink({ sendEmail: false, copyAfter: true })}
+                      disabled={isCreatingLink}
+                    >
+                      {isCreatingLink ? 'Готовим…' : 'Создать и скопировать'}
+                    </button>
+                  </div>
+                  {managerLink && (
                     <div className="rounded-2xl border border-white/70 bg-white/85 p-3 text-xs break-all shadow-sm">
                       <div className="text-muted mb-2">Ссылка для клиента</div>
-                      <div className="font-semibold">{adminLink}</div>
+                      <div className="font-semibold">{managerLink}</div>
                       <button type="button" className="button-ghost text-xs mt-2" onClick={handleCopyLink}>
                         Скопировать ссылку
                       </button>
                     </div>
                   )}
-                  {adminStatus && (
+                  {managerStatus && (
                     <div
                       className={`rounded-2xl border px-3 py-2 text-xs ${
-                        adminStatus.type === 'error'
+                        managerStatus.type === 'error'
                           ? 'border-red-200 bg-red-50 text-red-700'
                           : 'border-green-200 bg-green-50 text-green-700'
                       }`}
                     >
-                      {adminStatus.message}
+                      {managerStatus.message}
                     </div>
                   )}
                 </div>

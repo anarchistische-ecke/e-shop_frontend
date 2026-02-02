@@ -11,7 +11,9 @@ function Header() {
   const navigate = useNavigate();
   const { items } = useContext(CartContext);
   const [categories, setCategories] = useState([]);
-  const { isAuthenticated, logout, tokenParsed } = useAuth();
+  const { isAuthenticated, logout, tokenParsed, hasRole } = useAuth();
+  const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
+  const isManager = isAuthenticated && hasRole(managerRole);
   const isCartBouncing = useRef(false);
   const headerRef = useRef(null);
   const accountMenuRef = useRef(null);
@@ -22,12 +24,16 @@ function Header() {
     return tokenParsed.name || tokenParsed.preferred_username || 'Мой аккаунт';
   }, [tokenParsed]);
   const displayPhone = useMemo(
-    () =>
-      tokenParsed?.phone_number ||
-      tokenParsed?.phone ||
-      tokenParsed?.phoneNumber ||
-      'Добавьте телефон',
-    [tokenParsed]
+    () => {
+      if (isManager) return 'Менеджер';
+      return (
+        tokenParsed?.phone_number ||
+        tokenParsed?.phone ||
+        tokenParsed?.phoneNumber ||
+        'Добавьте телефон'
+      );
+    },
+    [isManager, tokenParsed]
   );
 
   // Load categories for navigation menu
@@ -247,130 +253,197 @@ function Header() {
                         </button>
                       </div>
                       <div className="py-2">
-                        <Link
-                          to="/account#profile"
-                          onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <circle cx="12" cy="8" r="4" />
-                            <path d="M4 21a8 8 0 0 1 16 0" />
-                          </svg>
-                          <span className="text-sm font-medium">Профиль</span>
-                        </Link>
-                        <Link
-                          to="/account#bonuses"
-                          onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <circle cx="12" cy="8" r="4" />
-                            <path d="M8 14l-1 7 5-3 5 3-1-7" />
-                          </svg>
-                          <span className="text-sm font-medium">Уютные бонусы</span>
-                        </Link>
-                        <Link
-                          to="/account#promocodes"
-                          onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <path d="M5 7h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4V9a2 2 0 0 1 2-2z" />
-                            <path d="M10 7v10" />
-                            <path d="M14 10h2" />
-                          </svg>
-                          <span className="text-sm font-medium">Мои промокоды</span>
-                        </Link>
-                        <Link
-                          to="/account#referral"
-                          onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <circle cx="9" cy="8" r="3" />
-                            <circle cx="17" cy="9" r="2.5" />
-                            <path d="M3 20a6 6 0 0 1 12 0" />
-                            <path d="M14 20a4 4 0 0 1 7 0" />
-                          </svg>
-                          <span className="text-sm font-medium">Приведи друга</span>
-                        </Link>
-                        <Link
-                          to="/account#orders"
-                          onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <path d="M6 7h12l-1 12H7L6 7z" />
-                            <path d="M9 7V6a3 3 0 0 1 6 0v1" />
-                          </svg>
-                          <span className="text-sm font-medium">Мои заказы</span>
-                        </Link>
-                        <Link
-                          to="/account#purchases"
-                          onClick={handleAccountNav}
-                          className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <path d="M3 7l9-4 9 4v10l-9 4-9-4V7z" />
-                            <path d="M3 7l9 4 9-4" />
-                            <path d="M12 11v10" />
-                          </svg>
-                          <span className="text-sm font-medium">Купленные товары</span>
-                        </Link>
+                        {isManager ? (
+                          <>
+                            <Link
+                              to="/account#overview"
+                              onClick={handleAccountNav}
+                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M3 3h18v18H3z" />
+                                <path d="M7 14l3-3 2 2 4-4" />
+                              </svg>
+                              <span className="text-sm font-medium">Сводка</span>
+                            </Link>
+                            <Link
+                              to="/account#orders"
+                              onClick={handleAccountNav}
+                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M6 7h12l-1 12H7L6 7z" />
+                                <path d="M9 7V6a3 3 0 0 1 6 0v1" />
+                              </svg>
+                              <span className="text-sm font-medium">Заказы</span>
+                            </Link>
+                            <Link
+                              to="/cart"
+                              onClick={handleAccountNav}
+                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M6 7h12l-1 12H7L6 7z" />
+                                <path d="M9 7V6a3 3 0 0 1 6 0v1" />
+                              </svg>
+                              <span className="text-sm font-medium">Ссылка на оплату</span>
+                            </Link>
+                          </>
+                        ) : (
+                          <>
+                            <Link
+                              to="/account#profile"
+                              onClick={handleAccountNav}
+                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <circle cx="12" cy="8" r="4" />
+                                <path d="M4 21a8 8 0 0 1 16 0" />
+                              </svg>
+                              <span className="text-sm font-medium">Профиль</span>
+                            </Link>
+                            <Link
+                              to="/account#bonuses"
+                              onClick={handleAccountNav}
+                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <circle cx="12" cy="8" r="4" />
+                                <path d="M8 14l-1 7 5-3 5 3-1-7" />
+                              </svg>
+                              <span className="text-sm font-medium">Уютные бонусы</span>
+                            </Link>
+                            <Link
+                              to="/account#promocodes"
+                              onClick={handleAccountNav}
+                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M5 7h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4V9a2 2 0 0 1 2-2z" />
+                                <path d="M10 7v10" />
+                                <path d="M14 10h2" />
+                              </svg>
+                              <span className="text-sm font-medium">Мои промокоды</span>
+                            </Link>
+                            <Link
+                              to="/account#referral"
+                              onClick={handleAccountNav}
+                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <circle cx="9" cy="8" r="3" />
+                                <circle cx="17" cy="9" r="2.5" />
+                                <path d="M3 20a6 6 0 0 1 12 0" />
+                                <path d="M14 20a4 4 0 0 1 7 0" />
+                              </svg>
+                              <span className="text-sm font-medium">Приведи друга</span>
+                            </Link>
+                            <Link
+                              to="/account#orders"
+                              onClick={handleAccountNav}
+                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M6 7h12l-1 12H7L6 7z" />
+                                <path d="M9 7V6a3 3 0 0 1 6 0v1" />
+                              </svg>
+                              <span className="text-sm font-medium">Мои заказы</span>
+                            </Link>
+                            <Link
+                              to="/account#purchases"
+                              onClick={handleAccountNav}
+                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-ink hover:bg-sand/50 transition"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 text-ink/60 group-hover:text-primary transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M3 7l9-4 9 4v10l-9 4-9-4V7z" />
+                                <path d="M3 7l9 4 9-4" />
+                                <path d="M12 11v10" />
+                              </svg>
+                              <span className="text-sm font-medium">Купленные товары</span>
+                            </Link>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

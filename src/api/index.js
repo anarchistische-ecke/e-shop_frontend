@@ -226,6 +226,12 @@ export async function createAdminOrderLink({ cartId, receiptEmail, orderPageUrl 
     body: JSON.stringify({ cartId, receiptEmail, orderPageUrl })
   });
 }
+export async function createManagerOrderLink({ cartId, receiptEmail, orderPageUrl, sendEmail } = {}) {
+  return request('/orders/manager-link', {
+    method: 'POST',
+    body: JSON.stringify({ cartId, receiptEmail, orderPageUrl, sendEmail })
+  });
+}
 export async function getOrders() {
   return request('/orders');
 }
@@ -307,6 +313,13 @@ export async function confirmEmailVerification(email, code) {
     method: 'POST',
     body: JSON.stringify({ email, code })
   });
+}
+export async function getManagerProfile() {
+  return request('/managers/me');
+}
+export async function getManagerDashboard({ limit = 8 } = {}) {
+  const safeLimit = Number.isFinite(limit) ? limit : 8;
+  return request(`/managers/me/dashboard?limit=${encodeURIComponent(safeLimit)}`);
 }
 export async function loginWithYandex({
   accessToken = '',

@@ -6,6 +6,7 @@ import {
   updateCustomerSubscription
 } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import ManagerAccountPage from './ManagerAccountPage';
 
 const IconProfile = ({ className }) => (
   <svg
@@ -167,7 +168,11 @@ const SECTION_LABELS = {
 };
 
 function AccountPage() {
-  const { isAuthenticated, isReady, tokenParsed, logout, refreshProfile } = useAuth();
+  const { isAuthenticated, isReady, tokenParsed, logout, refreshProfile, hasRole } = useAuth();
+  const customerRole = process.env.REACT_APP_KEYCLOAK_CUSTOMER_ROLE || 'customer';
+  const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
+  const isManager = isAuthenticated && hasRole(managerRole);
+  const isCustomer = isAuthenticated && hasRole(customerRole);
   const [orders, setOrders] = useState([]);
   const [activeSection, setActiveSection] = useState('profile');
   const [profile, setProfile] = useState({
@@ -188,7 +193,7 @@ function AccountPage() {
   const [copyStatus, setCopyStatus] = useState(null);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || isManager) return;
     let mounted = true;
     setIsOrdersLoading(true);
     setOrdersError(null);
@@ -217,7 +222,7 @@ function AccountPage() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || isManager) return;
     let mounted = true;
     setIsProfileLoading(true);
     refreshProfile()
@@ -313,6 +318,14 @@ function AccountPage() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
+  }
+
+  if (isManager) {
+    return <ManagerAccountPage />;
+  }
+
+  if (!isCustomer) {
+    return <Navigate to="/" replace />;
   }
 
   const loyaltyPoints = orders.length * 120;

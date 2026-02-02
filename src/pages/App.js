@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ScrollToTop from '../components/ScrollToTop';
@@ -92,6 +92,8 @@ function App() {
           />
           {/* Admin login (public) */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
+          {/* Manager login (public) */}
+          <Route path="/manager/login" element={<Navigate to="/admin/login" replace />} />
           {/* Protected admin routes (RequireAdmin enforces authentication) */}
           <Route 
             path="/admin/*" 

@@ -1,134 +1,188 @@
-import React, { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
+const NAV_GROUPS = [
+  {
+    title: 'Обзор',
+    items: [
+      { to: '/admin', label: 'Дашборд', end: true },
+      { to: '/admin/main', label: 'Главная витрина' },
+      { to: '/admin/reports', label: 'Отчёты' },
+    ],
+  },
+  {
+    title: 'Каталог',
+    items: [
+      { to: '/admin/products', label: 'Товары' },
+      { to: '/admin/categories', label: 'Категории' },
+      { to: '/admin/brands', label: 'Бренды' },
+    ],
+  },
+  {
+    title: 'Продажи',
+    items: [
+      { to: '/admin/orders', label: 'Заказы' },
+      { to: '/admin/customers', label: 'Клиенты' },
+      { to: '/admin/promotions', label: 'Акции и купоны' },
+    ],
+  },
+  {
+    title: 'Система',
+    items: [
+      { to: '/admin/content', label: 'Контент' },
+      { to: '/admin/settings', label: 'Настройки' },
+      { to: '/admin/security', label: 'Безопасность' },
+    ],
+  },
+];
+
+const NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
+
 function AdminLayout() {
+  const location = useLocation();
   const { logout } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const handleLogout = () => {
-    if (typeof window === 'undefined') {
-      logout();
-      return;
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+    } catch (err) {
+      console.error('Failed to logout:', err);
     }
-    logout();
-  };
+  }, [logout]);
 
-  const navItems = [
-    { to: '/admin', label: 'Dashboard', end: true },
-    { to: '/admin/main', label: 'Главная' },
-    { to: '/admin/products', label: 'Товары' },
-    { to: '/admin/categories', label: 'Категории' },
-    { to: '/admin/brands', label: 'Бренды' },
-    { to: '/admin/orders', label: 'Заказы' },
-    { to: '/admin/customers', label: 'Клиенты' },
-    { to: '/admin/content', label: 'Контент' },
-    { to: '/admin/promotions', label: 'Акции' },
-    { to: '/admin/reports', label: 'Отчёты' },
-    { to: '/admin/settings', label: 'Настройки' },
-    { to: '/admin/security', label: 'Безопасность' },
-  ];
+  const currentSection = useMemo(() => {
+    const match = NAV_ITEMS.find((item) => {
+      if (item.end) return location.pathname === item.to;
+      return location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+    });
+    return match?.label || 'Панель администратора';
+  }, [location.pathname]);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const originalOverflow = document.body.style.overflow;
+    if (mobileNavOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = originalOverflow;
+    }
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setMobileNavOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
 
   const linkClass = ({ isActive }) =>
-    `rounded px-2 py-1.5 transition-colors ${
-      isActive ? 'bg-secondary text-primary font-semibold' : 'text-gray-700 hover:bg-secondary hover:text-primary'
+    `admin-shell__nav-link ${
+      isActive
+        ? 'admin-shell__nav-link--active'
+        : 'admin-shell__nav-link--idle'
     }`;
 
-  const closeMobileNav = () => setMobileNavOpen(false);
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
 
   return (
-    <div className="min-h-screen bg-secondary">
-      <header className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between px-4 py-3">
+    <div className="admin-shell">
+      <div
+        className={`admin-shell__backdrop md:hidden ${
+          mobileNavOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={closeMobileNav}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={`admin-shell__sidebar ${
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+        aria-label="Навигация панели администратора"
+      >
+        <div className="admin-shell__brand">
+          <p className="admin-shell__eyebrow">CozyHome</p>
+          <h2 className="admin-shell__brand-title">Admin Console</h2>
+          <p className="admin-shell__brand-subtitle">Управление каталогом, заказами и контентом</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={closeMobileNav}
+          className="admin-shell__close md:hidden"
+          aria-label="Закрыть меню"
+        >
+          Закрыть
+        </button>
+
+        <nav className="admin-shell__nav" aria-label="Разделы админ-панели">
+          {NAV_GROUPS.map((group) => (
+            <section key={group.title} className="admin-shell__nav-group">
+              <h3 className="admin-shell__nav-title">{group.title}</h3>
+              <ul className="admin-shell__nav-list">
+                {group.items.map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.end}
+                      className={linkClass}
+                      onClick={closeMobileNav}
+                    >
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </nav>
+
+        <button type="button" onClick={handleLogout} className="admin-shell__logout">
+          Выйти
+        </button>
+      </aside>
+
+      <div className="admin-shell__content">
+        <header className="admin-shell__topbar">
           <button
             type="button"
-            aria-label="Открыть меню"
             onClick={() => setMobileNavOpen(true)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+            className="admin-shell__menu md:hidden"
+            aria-label="Открыть меню навигации"
           >
-            <span className="sr-only">Открыть меню</span>
-            <span className="flex items-center gap-1.5">
-              <span className="block h-1.5 w-1.5 rounded-full bg-primary" />
-              <span className="block h-1.5 w-1.5 rounded-full bg-primary" />
-              <span className="block h-1.5 w-1.5 rounded-full bg-primary" />
-            </span>
+            ☰
           </button>
-          <div className="text-sm font-semibold">Администрирование</div>
-          <button
-            onClick={handleLogout}
-            className="text-xs text-gray-500 hover:text-primary"
-          >
-            Выйти
-          </button>
-        </div>
-      </header>
 
-      <div className="md:flex">
-        <aside className="hidden md:flex md:w-60 md:flex-col bg-gray-100 border-r border-gray-200 p-4">
-          <h2 className="font-bold text-lg mb-6">Администрирование</h2>
-          <nav className="flex flex-col space-y-1 text-sm">
-            {navItems.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+          <div className="min-w-0">
+            <p className="admin-shell__eyebrow">Панель управления</p>
+            <h1 className="admin-shell__section-title">{currentSection}</h1>
+          </div>
+
           <button
+            type="button"
             onClick={handleLogout}
-            className="mt-8 text-sm text-gray-500 hover:text-primary"
+            className="button-gray hidden sm:inline-flex"
           >
             Выйти
           </button>
-        </aside>
-        <main className="flex-1 p-4 md:p-6 md:overflow-y-auto md:h-screen">
+        </header>
+
+        <main className="admin-shell__main" id="admin-main">
           <Outlet />
         </main>
-      </div>
-
-      <div className={`md:hidden fixed inset-0 z-50 ${mobileNavOpen ? '' : 'pointer-events-none'}`}>
-        <div
-          className={`absolute inset-0 bg-black/50 transition-opacity ${mobileNavOpen ? 'opacity-100' : 'opacity-0'}`}
-          onClick={closeMobileNav}
-        />
-        <aside
-          className={`absolute inset-y-0 left-0 w-72 bg-white shadow-xl transition-transform ${
-            mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-sm font-semibold">Меню</h2>
-            <button
-              type="button"
-              onClick={closeMobileNav}
-              className="text-xs text-gray-500 hover:text-primary"
-            >
-              Закрыть
-            </button>
-          </div>
-          <div className="p-4 space-y-4">
-            <nav className="flex flex-col space-y-1 text-sm">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  className={linkClass}
-                  onClick={closeMobileNav}
-                >
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
-            <button
-              onClick={() => {
-                closeMobileNav();
-                handleLogout();
-              }}
-              className="text-sm text-gray-500 hover:text-primary"
-            >
-              Выйти
-            </button>
-          </div>
-        </aside>
       </div>
     </div>
   );
