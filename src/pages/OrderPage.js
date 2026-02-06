@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getPublicOrder, payPublicOrder } from '../api';
+import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment } from '../api';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,7 +9,8 @@ const statusLabels = {
   PROCESSING: 'В обработке',
   DELIVERED: 'Доставлен',
   CANCELLED: 'Отменён',
-  PAID: 'Оплачен'
+  PAID: 'Оплачен',
+  REFUNDED: 'Возврат выполнен'
 };
 
 function OrderPage() {
@@ -20,6 +21,8 @@ function OrderPage() {
   const [status, setStatus] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimerRef = useRef(null);
 
   useEffect(() => {
     let mounted = true;
@@ -53,6 +56,60 @@ function OrderPage() {
       mounted = false;
     };
   }, [token, tokenParsed]);
+
+  const refreshPaymentStatus = async ({ silent = false } = {}) => {
+    if (!silent) {
+      setIsRefreshing(true);
+      setStatus(null);
+    }
+    try {
+      const updated = await refreshPublicOrderPayment(token);
+      if (updated) {
+        setOrder(updated);
+      }
+    } catch (err) {
+      if (!silent) {
+        console.error('Failed to refresh payment status:', err);
+        setStatus({
+          type: 'error',
+          message: 'Не удалось обновить статус оплаты. Попробуйте ещё раз.'
+        });
+      }
+    } finally {
+      if (!silent) setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!order) return undefined;
+    const currentStatus = order.status || 'PENDING';
+    const shouldPoll = currentStatus === 'PENDING' || currentStatus === 'PROCESSING';
+    if (!shouldPoll) return undefined;
+
+    let active = true;
+    let attempts = 0;
+    const maxAttempts = 18;
+
+    const tick = async () => {
+      if (!active) return;
+      attempts += 1;
+      await refreshPaymentStatus({ silent: true });
+      if (attempts >= maxAttempts) {
+        active = false;
+        return;
+      }
+      refreshTimerRef.current = window.setTimeout(tick, 10000);
+    };
+
+    refreshTimerRef.current = window.setTimeout(tick, 6000);
+
+    return () => {
+      active = false;
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, [order, token]);
 
   const total = useMemo(() => {
     if (!order) return 0;
@@ -113,7 +170,8 @@ function OrderPage() {
 
   const orderStatus = order.status || 'PENDING';
   const statusLabel = statusLabels[orderStatus] || orderStatus;
-  const canPay = orderStatus !== 'PAID' && orderStatus !== 'DELIVERED';
+  const canPay = orderStatus !== 'PAID' && orderStatus !== 'DELIVERED' && orderStatus !== 'REFUNDED';
+  const canRefresh = orderStatus !== 'PAID' && orderStatus !== 'DELIVERED' && orderStatus !== 'REFUNDED';
 
   return (
     <div className="order-page py-10">
@@ -205,9 +263,21 @@ function OrderPage() {
                 <span>{total.toLocaleString('ru-RU')} ₽</span>
               </div>
               {canPay ? (
-                <button className="button w-full" onClick={handlePay} disabled={isPaying}>
-                  {isPaying ? 'Создаём платёж…' : 'Оплатить заказ'}
-                </button>
+                <div className="space-y-2">
+                  <button className="button w-full" onClick={handlePay} disabled={isPaying}>
+                    {isPaying ? 'Создаём платёж…' : 'Оплатить заказ'}
+                  </button>
+                  {canRefresh && (
+                    <button
+                      type="button"
+                      className="button-gray w-full"
+                      onClick={() => refreshPaymentStatus()}
+                      disabled={isRefreshing}
+                    >
+                      {isRefreshing ? 'Проверяем оплату…' : 'Проверить оплату'}
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
                   Оплата получена. Спасибо за заказ!

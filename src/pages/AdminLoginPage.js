@@ -13,7 +13,9 @@ function AdminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const adminRole = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE || 'admin';
+  const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
   const isAdmin = isAuthenticated && hasRole(adminRole);
+  const isManager = isAuthenticated && hasRole(managerRole);
   const useKeycloak = isKeycloakConfigured();
 
   const safeRedirectPath = (path) => {
@@ -39,7 +41,7 @@ function AdminLoginPage() {
     setStatus(null);
     try {
       await keycloakLogin({
-        redirectUri: buildRedirectUri(safeRedirectPath(redirectTo))
+        redirectUri: buildRedirectUri('/admin/login')
       });
     } catch (err) {
       console.error('Keycloak login failed:', err);
@@ -93,71 +95,109 @@ function AdminLoginPage() {
     }
   };
 
-  if (isReady && isAdmin) {
-    return <Navigate to={safeRedirectPath(redirectTo)} replace />;
+  if (isReady && isAuthenticated) {
+    if (isAdmin) {
+      return <Navigate to={safeRedirectPath(redirectTo)} replace />;
+    }
+    if (isManager) {
+      return <Navigate to="/account" replace />;
+    }
   }
 
   return (
-    <div className="container mx-auto max-w-md px-4 py-16">
-      <h1 className="text-2xl font-semibold mb-6">Вход в панель администратора</h1>
-      {status && (
-        <div
-          className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
-            status.type === 'success'
-              ? 'border-green-300 bg-green-50 text-green-800'
-              : 'border-red-300 bg-red-50 text-red-800'
-          }`}
-        >
-          {status.message}
-        </div>
-      )}
-      {useKeycloak ? (
-        <div className="space-y-4">
-          <p className="text-sm text-muted">
-            Авторизация выполняется через Keycloak.
+    <section className="admin-auth-page">
+      <div className="admin-auth-grid">
+        <aside className="admin-auth-showcase" aria-hidden="true">
+          <p className="admin-auth-showcase__eyebrow">Secure zone</p>
+          <h1 className="admin-auth-showcase__title">Панель управления CozyHome</h1>
+          <p className="admin-auth-showcase__text">
+            Управляйте каталогом, заказами и контентом в одном защищенном интерфейсе.
           </p>
-          <button
-            type="button"
-            className="button w-full"
-            onClick={handleKeycloakLogin}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Перенаправляем…' : 'Войти через Keycloak'}
-          </button>
+          <ul className="admin-auth-showcase__list">
+            <li>Мобильная и десктопная адаптивность</li>
+            <li>Безопасная авторизация через Keycloak</li>
+            <li>Единый дизайн для всех разделов админки</li>
+          </ul>
+        </aside>
+
+        <div className="admin-auth-card">
+          <p className="admin-auth-card__eyebrow">Вход администратора</p>
+          <h2 className="admin-auth-card__title">Добро пожаловать</h2>
+
+          {status && (
+            <div
+              role="status"
+              aria-live="polite"
+              className={`admin-auth-alert ${
+                status.type === 'success'
+                  ? 'admin-auth-alert--success'
+                  : 'admin-auth-alert--error'
+              }`}
+            >
+              {status.message}
+            </div>
+          )}
+
+          {useKeycloak ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted">
+                Авторизация выполняется через Keycloak.
+              </p>
+              <button
+                type="button"
+                className="button w-full"
+                onClick={handleKeycloakLogin}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Перенаправляем…' : 'Войти через Keycloak'}
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              <div>
+                <label htmlFor="admin-username" className="block text-sm font-medium text-ink/80">
+                  Логин
+                </label>
+                <input
+                  id="admin-username"
+                  type="text"
+                  autoComplete="username"
+                  value={credentials.username}
+                  onChange={handleChange('username')}
+                  placeholder="admin"
+                  className="mt-2 w-full"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="admin-password" className="block text-sm font-medium text-ink/80">
+                  Пароль
+                </label>
+                <input
+                  id="admin-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={credentials.password}
+                  onChange={handleChange('password')}
+                  placeholder="Введите пароль"
+                  className="mt-2 w-full"
+                />
+              </div>
+
+              <button type="submit" className="button w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Входим…' : 'Войти в админ-панель'}
+              </button>
+            </form>
+          )}
+
+          {isReady && isAuthenticated && !isAdmin && !isManager && (
+            <p className="mt-4 text-sm text-red-600">
+              У вашей учётной записи нет прав администратора или менеджера.
+            </p>
+          )}
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block text-sm">
-            <span className="text-muted">Логин</span>
-            <input
-              type="text"
-              value={credentials.username}
-              onChange={handleChange('username')}
-              placeholder="admin"
-              className="mt-2 w-full"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="text-muted">Пароль</span>
-            <input
-              type="password"
-              value={credentials.password}
-              onChange={handleChange('password')}
-              placeholder="Введите пароль"
-              className="mt-2 w-full"
-            />
-          </label>
-          <button type="submit" className="button w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Входим…' : 'Войти'}
-          </button>
-        </form>
-      )}
-      {isReady && isAuthenticated && !isAdmin && (
-        <p className="mt-4 text-sm text-red-600">
-          У вашей учётной записи нет прав администратора.
-        </p>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }
 

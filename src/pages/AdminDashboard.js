@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getProducts, getOrders } from '../api';
 
 function AdminDashboard() {
@@ -14,25 +15,22 @@ function AdminDashboard() {
       .catch((err) => console.error('Failed to fetch orders:', err));
   }, []);
 
+  const extractOrderTotal = (order) => {
+    const value = order?.total;
+    if (!value) return 0;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'object') {
+      if (value.amount !== undefined) return Number(value.amount) / 100;
+      if (value.totalAmount !== undefined) return Number(value.totalAmount) / 100;
+    }
+    return 0;
+  };
+
   const totalProducts = products.length;
   const topProducts = [...products]
     .sort((a, b) => (b.rating || 0) - (a.rating || 0))
     .slice(0, 5);
-  let totalSales = 0;
-  orders.forEach((o) => {
-    const t = o.total;
-    if (t) {
-      if (typeof t === 'object') {
-        if (t.amount !== undefined) {
-          totalSales += t.amount / 100;
-        } else if (t.totalAmount !== undefined) {
-          totalSales += t.totalAmount / 100;
-        }
-      } else {
-        totalSales += t;
-      }
-    }
-  });
+  const totalSales = orders.reduce((sum, order) => sum + extractOrderTotal(order), 0);
   const ordersCount = orders.length;
   const averageOrderValue = ordersCount > 0 ? totalSales / ordersCount : 0;
   const statusBreakdown = orders.reduce(
@@ -58,99 +56,148 @@ function AdminDashboard() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
   const recentOrders = [...orders].slice(-5).reverse();
+  const statusCards = [
+    { key: 'PENDING', label: 'Новые' },
+    { key: 'PAID', label: 'Оплачены' },
+    { key: 'PROCESSING', label: 'В обработке' },
+    { key: 'DELIVERED', label: 'Доставлены' },
+    { key: 'CANCELLED', label: 'Отменены' },
+  ];
+  const formatCurrency = (value) => `${Number(value || 0).toLocaleString('ru-RU')} ₽`;
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-semibold">Dashboard &amp; Analytics</h1>
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 bg-white border rounded shadow">
-          <h3 className="text-sm text-gray-500 mb-1">Всего продаж</h3>
-          <p className="text-2xl font-bold">{totalSales.toLocaleString('ru-RU')} ₽</p>
+    <div className="space-y-6">
+      <section className="admin-panel admin-panel--hero">
+        <div className="space-y-2">
+          <p className="admin-chip">Оперативная сводка</p>
+          <h1 className="text-2xl font-semibold md:text-3xl">Пульс магазина</h1>
+          <p className="text-sm text-muted md:text-base">
+            Следите за продажами, активностью клиентов и наполнением каталога в одном окне.
+          </p>
         </div>
-        <div className="p-4 bg-white border rounded shadow">
-          <h3 className="text-sm text-gray-500 mb-1">Количество заказов</h3>
-          <p className="text-2xl font-bold">{ordersCount}</p>
-        </div>
-        <div className="p-4 bg-white border rounded shadow">
-          <h3 className="text-sm text-gray-500 mb-1">Средний чек</h3>
-          <p className="text-2xl font-bold">{averageOrderValue.toLocaleString('ru-RU')} ₽</p>
-        </div>
-        <div className="p-4 bg-white border rounded shadow">
-          <h3 className="text-sm text-gray-500 mb-1">Товары в каталоге</h3>
-          <p className="text-2xl font-bold">{totalProducts}</p>
-        </div>
-      </div>
-      {/* Status and navigation */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white border rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-3">Статус заказов</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-            {['PENDING', 'PAID', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
-              <div key={status} className="p-3 rounded border border-gray-200 bg-secondary/60">
-                <p className="text-muted text-xs mb-1">{status}</p>
-                <p className="text-xl font-semibold">{statusBreakdown[status] || 0}</p>
+      </section>
+
+      <section
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        aria-label="Ключевые показатели"
+      >
+        <article className="admin-kpi">
+          <p className="admin-kpi__label">Выручка</p>
+          <p className="admin-kpi__value">{formatCurrency(totalSales)}</p>
+        </article>
+        <article className="admin-kpi">
+          <p className="admin-kpi__label">Заказы</p>
+          <p className="admin-kpi__value">{ordersCount}</p>
+        </article>
+        <article className="admin-kpi">
+          <p className="admin-kpi__label">Средний чек</p>
+          <p className="admin-kpi__value">{formatCurrency(averageOrderValue)}</p>
+        </article>
+        <article className="admin-kpi">
+          <p className="admin-kpi__label">Товары в каталоге</p>
+          <p className="admin-kpi__value">{totalProducts}</p>
+        </article>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <article className="admin-panel xl:col-span-2">
+          <h2 className="text-lg font-semibold">Статусы заказов</h2>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {statusCards.map((status) => (
+              <div key={status.key} className="admin-status-card">
+                <p className="admin-status-card__label">{status.label}</p>
+                <p className="admin-status-card__value">{statusBreakdown[status.key] || 0}</p>
               </div>
             ))}
           </div>
-        </div>
-        <div className="bg-white border rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-3">Быстрые действия</h2>
-          <div className="flex flex-wrap gap-2">
-            <a href="/admin/orders" className="button text-sm">Заказы</a>
-            <a href="/admin/products" className="button text-sm">Каталог</a>
-            <a href="/admin/promotions" className="button text-sm">Скидки</a>
-            <a href="/admin/settings" className="button text-sm">Настройки</a>
+        </article>
+
+        <article className="admin-panel">
+          <h2 className="text-lg font-semibold">Быстрые действия</h2>
+          <div className="mt-4 grid grid-cols-1 gap-2">
+            <Link to="/admin/orders" className="button">
+              Перейти к заказам
+            </Link>
+            <Link to="/admin/products" className="button-gray">
+              Управление каталогом
+            </Link>
+            <Link to="/admin/promotions" className="button-gray">
+              Купоны и скидки
+            </Link>
+            <Link to="/admin/settings" className="button-gray">
+              Настройки магазина
+            </Link>
           </div>
-        </div>
-      </div>
-      {/* Top products */}
-      <div className="bg-white border rounded shadow p-4">
-        <h2 className="text-xl font-semibold mb-4">Топ‑продаваемые товары</h2>
-        <ul className="space-y-2">
-          {topProducts.map((p) => (
-            <li key={p.id} className="flex justify-between items-center">
-              <span>{p.name}</span>
-              <span className="text-sm text-gray-500">рейтинг: {p.rating}</span>
+        </article>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <article className="admin-panel">
+          <h2 className="text-lg font-semibold">Топ‑товары</h2>
+          <ul className="mt-4 space-y-2">
+            {topProducts.map((product) => (
+              <li
+                key={product.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-ink/10 bg-white/75 px-3 py-2 text-sm"
+              >
+                <span className="font-medium">{product.name}</span>
+                <span className="text-xs text-muted">Рейтинг {product.rating || 0}</span>
+              </li>
+            ))}
+            {topProducts.length === 0 && (
+              <li className="rounded-xl border border-dashed border-ink/20 px-3 py-4 text-sm text-muted">
+                Пока нет данных о популярных товарах.
+              </li>
+            )}
+          </ul>
+        </article>
+
+        <article className="admin-panel">
+          <h2 className="text-lg font-semibold">Популярные категории</h2>
+          <ul className="mt-4 space-y-2">
+            {topCategoryList.map(([name, count]) => (
+              <li
+                key={name}
+                className="flex items-center justify-between gap-3 rounded-xl border border-ink/10 bg-white/75 px-3 py-2 text-sm"
+              >
+                <span>{name}</span>
+                <span className="text-xs text-muted">{count} товаров</span>
+              </li>
+            ))}
+            {topCategoryList.length === 0 && (
+              <li className="rounded-xl border border-dashed border-ink/20 px-3 py-4 text-sm text-muted">
+                Категории пока не определены.
+              </li>
+            )}
+          </ul>
+        </article>
+      </section>
+
+      <section className="admin-panel">
+        <h2 className="text-lg font-semibold">Последние заказы</h2>
+        <ul className="mt-4 space-y-2">
+          {recentOrders.map((order) => (
+            <li
+              key={order.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/10 bg-white/75 px-3 py-2"
+            >
+              <div>
+                <p className="text-sm font-semibold">#{order.id}</p>
+                <p className="text-xs text-muted">{order.createdAt || 'Дата неизвестна'}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold">{formatCurrency(extractOrderTotal(order))}</p>
+                <p className="text-xs text-muted">{order.status || 'UNKNOWN'}</p>
+              </div>
             </li>
           ))}
-          {topProducts.length === 0 && <li className="text-sm text-muted">Нет данных</li>}
+          {recentOrders.length === 0 && (
+            <li className="rounded-xl border border-dashed border-ink/20 px-3 py-4 text-sm text-muted">
+              Заказов пока нет.
+            </li>
+          )}
         </ul>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white border rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-3">Популярные категории</h2>
-          <ul className="space-y-2 text-sm">
-            {topCategoryList.map(([name, count]) => (
-              <li key={name} className="flex justify-between">
-                <span>{name}</span>
-                <span className="text-muted">{count} товаров</span>
-              </li>
-            ))}
-            {topCategoryList.length === 0 && <li className="text-muted">Категории не найдены</li>}
-          </ul>
-        </div>
-        <div className="bg-white border rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-3">Недавние заказы</h2>
-          <ul className="space-y-2 text-sm">
-            {recentOrders.map((o) => (
-              <li key={o.id} className="flex justify-between items-center">
-                <div>
-                  <p className="font-semibold text-sm">#{o.id}</p>
-                  <p className="text-xs text-muted">{o.createdAt || '—'}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold">
-                    {(o.total?.amount ? o.total.amount / 100 : o.total || 0).toLocaleString('ru-RU')} ₽
-                  </p>
-                  <p className="text-xs text-muted">{o.status}</p>
-                </div>
-              </li>
-            ))}
-            {recentOrders.length === 0 && <li className="text-muted">Заказов пока нет</li>}
-          </ul>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

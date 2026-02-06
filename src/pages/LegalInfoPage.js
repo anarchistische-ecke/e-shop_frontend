@@ -37,36 +37,41 @@ const documents = [
 
 function LegalInfoPage() {
   return (
-    <div className="container mx-auto px-4 py-12 max-w-5xl">
-      <p className="text-xs uppercase tracking-[0.3em] text-muted">Документы</p>
-      <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Юридическая информация</h1>
-      <p className="text-sm text-muted mb-6">
-        Ниже собраны основные документы, регулирующие использование сайта, продажи и обработку данных.
-      </p>
+    <section className="legal-page">
+      <div className="legal-layout">
+        <header className="legal-hero">
+          <p className="legal-kicker">Юридический раздел</p>
+          <h1>Документы и регламенты</h1>
+          <p>
+            Здесь собраны документы, регулирующие использование сайта, продажи, обработку
+            персональных данных и рекламные коммуникации.
+          </p>
+        </header>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {documents.map((doc) => (
-          <Link
-            key={doc.path}
-            to={doc.path}
-            className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <h2 className="text-lg font-semibold mb-1">{doc.title}</h2>
-            <p className="text-sm text-muted">{doc.description}</p>
-          </Link>
-        ))}
+        <div className="legal-surface">
+          <div className="grid gap-3 md:grid-cols-2">
+            {documents.map((doc) => (
+              <Link key={doc.path} to={doc.path} className="legal-doc-link">
+                <span className="block text-base font-semibold text-ink">{doc.title}</span>
+                <span className="mt-1 block text-sm text-muted">{doc.description}</span>
+              </Link>
+            ))}
+          </div>
+
+          <section className="mt-6 rounded-2xl border border-ink/10 bg-white/70 p-5">
+            <h2 className="text-lg font-semibold">Реквизиты продавца</h2>
+            <div className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-2">
+              <p>{legalTokens.LEGAL_ENTITY_SHORT}</p>
+              <p>ИНН {legalTokens.LEGAL_INN}</p>
+              <p>ОГРНИП {legalTokens.LEGAL_OGRNIP}</p>
+              <p>Телефон: {legalTokens.LEGAL_PHONE}</p>
+              <p className="sm:col-span-2">Адрес: {legalTokens.LEGAL_ADDRESS}</p>
+              <p className="sm:col-span-2">E-mail: {legalTokens.LEGAL_EMAIL}</p>
+            </div>
+          </section>
+        </div>
       </div>
-
-      <section className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm space-y-2 mt-8">
-        <h2 className="text-lg font-semibold">Реквизиты продавца</h2>
-        <p className="text-sm text-muted">{legalTokens.LEGAL_ENTITY_SHORT}</p>
-        <p className="text-sm text-muted">ИНН {legalTokens.LEGAL_INN}</p>
-        <p className="text-sm text-muted">ОГРНИП {legalTokens.LEGAL_OGRNIP}</p>
-        <p className="text-sm text-muted">Адрес: {legalTokens.LEGAL_ADDRESS}</p>
-        <p className="text-sm text-muted">Телефон: {legalTokens.LEGAL_PHONE}</p>
-        <p className="text-sm text-muted">E-mail: {legalTokens.LEGAL_EMAIL}</p>
-      </section>
-    </div>
+    </section>
   );
 }
 

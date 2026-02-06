@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
 import { checkoutCart } from '../api';
 import { moneyToNumber } from '../utils/product';
@@ -7,10 +7,13 @@ import { useAuth } from '../contexts/AuthContext';
 
 function CheckoutPage() {
   const { items, cartId, clearCart } = useContext(CartContext);
-  const { tokenParsed } = useAuth();
+  const { tokenParsed, isAuthenticated, hasRole } = useAuth();
+  const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
+  const isManager = isAuthenticated && hasRole(managerRole);
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savePaymentMethod, setSavePaymentMethod] = useState(false);
 
   useEffect(() => {
     if (!email) {
@@ -24,6 +27,10 @@ function CheckoutPage() {
       }
     }
   }, [email, tokenParsed]);
+
+  if (isManager) {
+    return <Navigate to="/cart" replace />;
+  }
 
   const total = useMemo(
     () =>
@@ -62,7 +69,8 @@ function CheckoutPage() {
         cartId: id,
         receiptEmail: email.trim(),
         returnUrl: `${window.location.origin}/order/{token}`,
-        orderPageUrl: `${window.location.origin}/order/{token}`
+        orderPageUrl: `${window.location.origin}/order/{token}`,
+        savePaymentMethod: isAuthenticated ? savePaymentMethod : false
       });
       clearCart();
       const confirmationUrl = response?.payment?.confirmationUrl;
@@ -132,6 +140,16 @@ function CheckoutPage() {
                     required
                   />
                 </label>
+                {isAuthenticated && (
+                  <label className="flex items-center gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={savePaymentMethod}
+                      onChange={(event) => setSavePaymentMethod(event.target.checked)}
+                    />
+                    <span>Сохранить карту для следующих платежей</span>
+                  </label>
+                )}
                 <button type="submit" className="button" disabled={isSubmitting}>
                   {isSubmitting ? 'Готовим оплату…' : 'Перейти к оплате'}
                 </button>

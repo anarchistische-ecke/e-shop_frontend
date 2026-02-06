@@ -214,16 +214,22 @@ export async function createOrder(cartId) {
     method: 'POST'
   });
 }
-export async function checkoutCart({ cartId, receiptEmail, returnUrl, orderPageUrl } = {}) {
+export async function checkoutCart({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod } = {}) {
   return request('/orders/checkout', {
     method: 'POST',
-    body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl })
+    body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod })
   });
 }
 export async function createAdminOrderLink({ cartId, receiptEmail, orderPageUrl } = {}) {
   return request('/orders/admin-link', {
     method: 'POST',
     body: JSON.stringify({ cartId, receiptEmail, orderPageUrl })
+  });
+}
+export async function createManagerOrderLink({ cartId, receiptEmail, orderPageUrl, sendEmail } = {}) {
+  return request('/orders/manager-link', {
+    method: 'POST',
+    body: JSON.stringify({ cartId, receiptEmail, orderPageUrl, sendEmail })
   });
 }
 export async function getOrders() {
@@ -239,6 +245,11 @@ export async function payPublicOrder({ token, receiptEmail, returnUrl } = {}) {
   return request(`/orders/public/${token}/pay`, {
     method: 'POST',
     body: JSON.stringify({ receiptEmail, returnUrl })
+  });
+}
+export async function refreshPublicOrderPayment(token) {
+  return request(`/orders/public/${token}/refresh-payment`, {
+    method: 'POST'
   });
 }
 export async function updateOrderStatus(id, status) {
@@ -307,6 +318,13 @@ export async function confirmEmailVerification(email, code) {
     method: 'POST',
     body: JSON.stringify({ email, code })
   });
+}
+export async function getManagerProfile() {
+  return request('/managers/me');
+}
+export async function getManagerDashboard({ limit = 8 } = {}) {
+  const safeLimit = Number.isFinite(limit) ? limit : 8;
+  return request(`/managers/me/dashboard?limit=${encodeURIComponent(safeLimit)}`);
 }
 export async function loginWithYandex({
   accessToken = '',
