@@ -151,8 +151,8 @@ function LoginPage() {
     }
     setIsVerifying(true);
     try {
-      await confirmEmailVerification(email, code);
       const password = resolveVerificationPassword();
+      await confirmEmailVerification(email, code, password);
       if (password) {
         const response = await loginCustomer(email, password);
         await login({ token: response?.token, profile: response?.customer || null });
