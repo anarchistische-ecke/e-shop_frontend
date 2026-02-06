@@ -313,10 +313,10 @@ export async function requestEmailVerification(email) {
     body: JSON.stringify({ email })
   });
 }
-export async function confirmEmailVerification(email, code) {
+export async function confirmEmailVerification(email, code, password) {
   return request('/customers/verify/confirm', {
     method: 'POST',
-    body: JSON.stringify({ email, code })
+    body: JSON.stringify({ email, code, password })
   });
 }
 export async function getManagerProfile() {
