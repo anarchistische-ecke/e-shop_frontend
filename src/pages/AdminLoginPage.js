@@ -109,7 +109,7 @@ function AdminLoginPage() {
       <div className="admin-auth-grid">
         <aside className="admin-auth-showcase" aria-hidden="true">
           <p className="admin-auth-showcase__eyebrow">Secure zone</p>
-          <h1 className="admin-auth-showcase__title">Панель управления CozyHome</h1>
+          <h1 className="admin-auth-showcase__title">Панель управления Постельное Белье-Юг</h1>
           <p className="admin-auth-showcase__text">
             Управляйте каталогом, заказами и контентом в одном защищенном интерфейсе.
           </p>
