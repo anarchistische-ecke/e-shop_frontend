@@ -96,7 +96,7 @@ function AdminReports() {
             </p>
           </div>
           <div className="p-3 rounded border border-gray-200 bg-secondary/60">
-            <p className="text-muted text-xs mb-1">Новые</p>
+            <p className="text-muted text-xs mb-1">Ожидают оплаты</p>
             <p className="text-xl font-semibold">
               {orders.filter((o) => o.status === 'PENDING').length}
             </p>
