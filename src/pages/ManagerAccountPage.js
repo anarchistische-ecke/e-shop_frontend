@@ -7,7 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 const statusLabels = {
   PENDING: 'Ожидает оплаты',
   PAID: 'Оплачен',
-  CANCELLED: 'Отменён'
+  CANCELLED: 'Отменён',
+  REFUNDED: 'Возврат выполнен'
 };
 
 const formatStatus = (status) => {
@@ -155,7 +156,9 @@ function ManagerAccountPage() {
                     Отслеживайте оплаты и статус каждого клиента.
                   </p>
                 </div>
-                <span className="text-xs text-muted">{stats.pendingOrders ?? 0} ожидают оплату</span>
+                <span className="text-xs text-muted">
+                  {stats.pendingOrders ?? 0} ожидают оплату
+                </span>
               </div>
 
               {isLoading ? (
@@ -222,6 +225,10 @@ function ManagerAccountPage() {
                   <div className="flex items-center justify-between">
                     <span>Отменены</span>
                     <span className="font-semibold text-ink">{stats.cancelledOrders ?? 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Возвраты</span>
+                    <span className="font-semibold text-ink">{stats.refundedOrders ?? 0}</span>
                   </div>
                 </div>
               </div>

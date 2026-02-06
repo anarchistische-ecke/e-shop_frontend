@@ -214,10 +214,10 @@ export async function createOrder(cartId) {
     method: 'POST'
   });
 }
-export async function checkoutCart({ cartId, receiptEmail, returnUrl, orderPageUrl } = {}) {
+export async function checkoutCart({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod } = {}) {
   return request('/orders/checkout', {
     method: 'POST',
-    body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl })
+    body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod })
   });
 }
 export async function createAdminOrderLink({ cartId, receiptEmail, orderPageUrl } = {}) {
@@ -245,6 +245,11 @@ export async function payPublicOrder({ token, receiptEmail, returnUrl } = {}) {
   return request(`/orders/public/${token}/pay`, {
     method: 'POST',
     body: JSON.stringify({ receiptEmail, returnUrl })
+  });
+}
+export async function refreshPublicOrderPayment(token) {
+  return request(`/orders/public/${token}/refresh-payment`, {
+    method: 'POST'
   });
 }
 export async function updateOrderStatus(id, status) {

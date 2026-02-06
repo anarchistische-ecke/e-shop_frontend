@@ -13,6 +13,7 @@ function CheckoutPage() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savePaymentMethod, setSavePaymentMethod] = useState(false);
 
   useEffect(() => {
     if (!email) {
@@ -68,7 +69,8 @@ function CheckoutPage() {
         cartId: id,
         receiptEmail: email.trim(),
         returnUrl: `${window.location.origin}/order/{token}`,
-        orderPageUrl: `${window.location.origin}/order/{token}`
+        orderPageUrl: `${window.location.origin}/order/{token}`,
+        savePaymentMethod: isAuthenticated ? savePaymentMethod : false
       });
       clearCart();
       const confirmationUrl = response?.payment?.confirmationUrl;
@@ -138,6 +140,16 @@ function CheckoutPage() {
                     required
                   />
                 </label>
+                {isAuthenticated && (
+                  <label className="flex items-center gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={savePaymentMethod}
+                      onChange={(event) => setSavePaymentMethod(event.target.checked)}
+                    />
+                    <span>Сохранить карту для следующих платежей</span>
+                  </label>
+                )}
                 <button type="submit" className="button" disabled={isSubmitting}>
                   {isSubmitting ? 'Готовим оплату…' : 'Перейти к оплате'}
                 </button>
