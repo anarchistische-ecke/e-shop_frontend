@@ -7,6 +7,19 @@ function AdminOrders() {
   const [filter, setFilter] = useState('Все');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const statusLabels = {
+    PENDING: 'Ожидает оплаты',
+    PAID: 'Оплачен',
+    PROCESSING: 'В обработке',
+    DELIVERED: 'Доставлен',
+    CANCELLED: 'Отменён',
+    REFUNDED: 'Возврат'
+  };
+
+  const formatStatus = (status) => {
+    if (!status) return '—';
+    return statusLabels[status] || status;
+  };
 
   useEffect(() => {
     getOrders()
@@ -70,7 +83,7 @@ function AdminOrders() {
         {['Все', 'PENDING', 'PAID', 'PROCESSING', 'DELIVERED', 'CANCELLED'].map((status) => (
           <option key={status} value={status}>
             {status === 'PENDING'
-              ? 'Новый'
+              ? 'Ожидает оплаты'
               : status === 'PAID'
               ? 'Оплачен'
               : status === 'PROCESSING'
@@ -113,7 +126,7 @@ function AdminOrders() {
                     : 'bg-gray-100 text-gray-700'
                 }`}
               >
-                {order.status}
+                {formatStatus(order.status)}
               </span>
             </div>
             <div className="text-sm space-y-1">
@@ -215,7 +228,7 @@ function AdminOrders() {
                       : 'bg-gray-100 text-gray-700'
                     }`}
                   >
-                    {order.status}
+                  {formatStatus(order.status)}
                   </span>
                 </td>
                 <td className="p-2 space-y-1">

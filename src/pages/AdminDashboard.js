@@ -57,7 +57,7 @@ function AdminDashboard() {
     .slice(0, 4);
   const recentOrders = [...orders].slice(-5).reverse();
   const statusCards = [
-    { key: 'PENDING', label: 'Новые' },
+    { key: 'PENDING', label: 'Ожидают оплаты' },
     { key: 'PAID', label: 'Оплачены' },
     { key: 'PROCESSING', label: 'В обработке' },
     { key: 'DELIVERED', label: 'Доставлены' },
