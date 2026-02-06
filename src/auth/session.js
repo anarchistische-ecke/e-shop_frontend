@@ -43,14 +43,35 @@ export const parseJwtPayload = (token) => {
 
 export const getStoredProfile = () => safeJsonParse(localStorage.getItem(PROFILE_KEY));
 
+const normalizeToken = (token) => {
+  if (!token || typeof token !== 'string') return null;
+  const trimmed = token.trim();
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null') return null;
+  return trimmed;
+};
+
+const isTokenValid = (token) => {
+  const normalized = normalizeToken(token);
+  if (!normalized) return false;
+  if (normalized.split('.').length !== 3) return false;
+  const payload = parseJwtPayload(normalized);
+  if (!payload) return false;
+  if (payload.exp && Date.now() >= payload.exp * 1000) return false;
+  return true;
+};
+
 export const getStoredToken = () => {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (token) return token;
-  const legacyToken = localStorage.getItem('userToken') || localStorage.getItem('adminToken');
-  if (legacyToken) {
+  const token = normalizeToken(localStorage.getItem(TOKEN_KEY));
+  if (isTokenValid(token)) return token;
+  const legacyToken = normalizeToken(localStorage.getItem('userToken')) || normalizeToken(localStorage.getItem('adminToken'));
+  if (isTokenValid(legacyToken)) {
     localStorage.setItem(TOKEN_KEY, legacyToken);
+    return legacyToken;
   }
-  return legacyToken;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('userToken');
+  localStorage.removeItem('adminToken');
+  return null;
 };
 
 export const setSession = ({ token, profile } = {}) => {
@@ -75,7 +96,7 @@ export const getAccessToken = async () => {
   if (typeof window !== 'undefined' && isKeycloakConfigured()) {
     try {
       const keycloakToken = await getKeycloakAccessToken();
-      if (keycloakToken) return keycloakToken;
+      if (isTokenValid(keycloakToken)) return keycloakToken;
     } catch (err) {
       console.warn('Failed to read Keycloak token', err);
     }
