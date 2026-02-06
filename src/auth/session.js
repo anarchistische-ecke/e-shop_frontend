@@ -79,6 +79,10 @@ export const getAccessToken = async () => {
     } catch (err) {
       console.warn('Failed to read Keycloak token', err);
     }
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem(TOKEN_KEY);
+    return null;
   }
   return getStoredToken();
 };
