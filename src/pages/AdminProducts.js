@@ -21,7 +21,17 @@ const EMPTY_VARIANT_FORM = {
   name: '',
   price: '',
   stock: 0,
-  currency: 'RUB'
+  currency: 'RUB',
+  weightGrossG: '',
+  lengthMm: '',
+  widthMm: '',
+  heightMm: ''
+};
+
+const parseOptionalInt = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : Math.round(parsed);
 };
 
 const normalizeSpecSections = (sections) => {
@@ -212,7 +222,11 @@ const buildVariantFormState = (variants = []) =>
       name: v.name || '',
       price: v.price ? moneyToNumber(v.price) : '',
       stock: v.stock ?? v.stockQuantity ?? 0,
-      currency: v.price?.currency || 'RUB'
+      currency: v.price?.currency || 'RUB',
+      weightGrossG: v.weightGrossG ?? '',
+      lengthMm: v.lengthMm ?? '',
+      widthMm: v.widthMm ?? '',
+      heightMm: v.heightMm ?? ''
     };
     return acc;
   }, {});
@@ -297,7 +311,11 @@ function AdminProducts() {
     variantPrice: '',
     variantSku: '',
     variantStock: 0,
-    variantCurrency: 'RUB'
+    variantCurrency: 'RUB',
+    variantWeightGrossG: '',
+    variantLengthMm: '',
+    variantWidthMm: '',
+    variantHeightMm: ''
   });
   const [newItemImages, setNewItemImages] = useState([]);
   const [bulkPrice, setBulkPrice] = useState('');
@@ -358,12 +376,20 @@ function AdminProducts() {
     const rawSku = (form.sku || '').trim();
     const rawName = (form.name || '').trim();
     const rawStock = Number(form.stock || 0);
+    const rawWeight = form.weightGrossG === null || form.weightGrossG === undefined ? '' : String(form.weightGrossG);
+    const rawLength = form.lengthMm === null || form.lengthMm === undefined ? '' : String(form.lengthMm);
+    const rawWidth = form.widthMm === null || form.widthMm === undefined ? '' : String(form.widthMm);
+    const rawHeight = form.heightMm === null || form.heightMm === undefined ? '' : String(form.heightMm);
     return {
       sku: rawSku,
       name: rawName,
       price: rawPrice,
       stock: Number.isNaN(rawStock) ? 0 : rawStock,
-      currency: rawCurrency || 'RUB'
+      currency: rawCurrency || 'RUB',
+      weightGrossG: rawWeight,
+      lengthMm: rawLength,
+      widthMm: rawWidth,
+      heightMm: rawHeight
     };
   }, []);
 
@@ -474,7 +500,11 @@ function AdminProducts() {
                 name: v.name || '',
                 price: v.price ? moneyToNumber(v.price) : '',
                 stock: v.stock ?? v.stockQuantity ?? 0,
-                currency: v.price?.currency || 'RUB'
+                currency: v.price?.currency || 'RUB',
+                weightGrossG: v.weightGrossG ?? '',
+                lengthMm: v.lengthMm ?? '',
+                widthMm: v.widthMm ?? '',
+                heightMm: v.heightMm ?? ''
               };
             }
           });
@@ -647,7 +677,11 @@ function AdminProducts() {
         name: newItem.name,
         amount,
         currency: newItem.variantCurrency || 'RUB',
-        stock: Number(newItem.variantStock) || 0
+        stock: Number(newItem.variantStock) || 0,
+        weightGrossG: parseOptionalInt(newItem.variantWeightGrossG),
+        lengthMm: parseOptionalInt(newItem.variantLengthMm),
+        widthMm: parseOptionalInt(newItem.variantWidthMm),
+        heightMm: parseOptionalInt(newItem.variantHeightMm)
       });
       if (newItemImages.length > 0) {
         await uploadProductImages(created.id, newItemImages);
@@ -664,7 +698,11 @@ function AdminProducts() {
         variantPrice: '',
         variantSku: '',
         variantStock: 0,
-        variantCurrency: 'RUB'
+        variantCurrency: 'RUB',
+        variantWeightGrossG: '',
+        variantLengthMm: '',
+        variantWidthMm: '',
+        variantHeightMm: ''
       });
       setNewItemImages([]);
     } catch (err) {
@@ -697,7 +735,11 @@ function AdminProducts() {
         name: form.name || form.sku,
         amount,
         currency: form.currency || 'RUB',
-        stock: Number(form.stock) || 0
+        stock: Number(form.stock) || 0,
+        weightGrossG: parseOptionalInt(form.weightGrossG),
+        lengthMm: parseOptionalInt(form.lengthMm),
+        widthMm: parseOptionalInt(form.widthMm),
+        heightMm: parseOptionalInt(form.heightMm)
       });
       await refreshProduct(productId);
       setVariantForms((prev) => ({ ...prev, [productId]: { ...EMPTY_VARIANT_FORM } }));
@@ -786,7 +828,11 @@ function AdminProducts() {
         name: form.name,
         amount,
         currency: form.currency || 'RUB',
-        stock: Number(form.stock) || 0
+        stock: Number(form.stock) || 0,
+        weightGrossG: parseOptionalInt(form.weightGrossG),
+        lengthMm: parseOptionalInt(form.lengthMm),
+        widthMm: parseOptionalInt(form.widthMm),
+        heightMm: parseOptionalInt(form.heightMm)
       };
       await updateProductVariant(productId, variantId, payload);
       setEditingProduct((prev) =>
@@ -795,7 +841,17 @@ function AdminProducts() {
               ...prev,
               variants: prev.variants.map((v) =>
                 v.id === variantId
-                  ? { ...v, name: payload.name, price: { amount, currency: payload.currency }, stock: payload.stock, stockQuantity: payload.stock }
+                  ? {
+                      ...v,
+                      name: payload.name,
+                      price: { amount, currency: payload.currency },
+                      stock: payload.stock,
+                      stockQuantity: payload.stock,
+                      weightGrossG: payload.weightGrossG ?? v.weightGrossG,
+                      lengthMm: payload.lengthMm ?? v.lengthMm,
+                      widthMm: payload.widthMm ?? v.widthMm,
+                      heightMm: payload.heightMm ?? v.heightMm
+                    }
                   : v
               )
             }
@@ -828,7 +884,11 @@ function AdminProducts() {
         name: modalVariantForm.name || modalVariantForm.sku,
         amount,
         currency: modalVariantForm.currency || 'RUB',
-        stock: Number(modalVariantForm.stock) || 0
+        stock: Number(modalVariantForm.stock) || 0,
+        weightGrossG: parseOptionalInt(modalVariantForm.weightGrossG),
+        lengthMm: parseOptionalInt(modalVariantForm.lengthMm),
+        widthMm: parseOptionalInt(modalVariantForm.widthMm),
+        heightMm: parseOptionalInt(modalVariantForm.heightMm)
       });
       setModalVariantForm(EMPTY_VARIANT_FORM);
       initialModalVariantRef.current = JSON.stringify(normalizeVariantDraft(EMPTY_VARIANT_FORM));
@@ -1232,42 +1292,74 @@ function AdminProducts() {
             e.preventDefault();
             handleVariantSubmit(product.id);
           }}
-          className="grid grid-cols-1 md:grid-cols-5 gap-2"
+          className="space-y-3"
         >
-          <input
-            type="text"
-            placeholder="SKU"
-            value={variantForm.sku}
-            onChange={(e) => handleVariantFormChange(product.id, 'sku', e.target.value)}
-            className="p-2 border border-gray-300 rounded"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Название варианта"
-            value={variantForm.name}
-            onChange={(e) => handleVariantFormChange(product.id, 'name', e.target.value)}
-            className="p-2 border border-gray-300 rounded"
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Цена"
-            value={variantForm.price}
-            onChange={(e) => handleVariantFormChange(product.id, 'price', e.target.value)}
-            className="p-2 border border-gray-300 rounded"
-            required
-          />
-          <input
-            type="number"
-            placeholder="Остаток"
-            value={variantForm.stock}
-            onChange={(e) => handleVariantFormChange(product.id, 'stock', e.target.value)}
-            className="p-2 border border-gray-300 rounded"
-          />
-          <button type="submit" className="button">
-            Добавить вариант
-          </button>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+            <input
+              type="text"
+              placeholder="SKU"
+              value={variantForm.sku}
+              onChange={(e) => handleVariantFormChange(product.id, 'sku', e.target.value)}
+              className="p-2 border border-gray-300 rounded"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Название варианта"
+              value={variantForm.name}
+              onChange={(e) => handleVariantFormChange(product.id, 'name', e.target.value)}
+              className="p-2 border border-gray-300 rounded"
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Цена"
+              value={variantForm.price}
+              onChange={(e) => handleVariantFormChange(product.id, 'price', e.target.value)}
+              className="p-2 border border-gray-300 rounded"
+              required
+            />
+            <input
+              type="number"
+              placeholder="Остаток"
+              value={variantForm.stock}
+              onChange={(e) => handleVariantFormChange(product.id, 'stock', e.target.value)}
+              className="p-2 border border-gray-300 rounded"
+            />
+            <button type="submit" className="button">
+              Добавить вариант
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <input
+              type="number"
+              placeholder="Вес, г"
+              value={variantForm.weightGrossG}
+              onChange={(e) => handleVariantFormChange(product.id, 'weightGrossG', e.target.value)}
+              className="p-2 border border-gray-300 rounded"
+            />
+            <input
+              type="number"
+              placeholder="Длина, мм"
+              value={variantForm.lengthMm}
+              onChange={(e) => handleVariantFormChange(product.id, 'lengthMm', e.target.value)}
+              className="p-2 border border-gray-300 rounded"
+            />
+            <input
+              type="number"
+              placeholder="Ширина, мм"
+              value={variantForm.widthMm}
+              onChange={(e) => handleVariantFormChange(product.id, 'widthMm', e.target.value)}
+              className="p-2 border border-gray-300 rounded"
+            />
+            <input
+              type="number"
+              placeholder="Высота, мм"
+              value={variantForm.heightMm}
+              onChange={(e) => handleVariantFormChange(product.id, 'heightMm', e.target.value)}
+              className="p-2 border border-gray-300 rounded"
+            />
+          </div>
         </form>
       </>
     );
@@ -1300,7 +1392,11 @@ function AdminProducts() {
         (form.name || '') !== (variant.name || '') ||
         Number(form.price || 0) !== Number(originalPrice || 0) ||
         Number(form.stock ?? 0) !== originalStock ||
-        (form.currency || 'RUB') !== originalCurrency
+        (form.currency || 'RUB') !== originalCurrency ||
+        Number(form.weightGrossG || 0) !== Number(variant.weightGrossG || 0) ||
+        Number(form.lengthMm || 0) !== Number(variant.lengthMm || 0) ||
+        Number(form.widthMm || 0) !== Number(variant.widthMm || 0) ||
+        Number(form.heightMm || 0) !== Number(variant.heightMm || 0)
       );
     },
     [variantEditForms]
@@ -2009,7 +2105,11 @@ function AdminProducts() {
                         (form.name || '') !== (variant.name || '') ||
                         Number(form.price || 0) !== Number(originalPrice || 0) ||
                         Number(form.stock ?? 0) !== originalStock ||
-                        (form.currency || 'RUB') !== (variant.price?.currency || 'RUB');
+                        (form.currency || 'RUB') !== (variant.price?.currency || 'RUB') ||
+                        Number(form.weightGrossG || 0) !== Number(variant.weightGrossG || 0) ||
+                        Number(form.lengthMm || 0) !== Number(variant.lengthMm || 0) ||
+                        Number(form.widthMm || 0) !== Number(variant.widthMm || 0) ||
+                        Number(form.heightMm || 0) !== Number(variant.heightMm || 0);
                       return (
                         <div key={variant.id} className="pt-3">
                           <div className="flex flex-wrap justify-between items-start gap-3 mb-2">
@@ -2095,6 +2195,48 @@ function AdminProducts() {
                               <span className="text-[11px] text-muted text-center">Сохранить изменения по SKU</span>
                             </div>
                           </div>
+                          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <label className="block text-xs text-muted">
+                              <span className="mb-1 block">Вес, г</span>
+                              <input
+                                type="number"
+                                value={form.weightGrossG ?? ''}
+                                onChange={(e) => handleVariantEditChange(variant.id, 'weightGrossG', e.target.value)}
+                                className="p-2 border border-gray-300 rounded w-full"
+                                disabled={savingVariant[variant.id]}
+                              />
+                            </label>
+                            <label className="block text-xs text-muted">
+                              <span className="mb-1 block">Длина, мм</span>
+                              <input
+                                type="number"
+                                value={form.lengthMm ?? ''}
+                                onChange={(e) => handleVariantEditChange(variant.id, 'lengthMm', e.target.value)}
+                                className="p-2 border border-gray-300 rounded w-full"
+                                disabled={savingVariant[variant.id]}
+                              />
+                            </label>
+                            <label className="block text-xs text-muted">
+                              <span className="mb-1 block">Ширина, мм</span>
+                              <input
+                                type="number"
+                                value={form.widthMm ?? ''}
+                                onChange={(e) => handleVariantEditChange(variant.id, 'widthMm', e.target.value)}
+                                className="p-2 border border-gray-300 rounded w-full"
+                                disabled={savingVariant[variant.id]}
+                              />
+                            </label>
+                            <label className="block text-xs text-muted">
+                              <span className="mb-1 block">Высота, мм</span>
+                              <input
+                                type="number"
+                                value={form.heightMm ?? ''}
+                                onChange={(e) => handleVariantEditChange(variant.id, 'heightMm', e.target.value)}
+                                className="p-2 border border-gray-300 rounded w-full"
+                                disabled={savingVariant[variant.id]}
+                              />
+                            </label>
+                          </div>
                         </div>
                       );
                     })}
@@ -2103,46 +2245,78 @@ function AdminProducts() {
                     )}
                     <div className="pt-3">
                       <p className="text-xs text-muted mb-2">Новый вариант</p>
-                      <div className="border border-dashed border-gray-300 rounded-lg p-3 grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
-                        <input
-                          type="text"
-                          placeholder="SKU"
-                          value={modalVariantForm.sku}
-                          onChange={(e) => handleModalVariantChange('sku', e.target.value)}
-                          className="p-2 border border-gray-300 rounded"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Название"
-                          value={modalVariantForm.name}
-                          onChange={(e) => handleModalVariantChange('name', e.target.value)}
-                          className="p-2 border border-gray-300 rounded"
-                        />
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="Цена"
-                          value={modalVariantForm.price}
-                          onChange={(e) => handleModalVariantChange('price', e.target.value)}
-                          className="p-2 border border-gray-300 rounded"
-                        />
-                        <input
-                          type="number"
-                          placeholder="Остаток"
-                          value={modalVariantForm.stock}
-                          onChange={(e) => handleModalVariantChange('stock', e.target.value)}
-                          className="p-2 border border-gray-300 rounded"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Валюта"
-                          value={modalVariantForm.currency}
-                          onChange={(e) => handleModalVariantChange('currency', e.target.value)}
-                          className="p-2 border border-gray-300 rounded"
-                        />
-                        <button type="button" className="button text-sm" onClick={handleAddVariantInModal}>
-                          Добавить вариант
-                        </button>
+                      <div className="border border-dashed border-gray-300 rounded-lg p-3 space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+                          <input
+                            type="text"
+                            placeholder="SKU"
+                            value={modalVariantForm.sku}
+                            onChange={(e) => handleModalVariantChange('sku', e.target.value)}
+                            className="p-2 border border-gray-300 rounded"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Название"
+                            value={modalVariantForm.name}
+                            onChange={(e) => handleModalVariantChange('name', e.target.value)}
+                            className="p-2 border border-gray-300 rounded"
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Цена"
+                            value={modalVariantForm.price}
+                            onChange={(e) => handleModalVariantChange('price', e.target.value)}
+                            className="p-2 border border-gray-300 rounded"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Остаток"
+                            value={modalVariantForm.stock}
+                            onChange={(e) => handleModalVariantChange('stock', e.target.value)}
+                            className="p-2 border border-gray-300 rounded"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Валюта"
+                            value={modalVariantForm.currency}
+                            onChange={(e) => handleModalVariantChange('currency', e.target.value)}
+                            className="p-2 border border-gray-300 rounded"
+                          />
+                          <button type="button" className="button text-sm" onClick={handleAddVariantInModal}>
+                            Добавить вариант
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <input
+                            type="number"
+                            placeholder="Вес, г"
+                            value={modalVariantForm.weightGrossG}
+                            onChange={(e) => handleModalVariantChange('weightGrossG', e.target.value)}
+                            className="p-2 border border-gray-300 rounded"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Длина, мм"
+                            value={modalVariantForm.lengthMm}
+                            onChange={(e) => handleModalVariantChange('lengthMm', e.target.value)}
+                            className="p-2 border border-gray-300 rounded"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Ширина, мм"
+                            value={modalVariantForm.widthMm}
+                            onChange={(e) => handleModalVariantChange('widthMm', e.target.value)}
+                            className="p-2 border border-gray-300 rounded"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Высота, мм"
+                            value={modalVariantForm.heightMm}
+                            onChange={(e) => handleModalVariantChange('heightMm', e.target.value)}
+                            className="p-2 border border-gray-300 rounded"
+                          />
+                        </div>
                       </div>
                     </div>
                     </div>
@@ -2281,6 +2455,36 @@ function AdminProducts() {
               value={newItem.variantStock}
               onChange={(e) => setNewItem({ ...newItem, variantStock: e.target.value })}
               className="flex-1 p-2 border border-gray-300 rounded"
+            />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <input
+              type="number"
+              placeholder="Вес, г"
+              value={newItem.variantWeightGrossG}
+              onChange={(e) => setNewItem({ ...newItem, variantWeightGrossG: e.target.value })}
+              className="p-2 border border-gray-300 rounded"
+            />
+            <input
+              type="number"
+              placeholder="Длина, мм"
+              value={newItem.variantLengthMm}
+              onChange={(e) => setNewItem({ ...newItem, variantLengthMm: e.target.value })}
+              className="p-2 border border-gray-300 rounded"
+            />
+            <input
+              type="number"
+              placeholder="Ширина, мм"
+              value={newItem.variantWidthMm}
+              onChange={(e) => setNewItem({ ...newItem, variantWidthMm: e.target.value })}
+              className="p-2 border border-gray-300 rounded"
+            />
+            <input
+              type="number"
+              placeholder="Высота, мм"
+              value={newItem.variantHeightMm}
+              onChange={(e) => setNewItem({ ...newItem, variantHeightMm: e.target.value })}
+              className="p-2 border border-gray-300 rounded"
             />
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">

@@ -214,10 +214,22 @@ export async function createOrder(cartId) {
     method: 'POST'
   });
 }
-export async function checkoutCart({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod } = {}) {
+export async function checkoutCart({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod, delivery } = {}) {
   return request('/orders/checkout', {
     method: 'POST',
-    body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod })
+    body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod, delivery })
+  });
+}
+export async function getYandexDeliveryOffers(payload = {}) {
+  return request('/deliveries/yandex/offers', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+export async function getYandexPickupPoints(payload = {}) {
+  return request('/deliveries/yandex/pickup-points', {
+    method: 'POST',
+    body: JSON.stringify(payload)
   });
 }
 export async function createAdminOrderLink({ cartId, receiptEmail, orderPageUrl } = {}) {
@@ -259,6 +271,16 @@ export async function updateOrderStatus(id, status) {
       method: 'PUT'
     }
   );
+}
+export async function refreshOrderDelivery(id) {
+  return request(`/orders/${id}/delivery/refresh`, {
+    method: 'POST'
+  });
+}
+export async function cancelOrderDelivery(id) {
+  return request(`/orders/${id}/delivery/cancel`, {
+    method: 'POST'
+  });
 }
 
 // Customers and Authentication
