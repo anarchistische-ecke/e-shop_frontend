@@ -2159,7 +2159,7 @@ function AdminProducts() {
                                 className="p-2 border border-gray-300 rounded w-full"
                                 disabled={savingVariant[variant.id]}
                               />
-                              <div className="flex items-center gap-1 mt-1">
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
                                 {[-5, -1, 1, 5].map((step) => (
                                   <button
                                     key={step}
