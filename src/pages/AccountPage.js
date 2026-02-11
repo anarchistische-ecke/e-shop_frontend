@@ -168,10 +168,11 @@ const SECTION_LABELS = {
 };
 
 function AccountPage() {
-  const { isAuthenticated, isReady, tokenParsed, logout, refreshProfile, hasRole } = useAuth();
+  const { isAuthenticated, isReady, tokenParsed, logout, refreshProfile, hasRole, hasStrongAuth } = useAuth();
   const customerRole = process.env.REACT_APP_KEYCLOAK_CUSTOMER_ROLE || 'customer';
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
-  const isManager = isAuthenticated && hasRole(managerRole);
+  const hasManagerRole = isAuthenticated && hasRole(managerRole);
+  const isManager = hasManagerRole && hasStrongAuth();
   const isCustomer = isAuthenticated && hasRole(customerRole);
   const [orders, setOrders] = useState([]);
   const [activeSection, setActiveSection] = useState('profile');
@@ -318,6 +319,10 @@ function AccountPage() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
+  }
+
+  if (hasManagerRole && !isManager) {
+    return <Navigate to="/admin/login" replace />;
   }
 
   if (isManager) {

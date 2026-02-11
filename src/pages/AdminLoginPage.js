@@ -6,13 +6,14 @@ import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
 function AdminLoginPage() {
   const location = useLocation();
   const redirectTo = (location.state && location.state.from) || '/admin';
-  const { isAuthenticated, isReady, hasRole } = useAuth();
+  const { isAuthenticated, isReady, hasRole, hasStrongAuth } = useAuth();
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const adminRole = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE || 'admin';
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
   const isAdmin = isAuthenticated && hasRole(adminRole);
   const isManager = isAuthenticated && hasRole(managerRole);
+  const hasStrongSession = isAuthenticated && hasStrongAuth();
   const keycloakReady = isKeycloakConfigured();
 
   const safeRedirectPath = (path) => {
@@ -44,10 +45,10 @@ function AdminLoginPage() {
   };
 
   if (isReady && isAuthenticated) {
-    if (isAdmin) {
+    if (isAdmin && hasStrongSession) {
       return <Navigate to={safeRedirectPath(redirectTo)} replace />;
     }
-    if (isManager) {
+    if (isManager && hasStrongSession) {
       return <Navigate to="/account" replace />;
     }
   }
@@ -105,9 +106,11 @@ function AdminLoginPage() {
             </button>
           </div>
 
-          {isReady && isAuthenticated && !isAdmin && !isManager && (
+          {isReady && isAuthenticated && ((!isAdmin && !isManager) || !hasStrongSession) && (
             <p className="mt-4 text-sm text-red-600">
-              У вашей учётной записи нет прав администратора или менеджера.
+              {!hasStrongSession
+                ? 'Для доступа требуется подтвержденный e-mail и MFA.'
+                : 'У вашей учётной записи нет прав администратора или менеджера.'}
             </p>
           )}
         </div>
