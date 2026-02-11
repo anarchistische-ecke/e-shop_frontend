@@ -6,11 +6,12 @@ import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
 function ManagerLoginPage() {
   const location = useLocation();
   const redirectTo = (location.state && location.state.from) || '/account';
-  const { isAuthenticated, isReady, hasRole } = useAuth();
+  const { isAuthenticated, isReady, hasRole, hasStrongAuth } = useAuth();
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
+  const hasStrongSession = isAuthenticated && hasStrongAuth();
   const useKeycloak = isKeycloakConfigured();
 
   const safeRedirectPath = (path) => {
@@ -41,7 +42,7 @@ function ManagerLoginPage() {
     }
   };
 
-  if (isReady && isManager) {
+  if (isReady && isManager && hasStrongSession) {
     return <Navigate to={safeRedirectPath(redirectTo)} replace />;
   }
 
@@ -99,9 +100,11 @@ function ManagerLoginPage() {
             </p>
           )}
 
-          {isReady && isAuthenticated && !isManager && (
+          {isReady && isAuthenticated && (!isManager || !hasStrongSession) && (
             <p className="mt-4 text-sm text-red-600">
-              У вашей учётной записи нет прав менеджера.
+              {!hasStrongSession
+                ? 'Для доступа требуется подтвержденный e-mail и MFA.'
+                : 'У вашей учётной записи нет прав менеджера.'}
             </p>
           )}
         </div>

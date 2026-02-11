@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   getProducts,
   getProduct,
@@ -33,6 +34,8 @@ const parseOptionalInt = (value) => {
   const parsed = Number(value);
   return Number.isNaN(parsed) ? null : Math.round(parsed);
 };
+
+const NO_BULK_BRAND = '__NO_CHANGE__';
 
 const normalizeSpecSections = (sections) => {
   if (!Array.isArray(sections)) return [];
@@ -127,89 +130,125 @@ function SpecificationEditor({ value = [], onChange, compact = false }) {
 
   return (
     <div className={`space-y-3 ${compact ? '' : 'bg-white border border-gray-200 rounded-xl p-4 shadow-sm'}`}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h4 className="font-semibold">Технические характеристики</h4>
           <p className="text-xs text-muted">
-            Добавьте разделы и пары параметр/значение. Для блока «Уход» используйте описание.
+            Разбейте характеристики по смысловым разделам. Каждый параметр лучше хранить отдельной строкой.
           </p>
         </div>
         <button type="button" className="button-gray text-sm" onClick={addSection}>
           Добавить раздел
         </button>
       </div>
+
       {sections.length === 0 ? (
-        <div className="text-sm text-muted">Разделы не добавлены.</div>
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white/70 p-4 text-sm text-muted">
+          Разделы не добавлены.
+        </div>
       ) : (
         <div className="space-y-3">
-          {sections.map((section, sectionIndex) => (
-            <div key={`spec-${sectionIndex}`} className="rounded-xl border border-gray-200 bg-white/80 p-3 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Название раздела"
-                  value={section.title}
-                  onChange={(e) => updateSectionField(sectionIndex, 'title', e.target.value)}
-                  className="flex-1 p-2 border border-gray-300 rounded"
-                />
-                <button
-                  type="button"
-                  className="text-xs text-red-600 underline"
-                  onClick={() => removeSection(sectionIndex)}
-                >
-                  Удалить раздел
-                </button>
-              </div>
-              <textarea
-                placeholder="Описание раздела (опционально)"
-                value={section.description}
-                onChange={(e) => updateSectionField(sectionIndex, 'description', e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded min-h-[80px]"
-              />
-              <div className="space-y-2">
-                {(section.items || []).map((item, itemIndex) => (
-                  <div
-                    key={`spec-${sectionIndex}-item-${itemIndex}`}
-                    className="rounded-xl border border-ink/10 bg-white/90 p-3"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-40">
-                        <input
-                          type="text"
-                          placeholder="Параметр (например: Размер)"
-                          value={item.label}
-                          onChange={(e) => updateItem(sectionIndex, itemIndex, 'label', e.target.value)}
-                          className="w-full p-2 border border-gray-300 rounded"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <textarea
-                          placeholder="Значение (Enter = новая строка)"
-                          value={item.value}
-                          onChange={(e) => updateItem(sectionIndex, itemIndex, 'value', e.target.value)}
-                          onKeyDown={handleValueKeyDown}
-                          rows={4}
-                          className="w-full p-2 border border-gray-300 rounded min-h-[120px] resize-y leading-relaxed"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-2 flex justify-end">
-                      <button
-                        type="button"
-                        className="text-xs text-muted underline"
-                        onClick={() => removeItem(sectionIndex, itemIndex)}
-                      >
-                        Удалить
-                      </button>
-                    </div>
+          {sections.map((section, sectionIndex) => {
+            const items = Array.isArray(section.items) ? section.items : [];
+            const sectionTitle = section.title?.trim() || `Раздел ${sectionIndex + 1}`;
+            const itemsLabel = `${items.length} ${items.length === 1 ? 'параметр' : 'параметров'}`;
+            return (
+              <details
+                key={`spec-${sectionIndex}`}
+                className="rounded-xl border border-gray-200 bg-white/90 shadow-sm"
+                open={sectionIndex === 0}
+              >
+                <summary className="cursor-pointer list-none px-3 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{sectionTitle}</p>
+                    <p className="text-xs text-muted">{itemsLabel}</p>
                   </div>
-                ))}
-              </div>
-              <button type="button" className="text-xs text-primary underline" onClick={() => addItem(sectionIndex)}>
-                Добавить строку
-              </button>
-            </div>
-          ))}
+                  <span className="text-xs text-muted">Открыть</span>
+                </summary>
+
+                <div className="px-3 pb-3 space-y-3 border-t border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-2 pt-3">
+                    <input
+                      type="text"
+                      placeholder="Название раздела"
+                      value={section.title}
+                      onChange={(e) => updateSectionField(sectionIndex, 'title', e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded"
+                    />
+                    <button
+                      type="button"
+                      className="button-gray text-xs text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => removeSection(sectionIndex)}
+                    >
+                      Удалить раздел
+                    </button>
+                  </div>
+
+                  <details className="rounded-lg border border-gray-200 bg-secondary/40 px-3 py-2" open={Boolean(section.description)}>
+                    <summary className="cursor-pointer text-xs font-medium text-muted">
+                      Описание раздела (опционально)
+                    </summary>
+                    <textarea
+                      placeholder="Например: рекомендации по уходу, состав, особенности материала"
+                      value={section.description}
+                      onChange={(e) => updateSectionField(sectionIndex, 'description', e.target.value)}
+                      className="w-full mt-2 p-2 border border-gray-300 rounded min-h-[84px] bg-white"
+                    />
+                  </details>
+
+                  <div className="space-y-2">
+                    {items.map((item, itemIndex) => (
+                      <div
+                        key={`spec-${sectionIndex}-item-${itemIndex}`}
+                        className="rounded-xl border border-ink/10 bg-white p-3"
+                      >
+                        <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-2">
+                          <label className="text-xs text-muted">
+                            <span className="mb-1 block">Параметр</span>
+                            <input
+                              type="text"
+                              placeholder="Например: Размер"
+                              value={item.label}
+                              onChange={(e) => updateItem(sectionIndex, itemIndex, 'label', e.target.value)}
+                              className="w-full p-2 border border-gray-300 rounded"
+                            />
+                          </label>
+                          <label className="text-xs text-muted">
+                            <span className="mb-1 block">Значение</span>
+                            <textarea
+                              placeholder="Например: Евро, 200x220 см"
+                              value={item.value}
+                              onChange={(e) => updateItem(sectionIndex, itemIndex, 'value', e.target.value)}
+                              onKeyDown={handleValueKeyDown}
+                              rows={3}
+                              className="w-full p-2 border border-gray-300 rounded min-h-[84px] resize-y leading-relaxed"
+                            />
+                          </label>
+                        </div>
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            type="button"
+                            className="text-xs text-muted underline"
+                            onClick={() => removeItem(sectionIndex, itemIndex)}
+                          >
+                            Удалить строку
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="button-gray text-xs"
+                    onClick={() => addItem(sectionIndex)}
+                  >
+                    Добавить строку
+                  </button>
+                </div>
+              </details>
+            );
+          })}
         </div>
       )}
     </div>
@@ -264,25 +303,39 @@ function CategoryPicker({ options = [], selected = [], onToggle, emptyLabel = '�
   );
 }
 
-function BulkActionPill({ label, isActive, children, panelClassName = '' }) {
+function BulkActionPill({
+  menuKey,
+  label,
+  isActive,
+  isOpen,
+  onToggle,
+  children,
+  panelClassName = ''
+}) {
   return (
-    <details className="relative">
-      <summary
+    <div className="relative">
+      <button
+        type="button"
         className={`list-none inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition cursor-pointer [&::-webkit-details-marker]:hidden ${
           isActive
             ? 'border-primary/50 bg-primary/10 text-primary'
             : 'border-ink/10 bg-white/90 text-ink'
         }`}
+        onClick={() => onToggle(menuKey)}
+        aria-expanded={isOpen}
       >
         <span>{label}</span>
-        <span className="text-xs">▾</span>
-      </summary>
-      <div
-        className={`absolute left-0 mt-2 w-72 max-w-[90vw] rounded-2xl border border-ink/10 bg-white/95 p-4 shadow-xl z-20 ${panelClassName}`}
-      >
-        {children}
-      </div>
-    </details>
+        <span className={`text-xs transition-transform ${isOpen ? 'rotate-180' : ''}`}>▾</span>
+      </button>
+      {isOpen && (
+        <div
+          className={`absolute left-0 mt-2 w-72 max-w-[90vw] rounded-2xl border border-ink/10 bg-white/95 p-4 shadow-xl z-20 ${panelClassName}`}
+          role="menu"
+        >
+          {children}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -320,9 +373,11 @@ function AdminProducts() {
   const [newItemImages, setNewItemImages] = useState([]);
   const [bulkPrice, setBulkPrice] = useState('');
   const [bulkCategories, setBulkCategories] = useState([]);
-  const [bulkBrand, setBulkBrand] = useState('');
+  const [bulkBrand, setBulkBrand] = useState(NO_BULK_BRAND);
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+  const [activeBulkMenu, setActiveBulkMenu] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '', onConfirm: null });
   const [stockAdjustments, setStockAdjustments] = useState({});
   const [savingProduct, setSavingProduct] = useState(false);
@@ -332,6 +387,8 @@ function AdminProducts() {
   const [bulkVisibilityUpdating, setBulkVisibilityUpdating] = useState(false);
   const initialEditSnapshotRef = useRef(null);
   const initialModalVariantRef = useRef(null);
+  const bulkActionsRef = useRef(null);
+  const modalRoot = typeof document !== 'undefined' ? document.body : null;
 
   const slugify = useCallback(
     (str) =>
@@ -559,6 +616,32 @@ function AdminProducts() {
       .catch((err) => console.error('Failed to fetch brands:', err));
   }, []);
 
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!bulkActionsRef.current) return;
+      if (!bulkActionsRef.current.contains(event.target)) {
+        setActiveBulkMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeBulkMenu) return undefined;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setActiveBulkMenu(null);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [activeBulkMenu]);
+
   const toggleSelectAll = (checked) => {
     if (checked) {
       setSelectedIds(items.map((item) => item.id));
@@ -572,6 +655,14 @@ function AdminProducts() {
       prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
     );
   };
+
+  const toggleBulkMenu = useCallback((menuKey) => {
+    setActiveBulkMenu((prev) => (prev === menuKey ? null : menuKey));
+  }, []);
+
+  const closeBulkMenus = useCallback(() => {
+    setActiveBulkMenu(null);
+  }, []);
 
   const openEditModal = (product) => {
     const normalized = normalizeProduct(product);
@@ -1031,6 +1122,7 @@ function AdminProducts() {
   };
 
   const handleBulkCategoryChange = async () => {
+    if (selectedIds.length === 0) return;
     for (const id of selectedIds) {
       try {
         const product = items.find((p) => p.id === id);
@@ -1044,6 +1136,7 @@ function AdminProducts() {
   };
 
   const handleBulkBrandChange = async () => {
+    if (selectedIds.length === 0 || bulkBrand === NO_BULK_BRAND) return;
     for (const id of selectedIds) {
       try {
         const product = items.find((p) => p.id === id);
@@ -1057,7 +1150,7 @@ function AdminProducts() {
   };
 
   const handleBulkPriceChange = async () => {
-    if (!bulkPrice) return;
+    if (!bulkPrice || selectedIds.length === 0) return;
     const amount = decimalToMinorUnits(bulkPrice);
     if (amount === null) {
       alert('Введите корректную цену');
@@ -1081,13 +1174,99 @@ function AdminProducts() {
     await loadProducts();
   };
 
-  const getCategoryName = (value) => formatCategoryList(value);
+  const getCategoryName = useCallback((value) => formatCategoryList(value), [formatCategoryList]);
 
-  const getBrandName = (value) => {
+  const getBrandName = useCallback((value) => {
     if (!value) return '—';
     const match = brands.find((b) => b.slug === value || b.id === value);
     return match ? match.name : value;
-  };
+  }, [brands]);
+
+  const handleSortToggle = useCallback((key) => {
+    setSortConfig((prev) => {
+      if (prev.key !== key) return { key, direction: 'asc' };
+      if (prev.direction === 'asc') return { key, direction: 'desc' };
+      if (prev.direction === 'desc') return { key: null, direction: null };
+      return { key, direction: 'asc' };
+    });
+    setPage(1);
+  }, []);
+
+  const resetSort = useCallback(() => {
+    setSortConfig({ key: null, direction: null });
+    setPage(1);
+  }, []);
+
+  const getSortMarker = useCallback(
+    (key) => {
+      if (sortConfig.key !== key) return '↕';
+      if (sortConfig.direction === 'asc') return '▲';
+      if (sortConfig.direction === 'desc') return '▼';
+      return '↕';
+    },
+    [sortConfig]
+  );
+
+  const sortSummary = useMemo(() => {
+    if (!sortConfig.key || !sortConfig.direction) return '';
+    const fieldMap = {
+      product: 'товару',
+      categories: 'категориям',
+      brand: 'бренду',
+      variants: 'вариантам'
+    };
+    const directionMap = {
+      asc: 'по возрастанию',
+      desc: 'по убыванию'
+    };
+    const field = fieldMap[sortConfig.key] || 'товарам';
+    const direction = directionMap[sortConfig.direction] || '';
+    return `Сортировка: ${field} (${direction})`;
+  }, [sortConfig]);
+
+  const sortedItems = useMemo(() => {
+    if (!sortConfig.key || !sortConfig.direction) return items;
+    const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
+    const compareText = (a, b) =>
+      String(a || '').localeCompare(String(b || ''), 'ru', { numeric: true, sensitivity: 'base' });
+
+    const getSortValue = (item) => {
+      if (!item) return '';
+      if (sortConfig.key === 'product') {
+        return `${item.name || ''} ${item.slug || ''}`.trim();
+      }
+      if (sortConfig.key === 'categories') {
+        const label = formatCategoryList(item.categoryRefs);
+        return label === '—' ? '' : label;
+      }
+      if (sortConfig.key === 'brand') {
+        const label = getBrandName(item.brandRef);
+        return label === '—' ? '' : label;
+      }
+      if (sortConfig.key === 'variants') {
+        const primaryVariant = getPrimaryVariant(item);
+        return primaryVariant?.price ? moneyToNumber(primaryVariant.price) : null;
+      }
+      return '';
+    };
+
+    return [...items].sort((a, b) => {
+      const valueA = getSortValue(a);
+      const valueB = getSortValue(b);
+
+      if (typeof valueA === 'number' || typeof valueB === 'number') {
+        if (valueA === null && valueB === null) return 0;
+        if (valueA === null) return 1;
+        if (valueB === null) return -1;
+        if (valueA !== valueB) return (valueA - valueB) * directionMultiplier;
+      } else {
+        const textDiff = compareText(valueA, valueB);
+        if (textDiff !== 0) return textDiff * directionMultiplier;
+      }
+
+      return compareText(a?.name, b?.name) * directionMultiplier;
+    });
+  }, [formatCategoryList, getBrandName, items, sortConfig]);
 
   const getVariantLabel = (product, variantId) => {
     if (!variantId) return 'Общие фото';
@@ -1454,17 +1633,41 @@ function AdminProducts() {
     }
     closeEditModal();
   };
-  const pagedItems = items.slice((page - 1) * pageSize, page * pageSize);
+  const totalItems = sortedItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const pagedItems = sortedItems.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-semibold">Управление товарами</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Управление товарами</h1>
+        {sortSummary && (
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs text-primary">
+              {sortSummary}
+            </span>
+            <button type="button" className="text-xs text-primary underline" onClick={resetSort}>
+              Сбросить
+            </button>
+          </div>
+        )}
+      </div>
       <div className="border-y border-ink/10 py-4">
         <p className="text-[11px] uppercase tracking-[0.28em] text-muted mb-3">Массовые действия</p>
-        <div className="flex flex-wrap items-center gap-2">
+        <div ref={bulkActionsRef} className="flex flex-wrap items-center gap-2">
           <BulkActionPill
+            menuKey="selection"
             label={selectedIds.length > 0 ? `Выбор (${selectedIds.length})` : 'Выбор'}
             isActive={selectedIds.length > 0}
+            isOpen={activeBulkMenu === 'selection'}
+            onToggle={toggleBulkMenu}
           >
             <div className="space-y-3">
               <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Выбор</p>
@@ -1480,23 +1683,35 @@ function AdminProducts() {
               <div className="text-xs text-muted">Выбрано: {selectedIds.length}</div>
               <div className="grid grid-cols-1 gap-2">
                 <button
+                  type="button"
                   className="button text-sm w-full"
-                  onClick={() => handleBulkVisibilityChange(true)}
+                  onClick={async () => {
+                    await handleBulkVisibilityChange(true);
+                    closeBulkMenus();
+                  }}
                   disabled={selectedIds.length === 0 || bulkVisibilityUpdating}
                 >
                   {bulkVisibilityUpdating ? 'Обновляем…' : 'Показать выбранные'}
                 </button>
                 <button
+                  type="button"
                   className="button-gray text-sm w-full"
-                  onClick={() => handleBulkVisibilityChange(false)}
+                  onClick={async () => {
+                    await handleBulkVisibilityChange(false);
+                    closeBulkMenus();
+                  }}
                   disabled={selectedIds.length === 0 || bulkVisibilityUpdating}
                 >
                   {bulkVisibilityUpdating ? 'Обновляем…' : 'Скрыть выбранные'}
                 </button>
               </div>
               <button
+                type="button"
                 className="button-gray text-sm w-full"
-                onClick={handleBulkDelete}
+                onClick={async () => {
+                  await handleBulkDelete();
+                  closeBulkMenus();
+                }}
                 disabled={selectedIds.length === 0}
               >
                 Удалить выбранные
@@ -1505,8 +1720,11 @@ function AdminProducts() {
           </BulkActionPill>
 
           <BulkActionPill
+            menuKey="categories"
             label={bulkCategories.length > 0 ? `Категории (${bulkCategories.length})` : 'Категории'}
             isActive={bulkCategories.length > 0}
+            isOpen={activeBulkMenu === 'categories'}
+            onToggle={toggleBulkMenu}
             panelClassName="w-[320px]"
           >
             <div className="space-y-3">
@@ -1520,14 +1738,18 @@ function AdminProducts() {
               />
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   className="button text-sm w-full sm:w-auto"
-                  onClick={handleBulkCategoryChange}
+                  onClick={async () => {
+                    await handleBulkCategoryChange();
+                    closeBulkMenus();
+                  }}
                   disabled={selectedIds.length === 0}
                 >
                   Применить
                 </button>
                 {bulkCategories.length > 0 && (
-                  <button className="text-xs text-primary" onClick={() => setBulkCategories([])}>
+                  <button type="button" className="text-xs text-primary" onClick={() => setBulkCategories([])}>
                     Сбросить
                   </button>
                 )}
@@ -1535,7 +1757,13 @@ function AdminProducts() {
             </div>
           </BulkActionPill>
 
-          <BulkActionPill label="Бренд" isActive={Boolean(bulkBrand)}>
+          <BulkActionPill
+            menuKey="brand"
+            label="Бренд"
+            isActive={bulkBrand !== NO_BULK_BRAND}
+            isOpen={activeBulkMenu === 'brand'}
+            onToggle={toggleBulkMenu}
+          >
             <div className="space-y-3">
               <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Бренд</p>
               <select
@@ -1543,7 +1771,7 @@ function AdminProducts() {
                 onChange={(e) => setBulkBrand(e.target.value)}
                 className="w-full text-sm"
               >
-                <option value="">Бренд...</option>
+                <option value={NO_BULK_BRAND}>Выберите бренд</option>
                 <option value="">Без бренда</option>
                 {brands.map((b) => (
                   <option key={b.slug || b.id} value={b.slug || b.id}>
@@ -1553,14 +1781,18 @@ function AdminProducts() {
               </select>
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   className="button text-sm w-full sm:w-auto"
-                  onClick={handleBulkBrandChange}
-                  disabled={selectedIds.length === 0}
+                  onClick={async () => {
+                    await handleBulkBrandChange();
+                    closeBulkMenus();
+                  }}
+                  disabled={selectedIds.length === 0 || bulkBrand === NO_BULK_BRAND}
                 >
                   Применить
                 </button>
-                {bulkBrand && (
-                  <button className="text-xs text-primary" onClick={() => setBulkBrand('')}>
+                {bulkBrand !== NO_BULK_BRAND && (
+                  <button type="button" className="text-xs text-primary" onClick={() => setBulkBrand(NO_BULK_BRAND)}>
                     Сбросить
                   </button>
                 )}
@@ -1568,7 +1800,13 @@ function AdminProducts() {
             </div>
           </BulkActionPill>
 
-          <BulkActionPill label="Цена" isActive={Boolean(bulkPrice)}>
+          <BulkActionPill
+            menuKey="price"
+            label="Цена"
+            isActive={Boolean(bulkPrice)}
+            isOpen={activeBulkMenu === 'price'}
+            onToggle={toggleBulkMenu}
+          >
             <div className="space-y-3">
               <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Цена</p>
               <input
@@ -1581,14 +1819,18 @@ function AdminProducts() {
               />
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   className="button text-sm w-full sm:w-auto"
-                  onClick={handleBulkPriceChange}
+                  onClick={async () => {
+                    await handleBulkPriceChange();
+                    closeBulkMenus();
+                  }}
                   disabled={!bulkPrice || selectedIds.length === 0}
                 >
                   Изменить цену
                 </button>
                 {bulkPrice && (
-                  <button className="text-xs text-primary" onClick={() => setBulkPrice('')}>
+                  <button type="button" className="text-xs text-primary" onClick={() => setBulkPrice('')}>
                     Сбросить
                   </button>
                 )}
@@ -1601,6 +1843,39 @@ function AdminProducts() {
         </p>
       </div>
       <div className="md:hidden space-y-3">
+        <div className="rounded-2xl border border-ink/10 bg-white/85 p-3 space-y-2">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Сортировка</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { key: 'product', label: 'Товар' },
+              { key: 'categories', label: 'Категории' },
+              { key: 'brand', label: 'Бренд' },
+              { key: 'variants', label: 'Варианты' }
+            ].map(({ key, label }) => {
+              const isActive = sortConfig.key === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleSortToggle(key)}
+                  className={`rounded-xl border px-3 py-2 text-xs flex items-center justify-between transition ${
+                    isActive
+                      ? 'border-primary/50 bg-primary/10 text-primary'
+                      : 'border-ink/10 bg-white text-ink'
+                  }`}
+                >
+                  <span>{label}</span>
+                  <span className="text-[10px]">{getSortMarker(key)}</span>
+                </button>
+              );
+            })}
+          </div>
+          {sortConfig.key && sortConfig.direction && (
+            <button type="button" className="text-xs text-primary underline" onClick={resetSort}>
+              Сбросить сортировку
+            </button>
+          )}
+        </div>
         {pagedItems.map((item, index) => {
           const primaryVariant = getPrimaryVariant(item);
           const variantSummary = primaryVariant
@@ -1706,10 +1981,46 @@ function AdminProducts() {
                   onChange={(e) => toggleSelectAll(e.target.checked)}
                 />
               </th>
-              <th className="p-2 border-b">Товар</th>
-              <th className="p-2 border-b">Категории</th>
-              <th className="p-2 border-b">Бренд</th>
-              <th className="p-2 border-b">Варианты</th>
+              <th className="p-2 border-b">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 hover:text-primary"
+                  onClick={() => handleSortToggle('product')}
+                >
+                  <span>Товар</span>
+                  <span className="text-[10px]">{getSortMarker('product')}</span>
+                </button>
+              </th>
+              <th className="p-2 border-b">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 hover:text-primary"
+                  onClick={() => handleSortToggle('categories')}
+                >
+                  <span>Категории</span>
+                  <span className="text-[10px]">{getSortMarker('categories')}</span>
+                </button>
+              </th>
+              <th className="p-2 border-b">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 hover:text-primary"
+                  onClick={() => handleSortToggle('brand')}
+                >
+                  <span>Бренд</span>
+                  <span className="text-[10px]">{getSortMarker('brand')}</span>
+                </button>
+              </th>
+              <th className="p-2 border-b">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 hover:text-primary"
+                  onClick={() => handleSortToggle('variants')}
+                >
+                  <span>Варианты</span>
+                  <span className="text-[10px]">{getSortMarker('variants')}</span>
+                </button>
+              </th>
               <th className="p-2 border-b">Действия</th>
             </tr>
           </thead>
@@ -1807,19 +2118,19 @@ function AdminProducts() {
           >
             Назад
           </button>
-          <span>Страница {page} / {Math.max(1, Math.ceil(items.length / pageSize))}</span>
+          <span>Страница {page} / {totalPages}</span>
           <button
             className="button text-sm"
-            disabled={page >= Math.ceil(items.length / pageSize)}
+            disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
             Вперёд
           </button>
         </div>
       </div>
-      {confirmDialog.open && (
+      {modalRoot && confirmDialog.open && createPortal(
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1100]"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1500]"
           onClick={closeConfirm}
         >
           <div
@@ -1844,15 +2155,16 @@ function AdminProducts() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        modalRoot
       )}
-      {editModalOpen && editingProduct && (
+      {modalRoot && editModalOpen && editingProduct && createPortal(
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] px-3 py-6"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1400] px-3 py-6"
           onClick={requestCloseEditModal}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-6 max-h-[90vh] overflow-y-auto space-y-4"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-[1120px] p-6 max-h-[90vh] overflow-y-auto space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start mb-4">
@@ -2096,7 +2408,7 @@ function AdminProducts() {
                     <p className="text-xs text-muted">
                       Сохраняйте каждую строку отдельно. Быстрые кнопки корректируют остатки.
                     </p>
-                    <div className="space-y-3 divide-y divide-gray-100">
+                    <div className="space-y-4">
                     {editingVariants.map((variant) => {
                       const form = variantEditForms[variant.id] || {};
                       const originalPrice = variant.price ? moneyToNumber(variant.price) : 0;
@@ -2111,23 +2423,32 @@ function AdminProducts() {
                         Number(form.widthMm || 0) !== Number(variant.widthMm || 0) ||
                         Number(form.heightMm || 0) !== Number(variant.heightMm || 0);
                       return (
-                        <div key={variant.id} className="pt-3">
-                          <div className="flex flex-wrap justify-between items-start gap-3 mb-2">
+                        <div key={variant.id} className="rounded-2xl border border-gray-200 bg-white/85 p-4 shadow-sm">
+                          <div className="flex flex-wrap justify-between items-start gap-3">
                             <div className="space-y-1">
                               <p className="text-xs text-muted">SKU {variant.sku}</p>
                               <p className="font-semibold">{variant.name || 'Без названия'}</p>
                               <p className="text-[11px] text-muted">ID: {variant.id}</p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               <span className={`px-2 py-1 rounded text-xs ${isDirty ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
                                 {isDirty ? 'Есть изменения' : 'Актуально'}
                               </span>
+                              <button
+                                type="button"
+                                className={`button text-sm ${savingVariant[variant.id] ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                onClick={() => handleSaveVariant(editingProduct.id, variant.id)}
+                                disabled={savingVariant[variant.id]}
+                              >
+                                {savingVariant[variant.id] ? 'Сохраняем…' : 'Сохранить вариант'}
+                              </button>
                               {savingVariant[variant.id] && (
                                 <span className="text-primary text-xs animate-pulse">Сохраняем…</span>
                               )}
                             </div>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+
+                          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                             <label className="block text-xs text-muted">
                               <span className="mb-1 block">Название</span>
                               <input
@@ -2148,7 +2469,9 @@ function AdminProducts() {
                                 className="p-2 border border-gray-300 rounded w-full"
                                 disabled={savingVariant[variant.id]}
                               />
-                              <span className="text-[11px] text-muted mt-1 block">Текущее: {originalPrice.toLocaleString('ru-RU')} ₽</span>
+                              <span className="text-[11px] text-muted mt-1 block">
+                                Текущее: {originalPrice.toLocaleString('ru-RU')} ₽
+                              </span>
                             </label>
                             <label className="block text-xs text-muted">
                               <span className="mb-1 block">Количество</span>
@@ -2159,19 +2482,6 @@ function AdminProducts() {
                                 className="p-2 border border-gray-300 rounded w-full"
                                 disabled={savingVariant[variant.id]}
                               />
-                              <div className="flex flex-wrap items-center gap-1 mt-1">
-                                {[-5, -1, 1, 5].map((step) => (
-                                  <button
-                                    key={step}
-                                    type="button"
-                                    className="px-2 py-1 border border-gray-200 rounded text-xs hover:bg-secondary"
-                                    onClick={() => bumpVariantStock(variant.id, step)}
-                                    disabled={savingVariant[variant.id]}
-                                  >
-                                    {step > 0 ? `+${step}` : step}
-                                  </button>
-                                ))}
-                              </div>
                             </label>
                             <label className="block text-xs text-muted">
                               <span className="mb-1 block">Валюта</span>
@@ -2183,60 +2493,70 @@ function AdminProducts() {
                                 disabled={savingVariant[variant.id]}
                               />
                             </label>
-                            <div className="flex flex-col gap-2">
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap items-center gap-1">
+                            <span className="text-[11px] text-muted mr-1">Быстрые изменения запаса:</span>
+                            {[-5, -1, 1, 5].map((step) => (
                               <button
+                                key={step}
                                 type="button"
-                                className={`button text-sm w-full ${savingVariant[variant.id] ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                onClick={() => handleSaveVariant(editingProduct.id, variant.id)}
+                                className="px-2 py-1 border border-gray-200 rounded text-xs hover:bg-secondary"
+                                onClick={() => bumpVariantStock(variant.id, step)}
                                 disabled={savingVariant[variant.id]}
                               >
-                                {savingVariant[variant.id] ? 'Сохраняем…' : 'Сохранить вариант'}
+                                {step > 0 ? `+${step}` : step}
                               </button>
-                              <span className="text-[11px] text-muted text-center">Сохранить изменения по SKU</span>
+                            ))}
+                          </div>
+
+                          <details className="mt-3 rounded-xl border border-gray-200 bg-secondary/35 px-3 py-2">
+                            <summary className="cursor-pointer text-xs font-medium text-muted">
+                              Вес и габариты (опционально)
+                            </summary>
+                            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+                              <label className="block text-xs text-muted">
+                                <span className="mb-1 block">Вес, г</span>
+                                <input
+                                  type="number"
+                                  value={form.weightGrossG ?? ''}
+                                  onChange={(e) => handleVariantEditChange(variant.id, 'weightGrossG', e.target.value)}
+                                  className="p-2 border border-gray-300 rounded w-full"
+                                  disabled={savingVariant[variant.id]}
+                                />
+                              </label>
+                              <label className="block text-xs text-muted">
+                                <span className="mb-1 block">Длина, мм</span>
+                                <input
+                                  type="number"
+                                  value={form.lengthMm ?? ''}
+                                  onChange={(e) => handleVariantEditChange(variant.id, 'lengthMm', e.target.value)}
+                                  className="p-2 border border-gray-300 rounded w-full"
+                                  disabled={savingVariant[variant.id]}
+                                />
+                              </label>
+                              <label className="block text-xs text-muted">
+                                <span className="mb-1 block">Ширина, мм</span>
+                                <input
+                                  type="number"
+                                  value={form.widthMm ?? ''}
+                                  onChange={(e) => handleVariantEditChange(variant.id, 'widthMm', e.target.value)}
+                                  className="p-2 border border-gray-300 rounded w-full"
+                                  disabled={savingVariant[variant.id]}
+                                />
+                              </label>
+                              <label className="block text-xs text-muted">
+                                <span className="mb-1 block">Высота, мм</span>
+                                <input
+                                  type="number"
+                                  value={form.heightMm ?? ''}
+                                  onChange={(e) => handleVariantEditChange(variant.id, 'heightMm', e.target.value)}
+                                  className="p-2 border border-gray-300 rounded w-full"
+                                  disabled={savingVariant[variant.id]}
+                                />
+                              </label>
                             </div>
-                          </div>
-                          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <label className="block text-xs text-muted">
-                              <span className="mb-1 block">Вес, г</span>
-                              <input
-                                type="number"
-                                value={form.weightGrossG ?? ''}
-                                onChange={(e) => handleVariantEditChange(variant.id, 'weightGrossG', e.target.value)}
-                                className="p-2 border border-gray-300 rounded w-full"
-                                disabled={savingVariant[variant.id]}
-                              />
-                            </label>
-                            <label className="block text-xs text-muted">
-                              <span className="mb-1 block">Длина, мм</span>
-                              <input
-                                type="number"
-                                value={form.lengthMm ?? ''}
-                                onChange={(e) => handleVariantEditChange(variant.id, 'lengthMm', e.target.value)}
-                                className="p-2 border border-gray-300 rounded w-full"
-                                disabled={savingVariant[variant.id]}
-                              />
-                            </label>
-                            <label className="block text-xs text-muted">
-                              <span className="mb-1 block">Ширина, мм</span>
-                              <input
-                                type="number"
-                                value={form.widthMm ?? ''}
-                                onChange={(e) => handleVariantEditChange(variant.id, 'widthMm', e.target.value)}
-                                className="p-2 border border-gray-300 rounded w-full"
-                                disabled={savingVariant[variant.id]}
-                              />
-                            </label>
-                            <label className="block text-xs text-muted">
-                              <span className="mb-1 block">Высота, мм</span>
-                              <input
-                                type="number"
-                                value={form.heightMm ?? ''}
-                                onChange={(e) => handleVariantEditChange(variant.id, 'heightMm', e.target.value)}
-                                className="p-2 border border-gray-300 rounded w-full"
-                                disabled={savingVariant[variant.id]}
-                              />
-                            </label>
-                          </div>
+                          </details>
                         </div>
                       );
                     })}
@@ -2246,76 +2566,98 @@ function AdminProducts() {
                     <div className="pt-3">
                       <p className="text-xs text-muted mb-2">Новый вариант</p>
                       <div className="border border-dashed border-gray-300 rounded-lg p-3 space-y-2">
-                        <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
-                          <input
-                            type="text"
-                            placeholder="SKU"
-                            value={modalVariantForm.sku}
-                            onChange={(e) => handleModalVariantChange('sku', e.target.value)}
-                            className="p-2 border border-gray-300 rounded"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Название"
-                            value={modalVariantForm.name}
-                            onChange={(e) => handleModalVariantChange('name', e.target.value)}
-                            className="p-2 border border-gray-300 rounded"
-                          />
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Цена"
-                            value={modalVariantForm.price}
-                            onChange={(e) => handleModalVariantChange('price', e.target.value)}
-                            className="p-2 border border-gray-300 rounded"
-                          />
-                          <input
-                            type="number"
-                            placeholder="Остаток"
-                            value={modalVariantForm.stock}
-                            onChange={(e) => handleModalVariantChange('stock', e.target.value)}
-                            className="p-2 border border-gray-300 rounded"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Валюта"
-                            value={modalVariantForm.currency}
-                            onChange={(e) => handleModalVariantChange('currency', e.target.value)}
-                            className="p-2 border border-gray-300 rounded"
-                          />
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
+                          <label className="text-xs text-muted block">
+                            <span className="mb-1 block">SKU</span>
+                            <input
+                              type="text"
+                              placeholder="SKU"
+                              value={modalVariantForm.sku}
+                              onChange={(e) => handleModalVariantChange('sku', e.target.value)}
+                              className="p-2 border border-gray-300 rounded w-full"
+                            />
+                          </label>
+                          <label className="text-xs text-muted block">
+                            <span className="mb-1 block">Название</span>
+                            <input
+                              type="text"
+                              placeholder="Название"
+                              value={modalVariantForm.name}
+                              onChange={(e) => handleModalVariantChange('name', e.target.value)}
+                              className="p-2 border border-gray-300 rounded w-full"
+                            />
+                          </label>
+                          <label className="text-xs text-muted block">
+                            <span className="mb-1 block">Цена</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="Цена"
+                              value={modalVariantForm.price}
+                              onChange={(e) => handleModalVariantChange('price', e.target.value)}
+                              className="p-2 border border-gray-300 rounded w-full"
+                            />
+                          </label>
+                          <label className="text-xs text-muted block">
+                            <span className="mb-1 block">Остаток</span>
+                            <input
+                              type="number"
+                              placeholder="Остаток"
+                              value={modalVariantForm.stock}
+                              onChange={(e) => handleModalVariantChange('stock', e.target.value)}
+                              className="p-2 border border-gray-300 rounded w-full"
+                            />
+                          </label>
+                          <label className="text-xs text-muted block">
+                            <span className="mb-1 block">Валюта</span>
+                            <input
+                              type="text"
+                              placeholder="Валюта"
+                              value={modalVariantForm.currency}
+                              onChange={(e) => handleModalVariantChange('currency', e.target.value)}
+                              className="p-2 border border-gray-300 rounded w-full"
+                            />
+                          </label>
+                        </div>
+                        <details className="rounded-lg border border-gray-200 bg-secondary/35 px-3 py-2">
+                          <summary className="cursor-pointer text-xs font-medium text-muted">
+                            Вес и габариты (опционально)
+                          </summary>
+                          <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <input
+                              type="number"
+                              placeholder="Вес, г"
+                              value={modalVariantForm.weightGrossG}
+                              onChange={(e) => handleModalVariantChange('weightGrossG', e.target.value)}
+                              className="p-2 border border-gray-300 rounded"
+                            />
+                            <input
+                              type="number"
+                              placeholder="Длина, мм"
+                              value={modalVariantForm.lengthMm}
+                              onChange={(e) => handleModalVariantChange('lengthMm', e.target.value)}
+                              className="p-2 border border-gray-300 rounded"
+                            />
+                            <input
+                              type="number"
+                              placeholder="Ширина, мм"
+                              value={modalVariantForm.widthMm}
+                              onChange={(e) => handleModalVariantChange('widthMm', e.target.value)}
+                              className="p-2 border border-gray-300 rounded"
+                            />
+                            <input
+                              type="number"
+                              placeholder="Высота, мм"
+                              value={modalVariantForm.heightMm}
+                              onChange={(e) => handleModalVariantChange('heightMm', e.target.value)}
+                              className="p-2 border border-gray-300 rounded"
+                            />
+                          </div>
+                        </details>
+                        <div className="flex justify-end">
                           <button type="button" className="button text-sm" onClick={handleAddVariantInModal}>
                             Добавить вариант
                           </button>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          <input
-                            type="number"
-                            placeholder="Вес, г"
-                            value={modalVariantForm.weightGrossG}
-                            onChange={(e) => handleModalVariantChange('weightGrossG', e.target.value)}
-                            className="p-2 border border-gray-300 rounded"
-                          />
-                          <input
-                            type="number"
-                            placeholder="Длина, мм"
-                            value={modalVariantForm.lengthMm}
-                            onChange={(e) => handleModalVariantChange('lengthMm', e.target.value)}
-                            className="p-2 border border-gray-300 rounded"
-                          />
-                          <input
-                            type="number"
-                            placeholder="Ширина, мм"
-                            value={modalVariantForm.widthMm}
-                            onChange={(e) => handleModalVariantChange('widthMm', e.target.value)}
-                            className="p-2 border border-gray-300 rounded"
-                          />
-                          <input
-                            type="number"
-                            placeholder="Высота, мм"
-                            value={modalVariantForm.heightMm}
-                            onChange={(e) => handleModalVariantChange('heightMm', e.target.value)}
-                            className="p-2 border border-gray-300 rounded"
-                          />
                         </div>
                       </div>
                     </div>
@@ -2346,7 +2688,8 @@ function AdminProducts() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        modalRoot
       )}
       <details className="bg-white/80 border border-gray-200 rounded-2xl shadow-sm" open>
         <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-ink">

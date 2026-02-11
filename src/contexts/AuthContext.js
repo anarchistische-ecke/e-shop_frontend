@@ -19,6 +19,7 @@ const AuthContext = createContext({
   login: () => Promise.resolve(),
   logout: () => Promise.resolve(),
   hasRole: () => false,
+  hasStrongAuth: () => false,
   refreshProfile: () => Promise.resolve()
 });
 
@@ -26,6 +27,35 @@ const normalizeRole = (role) => {
   if (!role) return '';
   if (role.startsWith('ROLE_')) return role;
   return `ROLE_${role.toUpperCase()}`;
+};
+
+const isEmailVerified = (payload) => payload?.email_verified === true;
+
+const hasMfa = (payload) => {
+  if (!payload) return false;
+  const acr = payload.acr;
+  if (typeof acr === 'string' && acr.trim() && acr !== '0') {
+    return true;
+  }
+  const amrValues = Array.isArray(payload.amr) ? payload.amr : [];
+  const knownMfaMethods = new Set(['mfa', 'otp', 'totp', 'webauthn', 'hwk', 'sms']);
+  return amrValues.some((method) => knownMfaMethods.has(String(method || '').toLowerCase()));
+};
+
+const collectRoles = (payload, { clientId } = {}) => {
+  const roles = new Set();
+  if (!payload) return roles;
+  if (payload.role) roles.add(normalizeRole(payload.role));
+  if (Array.isArray(payload.roles)) {
+    payload.roles.forEach((entry) => roles.add(normalizeRole(entry)));
+  }
+  if (Array.isArray(payload?.realm_access?.roles)) {
+    payload.realm_access.roles.forEach((entry) => roles.add(normalizeRole(entry)));
+  }
+  if (clientId && payload?.resource_access?.[clientId]?.roles) {
+    payload.resource_access[clientId].roles.forEach((entry) => roles.add(normalizeRole(entry)));
+  }
+  return roles;
 };
 
 const resolveBasePath = () => {
@@ -74,14 +104,7 @@ export function AuthProvider({ children }) {
     const token = await getAccessToken();
     if (!token) return null;
     const payload = parseJwtPayload(token);
-    const roles = new Set();
-    if (payload?.role) roles.add(normalizeRole(payload.role));
-    if (Array.isArray(payload?.roles)) {
-      payload.roles.forEach((role) => roles.add(normalizeRole(role)));
-    }
-    if (payload?.realm_access?.roles) {
-      payload.realm_access.roles.forEach((role) => roles.add(normalizeRole(role)));
-    }
+    const roles = collectRoles(payload);
     if (!roles.has('ROLE_CUSTOMER')) {
       return null;
     }
@@ -129,28 +152,18 @@ export function AuthProvider({ children }) {
   }, [syncState]);
 
   const hasRole = useCallback(
-    (role) => {
+    (role, { clientId } = {}) => {
       if (!tokenPayload || !role) return false;
       const normalized = normalizeRole(role);
-      const roles = new Set();
-      if (tokenPayload.role) roles.add(normalizeRole(tokenPayload.role));
-      if (Array.isArray(tokenPayload.roles)) {
-        tokenPayload.roles.forEach((entry) => roles.add(normalizeRole(entry)));
-      }
-      if (tokenPayload.realm_access?.roles) {
-        tokenPayload.realm_access.roles.forEach((entry) => roles.add(normalizeRole(entry)));
-      }
-      if (tokenPayload.resource_access) {
-        Object.values(tokenPayload.resource_access).forEach((clientAccess) => {
-          if (clientAccess?.roles) {
-            clientAccess.roles.forEach((entry) => roles.add(normalizeRole(entry)));
-          }
-        });
-      }
+      const roles = collectRoles(tokenPayload, { clientId });
       return roles.has(normalized);
     },
     [tokenPayload]
   );
+
+  const hasStrongAuth = useCallback(() => {
+    return isEmailVerified(tokenPayload) && hasMfa(tokenPayload);
+  }, [tokenPayload]);
 
   const tokenParsed = useMemo(
     () => buildTokenProfile({ profile, payload: tokenPayload }),
@@ -166,9 +179,10 @@ export function AuthProvider({ children }) {
       login,
       logout,
       hasRole,
+      hasStrongAuth,
       refreshProfile
     }),
-    [isReady, tokenPayload, tokenParsed, profile, login, logout, hasRole, refreshProfile]
+    [isReady, tokenPayload, tokenParsed, profile, login, logout, hasRole, hasStrongAuth, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
