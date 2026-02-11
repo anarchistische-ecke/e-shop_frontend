@@ -311,66 +311,12 @@ export async function updateCustomerSubscription(marketingOptIn) {
 export async function getCustomerOrders() {
   return request('/orders/me');
 }
-export async function loginAdmin(username, password) {
-  return request('/auth/admin/login', {
-    method: 'POST',
-    body: JSON.stringify({ username, password })
-  });
-}
-export async function loginCustomer(email, password) {
-  return request('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password })
-  });
-}
-export async function registerCustomer(payload) {
-  return request('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-export async function requestEmailVerification(email) {
-  return request('/customers/verify/request', {
-    method: 'POST',
-    body: JSON.stringify({ email })
-  });
-}
-export async function confirmEmailVerification(email, code, password) {
-  return request('/customers/verify/confirm', {
-    method: 'POST',
-    body: JSON.stringify({ email, code, password })
-  });
-}
 export async function getManagerProfile() {
   return request('/managers/me');
 }
 export async function getManagerDashboard({ limit = 8 } = {}) {
   const safeLimit = Number.isFinite(limit) ? limit : 8;
   return request(`/managers/me/dashboard?limit=${encodeURIComponent(safeLimit)}`);
-}
-export async function loginWithYandex({
-  accessToken = '',
-  yandexId = '',
-  email = '',
-  firstName = '',
-  lastName = ''
-} = {}) {
-  return request('/auth/login/yandex', {
-    method: 'POST',
-    body: JSON.stringify({ accessToken, yandexId, email, firstName, lastName })
-  });
-}
-export async function loginWithVk({
-  accessToken = '',
-  vkUserId = '',
-  email = '',
-  firstName = '',
-  lastName = ''
-} = {}) {
-  return request('/auth/login/vk', {
-    method: 'POST',
-    body: JSON.stringify({ accessToken, vkUserId, email, firstName, lastName })
-  });
 }
 
 export async function getAdminActivityLogs(params = {}) {
