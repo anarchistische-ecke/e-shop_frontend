@@ -1,22 +1,19 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { loginAdmin } from '../api';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
 
 function AdminLoginPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const redirectTo = (location.state && location.state.from) || '/admin';
-  const { isAuthenticated, isReady, hasRole, login } = useAuth();
+  const { isAuthenticated, isReady, hasRole } = useAuth();
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
   const adminRole = process.env.REACT_APP_KEYCLOAK_ADMIN_ROLE || 'admin';
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
   const isAdmin = isAuthenticated && hasRole(adminRole);
   const isManager = isAuthenticated && hasRole(managerRole);
-  const useKeycloak = isKeycloakConfigured();
+  const keycloakReady = isKeycloakConfigured();
 
   const safeRedirectPath = (path) => {
     if (typeof path !== 'string') return '/admin';
@@ -32,10 +29,6 @@ function AdminLoginPage() {
     return `${window.location.origin}${normalizedBase}${path}`;
   };
 
-  const handleChange = (field) => (event) => {
-    setCredentials((prev) => ({ ...prev, [field]: event.target.value }));
-  };
-
   const handleKeycloakLogin = async () => {
     setIsSubmitting(true);
     setStatus(null);
@@ -46,51 +39,6 @@ function AdminLoginPage() {
     } catch (err) {
       console.error('Keycloak login failed:', err);
       setStatus({ type: 'error', message: 'Не удалось открыть страницу входа.' });
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setStatus(null);
-    if (useKeycloak) {
-      await handleKeycloakLogin();
-      return;
-    }
-    if (!credentials.username.trim() || !credentials.password) {
-      setStatus({ type: 'error', message: 'Введите логин и пароль администратора.' });
-      setIsSubmitting(false);
-      return;
-    }
-    try {
-      const response = await loginAdmin(credentials.username.trim(), credentials.password);
-      const token =
-        (typeof response === 'string' ? response : null) ||
-        response?.token ||
-        response?.access_token ||
-        response?.accessToken ||
-        response?.id_token ||
-        response?.idToken ||
-        response?.token?.access_token ||
-        response?.token?.accessToken ||
-        response?.token?.token ||
-        response?.token?.id_token ||
-        response?.token?.idToken ||
-        '';
-      if (!token) {
-        setStatus({
-          type: 'error',
-          message: 'Не удалось получить токен. Проверьте настройки авторизации.'
-        });
-        return;
-      }
-      await login({ token, profile: { username: credentials.username.trim() } });
-      navigate(safeRedirectPath(redirectTo), { replace: true });
-    } catch (err) {
-      console.error('Admin login failed:', err);
-      setStatus({ type: 'error', message: 'Неверные учетные данные.' });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -138,57 +86,24 @@ function AdminLoginPage() {
             </div>
           )}
 
-          {useKeycloak ? (
-            <div className="space-y-4">
-              <p className="text-sm text-muted">
-                Авторизация выполняется через Keycloak.
+          <div className="space-y-4">
+            <p className="text-sm text-muted">
+              Авторизация выполняется через Keycloak.
+            </p>
+            {!keycloakReady && (
+              <p className="text-sm text-red-600">
+                Keycloak не настроен. Проверьте переменные окружения.
               </p>
-              <button
-                type="button"
-                className="button w-full"
-                onClick={handleKeycloakLogin}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Перенаправляем…' : 'Войти через Keycloak'}
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-              <div>
-                <label htmlFor="admin-username" className="block text-sm font-medium text-ink/80">
-                  Логин
-                </label>
-                <input
-                  id="admin-username"
-                  type="text"
-                  autoComplete="username"
-                  value={credentials.username}
-                  onChange={handleChange('username')}
-                  placeholder="admin"
-                  className="mt-2 w-full"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="admin-password" className="block text-sm font-medium text-ink/80">
-                  Пароль
-                </label>
-                <input
-                  id="admin-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={credentials.password}
-                  onChange={handleChange('password')}
-                  placeholder="Введите пароль"
-                  className="mt-2 w-full"
-                />
-              </div>
-
-              <button type="submit" className="button w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Входим…' : 'Войти в админ-панель'}
-              </button>
-            </form>
-          )}
+            )}
+            <button
+              type="button"
+              className="button w-full"
+              onClick={handleKeycloakLogin}
+              disabled={isSubmitting || !keycloakReady}
+            >
+              {isSubmitting ? 'Перенаправляем…' : 'Войти через Keycloak'}
+            </button>
+          </div>
 
           {isReady && isAuthenticated && !isAdmin && !isManager && (
             <p className="mt-4 text-sm text-red-600">

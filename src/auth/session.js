@@ -63,14 +63,7 @@ const isTokenValid = (token) => {
 export const getStoredToken = () => {
   const token = normalizeToken(localStorage.getItem(TOKEN_KEY));
   if (isTokenValid(token)) return token;
-  const legacyToken = normalizeToken(localStorage.getItem('userToken')) || normalizeToken(localStorage.getItem('adminToken'));
-  if (isTokenValid(legacyToken)) {
-    localStorage.setItem(TOKEN_KEY, legacyToken);
-    return legacyToken;
-  }
   localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem('userToken');
-  localStorage.removeItem('adminToken');
   return null;
 };
 
@@ -100,12 +93,8 @@ export const getAccessToken = async () => {
     } catch (err) {
       console.warn('Failed to read Keycloak token', err);
     }
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem(TOKEN_KEY);
-    return null;
   }
-  return getStoredToken();
+  return null;
 };
 
 export const buildTokenProfile = ({ profile, payload }) => {

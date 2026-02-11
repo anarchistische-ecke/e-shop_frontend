@@ -13,6 +13,27 @@ const isConfigValid = () =>
 let keycloakInstance = null;
 let initPromise = null;
 
+const resolveBasePath = () => {
+  const raw = process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '';
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const path = new URL(raw).pathname.replace(/\/$/, '');
+      return path === '/' ? '' : path;
+    } catch (err) {
+      return '';
+    }
+  }
+  const normalized = raw.replace(/\/$/, '');
+  return normalized === '/' ? '' : normalized;
+};
+
+const buildSilentCheckSsoRedirectUri = () => {
+  if (typeof window === 'undefined') return undefined;
+  const base = resolveBasePath();
+  return `${window.location.origin}${base}/silent-check-sso.html`;
+};
+
 export function isKeycloakConfigured() {
   return isConfigValid();
 }
@@ -65,10 +86,7 @@ export async function initKeycloak() {
       .init({
         onLoad: 'check-sso',
         pkceMethod: 'S256',
-        silentCheckSsoRedirectUri:
-          typeof window !== 'undefined'
-            ? `${window.location.origin}/silent-check-sso.html`
-            : undefined,
+        silentCheckSsoRedirectUri: buildSilentCheckSsoRedirectUri(),
         checkLoginIframe: false
       })
       .then(() => keycloakInstance)
