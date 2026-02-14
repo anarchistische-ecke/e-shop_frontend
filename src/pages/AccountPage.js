@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import {
   getCustomerOrders,
-  updateCustomerProfile,
-  updateCustomerSubscription
+  updateCustomerProfile
 } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import ManagerAccountPage from './ManagerAccountPage';
@@ -125,12 +124,11 @@ const IconLogout = ({ className }) => (
   </svg>
 );
 
-const PROFILE_SECTIONS = ['profile', 'addresses', 'events', 'subscriptions'];
+const PROFILE_SECTIONS = ['profile', 'addresses', 'events'];
 
 const PROFILE_SUBMENU = [
   { id: 'addresses', label: 'Мои адреса' },
-  { id: 'events', label: 'Уютные события' },
-  { id: 'subscriptions', label: 'Управление подписками' }
+  { id: 'events', label: 'Уютные события' }
 ];
 
 const ACCOUNT_MENU = [
@@ -159,7 +157,6 @@ const SECTION_LABELS = {
   profile: 'Профиль',
   addresses: 'Мои адреса',
   events: 'Уютные события',
-  subscriptions: 'Управление подписками',
   bonuses: 'Уютные бонусы',
   promocodes: 'Мои промокоды',
   referral: 'Приведи друга',
@@ -186,8 +183,6 @@ function AccountPage() {
   });
   const [saveStatus, setSaveStatus] = useState(null);
   const [saveMessage, setSaveMessage] = useState(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
@@ -238,9 +233,6 @@ function AccountPage() {
           birthDate: data.birthDate ?? prev.birthDate,
           gender: data.gender ?? prev.gender ?? 'female'
         }));
-        if (typeof data.marketingOptIn === 'boolean') {
-          setIsSubscribed(data.marketingOptIn);
-        }
       })
       .catch((err) => {
         if (!mounted) return;
@@ -376,9 +368,6 @@ function AccountPage() {
           birthDate: updated.birthDate ?? prev.birthDate,
           gender: updated.gender ?? prev.gender
         }));
-        if (typeof updated.marketingOptIn === 'boolean') {
-          setIsSubscribed(updated.marketingOptIn);
-        }
       }
       setSaveStatus('saved');
       window.setTimeout(() => setSaveStatus(null), 2500);
@@ -414,24 +403,6 @@ function AccountPage() {
       console.warn('Failed to copy referral code', err);
       setCopyStatus('error');
       window.setTimeout(() => setCopyStatus(null), 2000);
-    }
-  };
-
-  const handleSubscriptionToggle = async () => {
-    const nextValue = !isSubscribed;
-    setIsSubscribed(nextValue);
-    setSubscriptionStatus('saving');
-    try {
-      const updated = await updateCustomerSubscription(nextValue);
-      if (typeof updated?.marketingOptIn === 'boolean') {
-        setIsSubscribed(updated.marketingOptIn);
-      }
-      setSubscriptionStatus(null);
-    } catch (err) {
-      console.error('Failed to update subscription:', err);
-      setIsSubscribed((prev) => !prev);
-      setSubscriptionStatus('error');
-      window.setTimeout(() => setSubscriptionStatus(null), 2000);
     }
   };
 
@@ -626,42 +597,6 @@ function AccountPage() {
             </div>
           </div>
         );
-      case 'subscriptions':
-        return (
-          <div className="soft-card p-6 md:p-8 reveal-up">
-            <h2 className="text-xl sm:text-2xl font-semibold mb-3">Управление подписками</h2>
-            <p className="text-sm text-muted">
-              Настройте рассылки и выбирайте частоту получения уютных подборок.
-            </p>
-            <div className="mt-5 flex items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white/80 px-4 py-4">
-              <div>
-                <p className="text-sm font-semibold">Еженедельные подборки</p>
-                <p className="text-xs text-muted">Новинки, рекомендации и подборки по сезонам.</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleSubscriptionToggle}
-                disabled={subscriptionStatus === 'saving'}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${
-                  isSubscribed ? 'bg-primary' : 'bg-ink/10'
-                } ${subscriptionStatus === 'saving' ? 'opacity-60 cursor-wait' : ''}`}
-                aria-pressed={isSubscribed}
-                aria-busy={subscriptionStatus === 'saving'}
-              >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-                    isSubscribed ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-            {subscriptionStatus === 'error' && (
-              <p className="mt-3 text-xs text-red-500">
-                Не удалось обновить подписку. Попробуйте ещё раз.
-              </p>
-            )}
-          </div>
-        );
       case 'bonuses':
         return (
           <div className="soft-card p-6 md:p-8 reveal-up">
@@ -685,7 +620,7 @@ function AccountPage() {
               Здесь появятся все активные промокоды и персональные скидки.
             </p>
             <div className="mt-5 rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 text-sm text-muted">
-              Пока нет активных промокодов. Следите за рассылками — мы пришлём первый бонус.
+              Пока нет активных промокодов. Первый бонус появится здесь автоматически.
             </div>
           </div>
         );
