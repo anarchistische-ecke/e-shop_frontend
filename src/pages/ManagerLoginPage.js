@@ -33,7 +33,8 @@ function ManagerLoginPage() {
     setStatus(null);
     try {
       await keycloakLogin({
-        redirectUri: buildRedirectUri(safeRedirectPath(redirectTo))
+        redirectUri: buildRedirectUri(safeRedirectPath(redirectTo)),
+        prompt: 'login'
       });
     } catch (err) {
       console.error('Keycloak login failed:', err);

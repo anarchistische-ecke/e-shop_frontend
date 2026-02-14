@@ -19,13 +19,11 @@ function ProductPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [bundleSelections, setBundleSelections] = useState({});
-  const [subscribeAndSave, setSubscribeAndSave] = useState(false);
   const { addItem } = useContext(CartContext);
 
   useEffect(() => {
     setRelatedProducts([]);
     setBundleSelections({});
-    setSubscribeAndSave(false);
     setActiveTab('about');
   }, [id]);
 
@@ -188,8 +186,6 @@ function ProductPage() {
   const reviewCount = productReviews.length;
   const isLowStock = availableStock > 0 && availableStock <= 3;
 
-  const subscriptionPrice = subscribeAndSave ? Math.round(price * 0.9) : price;
-
   const highlightList = [
     product.material ? `Материал: ${product.material}` : 'Натуральные ткани и мягкая текстура',
     product.threadCount ? `Плотность: ${product.threadCount}` : 'Дышащая структура для спокойного сна',
@@ -254,7 +250,10 @@ function ProductPage() {
 
         <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
           <div>
-            <div className="relative w-full aspect-[1/1] sm:aspect-[4/5] rounded-[28px] sm:rounded-[32px] overflow-hidden border border-white/80 shadow-[0_24px_60px_rgba(43,39,34,0.16)] bg-gradient-to-br from-sand/70 to-white">
+            <div
+              className="relative w-full h-screen max-h-screen rounded-[28px] sm:rounded-[32px] overflow-hidden border border-white/80 shadow-[0_24px_60px_rgba(43,39,34,0.16)] bg-gradient-to-br from-sand/70 to-white"
+              style={{ height: '100dvh', maxHeight: '100dvh' }}
+            >
               {mainImage ? (
                 <img
                   src={mainImage}
@@ -357,7 +356,7 @@ function ProductPage() {
               </div>
 
               <div className="text-accent text-xl sm:text-2xl font-semibold mb-2">
-                {subscriptionPrice.toLocaleString('ru-RU')} ₽
+                {price.toLocaleString('ru-RU')} ₽
                 {oldPrice && (
                   <span className="text-base sm:text-lg line-through text-muted ml-3">
                     {oldPrice.toLocaleString('ru-RU')} ₽
@@ -365,7 +364,7 @@ function ProductPage() {
                 )}
               </div>
               <p className="text-xs text-muted mb-4">
-                {subscribeAndSave ? 'Цена с подпиской и автодоставкой каждые 6 месяцев.' : 'Разовая покупка без подписки.'}
+                Цена за выбранный вариант.
               </p>
 
               {product.variants && product.variants.length > 1 && (
@@ -392,19 +391,6 @@ function ProductPage() {
                   </div>
                 </div>
               )}
-
-              <label className="flex items-start gap-3 text-sm mb-4">
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4 accent-primary"
-                  checked={subscribeAndSave}
-                  onChange={(e) => setSubscribeAndSave(e.target.checked)}
-                />
-                <span>
-                  <span className="font-semibold">Подписка и экономия 10%</span>
-                  <span className="block text-xs text-muted">Автодоставка раз в 6 месяцев, отмена в любой момент.</span>
-                </span>
-              </label>
 
               <div className="flex items-center gap-3 mb-4 text-sm">
                 <span className={availableStock > 0 ? 'text-emerald-700' : 'text-red-700'}>
@@ -591,7 +577,7 @@ function ProductPage() {
         <div className="container mx-auto px-4 py-3 flex items-center gap-3">
           <div className="flex-1">
             <p className="text-xs text-muted">Итого</p>
-            <p className="text-base font-semibold">{subscriptionPrice.toLocaleString('ru-RU')} ₽</p>
+            <p className="text-base font-semibold">{price.toLocaleString('ru-RU')} ₽</p>
           </div>
           <button
             className="button flex-1 disabled:opacity-50 disabled:cursor-not-allowed"

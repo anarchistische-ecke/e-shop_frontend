@@ -35,7 +35,8 @@ function AdminLoginPage() {
     setStatus(null);
     try {
       await keycloakLogin({
-        redirectUri: buildRedirectUri('/admin/login')
+        redirectUri: buildRedirectUri('/admin/login'),
+        prompt: 'login'
       });
     } catch (err) {
       console.error('Keycloak login failed:', err);
