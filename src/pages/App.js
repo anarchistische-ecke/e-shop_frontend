@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -39,10 +39,16 @@ import PersonalDataConsentPage from './legal/PersonalDataConsentPage';
 import SalesTermsPage from './legal/SalesTermsPage';
 import OrderPage from './OrderPage';
 import NotFound from './NotFound';
+import { trackMetrikaHit } from '../utils/metrika';
 
 function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+
+  useEffect(() => {
+    const path = `${location.pathname}${location.search}${location.hash}`;
+    trackMetrikaHit(path, typeof document !== 'undefined' ? document.title : undefined);
+  }, [location.pathname, location.search, location.hash]);
 
   return (
     <>

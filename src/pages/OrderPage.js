@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment } from '../api';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
+import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 
 const statusLabels = {
   PENDING: 'Ожидает оплаты',
@@ -23,6 +24,7 @@ function OrderPage() {
   const [isPaying, setIsPaying] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef(null);
+  const purchaseTrackedRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -114,6 +116,19 @@ function OrderPage() {
   const total = useMemo(() => {
     if (!order) return 0;
     return moneyToNumber(order.totalAmount || order.total);
+  }, [order]);
+
+  useEffect(() => {
+    if (!order || purchaseTrackedRef.current) return;
+    const status = order.status || 'PENDING';
+    if (status !== 'PAID' && status !== 'DELIVERED') return;
+
+    trackMetrikaGoal(METRIKA_GOALS.PURCHASE, {
+      order_id: order.id,
+      total: Math.round(moneyToNumber(order.totalAmount || order.total)),
+      items: Array.isArray(order.items) ? order.items.length : 0
+    });
+    purchaseTrackedRef.current = true;
   }, [order]);
 
   const handlePay = async () => {

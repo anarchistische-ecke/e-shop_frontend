@@ -1,10 +1,18 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
 import { checkoutCart, getYandexDeliveryOffers, getYandexPickupPoints } from '../api';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import PickupMapModal from '../components/PickupMapModal';
+import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+
+const CHECKOUT_STEPS = [
+  { key: 'contact', title: 'Контакт' },
+  { key: 'recipient', title: 'Получатель' },
+  { key: 'delivery', title: 'Доставка' },
+  { key: 'review', title: 'Подтверждение' }
+];
 
 function pickupUiId(point, index = 0) {
   const lat = Number(point?.latitude);
@@ -13,11 +21,19 @@ function pickupUiId(point, index = 0) {
   return point?.id || `${coordToken}-${index}`;
 }
 
+function isEmailValid(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function CheckoutPage() {
   const { items, cartId, clearCart } = useContext(CartContext);
   const { tokenParsed, isAuthenticated, hasRole } = useAuth();
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
+
+  const [activeStep, setActiveStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [email, setEmail] = useState('');
   const [recipientFirstName, setRecipientFirstName] = useState('');
@@ -43,6 +59,10 @@ function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savePaymentMethod, setSavePaymentMethod] = useState(false);
   const [isPickupMapOpen, setIsPickupMapOpen] = useState(false);
+
+  const beginCheckoutTrackedRef = useRef(false);
+  const shippingTrackedOfferRef = useRef('');
+  const paymentStepTrackedRef = useRef(false);
 
   useEffect(() => {
     if (!email) {
@@ -70,6 +90,7 @@ function CheckoutPage() {
     setDeliveryOffers([]);
     setSelectedOfferId('');
     setDeliveryError('');
+    shippingTrackedOfferRef.current = '';
   }, [deliveryType, deliveryAddress, selectedPickupPointId]);
 
   useEffect(() => {
@@ -101,6 +122,11 @@ function CheckoutPage() {
     return null;
   }, [enrichedPickupPoints, selectedPickupPointId, selectedPickupPointUiId]);
 
+  const itemsCount = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items]
+  );
+
   const total = useMemo(
     () => items.reduce(
       (sum, item) => sum + (item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity,
@@ -120,7 +146,7 @@ function CheckoutPage() {
   }, [selectedOffer]);
 
   const totalWithDelivery = total + deliveryAmount;
-  const deliveryLabel = selectedOfferId ? `${deliveryAmount.toLocaleString('ru-RU')} ₽` : '—';
+  const deliveryLabel = selectedOfferId ? `${deliveryAmount.toLocaleString('ru-RU')} ₽` : 'Рассчитаем после выбора адреса';
   const payableTotal = selectedOfferId ? totalWithDelivery : total;
 
   const formatInterval = (offer) => {
@@ -134,16 +160,116 @@ function CheckoutPage() {
     return `${dateLabel}, ${fromTime}–${toTime}`;
   };
 
-  const ensureRecipientInfo = () => {
+  useEffect(() => {
+    if (!itemsCount || beginCheckoutTrackedRef.current) return;
+    trackMetrikaGoal(METRIKA_GOALS.BEGIN_CHECKOUT, {
+      cart_items: itemsCount,
+      cart_total: Math.round(total)
+    });
+    beginCheckoutTrackedRef.current = true;
+  }, [itemsCount, total]);
+
+  useEffect(() => {
+    const step = CHECKOUT_STEPS[activeStep];
+    if (!step) return;
+    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_VIEW, {
+      step: step.key,
+      cart_items: itemsCount,
+      cart_total: Math.round(payableTotal)
+    });
+  }, [activeStep, itemsCount, payableTotal]);
+
+  useEffect(() => {
+    if (!selectedOfferId || shippingTrackedOfferRef.current === selectedOfferId) return;
+    shippingTrackedOfferRef.current = selectedOfferId;
+    trackMetrikaGoal(METRIKA_GOALS.ADD_SHIPPING_INFO, {
+      delivery_type: deliveryType,
+      shipping_cost: Math.round(deliveryAmount),
+      cart_total: Math.round(payableTotal)
+    });
+  }, [selectedOfferId, deliveryType, deliveryAmount, payableTotal]);
+
+  useEffect(() => {
+    if (activeStep !== 3 || paymentStepTrackedRef.current) return;
+    trackMetrikaGoal(METRIKA_GOALS.ADD_PAYMENT_INFO, {
+      delivery_type: deliveryType,
+      cart_total: Math.round(payableTotal)
+    });
+    paymentStepTrackedRef.current = true;
+  }, [activeStep, deliveryType, payableTotal]);
+
+  const applyStepFieldErrors = (keys, errors) => {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      keys.forEach((key) => {
+        next[key] = errors[key] || '';
+      });
+      return next;
+    });
+  };
+
+  const clearFieldError = (field) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      return { ...prev, [field]: '' };
+    });
+  };
+
+  const markCompleted = (stepKey) => {
+    setCompletedSteps((prev) => ({ ...prev, [stepKey]: true }));
+  };
+
+  const validateContactStep = () => {
+    const errors = {};
+    const normalizedEmail = email.trim();
+
+    if (!normalizedEmail) {
+      errors.email = 'Укажите email для чека и подтверждения заказа.';
+    } else if (!isEmailValid(normalizedEmail)) {
+      errors.email = 'Проверьте формат email, например name@example.com.';
+    }
+
+    applyStepFieldErrors(['email'], errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateRecipientStep = () => {
+    const errors = {};
+
     if (!recipientFirstName.trim()) {
-      setDeliveryError('Укажите имя получателя.');
-      return false;
+      errors.recipientFirstName = 'Укажите имя получателя.';
     }
     if (!recipientPhone.trim()) {
-      setDeliveryError('Укажите телефон получателя.');
-      return false;
+      errors.recipientPhone = 'Укажите телефон для связи по доставке.';
     }
-    return true;
+
+    applyStepFieldErrors(['recipientFirstName', 'recipientPhone'], errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateDeliveryStep = () => {
+    const errors = {};
+
+    if (deliveryType === 'COURIER' && !deliveryAddress.trim()) {
+      errors.deliveryAddress = 'Укажите адрес доставки для расчёта интервалов.';
+    }
+    if (deliveryType === 'PICKUP') {
+      if (!pickupLocation.trim()) {
+        errors.pickupLocation = 'Укажите город или адрес, чтобы найти пункты выдачи.';
+      }
+      if (!selectedPickupPointId) {
+        errors.selectedPickupPointId = 'Выберите пункт выдачи из списка или на карте.';
+      }
+    }
+    if (!selectedOfferId) {
+      errors.selectedOfferId = 'Рассчитайте и выберите подходящий интервал доставки.';
+    }
+
+    applyStepFieldErrors(
+      ['deliveryAddress', 'pickupLocation', 'selectedPickupPointId', 'selectedOfferId'],
+      errors
+    );
+    return Object.keys(errors).length === 0;
   };
 
   const applyPickupSelection = (point) => {
@@ -152,12 +278,61 @@ function CheckoutPage() {
     setSelectedPickupPointUiId(point.__uiId || pickupUiId(point, 0));
     setSelectedPickupPointName(point.name || point.address || '');
     setDeliveryError('');
+    clearFieldError('selectedPickupPointId');
+  };
+
+  const handleContactNext = () => {
+    setStatus(null);
+    if (!validateContactStep()) {
+      setActiveStep(0);
+      return;
+    }
+
+    markCompleted('contact');
+    setActiveStep(1);
+  };
+
+  const handleRecipientNext = () => {
+    setStatus(null);
+    if (!validateContactStep()) {
+      setActiveStep(0);
+      return;
+    }
+    if (!validateRecipientStep()) {
+      setActiveStep(1);
+      return;
+    }
+
+    markCompleted('recipient');
+    setActiveStep(2);
+  };
+
+  const handleDeliveryNext = () => {
+    setStatus(null);
+    if (!validateContactStep()) {
+      setActiveStep(0);
+      return;
+    }
+    if (!validateRecipientStep()) {
+      setActiveStep(1);
+      return;
+    }
+    if (!validateDeliveryStep()) {
+      setActiveStep(2);
+      return;
+    }
+
+    markCompleted('delivery');
+    setActiveStep(3);
   };
 
   const handlePickupSearch = async () => {
     setDeliveryError('');
+
     if (!pickupLocation.trim()) {
-      setDeliveryError('Укажите город или адрес для поиска пунктов выдачи.');
+      applyStepFieldErrors(['pickupLocation'], {
+        pickupLocation: 'Укажите город или адрес для поиска пунктов выдачи.'
+      });
       return;
     }
 
@@ -169,6 +344,7 @@ function CheckoutPage() {
 
       setPickupPoints(points);
       setPickupGeoId(response?.geoId ?? null);
+      clearFieldError('pickupLocation');
 
       if (pointsWithUi.length > 0) {
         const firstSelectable = pointsWithUi.find((point) => Boolean(point.id)) || pointsWithUi[0];
@@ -190,18 +366,27 @@ function CheckoutPage() {
     setDeliveryError('');
 
     if (!items.length) {
-      setDeliveryError('Корзина пуста.');
+      setDeliveryError('Корзина пуста. Добавьте товары перед оформлением заказа.');
       return;
     }
-    if (!ensureRecipientInfo()) {
+    if (!validateContactStep()) {
+      setActiveStep(0);
       return;
     }
+    if (!validateRecipientStep()) {
+      setActiveStep(1);
+      return;
+    }
+
+    const deliveryFieldErrors = {};
     if (deliveryType === 'COURIER' && !deliveryAddress.trim()) {
-      setDeliveryError('Укажите адрес доставки.');
-      return;
+      deliveryFieldErrors.deliveryAddress = 'Укажите адрес доставки.';
     }
     if (deliveryType === 'PICKUP' && !selectedPickupPointId) {
-      setDeliveryError('Выберите пункт выдачи на карте или в списке.');
+      deliveryFieldErrors.selectedPickupPointId = 'Сначала выберите пункт выдачи.';
+    }
+    if (Object.keys(deliveryFieldErrors).length) {
+      applyStepFieldErrors(['deliveryAddress', 'selectedPickupPointId'], deliveryFieldErrors);
       return;
     }
 
@@ -220,12 +405,14 @@ function CheckoutPage() {
         email: email.trim()
       });
 
-      const offers = response?.offers || [];
+      const offers = Array.isArray(response?.offers) ? response.offers : [];
       setDeliveryOffers(offers);
       setSelectedOfferId(offers.length ? offers[0].offerId : '');
 
       if (!offers.length) {
-        setDeliveryError('По выбранным параметрам нет доступных интервалов. Уточните адрес или пункт выдачи.');
+        setDeliveryError('Нет доступных интервалов. Проверьте адрес или выберите другой пункт выдачи.');
+      } else {
+        clearFieldError('selectedOfferId');
       }
     } catch (err) {
       console.error('Failed to load delivery offers:', err);
@@ -245,12 +432,17 @@ function CheckoutPage() {
       setStatus({ type: 'error', message: 'Корзина пуста. Добавьте товары перед оформлением заказа.' });
       return;
     }
-    if (!email.trim()) {
-      setStatus({ type: 'error', message: 'Укажите email для отправки чека и деталей заказа.' });
+
+    if (!validateContactStep()) {
+      setActiveStep(0);
       return;
     }
-    if (!selectedOfferId) {
-      setStatus({ type: 'error', message: 'Выберите способ доставки и рассчитайте стоимость.' });
+    if (!validateRecipientStep()) {
+      setActiveStep(1);
+      return;
+    }
+    if (!validateDeliveryStep()) {
+      setActiveStep(2);
       return;
     }
 
@@ -294,14 +486,64 @@ function CheckoutPage() {
     }
   };
 
+  if (!items.length) {
+    return (
+      <div className="checkout-page py-10">
+        <div className="container mx-auto px-4">
+          <div className="soft-card p-8 text-center">
+            <h1 className="text-2xl font-semibold">Корзина пуста</h1>
+            <p className="mt-2 text-sm text-muted">Добавьте товары в корзину, чтобы перейти к оформлению заказа.</p>
+            <Link to="/cart" className="button mt-5">Вернуться в корзину</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const mobileAction =
+    activeStep === 0
+      ? {
+          label: 'Продолжить',
+          subtitle: 'Шаг 1 из 4 · Контакт',
+          action: handleContactNext,
+          disabled: false
+        }
+      : activeStep === 1
+      ? {
+          label: 'К доставке',
+          subtitle: 'Шаг 2 из 4 · Получатель',
+          action: handleRecipientNext,
+          disabled: false
+        }
+      : activeStep === 2
+      ? {
+          label: 'К подтверждению',
+          subtitle: 'Шаг 3 из 4 · Доставка',
+          action: handleDeliveryNext,
+          disabled: deliveryLoading
+        }
+      : {
+          label: isSubmitting ? 'Переходим к оплате…' : 'Перейти к оплате',
+          subtitle: 'Шаг 4 из 4 · Подтверждение',
+          action: () => {
+            const form = document.getElementById('checkout-form');
+            if (form) form.requestSubmit();
+          },
+          disabled: isSubmitting
+        };
+
+  const reviewDeliveryLabel = selectedOffer
+    ? `${deliveryType === 'PICKUP' ? 'Самовывоз' : 'Курьер'}, ${formatInterval(selectedOffer)}`
+    : 'Не выбрано';
+
   return (
-    <div className="checkout-page py-7 md:py-10">
+    <div className="checkout-page py-7 pb-28 md:py-10 lg:pb-10">
       <div className="container mx-auto px-4">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-accent">Оформление заказа</p>
-            <h1 className="text-3xl sm:text-4xl font-semibold">Подтвердите детали и перейдите к оплате</h1>
-            <p className="mt-1 text-sm text-muted">Чек и подтверждение придут на указанную электронную почту.</p>
+            <h1 className="text-3xl sm:text-4xl font-semibold">Быстрое оформление без лишних шагов</h1>
+            <p className="mt-1 text-sm text-muted">Вы выбираете доставку и полную стоимость до оплаты. Регистрация не обязательна.</p>
           </div>
           <Link to="/cart" className="button-ghost text-sm">← Вернуться в корзину</Link>
         </div>
@@ -318,265 +560,502 @@ function CheckoutPage() {
           </div>
         )}
 
+        <div className="mb-5 rounded-[24px] border border-primary/20 bg-white/90 p-4 shadow-[0_18px_36px_rgba(43,39,34,0.08)]">
+          <p className="text-sm font-semibold text-ink">Оформление как гость</p>
+          <p className="mt-1 text-xs text-muted">Достаточно email и контакта получателя. Аккаунт можно использовать только если вам так удобнее.</p>
+          {!isAuthenticated && (
+            <p className="mt-2 text-xs">
+              Уже оформляли у нас?{' '}
+              <Link className="text-primary font-semibold" to="/login">
+                Войти в аккаунт
+              </Link>
+            </p>
+          )}
+        </div>
+
+        <div className="mb-6 soft-card p-4 md:p-5">
+          <ol className="grid gap-2 sm:grid-cols-4">
+            {CHECKOUT_STEPS.map((step, index) => {
+              const isActive = activeStep === index;
+              const isDone = Boolean(completedSteps[step.key]) || index < activeStep;
+              return (
+                <li
+                  key={step.key}
+                  className={`rounded-2xl border px-3 py-3 text-sm transition ${
+                    isActive
+                      ? 'border-primary/35 bg-primary/10'
+                      : isDone
+                      ? 'border-emerald-300 bg-emerald-50'
+                      : 'border-ink/10 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+                        isDone ? 'bg-emerald-600 text-white' : isActive ? 'bg-primary text-white' : 'bg-secondary text-muted'
+                      }`}
+                    >
+                      {isDone ? '✓' : index + 1}
+                    </span>
+                    <span className="font-semibold">{step.title}</span>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+
+        <div className="lg:hidden mb-6">
+          <details className="soft-card p-4">
+            <summary className="cursor-pointer text-sm font-semibold">Сводка заказа · {payableTotal.toLocaleString('ru-RU')} ₽</summary>
+            <div className="mt-3 space-y-2 text-sm">
+              {items.map((item) => (
+                <div key={item.id} className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{item.productInfo?.name || 'Товар'}</div>
+                    <div className="text-xs text-muted">{item.quantity} шт.</div>
+                  </div>
+                  <div className="whitespace-nowrap font-semibold">
+                    {((item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity).toLocaleString('ru-RU')} ₽
+                  </div>
+                </div>
+              ))}
+              <hr className="my-2 border-ink/10" />
+              <div className="flex justify-between"><span>Товары</span><span>{total.toLocaleString('ru-RU')} ₽</span></div>
+              <div className="flex justify-between"><span>Доставка</span><span>{deliveryLabel}</span></div>
+              <div className="flex justify-between font-semibold"><span>К оплате</span><span>{payableTotal.toLocaleString('ru-RU')} ₽</span></div>
+            </div>
+          </details>
+        </div>
+
         <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_370px] lg:items-start">
-          <form id="checkout-form" onSubmit={handleSubmit} className="soft-card p-6 md:p-8 space-y-8">
-            <section>
-              <div className="mb-4 flex items-center gap-3">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">1</span>
-                <div>
-                  <h2 className="text-2xl font-semibold">Контакт для чека</h2>
-                  <p className="text-sm text-muted">Письма по заказу и оплате будут отправлены сюда.</p>
+          <form id="checkout-form" onSubmit={handleSubmit} className="space-y-5">
+            <section className="soft-card p-6 md:p-7">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">1</span>
+                  <div>
+                    <h2 className="text-2xl font-semibold">Контакт для чека</h2>
+                    <p className="text-sm text-muted">Письмо с заказом придёт на этот email.</p>
+                  </div>
                 </div>
-              </div>
-              <label className="block text-sm">
-                <span className="text-muted">Электронная почта</span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  className="mt-2 w-full"
-                  required
-                />
-              </label>
-              {isAuthenticated && (
-                <label className="mt-3 flex items-center gap-3 text-sm text-ink/90">
-                  <input
-                    type="checkbox"
-                    checked={savePaymentMethod}
-                    onChange={(event) => setSavePaymentMethod(event.target.checked)}
-                  />
-                  <span>Сохранить карту для следующих платежей</span>
-                </label>
-              )}
-            </section>
-
-            <section className="border-t border-ink/10 pt-8">
-              <div className="mb-4 flex items-center gap-3">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">2</span>
-                <div>
-                  <h2 className="text-2xl font-semibold">Получатель</h2>
-                  <p className="text-sm text-muted">Эти данные нужны службе доставки.</p>
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm">
-                  <span className="text-muted">Имя</span>
-                  <input
-                    type="text"
-                    value={recipientFirstName}
-                    onChange={(event) => setRecipientFirstName(event.target.value)}
-                    placeholder="Имя"
-                    className="mt-2 w-full"
-                    required
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span className="text-muted">Фамилия</span>
-                  <input
-                    type="text"
-                    value={recipientLastName}
-                    onChange={(event) => setRecipientLastName(event.target.value)}
-                    placeholder="Фамилия"
-                    className="mt-2 w-full"
-                  />
-                </label>
-                <label className="block text-sm sm:col-span-2">
-                  <span className="text-muted">Телефон</span>
-                  <input
-                    type="tel"
-                    value={recipientPhone}
-                    onChange={(event) => setRecipientPhone(event.target.value)}
-                    placeholder="+7 900 000-00-00"
-                    className="mt-2 w-full"
-                    required
-                  />
-                </label>
-              </div>
-            </section>
-
-            <section className="border-t border-ink/10 pt-8 space-y-4">
-              <div className="mb-2 flex items-center gap-3">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">3</span>
-                <div>
-                  <h2 className="text-2xl font-semibold">Доставка</h2>
-                  <p className="text-sm text-muted">Выберите способ получения и интервал.</p>
-                </div>
+                {activeStep !== 0 && (
+                  <button type="button" className="button-ghost text-xs" onClick={() => setActiveStep(0)}>Изменить</button>
+                )}
               </div>
 
-              <div className="rounded-2xl border border-ink/10 bg-secondary/55 p-1 inline-flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => setDeliveryType('COURIER')}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                    deliveryType === 'COURIER'
-                      ? 'bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.12)]'
-                      : 'text-muted hover:text-ink'
-                  }`}
-                >
-                  Курьер
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeliveryType('PICKUP')}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                    deliveryType === 'PICKUP'
-                      ? 'bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.12)]'
-                      : 'text-muted hover:text-ink'
-                  }`}
-                >
-                  Пункт выдачи
-                </button>
-              </div>
-
-              {deliveryType === 'COURIER' ? (
-                <label className="block text-sm">
-                  <span className="text-muted">Адрес доставки</span>
-                  <input
-                    type="text"
-                    value={deliveryAddress}
-                    onChange={(event) => setDeliveryAddress(event.target.value)}
-                    placeholder="Город, улица, дом, квартира"
-                    className="mt-2 w-full"
-                    required
-                  />
-                </label>
-              ) : (
-                <div className="space-y-3">
+              {activeStep === 0 ? (
+                <>
                   <label className="block text-sm">
-                    <span className="text-muted">Город или адрес</span>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
-                      <input
-                        type="text"
-                        value={pickupLocation}
-                        onChange={(event) => setPickupLocation(event.target.value)}
-                        placeholder="Например, Санкт-Петербург"
-                        className="w-full"
-                      />
-                      <button
-                        type="button"
-                        className="button-gray text-sm whitespace-nowrap"
-                        onClick={handlePickupSearch}
-                        disabled={pickupLoading}
-                      >
-                        {pickupLoading ? 'Ищем…' : 'Найти пункты'}
-                      </button>
-                      <button
-                        type="button"
-                        className="button-ghost text-sm whitespace-nowrap"
-                        disabled={!pickupPoints.length}
-                        onClick={() => setIsPickupMapOpen(true)}
-                      >
-                        Открыть карту
-                      </button>
-                    </div>
+                    <span className="text-muted">Электронная почта</span>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        clearFieldError('email');
+                      }}
+                      onBlur={validateContactStep}
+                      placeholder="you@example.com"
+                      className="mt-2 w-full"
+                      autoComplete="email"
+                      aria-invalid={Boolean(fieldErrors.email)}
+                      required
+                    />
+                    {fieldErrors.email && (
+                      <p className="mt-2 text-xs text-red-700">{fieldErrors.email}</p>
+                    )}
                   </label>
 
-                  {pickupGeoId && (
-                    <div className="text-xs text-muted">GeoID региона: {pickupGeoId}</div>
+                  {isAuthenticated && (
+                    <label className="mt-3 flex items-center gap-3 text-sm text-ink/90">
+                      <input
+                        type="checkbox"
+                        checked={savePaymentMethod}
+                        onChange={(event) => setSavePaymentMethod(event.target.checked)}
+                      />
+                      <span>Сохранить карту для будущих покупок</span>
+                    </label>
                   )}
 
-                  {selectedPickupPoint ? (
-                    <div className="rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <div className="text-sm font-semibold text-ink">{selectedPickupPoint.name || 'Пункт выдачи'}</div>
-                          <div className="mt-1 text-xs text-muted">{selectedPickupPoint.address || 'Адрес уточняется'}</div>
-                        </div>
-                        <button
-                          type="button"
-                          className="button-ghost !px-2 !py-1 text-xs"
-                          onClick={() => setIsPickupMapOpen(true)}
-                        >
-                          Изменить
-                        </button>
-                      </div>
-                      {!selectedPickupPoint.id && (
-                        <div className="mt-2 text-xs text-red-600">
-                          Для этого пункта не получен идентификатор. Выберите другой пункт на карте.
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted">
-                      Выберите пункт выдачи после поиска. Для удобства можно использовать карту.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="rounded-2xl border border-ink/10 bg-white/80 p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold">Варианты доставки</h3>
-                  <button
-                    type="button"
-                    className="button-gray text-sm"
-                    onClick={handleFetchOffers}
-                    disabled={deliveryLoading}
-                  >
-                    {deliveryLoading ? 'Рассчитываем…' : 'Рассчитать'}
+                  <button type="button" className="button mt-5" onClick={handleContactNext}>
+                    Продолжить
                   </button>
+                </>
+              ) : (
+                <p className="text-sm text-muted">{email}</p>
+              )}
+            </section>
+
+            <section className="soft-card p-6 md:p-7">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">2</span>
+                  <div>
+                    <h2 className="text-2xl font-semibold">Получатель</h2>
+                    <p className="text-sm text-muted">Нужны только данные для доставки.</p>
+                  </div>
                 </div>
-
-                {deliveryError && (
-                  <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                    {deliveryError}
-                  </div>
-                )}
-
-                {deliveryOffers.length > 0 ? (
-                  <div className="space-y-2">
-                    {deliveryOffers.map((offer) => {
-                      const price = offer.pricingTotal || offer.pricing;
-                      const priceValue = price ? moneyToNumber(price) : 0;
-                      const expiresAt = offer.expiresAt ? new Date(offer.expiresAt) : null;
-                      const expiresLabel =
-                        expiresAt && !Number.isNaN(expiresAt.getTime())
-                          ? expiresAt.toLocaleString('ru-RU')
-                          : null;
-
-                      return (
-                        <label
-                          key={offer.offerId}
-                          className={`flex cursor-pointer items-start justify-between gap-3 rounded-2xl border px-4 py-3 transition ${
-                            selectedOfferId === offer.offerId
-                              ? 'border-primary/35 bg-primary/10 shadow-[0_14px_24px_rgba(182,91,74,0.16)]'
-                              : 'border-ink/10 bg-white hover:border-primary/30 hover:bg-secondary/35'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="radio"
-                              name="deliveryOffer"
-                              checked={selectedOfferId === offer.offerId}
-                              onChange={() => setSelectedOfferId(offer.offerId)}
-                            />
-                            <div>
-                              <div className="text-sm font-semibold text-ink">
-                                {deliveryType === 'PICKUP' ? 'Самовывоз' : 'Курьер'} · {formatInterval(offer)}
-                              </div>
-                              {expiresLabel && (
-                                <div className="mt-1 text-xs text-muted">Актуально до {expiresLabel}</div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-sm font-semibold">{priceValue.toLocaleString('ru-RU')} ₽</div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted">
-                    Нажмите «Рассчитать», чтобы получить доступные интервалы и стоимость доставки.
-                  </p>
+                {activeStep !== 1 && (
+                  <button type="button" className="button-ghost text-xs" onClick={() => setActiveStep(1)}>Изменить</button>
                 )}
               </div>
+
+              {activeStep === 1 ? (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block text-sm">
+                      <span className="text-muted">Имя</span>
+                      <input
+                        type="text"
+                        value={recipientFirstName}
+                        onChange={(event) => {
+                          setRecipientFirstName(event.target.value);
+                          clearFieldError('recipientFirstName');
+                        }}
+                        placeholder="Имя"
+                        className="mt-2 w-full"
+                        autoComplete="shipping given-name"
+                        aria-invalid={Boolean(fieldErrors.recipientFirstName)}
+                        required
+                      />
+                      {fieldErrors.recipientFirstName && (
+                        <p className="mt-2 text-xs text-red-700">{fieldErrors.recipientFirstName}</p>
+                      )}
+                    </label>
+                    <label className="block text-sm">
+                      <span className="text-muted">Фамилия</span>
+                      <input
+                        type="text"
+                        value={recipientLastName}
+                        onChange={(event) => setRecipientLastName(event.target.value)}
+                        placeholder="Фамилия"
+                        className="mt-2 w-full"
+                        autoComplete="shipping family-name"
+                      />
+                    </label>
+                    <label className="block text-sm sm:col-span-2">
+                      <span className="text-muted">Телефон</span>
+                      <input
+                        type="tel"
+                        value={recipientPhone}
+                        onChange={(event) => {
+                          setRecipientPhone(event.target.value);
+                          clearFieldError('recipientPhone');
+                        }}
+                        placeholder="+7 900 000-00-00"
+                        className="mt-2 w-full"
+                        autoComplete="shipping tel"
+                        aria-invalid={Boolean(fieldErrors.recipientPhone)}
+                        required
+                      />
+                      {fieldErrors.recipientPhone && (
+                        <p className="mt-2 text-xs text-red-700">{fieldErrors.recipientPhone}</p>
+                      )}
+                    </label>
+                  </div>
+
+                  <button type="button" className="button mt-5" onClick={handleRecipientNext}>
+                    Продолжить
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-muted">
+                  {recipientFirstName} {recipientLastName} · {recipientPhone}
+                </p>
+              )}
+            </section>
+
+            <section className="soft-card p-6 md:p-7">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">3</span>
+                  <div>
+                    <h2 className="text-2xl font-semibold">Доставка</h2>
+                    <p className="text-sm text-muted">Сначала выбираете интервал и стоимость, потом переходите к оплате.</p>
+                  </div>
+                </div>
+                {activeStep !== 2 && (
+                  <button type="button" className="button-ghost text-xs" onClick={() => setActiveStep(2)}>Изменить</button>
+                )}
+              </div>
+
+              {activeStep === 2 ? (
+                <>
+                  <div className="rounded-2xl border border-ink/10 bg-secondary/55 p-1 inline-flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeliveryType('COURIER');
+                        clearFieldError('selectedPickupPointId');
+                      }}
+                      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                        deliveryType === 'COURIER'
+                          ? 'bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.12)]'
+                          : 'text-muted hover:text-ink'
+                      }`}
+                    >
+                      Курьер
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeliveryType('PICKUP');
+                        clearFieldError('deliveryAddress');
+                      }}
+                      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                        deliveryType === 'PICKUP'
+                          ? 'bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.12)]'
+                          : 'text-muted hover:text-ink'
+                      }`}
+                    >
+                      Пункт выдачи
+                    </button>
+                  </div>
+
+                  {deliveryType === 'COURIER' ? (
+                    <label className="mt-4 block text-sm">
+                      <span className="text-muted">Адрес доставки</span>
+                      <input
+                        type="text"
+                        value={deliveryAddress}
+                        onChange={(event) => {
+                          setDeliveryAddress(event.target.value);
+                          clearFieldError('deliveryAddress');
+                        }}
+                        placeholder="Город, улица, дом, квартира"
+                        className="mt-2 w-full"
+                        autoComplete="shipping street-address"
+                        aria-invalid={Boolean(fieldErrors.deliveryAddress)}
+                        required
+                      />
+                      {fieldErrors.deliveryAddress && (
+                        <p className="mt-2 text-xs text-red-700">{fieldErrors.deliveryAddress}</p>
+                      )}
+                    </label>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      <label className="block text-sm">
+                        <span className="text-muted">Город или адрес</span>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                          <input
+                            type="text"
+                            value={pickupLocation}
+                            onChange={(event) => {
+                              setPickupLocation(event.target.value);
+                              clearFieldError('pickupLocation');
+                            }}
+                            placeholder="Например, Санкт-Петербург"
+                            className="w-full"
+                            aria-invalid={Boolean(fieldErrors.pickupLocation)}
+                          />
+                          <button
+                            type="button"
+                            className="button-gray text-sm whitespace-nowrap"
+                            onClick={handlePickupSearch}
+                            disabled={pickupLoading}
+                          >
+                            {pickupLoading ? 'Ищем…' : 'Найти пункты'}
+                          </button>
+                          <button
+                            type="button"
+                            className="button-ghost text-sm whitespace-nowrap"
+                            disabled={!pickupPoints.length}
+                            onClick={() => setIsPickupMapOpen(true)}
+                          >
+                            Открыть карту
+                          </button>
+                        </div>
+                        {fieldErrors.pickupLocation && (
+                          <p className="mt-2 text-xs text-red-700">{fieldErrors.pickupLocation}</p>
+                        )}
+                      </label>
+
+                      {pickupGeoId && (
+                        <div className="text-xs text-muted">GeoID региона: {pickupGeoId}</div>
+                      )}
+
+                      {selectedPickupPoint ? (
+                        <div className="rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-semibold text-ink">{selectedPickupPoint.name || 'Пункт выдачи'}</div>
+                              <div className="mt-1 text-xs text-muted">{selectedPickupPoint.address || 'Адрес уточняется'}</div>
+                            </div>
+                            <button
+                              type="button"
+                              className="button-ghost !px-2 !py-1 text-xs"
+                              onClick={() => setIsPickupMapOpen(true)}
+                            >
+                              Изменить
+                            </button>
+                          </div>
+                          {!selectedPickupPoint.id && (
+                            <div className="mt-2 text-xs text-red-600">
+                              Для этой точки нет идентификатора. Выберите другой пункт.
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted">Сначала найдите пункт выдачи по адресу или городу.</p>
+                      )}
+
+                      {fieldErrors.selectedPickupPointId && (
+                        <p className="text-xs text-red-700">{fieldErrors.selectedPickupPointId}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-5 rounded-2xl border border-ink/10 bg-white/80 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h3 className="text-lg font-semibold">Варианты доставки</h3>
+                      <button
+                        type="button"
+                        className="button-gray text-sm"
+                        onClick={handleFetchOffers}
+                        disabled={deliveryLoading}
+                      >
+                        {deliveryLoading ? 'Рассчитываем…' : 'Рассчитать'}
+                      </button>
+                    </div>
+
+                    {deliveryError && (
+                      <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                        {deliveryError}
+                      </div>
+                    )}
+
+                    {fieldErrors.selectedOfferId && (
+                      <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                        {fieldErrors.selectedOfferId}
+                      </div>
+                    )}
+
+                    {deliveryOffers.length > 0 ? (
+                      <div className="space-y-2">
+                        {deliveryOffers.map((offer) => {
+                          const price = offer.pricingTotal || offer.pricing;
+                          const priceValue = price ? moneyToNumber(price) : 0;
+                          const expiresAt = offer.expiresAt ? new Date(offer.expiresAt) : null;
+                          const expiresLabel =
+                            expiresAt && !Number.isNaN(expiresAt.getTime())
+                              ? expiresAt.toLocaleString('ru-RU')
+                              : null;
+
+                          return (
+                            <label
+                              key={offer.offerId}
+                              className={`flex cursor-pointer items-start justify-between gap-3 rounded-2xl border px-4 py-3 transition ${
+                                selectedOfferId === offer.offerId
+                                  ? 'border-primary/35 bg-primary/10 shadow-[0_14px_24px_rgba(182,91,74,0.16)]'
+                                  : 'border-ink/10 bg-white hover:border-primary/30 hover:bg-secondary/35'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <input
+                                  type="radio"
+                                  name="deliveryOffer"
+                                  checked={selectedOfferId === offer.offerId}
+                                  onChange={() => {
+                                    setSelectedOfferId(offer.offerId);
+                                    clearFieldError('selectedOfferId');
+                                  }}
+                                />
+                                <div>
+                                  <div className="text-sm font-semibold text-ink">
+                                    {deliveryType === 'PICKUP' ? 'Самовывоз' : 'Курьер'} · {formatInterval(offer)}
+                                  </div>
+                                  {expiresLabel && (
+                                    <div className="mt-1 text-xs text-muted">Актуально до {expiresLabel}</div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-sm font-semibold">{priceValue.toLocaleString('ru-RU')} ₽</div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted">
+                        Нажмите «Рассчитать», чтобы получить доступные интервалы и финальную стоимость.
+                      </p>
+                    )}
+                  </div>
+
+                  <button type="button" className="button mt-5" onClick={handleDeliveryNext}>
+                    Продолжить
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-muted">{reviewDeliveryLabel}</p>
+              )}
+            </section>
+
+            <section className="soft-card p-6 md:p-7">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">4</span>
+                  <div>
+                    <h2 className="text-2xl font-semibold">Проверка и оплата</h2>
+                    <p className="text-sm text-muted">Проверьте данные. После этого откроется защищённая страница оплаты.</p>
+                  </div>
+                </div>
+                {activeStep !== 3 && (
+                  <button type="button" className="button-ghost text-xs" onClick={() => setActiveStep(3)}>Открыть</button>
+                )}
+              </div>
+
+              {activeStep === 3 ? (
+                <>
+                  <div className="rounded-2xl border border-ink/10 bg-white/85 p-4 text-sm space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.15em] text-muted">Контакт</div>
+                        <div className="font-semibold">{email}</div>
+                      </div>
+                      <button type="button" className="button-ghost text-xs" onClick={() => setActiveStep(0)}>Изменить</button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.15em] text-muted">Получатель</div>
+                        <div className="font-semibold">{recipientFirstName} {recipientLastName || ''}</div>
+                        <div className="text-xs text-muted">{recipientPhone}</div>
+                      </div>
+                      <button type="button" className="button-ghost text-xs" onClick={() => setActiveStep(1)}>Изменить</button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.15em] text-muted">Доставка</div>
+                        <div className="font-semibold">{reviewDeliveryLabel}</div>
+                        <div className="text-xs text-muted">
+                          {deliveryType === 'COURIER'
+                            ? deliveryAddress
+                            : selectedPickupPointName || selectedPickupPoint?.address || 'Пункт выдачи'}
+                        </div>
+                      </div>
+                      <button type="button" className="button-ghost text-xs" onClick={() => setActiveStep(2)}>Изменить</button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-xs text-ink/90">
+                    Нажимая «Перейти к оплате», вы подтверждаете заказ. На следующем шаге сможете завершить платёж через ЮKassa.
+                  </div>
+
+                  <button type="submit" className="button mt-5 w-full" disabled={isSubmitting}>
+                    {isSubmitting ? 'Готовим оплату…' : 'Перейти к оплате'}
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-muted">Сначала завершите предыдущие шаги, затем подтвердите заказ.</p>
+              )}
             </section>
           </form>
 
-          <aside className="space-y-4 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] self-start">
+          <aside className="hidden lg:block space-y-4 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] self-start">
             <div className="soft-card p-5">
-              <h2 className="text-2xl font-semibold mb-4">Ваша корзина</h2>
+              <h2 className="text-2xl font-semibold mb-4">Ваш заказ</h2>
               <div className="space-y-2 text-sm">
                 {items.map((item) => (
                   <div key={item.id} className="flex items-start justify-between gap-3">
@@ -590,10 +1069,11 @@ function CheckoutPage() {
                   </div>
                 ))}
               </div>
+
               <hr className="my-4 border-ink/10" />
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span>Товары ({items.length})</span>
+                  <span>Товары ({itemsCount})</span>
                   <span>{total.toLocaleString('ru-RU')} ₽</span>
                 </div>
                 <div className="flex justify-between">
@@ -606,25 +1086,31 @@ function CheckoutPage() {
                 <span>К оплате</span>
                 <span>{payableTotal.toLocaleString('ru-RU')} ₽</span>
               </div>
-
-              {!selectedOfferId && (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  Сначала выберите способ и интервал доставки.
-                </div>
-              )}
-
-              <button type="submit" form="checkout-form" className="button mt-4 w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Готовим оплату…' : 'Перейти к оплате'}
-              </button>
             </div>
 
-            <div className="soft-card p-4 text-sm">
-              <div className="font-semibold">Оплата через ЮKassa</div>
-              <p className="mt-1 text-muted">
-                Вы будете перенаправлены на защищённую страницу оплаты.
-              </p>
+            <div className="soft-card p-4 text-sm space-y-2">
+              <p className="font-semibold">Доверие и безопасность</p>
+              <p className="text-muted">Платёж проходит на защищённой странице ЮKassa. Данные карты не хранятся в браузере магазина.</p>
+              <p className="text-muted">Доставка рассчитывается через интеграцию Яндекс и отображается до оплаты.</p>
             </div>
           </aside>
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 py-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] lg:hidden">
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
+          <div className="min-w-0">
+            <div className="text-[11px] uppercase tracking-[0.16em] text-muted">{mobileAction.subtitle}</div>
+            <div className="text-sm font-semibold">К оплате: {payableTotal.toLocaleString('ru-RU')} ₽</div>
+          </div>
+          <button
+            type="button"
+            className="button ml-auto !px-4 !py-2.5"
+            onClick={mobileAction.action}
+            disabled={mobileAction.disabled}
+          >
+            {mobileAction.label}
+          </button>
         </div>
       </div>
 

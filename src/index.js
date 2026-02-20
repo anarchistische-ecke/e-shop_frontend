@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import App from './pages/App';
+import { initYandexMetrika } from './utils/metrika';
 import './index.css';
 import './styles/legal.css';
 
@@ -23,6 +24,7 @@ const resolveBasename = () => {
 };
 
 const basename = resolveBasename();
+initYandexMetrika();
 
 // Create React root and mount the application. Wrapping the app with
 // BrowserRouter enables client‑side routing throughout the site.
