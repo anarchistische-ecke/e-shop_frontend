@@ -235,7 +235,7 @@ function PickupMapModal({
     if (!open || !ymapsApi || !mapRef.current || typeof onMapCityChange !== 'function') return undefined;
 
     const map = mapRef.current;
-    const handleActionEnd = () => {
+    const handleDragEnd = () => {
       const center = map.getCenter?.();
       if (!Array.isArray(center) || center.length < 2) return;
       const [latitude, longitude] = center;
@@ -248,21 +248,20 @@ function PickupMapModal({
       dragDebounceTimerRef.current = setTimeout(async () => {
         try {
           const city = (await reverseGeocodeCity(ymapsApi, latitude, longitude)).trim();
-          const fallbackCoords = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-          const lookupToken = city || fallbackCoords;
-          const cityToken = lookupToken.toLowerCase();
+          if (!city) return;
+          const cityToken = city.toLowerCase();
           if (lastNotifiedCityRef.current === cityToken) return;
           lastNotifiedCityRef.current = cityToken;
-          onMapCityChange(lookupToken);
+          onMapCityChange(city);
         } catch (error) {
           console.warn('Failed to resolve city after map drag:', error);
         }
-      }, 450);
+      }, 250);
     };
 
-    map.events.add('actionend', handleActionEnd);
+    map.events.add('dragend', handleDragEnd);
     return () => {
-      map.events.remove('actionend', handleActionEnd);
+      map.events.remove('dragend', handleDragEnd);
       if (dragDebounceTimerRef.current) {
         clearTimeout(dragDebounceTimerRef.current);
         dragDebounceTimerRef.current = null;
