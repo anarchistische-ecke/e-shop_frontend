@@ -71,6 +71,9 @@ function PickupMapModal({
   points,
   selectedPointId,
   searchLabel,
+  errorMessage,
+  isLoading,
+  onRetry,
   onClose,
   onSelect
 }) {
@@ -341,6 +344,22 @@ function PickupMapModal({
               )}
             </div>
 
+            {errorMessage && (
+              <div className="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {errorMessage}
+                {onRetry && (
+                  <button
+                    type="button"
+                    className="button-ghost ml-2 !px-2 !py-1 text-xs"
+                    onClick={onRetry}
+                    disabled={Boolean(isLoading)}
+                  >
+                    {isLoading ? 'Обновляем…' : 'Повторить'}
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto px-2 pb-3">
               {filteredPoints.length ? (
                 filteredPoints.map((point) => {
@@ -363,7 +382,11 @@ function PickupMapModal({
                   );
                 })
               ) : (
-                <div className="px-6 py-10 text-sm text-muted">Ничего не найдено по вашему запросу.</div>
+                <div className="px-6 py-10 text-sm text-muted">
+                  {isLoading
+                    ? 'Загружаем пункты выдачи…'
+                    : 'Ничего не найдено. Попробуйте изменить город или сбросить поиск.'}
+                </div>
               )}
             </div>
 

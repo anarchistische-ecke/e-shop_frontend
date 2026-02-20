@@ -341,7 +341,7 @@ function CheckoutPage() {
       errors.deliveryAddress = 'Укажите адрес доставки для расчёта интервалов.';
     }
     if (deliveryType === 'PICKUP') {
-      if (!pickupLocation.trim()) {
+      if (!pickupLocation.trim() && !selectedPickupPointId) {
         errors.pickupLocation = 'Укажите город или адрес, чтобы найти пункты выдачи.';
       }
       if (!selectedPickupPointId) {
@@ -514,8 +514,6 @@ function CheckoutPage() {
   const preloadPickupPointsByCities = async (cities = []) => {
     const candidates = uniqueCities(cities);
     for (const city of candidates) {
-      setPickupLocation(city);
-      clearFieldError('pickupLocation');
       try {
         const pointsCount = await fetchPickupPointsByLocation(city);
         if (pointsCount > 0) {
@@ -601,7 +599,11 @@ function CheckoutPage() {
       }
     } catch (err) {
       console.error('Failed to load pickup points:', err);
-      setDeliveryError('Не удалось загрузить пункты выдачи. Попробуйте ещё раз.');
+      if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
+        setDeliveryError(err.details.message.trim());
+      } else {
+        setDeliveryError('Не удалось загрузить пункты выдачи. Попробуйте ещё раз.');
+      }
     } finally {
       setPickupLoading(false);
     }
@@ -625,7 +627,11 @@ function CheckoutPage() {
         }
       } catch (err) {
         console.error('Failed to preload pickup points:', err);
-        setDeliveryError('Не удалось загрузить пункты выдачи. Проверьте город или попробуйте позже.');
+        if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
+          setDeliveryError(err.details.message.trim());
+        } else {
+          setDeliveryError('Не удалось загрузить пункты выдачи. Проверьте город или попробуйте позже.');
+        }
       } finally {
         setPickupLoading(false);
       }
@@ -647,7 +653,6 @@ function CheckoutPage() {
           DEFAULT_PICKUP_CITY
         ]);
         if (!preloadResult.ok) {
-          setPickupLocation(DEFAULT_PICKUP_CITY);
           setDeliveryError('Карта открыта. Не удалось определить город, используем Москву по умолчанию.');
         }
       } finally {
@@ -662,7 +667,6 @@ function CheckoutPage() {
           DEFAULT_PICKUP_CITY
         ]);
         if (!preloadResult.ok) {
-          setPickupLocation(DEFAULT_PICKUP_CITY);
           setDeliveryError('Карта открыта. Используем Москву по умолчанию, укажите город вручную при необходимости.');
         }
       } finally {
@@ -1512,6 +1516,9 @@ function CheckoutPage() {
         points={enrichedPickupPoints}
         selectedPointId={selectedPickupPointId}
         searchLabel={pickupLocation}
+        errorMessage={deliveryError}
+        isLoading={pickupLoading || pickupAutoDetecting}
+        onRetry={() => (pickupLocation.trim() ? handlePickupSearch() : handleOpenPickupMap())}
         onClose={() => setIsPickupMapOpen(false)}
         onSelect={(point) => {
           applyPickupSelection(point);
