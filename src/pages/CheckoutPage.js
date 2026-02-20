@@ -121,7 +121,7 @@ function CheckoutPage() {
   const paymentStepTrackedRef = useRef(false);
   const checkoutIdempotencyKeyRef = useRef('');
   const statusRef = useRef(null);
-  const pickupCitySyncRef = useRef({ inFlight: '', lastResolved: '' });
+  const pickupViewportSyncRef = useRef({ inFlight: '', lastResolved: '' });
   const autoOfferFetchRef = useRef('');
 
   useEffect(() => {
@@ -160,6 +160,7 @@ function CheckoutPage() {
     setSelectedPickupPointUiId('');
     setSelectedPickupPointName('');
     setPickupGeoId(null);
+    pickupViewportSyncRef.current = { inFlight: '', lastResolved: '' };
   }, [pickupLocation]);
 
   if (isManager) {
@@ -484,32 +485,85 @@ function CheckoutPage() {
     return city || detectCityByTimezone();
   };
 
-  const populatePickupPoints = (response) => {
+  const normalizeViewportBounds = (bounds) => {
+    const latitudeFrom = Number(bounds?.latitudeFrom);
+    const latitudeTo = Number(bounds?.latitudeTo);
+    const longitudeFrom = Number(bounds?.longitudeFrom);
+    const longitudeTo = Number(bounds?.longitudeTo);
+    if (![latitudeFrom, latitudeTo, longitudeFrom, longitudeTo].every((value) => Number.isFinite(value))) {
+      return null;
+    }
+    return {
+      latitudeFrom: Math.min(latitudeFrom, latitudeTo),
+      latitudeTo: Math.max(latitudeFrom, latitudeTo),
+      longitudeFrom: Math.min(longitudeFrom, longitudeTo),
+      longitudeTo: Math.max(longitudeFrom, longitudeTo)
+    };
+  };
+
+  const viewportToken = (bounds) => [
+    bounds.latitudeFrom.toFixed(4),
+    bounds.latitudeTo.toFixed(4),
+    bounds.longitudeFrom.toFixed(4),
+    bounds.longitudeTo.toFixed(4)
+  ].join('|');
+
+  const populatePickupPoints = (response, options = {}) => {
+    const { autoSelectFirst = true, preserveSelection = true } = options;
     const points = Array.isArray(response?.points) ? response.points : [];
     const pointsWithUi = points.map((point, index) => ({ ...point, __uiId: pickupUiId(point, index) }));
 
     setPickupPoints(points);
     setPickupGeoId(response?.geoId ?? null);
 
-    if (pointsWithUi.length > 0) {
-      const firstSelectable = pointsWithUi.find((point) => Boolean(point.id)) || pointsWithUi[0];
-      applyPickupSelection(firstSelectable);
-    } else {
+    if (!pointsWithUi.length) {
       setSelectedPickupPointId('');
       setSelectedPickupPointUiId('');
       setSelectedPickupPointName('');
+      return 0;
     }
 
+    const preservedByServerId = preserveSelection && selectedPickupPointId
+      ? pointsWithUi.find((point) => point.id === selectedPickupPointId)
+      : null;
+    const preservedByUiId = preserveSelection && selectedPickupPointUiId
+      ? pointsWithUi.find((point) => point.__uiId === selectedPickupPointUiId)
+      : null;
+    const preservedSelection = preservedByServerId || preservedByUiId || null;
+
+    if (preservedSelection) {
+      applyPickupSelection(preservedSelection);
+      return pointsWithUi.length;
+    }
+
+    if (autoSelectFirst) {
+      const firstSelectable = pointsWithUi.find((point) => Boolean(point.id)) || pointsWithUi[0];
+      applyPickupSelection(firstSelectable);
+      return pointsWithUi.length;
+    }
+
+    setSelectedPickupPointId('');
+    setSelectedPickupPointUiId('');
+    setSelectedPickupPointName('');
     return pointsWithUi.length;
   };
 
-  const fetchPickupPointsByLocation = async (locationLabel) => {
+  const fetchPickupPointsByLocation = async (locationLabel, options = {}) => {
     const trimmedLocation = (locationLabel || '').trim();
     if (!trimmedLocation) {
       throw new Error('Location is required');
     }
     const response = await getYandexPickupPoints({ location: trimmedLocation });
-    return populatePickupPoints(response);
+    return populatePickupPoints(response, options);
+  };
+
+  const fetchPickupPointsByViewport = async (bounds, options = {}) => {
+    const normalizedBounds = normalizeViewportBounds(bounds);
+    if (!normalizedBounds) {
+      throw new Error('Viewport bounds are required');
+    }
+    const response = await getYandexPickupPoints(normalizedBounds);
+    return populatePickupPoints(response, options);
   };
 
   const uniqueCities = (cities = []) =>
@@ -536,35 +590,39 @@ function CheckoutPage() {
     return { ok: false, city: candidates[candidates.length - 1] || '' };
   };
 
-  const handleMapCityChange = async (cityLabel) => {
-    const normalizedCity = (cityLabel || '').trim();
-    if (!normalizedCity) return;
-    const cityToken = normalizedCity.toLowerCase();
+  const handleMapViewportChange = async (bounds) => {
+    if (!isPickupMapOpen) return;
+    const normalizedBounds = normalizeViewportBounds(bounds);
+    if (!normalizedBounds) return;
+    const token = viewportToken(normalizedBounds);
 
-    if (pickupCitySyncRef.current.inFlight === cityToken || pickupCitySyncRef.current.lastResolved === cityToken) {
+    if (pickupViewportSyncRef.current.inFlight === token || pickupViewportSyncRef.current.lastResolved === token) {
       return;
     }
 
-    pickupCitySyncRef.current.inFlight = cityToken;
+    pickupViewportSyncRef.current.inFlight = token;
     setDeliveryError('');
     setPickupLoading(true);
 
     try {
-      const pointsCount = await fetchPickupPointsByLocation(normalizedCity);
-      pickupCitySyncRef.current.lastResolved = cityToken;
+      const pointsCount = await fetchPickupPointsByViewport(normalizedBounds, {
+        autoSelectFirst: false,
+        preserveSelection: true
+      });
+      pickupViewportSyncRef.current.lastResolved = token;
       if (pointsCount <= 0) {
-        setDeliveryError('В этой зоне не найдено пунктов выдачи. Переместите карту или уточните город.');
+        setDeliveryError('В текущей зоне карты не найдено пунктов выдачи. Измените масштаб или переместите карту.');
       }
     } catch (err) {
-      console.error('Failed to refresh pickup points after map move:', err);
+      console.error('Failed to refresh pickup points for current map viewport:', err);
       if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
         setDeliveryError(err.details.message.trim());
       } else {
-        setDeliveryError('Не удалось обновить пункты выдачи по новой зоне карты.');
+        setDeliveryError('Не удалось обновить пункты выдачи для текущей области карты.');
       }
     } finally {
-      if (pickupCitySyncRef.current.inFlight === cityToken) {
-        pickupCitySyncRef.current.inFlight = '';
+      if (pickupViewportSyncRef.current.inFlight === token) {
+        pickupViewportSyncRef.current.inFlight = '';
       }
       setPickupLoading(false);
     }
@@ -644,7 +702,6 @@ function CheckoutPage() {
     try {
       const city = pickupLocation.trim();
       const pointsCount = await fetchPickupPointsByLocation(city);
-      pickupCitySyncRef.current.lastResolved = city.toLowerCase();
       clearFieldError('pickupLocation');
       if (pointsCount <= 0) {
         setDeliveryError('По указанному городу не найдено пунктов выдачи. Уточните запрос.');
@@ -664,6 +721,7 @@ function CheckoutPage() {
   const handleOpenPickupMap = async () => {
     setIsPickupMapOpen(true);
     setDeliveryError('');
+    pickupViewportSyncRef.current = { inFlight: '', lastResolved: '' };
 
     if (pickupPoints.length || pickupLoading || pickupAutoDetecting) {
       return;
@@ -674,7 +732,6 @@ function CheckoutPage() {
       setPickupLoading(true);
       try {
         const pointsCount = await fetchPickupPointsByLocation(typedLocation);
-        pickupCitySyncRef.current.lastResolved = typedLocation.toLowerCase();
         if (pointsCount <= 0) {
           setDeliveryError('В выбранном городе не найдены пункты выдачи. Уточните город или выберите другой.');
         }
@@ -705,9 +762,6 @@ function CheckoutPage() {
           detectCityByTimezone(),
           DEFAULT_PICKUP_CITY
         ]);
-        if (preloadResult.city) {
-          pickupCitySyncRef.current.lastResolved = preloadResult.city.toLowerCase();
-        }
         if (!preloadResult.ok) {
           setDeliveryError('Карта открыта. Не удалось определить город, используем Москву по умолчанию.');
         }
@@ -722,9 +776,6 @@ function CheckoutPage() {
           detectCityByTimezone(),
           DEFAULT_PICKUP_CITY
         ]);
-        if (preloadResult.city) {
-          pickupCitySyncRef.current.lastResolved = preloadResult.city.toLowerCase();
-        }
         if (!preloadResult.ok) {
           setDeliveryError('Карта открыта. Используем Москву по умолчанию, укажите город вручную при необходимости.');
         }
@@ -1657,7 +1708,7 @@ function CheckoutPage() {
         errorMessage={deliveryError}
         isLoading={pickupLoading || pickupAutoDetecting}
         onRetry={() => (pickupLocation.trim() ? handlePickupSearch() : handleOpenPickupMap())}
-        onMapCityChange={handleMapCityChange}
+        onMapViewportChange={handleMapViewportChange}
         onClose={() => setIsPickupMapOpen(false)}
         onSelect={(point) => {
           applyPickupSelection(point);
