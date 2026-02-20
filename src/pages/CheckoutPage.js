@@ -114,12 +114,15 @@ function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savePaymentMethod, setSavePaymentMethod] = useState(false);
   const [isPickupMapOpen, setIsPickupMapOpen] = useState(false);
+  const [expressMessage, setExpressMessage] = useState('');
 
   const beginCheckoutTrackedRef = useRef(false);
   const shippingTrackedOfferRef = useRef('');
   const paymentStepTrackedRef = useRef(false);
   const checkoutIdempotencyKeyRef = useRef('');
   const statusRef = useRef(null);
+  const pickupCitySyncRef = useRef({ inFlight: '', lastResolved: '' });
+  const autoOfferFetchRef = useRef('');
 
   useEffect(() => {
     if (!email) {
@@ -148,6 +151,7 @@ function CheckoutPage() {
     setSelectedOfferId('');
     setDeliveryError('');
     shippingTrackedOfferRef.current = '';
+    autoOfferFetchRef.current = '';
   }, [deliveryType, deliveryAddress, deliveryAddressDetails, selectedPickupPointId]);
 
   useEffect(() => {
@@ -271,6 +275,12 @@ function CheckoutPage() {
       statusRef.current.focus();
     }
   }, [status]);
+
+  useEffect(() => {
+    if (activeStep !== 3 && expressMessage) {
+      setExpressMessage('');
+    }
+  }, [activeStep, expressMessage]);
 
   const applyStepFieldErrors = (keys, errors) => {
     setFieldErrors((prev) => {
@@ -526,6 +536,46 @@ function CheckoutPage() {
     return { ok: false, city: candidates[candidates.length - 1] || '' };
   };
 
+  const handleMapCityChange = async (cityLabel) => {
+    const normalizedCity = (cityLabel || '').trim();
+    if (!normalizedCity) return;
+    const cityToken = normalizedCity.toLowerCase();
+
+    if (pickupCitySyncRef.current.inFlight === cityToken || pickupCitySyncRef.current.lastResolved === cityToken) {
+      return;
+    }
+
+    pickupCitySyncRef.current.inFlight = cityToken;
+    setDeliveryError('');
+    setPickupLoading(true);
+
+    try {
+      const pointsCount = await fetchPickupPointsByLocation(normalizedCity);
+      pickupCitySyncRef.current.lastResolved = cityToken;
+      if (pointsCount <= 0) {
+        setDeliveryError('В этой зоне не найдено пунктов выдачи. Переместите карту или уточните город.');
+      }
+    } catch (err) {
+      console.error('Failed to refresh pickup points after map move:', err);
+      if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
+        setDeliveryError(err.details.message.trim());
+      } else {
+        setDeliveryError('Не удалось обновить пункты выдачи по новой зоне карты.');
+      }
+    } finally {
+      if (pickupCitySyncRef.current.inFlight === cityToken) {
+        pickupCitySyncRef.current.inFlight = '';
+      }
+      setPickupLoading(false);
+    }
+  };
+
+  const handleExpressCheckout = (providerLabel) => {
+    setExpressMessage(
+      `${providerLabel} будет доступен на защищённой платёжной странице, если поддерживается вашим устройством и банком.`
+    );
+  };
+
   const handleContactNext = () => {
     setStatus(null);
     if (!validateContactStep()) {
@@ -592,7 +642,9 @@ function CheckoutPage() {
 
     setPickupLoading(true);
     try {
-      const pointsCount = await fetchPickupPointsByLocation(pickupLocation.trim());
+      const city = pickupLocation.trim();
+      const pointsCount = await fetchPickupPointsByLocation(city);
+      pickupCitySyncRef.current.lastResolved = city.toLowerCase();
       clearFieldError('pickupLocation');
       if (pointsCount <= 0) {
         setDeliveryError('По указанному городу не найдено пунктов выдачи. Уточните запрос.');
@@ -622,6 +674,7 @@ function CheckoutPage() {
       setPickupLoading(true);
       try {
         const pointsCount = await fetchPickupPointsByLocation(typedLocation);
+        pickupCitySyncRef.current.lastResolved = typedLocation.toLowerCase();
         if (pointsCount <= 0) {
           setDeliveryError('В выбранном городе не найдены пункты выдачи. Уточните город или выберите другой.');
         }
@@ -652,6 +705,9 @@ function CheckoutPage() {
           detectCityByTimezone(),
           DEFAULT_PICKUP_CITY
         ]);
+        if (preloadResult.city) {
+          pickupCitySyncRef.current.lastResolved = preloadResult.city.toLowerCase();
+        }
         if (!preloadResult.ok) {
           setDeliveryError('Карта открыта. Не удалось определить город, используем Москву по умолчанию.');
         }
@@ -666,6 +722,9 @@ function CheckoutPage() {
           detectCityByTimezone(),
           DEFAULT_PICKUP_CITY
         ]);
+        if (preloadResult.city) {
+          pickupCitySyncRef.current.lastResolved = preloadResult.city.toLowerCase();
+        }
         if (!preloadResult.ok) {
           setDeliveryError('Карта открыта. Используем Москву по умолчанию, укажите город вручную при необходимости.');
         }
@@ -738,6 +797,45 @@ function CheckoutPage() {
       setDeliveryLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (activeStep !== 2) return;
+    if (!items.length) return;
+    if (!isEmailValid(email.trim())) return;
+    if (!recipientFirstName.trim() || !recipientPhone.trim()) return;
+    if (deliveryType === 'COURIER' && !fullDeliveryAddress) return;
+    if (deliveryType === 'PICKUP' && !selectedPickupPointId) return;
+
+    const signature = [
+      deliveryType,
+      fullDeliveryAddress,
+      selectedPickupPointId,
+      recipientFirstName.trim(),
+      recipientLastName.trim(),
+      recipientPhone.trim(),
+      email.trim(),
+      items.length
+    ].join('|');
+
+    if (autoOfferFetchRef.current === signature) return;
+
+    const timer = setTimeout(() => {
+      autoOfferFetchRef.current = signature;
+      handleFetchOffers();
+    }, 420);
+
+    return () => clearTimeout(timer);
+  }, [
+    activeStep,
+    items,
+    email,
+    recipientFirstName,
+    recipientLastName,
+    recipientPhone,
+    deliveryType,
+    fullDeliveryAddress,
+    selectedPickupPointId
+  ]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -915,14 +1013,14 @@ function CheckoutPage() {
         <div className="mb-5 rounded-[24px] border border-primary/20 bg-white/90 p-4 shadow-[0_18px_36px_rgba(43,39,34,0.08)]">
           <p className="text-sm font-semibold text-ink">Оформление как гость</p>
           <p className="mt-1 text-xs text-muted">Достаточно email и контакта получателя. Аккаунт можно использовать только если вам так удобнее.</p>
-          {!isAuthenticated && (
-            <p className="mt-2 text-xs">
-              Уже оформляли у нас?{' '}
-              <Link className="text-primary font-semibold" to="/login">
-                Войти в аккаунт
-              </Link>
-            </p>
-          )}
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <button type="button" className="button-gray w-full justify-start text-left !py-2.5">
+              Checkout as guest
+            </button>
+            <Link to="/login" className="button-ghost w-full justify-start text-left !py-2.5">
+              Sign in
+            </Link>
+          </div>
         </div>
 
         <div className="mb-6 soft-card p-4 md:p-5">
@@ -1016,7 +1114,7 @@ function CheckoutPage() {
                       }}
                       onBlur={validateContactStep}
                       placeholder="you@example.com"
-                      className="mt-2 w-full"
+                      className={`mt-2 w-full ${fieldErrors.email ? 'input-error' : ''}`}
                       autoComplete="email"
                       inputMode="email"
                       aria-invalid={Boolean(fieldErrors.email)}
@@ -1024,7 +1122,10 @@ function CheckoutPage() {
                       required
                     />
                     {fieldErrors.email && (
-                      <p id="checkout-email-error" className="mt-2 text-xs text-red-700">{fieldErrors.email}</p>
+                      <p id="checkout-email-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
+                        <span aria-hidden="true">⚠</span>
+                        <span>{fieldErrors.email}</span>
+                      </p>
                     )}
                   </label>
 
@@ -1076,14 +1177,17 @@ function CheckoutPage() {
                           clearFieldError('recipientFirstName');
                         }}
                         placeholder="Имя"
-                        className="mt-2 w-full"
+                        className={`mt-2 w-full ${fieldErrors.recipientFirstName ? 'input-error' : ''}`}
                         autoComplete="shipping given-name"
                         aria-invalid={Boolean(fieldErrors.recipientFirstName)}
                         aria-errormessage={fieldErrors.recipientFirstName ? 'checkout-recipient-first-name-error' : undefined}
                         required
                       />
                       {fieldErrors.recipientFirstName && (
-                        <p id="checkout-recipient-first-name-error" className="mt-2 text-xs text-red-700">{fieldErrors.recipientFirstName}</p>
+                        <p id="checkout-recipient-first-name-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
+                          <span aria-hidden="true">⚠</span>
+                          <span>{fieldErrors.recipientFirstName}</span>
+                        </p>
                       )}
                     </label>
                     <label className="block text-sm">
@@ -1109,7 +1213,7 @@ function CheckoutPage() {
                           clearFieldError('recipientPhone');
                         }}
                         placeholder="+7 900 000-00-00"
-                        className="mt-2 w-full"
+                        className={`mt-2 w-full ${fieldErrors.recipientPhone ? 'input-error' : ''}`}
                         autoComplete="shipping tel"
                         inputMode="tel"
                         aria-invalid={Boolean(fieldErrors.recipientPhone)}
@@ -1117,8 +1221,12 @@ function CheckoutPage() {
                         required
                       />
                       {fieldErrors.recipientPhone && (
-                        <p id="checkout-recipient-phone-error" className="mt-2 text-xs text-red-700">{fieldErrors.recipientPhone}</p>
+                        <p id="checkout-recipient-phone-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
+                          <span aria-hidden="true">⚠</span>
+                          <span>{fieldErrors.recipientPhone}</span>
+                        </p>
                       )}
+                      <p className="mt-1 text-xs text-muted">Номер нужен, чтобы курьер мог уточнить детали доставки.</p>
                     </label>
                   </div>
 
@@ -1193,14 +1301,17 @@ function CheckoutPage() {
                             clearFieldError('deliveryAddress');
                           }}
                           placeholder="Город, улица, дом"
-                          className="mt-2 w-full"
+                          className={`mt-2 w-full ${fieldErrors.deliveryAddress ? 'input-error' : ''}`}
                           autoComplete="shipping street-address"
                           aria-invalid={Boolean(fieldErrors.deliveryAddress)}
                           aria-errormessage={fieldErrors.deliveryAddress ? 'checkout-delivery-address-error' : undefined}
                           required
                         />
                         {fieldErrors.deliveryAddress && (
-                          <p id="checkout-delivery-address-error" className="mt-2 text-xs text-red-700">{fieldErrors.deliveryAddress}</p>
+                          <p id="checkout-delivery-address-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
+                            <span aria-hidden="true">⚠</span>
+                            <span>{fieldErrors.deliveryAddress}</span>
+                          </p>
                         )}
                       </label>
 
@@ -1243,7 +1354,7 @@ function CheckoutPage() {
                               clearFieldError('pickupLocation');
                             }}
                             placeholder="Например, Санкт-Петербург"
-                            className="w-full"
+                            className={`w-full ${fieldErrors.pickupLocation ? 'input-error' : ''}`}
                             aria-invalid={Boolean(fieldErrors.pickupLocation)}
                             aria-errormessage={fieldErrors.pickupLocation ? 'checkout-pickup-location-error' : undefined}
                           />
@@ -1264,7 +1375,10 @@ function CheckoutPage() {
                           </button>
                         </div>
                         {fieldErrors.pickupLocation && (
-                          <p id="checkout-pickup-location-error" className="mt-2 text-xs text-red-700">{fieldErrors.pickupLocation}</p>
+                          <p id="checkout-pickup-location-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
+                            <span aria-hidden="true">⚠</span>
+                            <span>{fieldErrors.pickupLocation}</span>
+                          </p>
                         )}
                       </label>
 
@@ -1305,7 +1419,10 @@ function CheckoutPage() {
 
                   <div className="mt-5 rounded-2xl border border-ink/10 bg-white/80 p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <h3 className="text-lg font-semibold">Варианты доставки</h3>
+                      <div>
+                        <h3 className="text-lg font-semibold">Варианты доставки</h3>
+                        <p className="text-xs text-muted mt-1">Стоимость обновляется автоматически после заполнения адреса.</p>
+                      </div>
                       <button
                         type="button"
                         className="button-gray text-sm"
@@ -1324,7 +1441,10 @@ function CheckoutPage() {
 
                     {fieldErrors.selectedOfferId && (
                       <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                        {fieldErrors.selectedOfferId}
+                        <span className="inline-flex items-center gap-1">
+                          <span aria-hidden="true">⚠</span>
+                          <span>{fieldErrors.selectedOfferId}</span>
+                        </span>
                       </div>
                     )}
 
@@ -1436,8 +1556,26 @@ function CheckoutPage() {
                     </div>
                   </div>
 
+                  <div className="mt-4 rounded-2xl border border-ink/10 bg-white/90 p-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted">Express checkout</p>
+                    <div className="mt-2 grid gap-2">
+                      {['Apple Pay', 'Google Pay', 'PayPal'].map((provider) => (
+                        <button
+                          key={provider}
+                          type="button"
+                          className="w-full min-h-[44px] rounded-xl border border-ink/15 bg-white text-sm font-semibold text-ink hover:border-primary/35 hover:text-primary transition"
+                          onClick={() => handleExpressCheckout(provider)}
+                        >
+                          {provider}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-muted">Или оплатите картой на следующем шаге через ЮKassa.</p>
+                    {expressMessage && <p className="mt-2 text-xs text-primary">{expressMessage}</p>}
+                  </div>
+
                   <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-xs text-ink/90">
-                    Нажимая «Перейти к оплате», вы подтверждаете заказ. На следующем шаге сможете завершить платёж через ЮKassa.
+                    Нажимая «Перейти к оплате», вы подтверждаете заказ. Если банк запросит 3DS/SCA, вы увидите отдельный шаг подтверждения.
                   </div>
 
                   <button type="submit" className="button mt-5 w-full" disabled={isSubmitting}>
@@ -1519,6 +1657,7 @@ function CheckoutPage() {
         errorMessage={deliveryError}
         isLoading={pickupLoading || pickupAutoDetecting}
         onRetry={() => (pickupLocation.trim() ? handlePickupSearch() : handleOpenPickupMap())}
+        onMapCityChange={handleMapCityChange}
         onClose={() => setIsPickupMapOpen(false)}
         onSelect={(point) => {
           applyPickupSelection(point);

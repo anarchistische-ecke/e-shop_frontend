@@ -65,6 +65,7 @@ export function CartProvider({ children }) {
   });
   const [items, setItems] = useState([]);
   const [variantMap, setVariantMap] = useState({});
+  const [lastAddedItem, setLastAddedItem] = useState(null);
 
   const refreshVariantMap = useCallback(async () => {
     try {
@@ -135,12 +136,28 @@ export function CartProvider({ children }) {
           console.error('Product has no variants to add to cart');
           return;
         }
+        const variants = Array.isArray(product?.variants)
+          ? product.variants
+          : product?.variants
+          ? Array.from(product.variants)
+          : [];
+        const selectedVariant = variants.find((variant) => variant?.id === targetVariant) || getPrimaryVariant(product);
+        const quantityValue = Math.max(1, Number(quantity) || 1);
         await addItemToCart(id, targetVariant, quantity);
         await syncCart(id);
+        setLastAddedItem({
+          id: `${targetVariant}-${Date.now()}`,
+          productId: product?.id || targetVariant,
+          name: product?.name || 'Товар',
+          variantName: selectedVariant?.name || selectedVariant?.sku || targetVariant,
+          quantity: quantityValue,
+          unitPriceValue: moneyToNumber(selectedVariant?.price || product?.price),
+          imageUrl: getPrimaryImageUrl(product, targetVariant) || getPrimaryImageUrl(product),
+        });
         trackMetrikaGoal(METRIKA_GOALS.ADD_TO_CART, {
           product_id: product?.id,
           variant_id: targetVariant,
-          quantity: Number(quantity) || 1
+          quantity: quantityValue
         });
       } catch (err) {
         console.error('Failed to add item to cart:', err);
@@ -192,13 +209,19 @@ export function CartProvider({ children }) {
     }
   }, [cartId, items, syncCart]);
 
+  const dismissLastAddedItem = useCallback(() => {
+    setLastAddedItem(null);
+  }, []);
+
   const contextValue = {
     items,
     cartId,
     addItem,
     removeItem,
     updateQuantity,
-    clearCart
+    clearCart,
+    lastAddedItem,
+    dismissLastAddedItem
   };
 
   return <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>;

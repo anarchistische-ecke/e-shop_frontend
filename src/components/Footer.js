@@ -16,6 +16,7 @@ function Footer() {
       title: 'Сервис',
       links: [
         { label: 'Доставка и самовывоз', path: '/info/delivery' },
+        { label: 'Shipping & returns', path: '/usloviya-prodazhi#return' },
         { label: 'Способы оплаты', path: '/info/payment' },
         { label: 'Бонусы и лояльность', path: '/info/bonuses' },
         { label: 'Производство', path: '/info/production' },
