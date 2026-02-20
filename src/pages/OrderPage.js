@@ -296,7 +296,7 @@ function OrderPage() {
             </span>
             <div>
               <p className="text-lg font-semibold">
-                {isConfirmed ? 'Order confirmed' : 'Заказ принят в обработку'}
+                {isConfirmed ? 'Заказ подтверждён' : 'Заказ принят в обработку'}
               </p>
               <p className="text-sm text-muted mt-1">
                 Номер заказа: <span className="font-semibold text-ink">{String(order.id).slice(0, 12)}</span>
@@ -308,9 +308,9 @@ function OrderPage() {
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <button type="button" className="button-gray w-full">Track order</button>
-            <Link to="/usloviya-prodazhi#return" className="button-gray w-full text-center">Manage returns</Link>
-            <Link to="/info/delivery" className="button-ghost w-full text-center">Contact support</Link>
+            <button type="button" className="button-gray w-full">Отслеживать заказ</button>
+            <Link to="/usloviya-prodazhi#return" className="button-gray w-full text-center">Оформить возврат</Link>
+            <Link to="/info/delivery" className="button-ghost w-full text-center">Связаться с поддержкой</Link>
           </div>
         </div>
 
@@ -348,7 +348,7 @@ function OrderPage() {
                 <p><span className="text-muted">Способ:</span> {deliveryType}</p>
                 <p><span className="text-muted">Адрес/пункт:</span> {deliveryAddress}</p>
                 <p><span className="text-muted">Перевозчик:</span> {carrierName}</p>
-                <p><span className="text-muted">Tracking number:</span> {trackingNumber || 'Появится после отгрузки'}</p>
+                <p><span className="text-muted">Трек-номер:</span> {trackingNumber || 'Появится после отгрузки'}</p>
               </div>
             </section>
 
@@ -402,7 +402,7 @@ function OrderPage() {
                       type="email"
                       value={receiptEmail}
                       onChange={(event) => setReceiptEmail(event.target.value)}
-                      placeholder="you@example.com"
+                      placeholder="email@example.ru"
                       className="mt-2 w-full"
                     />
                   </label>

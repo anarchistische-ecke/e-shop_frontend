@@ -1066,10 +1066,10 @@ function CheckoutPage() {
           <p className="mt-1 text-xs text-muted">Достаточно email и контакта получателя. Аккаунт можно использовать только если вам так удобнее.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <button type="button" className="button-gray w-full justify-start text-left !py-2.5">
-              Checkout as guest
+              Оформить как гость
             </button>
             <Link to="/login" className="button-ghost w-full justify-start text-left !py-2.5">
-              Sign in
+              Войти в аккаунт
             </Link>
           </div>
         </div>
@@ -1164,7 +1164,7 @@ function CheckoutPage() {
                         clearFieldError('email');
                       }}
                       onBlur={validateContactStep}
-                      placeholder="you@example.com"
+                      placeholder="email@example.ru"
                       className={`mt-2 w-full ${fieldErrors.email ? 'input-error' : ''}`}
                       autoComplete="email"
                       inputMode="email"
@@ -1608,7 +1608,7 @@ function CheckoutPage() {
                   </div>
 
                   <div className="mt-4 rounded-2xl border border-ink/10 bg-white/90 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted">Express checkout</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted">Быстрая оплата</p>
                     <div className="mt-2 grid gap-2">
                       {['Apple Pay', 'Google Pay', 'PayPal'].map((provider) => (
                         <button

@@ -184,9 +184,9 @@ function CategoryCard({ product, fromPath, fromLabel }) {
   const stockCount = getStockCount(product);
 
   const badges = [
-    stockCount > 0 && stockCount <= 3 ? `Low stock: ${stockCount}` : '',
-    rating >= 4.8 ? 'Bestseller' : '',
-    !oldPrice && rating >= 4.5 ? 'New' : '',
+    stockCount > 0 && stockCount <= 3 ? `Мало на складе: ${stockCount}` : '',
+    rating >= 4.8 ? 'Хит продаж' : '',
+    !oldPrice && rating >= 4.5 ? 'Новинка' : '',
   ].filter(Boolean);
 
   const attributeLine =
@@ -222,7 +222,7 @@ function CategoryCard({ product, fromPath, fromLabel }) {
 
         <div className="absolute inset-x-2 top-2 flex flex-wrap items-start gap-2">
           {hasDiscount && (
-            <span className="rounded-full border border-primary/20 bg-primary/12 px-2.5 py-1 text-[11px] font-medium text-primary">
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
               −{discount}%
             </span>
           )}
@@ -790,7 +790,7 @@ function CategoryPage() {
   }
 
   const sortLabelByKey = {
-    bestMatch: 'Best match',
+    bestMatch: 'Лучшее совпадение',
     newest: 'Сначала новые',
     priceAsc: 'Цена: по возрастанию',
     priceDesc: 'Цена: по убыванию',
@@ -877,7 +877,7 @@ function CategoryPage() {
               className="inline-flex items-center gap-2 rounded-2xl border border-ink/10 bg-white/85 px-4 py-2 text-sm"
             >
               <span className="text-ink/65">↕</span>
-              <span>Sort: {sortLabelByKey[sortKey] || 'Best match'}</span>
+              <span>Сортировка: {sortLabelByKey[sortKey] || 'Лучшее совпадение'}</span>
             </button>
             <select
               value={sortKey}
@@ -885,7 +885,7 @@ function CategoryPage() {
               className="min-w-[210px] rounded-2xl border border-ink/10 bg-white/85 px-4 py-2 text-sm"
               aria-label="Сортировка товаров"
             >
-              <option value="bestMatch">Best match (Recommended)</option>
+              <option value="bestMatch">Лучшее совпадение (рекомендуется)</option>
               <option value="newest">Сначала новые</option>
               <option value="priceAsc">Цена: по возрастанию</option>
               <option value="priceDesc">Цена: по убыванию</option>
@@ -1059,7 +1059,7 @@ function CategoryPage() {
                 className="text-xs text-primary whitespace-nowrap"
                 onClick={clearAllFilters}
               >
-                Clear all
+                Очистить всё
               </button>
             )}
           </div>

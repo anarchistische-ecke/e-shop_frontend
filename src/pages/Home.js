@@ -413,7 +413,7 @@ function Home() {
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <div className="soft-card p-8 md:p-10">
             <h2 className="text-2xl md:text-3xl font-semibold">
-              Постельное Белье‑Юг — пространство для отдыха и перезагрузки
+              Постельное Белье‑ЮГ — пространство для отдыха и перезагрузки
             </h2>
             <p className="text-base text-muted mt-4">
               Собственное производство, проверенные материалы и честный сервис. Здесь легко подобрать комплект под

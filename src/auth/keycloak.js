@@ -6,6 +6,7 @@ const keycloakConfig = {
   realm: process.env.REACT_APP_KEYCLOAK_REALM,
   clientId: process.env.REACT_APP_KEYCLOAK_CLIENT_ID
 };
+const keycloakLocale = (process.env.REACT_APP_KEYCLOAK_LOCALE || 'ru').trim() || 'ru';
 
 const isConfigValid = () =>
   Boolean(keycloakConfig.url && keycloakConfig.realm && keycloakConfig.clientId);
@@ -115,7 +116,8 @@ export async function login(options = {}) {
   if (!kc) {
     throw new Error('Keycloak is not configured');
   }
-  return kc.login(options);
+  const nextOptions = { locale: keycloakLocale, ...options };
+  return kc.login(nextOptions);
 }
 
 export async function logout(options = {}) {

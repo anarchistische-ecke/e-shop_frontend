@@ -4,7 +4,7 @@ function AdminSettings() {
   const [settings, setSettings] = React.useState(() => {
     const storedBannerToggle = typeof window !== 'undefined' ? localStorage.getItem('adminBannerEnabled') : null;
     return {
-      storeName: 'Постельное Белье‑Юг',
+      storeName: 'Постельное Белье‑ЮГ',
       email: 'postel-yug@yandex.ru',
       phone: '+7 961 466‑88‑33',
       address: 'Москва, ул. Пример, 1',

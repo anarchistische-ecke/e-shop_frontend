@@ -16,7 +16,7 @@ function Footer() {
       title: 'Сервис',
       links: [
         { label: 'Доставка и самовывоз', path: '/info/delivery' },
-        { label: 'Shipping & returns', path: '/usloviya-prodazhi#return' },
+        { label: 'Доставка и возврат', path: '/usloviya-prodazhi#return' },
         { label: 'Способы оплаты', path: '/info/payment' },
         { label: 'Бонусы и лояльность', path: '/info/bonuses' },
         { label: 'Производство', path: '/info/production' },
@@ -38,7 +38,7 @@ function Footer() {
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr_0.9fr] lg:items-start">
             <div className="space-y-3">
               <Link to="/" className="font-display text-2xl font-semibold tracking-tight text-white">
-                Постельное Белье-Юг
+                Постельное Белье-ЮГ
               </Link>
               <p className="text-sm text-white/70 max-w-sm">
                 Спокойный дом начинается с мягких тканей. Мы подбираем натуральные материалы, чтобы
@@ -124,7 +124,7 @@ function Footer() {
       <div className="border-t border-white/10 py-4">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-2 text-xs text-white/60">
-            <p className="m-0">© Постельное Белье‑Юг, 2015–{currentYear}</p>
+            <p className="m-0">© Постельное Белье‑ЮГ, 2015–{currentYear}</p>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Mir</span>
               <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Visa</span>
