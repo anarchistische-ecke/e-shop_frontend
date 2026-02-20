@@ -8,6 +8,7 @@ import {
   getProducts
 } from '../api';
 import { moneyToNumber, getPrimaryImageUrl, getPrimaryVariant } from '../utils/product';
+import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 
 export const CartContext = createContext();
 
@@ -136,6 +137,11 @@ export function CartProvider({ children }) {
         }
         await addItemToCart(id, targetVariant, quantity);
         await syncCart(id);
+        trackMetrikaGoal(METRIKA_GOALS.ADD_TO_CART, {
+          product_id: product?.id,
+          variant_id: targetVariant,
+          quantity: Number(quantity) || 1
+        });
       } catch (err) {
         console.error('Failed to add item to cart:', err);
         alert('Не удалось добавить товар в корзину. Возможно, товар закончился или недоступен.');
@@ -150,6 +156,9 @@ export function CartProvider({ children }) {
       try {
         await removeCartItem(cartId, cartItemId);
         await syncCart(cartId);
+        trackMetrikaGoal(METRIKA_GOALS.REMOVE_FROM_CART, {
+          cart_item_id: cartItemId
+        });
       } catch (err) {
         console.error('Failed to remove item from cart:', err);
       }

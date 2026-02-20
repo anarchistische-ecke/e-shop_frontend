@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createManagerOrderLink } from '../api';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
+import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 
 function CartPage() {
   const { items, removeItem, updateQuantity, clearCart } = useContext(CartContext);
@@ -20,8 +21,13 @@ function CartPage() {
     (sum, item) => sum + (item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity,
     0
   );
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCheckout = () => {
+    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_CTA_CLICK, {
+      cart_items: itemCount,
+      cart_total: Math.round(total)
+    });
     navigate('/checkout');
   };
 
@@ -167,12 +173,16 @@ function CartPage() {
               <div className="soft-card p-5">
                 <h3 className="text-xl font-semibold mb-4">Сводка заказа</h3>
                 <div className="flex justify-between mb-2 text-sm">
-                  <span>Товары ({items.length})</span>
+                  <span>Товары ({itemCount})</span>
                   <span>{total.toLocaleString('ru-RU')} ₽</span>
                 </div>
                 <div className="flex justify-between mb-2 text-sm">
                   <span>Доставка</span>
-                  <span>0 ₽</span>
+                  <span>Рассчитаем на следующем шаге</span>
+                </div>
+                <div className="flex justify-between mb-2 text-sm text-muted">
+                  <span>Оплата</span>
+                  <span>ЮKassa (карта / SberPay)</span>
                 </div>
                 <hr className="my-3 border-ink/10" />
                 <div className="flex justify-between font-semibold text-base mb-4">
@@ -180,9 +190,16 @@ function CartPage() {
                   <span>{total.toLocaleString('ru-RU')} ₽</span>
                 </div>
                 {!isManager && (
-                  <button className="button w-full mb-2" onClick={handleCheckout}>
-                    Оформить заказ
-                  </button>
+                  <>
+                    <button className="button w-full mb-2" onClick={handleCheckout}>
+                      Оформить заказ
+                    </button>
+                    {!isAuthenticated && (
+                      <div className="mb-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-ink/90">
+                        Оформление без регистрации уже включено. Для постоянных клиентов доступен вход в аккаунт на шаге оформления.
+                      </div>
+                    )}
+                  </>
                 )}
                 <button className="button-gray w-full" onClick={clearCart}>
                   Очистить корзину
@@ -249,8 +266,8 @@ function CartPage() {
               )}
               <div className="soft-card p-4 text-sm space-y-2">
                 <p className="font-semibold">Почему с нами спокойно</p>
-                <p className="text-muted">Бесплатная доставка от 5000 ₽ и возврат в течение 14 дней.</p>
-                <p className="text-muted">Поддержка работает ежедневно с 9:00 до 21:00.</p>
+                <p className="text-muted">Доставка Яндекс и пункты выдачи: сначала видите стоимость и интервал, потом оплачиваете.</p>
+                <p className="text-muted">Оплата через защищённую страницу ЮKassa. Поддержка ежедневно с 9:00 до 21:00.</p>
               </div>
             </div>
           </div>
