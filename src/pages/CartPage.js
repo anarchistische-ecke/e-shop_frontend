@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { CartContext } from '../contexts/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { createManagerOrderLink } from '../api';
@@ -14,6 +14,7 @@ function CartPage() {
   const [managerLink, setManagerLink] = useState('');
   const [managerStatus, setManagerStatus] = useState(null);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
+  const [quantityDrafts, setQuantityDrafts] = useState({});
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
 
@@ -22,6 +23,38 @@ function CartPage() {
     0
   );
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  useEffect(() => {
+    setQuantityDrafts((prev) => {
+      const next = { ...prev };
+      items.forEach((item) => {
+        next[item.id] = String(item.quantity);
+      });
+      Object.keys(next).forEach((key) => {
+        if (!items.some((item) => item.id === key)) {
+          delete next[key];
+        }
+      });
+      return next;
+    });
+  }, [items]);
+
+  const setQuantityDraft = (itemId, value) => {
+    setQuantityDrafts((prev) => ({ ...prev, [itemId]: value }));
+  };
+
+  const commitQuantityDraft = (item) => {
+    const rawValue = quantityDrafts[item.id];
+    const parsed = Number.parseInt(rawValue, 10);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      setQuantityDraft(item.id, String(item.quantity));
+      return;
+    }
+    if (parsed === item.quantity) {
+      return;
+    }
+    updateQuantity(item.id, parsed);
+  };
 
   const handleCheckout = () => {
     trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_CTA_CLICK, {
@@ -136,28 +169,64 @@ function CartPage() {
                       {(item.unitPriceValue || moneyToNumber(item.unitPrice)).toLocaleString('ru-RU')} ₽
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
-                      <div className="flex items-center gap-2 rounded-2xl border border-ink/10 bg-white/85 px-3 py-1">
+                      <div className="flex items-center gap-1 rounded-2xl border border-ink/10 bg-white/85 p-1">
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="text-lg leading-none"
+                          type="button"
+                          onClick={() => {
+                            const nextQuantity = Math.max(1, item.quantity - 1);
+                            setQuantityDraft(item.id, String(nextQuantity));
+                            updateQuantity(item.id, nextQuantity);
+                          }}
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-transparent text-lg leading-none hover:border-ink/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                          aria-label={`Уменьшить количество: ${item.productInfo?.name || 'Товар'}`}
                         >
                           −
                         </button>
-                        <span>{item.quantity}</span>
+                        <label className="sr-only" htmlFor={`cart-item-qty-${item.id}`}>
+                          Количество товара {item.productInfo?.name || 'Товар'}
+                        </label>
+                        <input
+                          id={`cart-item-qty-${item.id}`}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          className="!h-11 !w-14 !rounded-xl !px-2 !py-1 text-center text-sm font-semibold"
+                          value={quantityDrafts[item.id] ?? String(item.quantity)}
+                          onChange={(event) => {
+                            const next = event.target.value.replace(/[^\d]/g, '');
+                            setQuantityDraft(item.id, next);
+                          }}
+                          onBlur={() => commitQuantityDraft(item)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              commitQuantityDraft(item);
+                            }
+                          }}
+                          aria-label={`Количество: ${item.productInfo?.name || 'Товар'}`}
+                        />
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="text-lg leading-none"
+                          type="button"
+                          onClick={() => {
+                            const nextQuantity = item.quantity + 1;
+                            setQuantityDraft(item.id, String(nextQuantity));
+                            updateQuantity(item.id, nextQuantity);
+                          }}
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-transparent text-lg leading-none hover:border-ink/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                          aria-label={`Увеличить количество: ${item.productInfo?.name || 'Товар'}`}
                         >
                           +
                         </button>
                       </div>
                       <button
+                        type="button"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                         className="text-xs text-primary"
                       >
                         Добавить ещё одну
                       </button>
                       <button
+                        type="button"
                         onClick={() => removeItem(item.id)}
                         className="text-xs text-muted hover:text-primary"
                       >

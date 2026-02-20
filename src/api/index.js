@@ -8,6 +8,21 @@ const JSON_TYPE = 'application/json';
 const rawActivityPath = process.env.REACT_APP_ACTIVITY_LOGS_PATH || '/admin/activity';
 const ACTIVITY_LOGS_PATH = (rawActivityPath.startsWith('/') ? rawActivityPath : `/${rawActivityPath}`).replace(/\/$/, '');
 
+export class ApiRequestError extends Error {
+  constructor(message, { status, statusText, details, url } = {}) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+    this.statusText = statusText;
+    this.details = details;
+    this.url = url;
+  }
+}
+
+export function isApiRequestError(error) {
+  return error instanceof ApiRequestError;
+}
+
 function broadcastLogout(reason = 'logout') {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('adminToken');
@@ -36,10 +51,34 @@ async function request(url, options = {}) {
     throw new Error('Unauthorized');
   }
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(
-      `Request failed: ${response.status} ${response.statusText} ${text}`
-    );
+    const contentType = response.headers.get('content-type') || '';
+    let details = null;
+    let rawText = '';
+    if (contentType.includes('application/json')) {
+      try {
+        details = await response.json();
+      } catch (err) {
+      }
+    } else {
+      try {
+        rawText = await response.text();
+      } catch (err) {
+      }
+    }
+
+    const messageFromDetails =
+      typeof details === 'string'
+        ? details
+        : details && typeof details === 'object' && typeof details.message === 'string'
+        ? details.message
+        : '';
+    const message = messageFromDetails || rawText || `Request failed: ${response.status} ${response.statusText}`;
+    throw new ApiRequestError(message, {
+      status: response.status,
+      statusText: response.statusText,
+      details,
+      url: targetUrl
+    });
   }
   if (response.status === 204) return null;
   const contentType = response.headers.get('content-type');
@@ -214,9 +253,21 @@ export async function createOrder(cartId) {
     method: 'POST'
   });
 }
-export async function checkoutCart({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod, delivery } = {}) {
+export async function checkoutCart({
+  cartId,
+  receiptEmail,
+  returnUrl,
+  orderPageUrl,
+  savePaymentMethod,
+  delivery,
+  idempotencyKey
+} = {}) {
+  if (!idempotencyKey) {
+    throw new Error('Idempotency key is required for checkout');
+  }
   return request('/orders/checkout', {
     method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod, delivery })
   });
 }
