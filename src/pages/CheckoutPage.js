@@ -1,7 +1,12 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
-import { checkoutCart, getYandexDeliveryOffers, getYandexPickupPoints } from '../api';
+import {
+  checkoutCart,
+  getYandexDeliveryOffers,
+  getYandexPickupPoints,
+  isApiRequestError
+} from '../api';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import PickupMapModal from '../components/PickupMapModal';
@@ -13,6 +18,21 @@ const CHECKOUT_STEPS = [
   { key: 'delivery', title: 'Доставка' },
   { key: 'review', title: 'Подтверждение' }
 ];
+const DEFAULT_PICKUP_CITY = 'Москва';
+const MONEY_FORMATTER = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
+const FIELD_TO_STEP = {
+  email: 0,
+  recipientFirstName: 1,
+  recipientPhone: 1,
+  deliveryAddress: 2,
+  pickupLocation: 2,
+  selectedPickupPointId: 2,
+  selectedOfferId: 2
+};
+
+function formatRub(value) {
+  return `${MONEY_FORMATTER.format(Number.isFinite(value) ? value : 0)} ₽`;
+}
 
 function pickupUiId(point, index = 0) {
   const lat = Number(point?.latitude);
@@ -23,6 +43,38 @@ function pickupUiId(point, index = 0) {
 
 function isEmailValid(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function createIdempotencyKey(seed = '') {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `checkout-${seed}-${crypto.randomUUID()}`;
+  }
+  return `checkout-${seed}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function mapBackendField(field = '') {
+  const normalized = String(field || '').trim();
+  if (!normalized) return '';
+  if (normalized === 'receiptEmail' || normalized === 'email') return 'email';
+  if (normalized === 'delivery.firstName' || normalized === 'firstName') return 'recipientFirstName';
+  if (normalized === 'delivery.phone' || normalized === 'phone') return 'recipientPhone';
+  if (normalized === 'delivery.address' || normalized === 'address') return 'deliveryAddress';
+  if (normalized === 'delivery.pickupPointId' || normalized === 'pickupPointId') return 'selectedPickupPointId';
+  if (normalized === 'delivery.offerId' || normalized === 'offerId') return 'selectedOfferId';
+  if (normalized === 'delivery.pickupLocation' || normalized === 'pickupLocation') return 'pickupLocation';
+  return '';
+}
+
+function inferFieldByMessage(message = '') {
+  const source = String(message || '').toLowerCase();
+  if (!source) return '';
+  if (source.includes('email')) return 'email';
+  if (source.includes('first name') || source.includes('имя')) return 'recipientFirstName';
+  if (source.includes('phone') || source.includes('телефон')) return 'recipientPhone';
+  if (source.includes('address') || source.includes('адрес')) return 'deliveryAddress';
+  if (source.includes('pickup point') || source.includes('пункт')) return 'selectedPickupPointId';
+  if (source.includes('offer') || source.includes('интервал')) return 'selectedOfferId';
+  return '';
 }
 
 function CheckoutPage() {
@@ -42,6 +94,8 @@ function CheckoutPage() {
 
   const [deliveryType, setDeliveryType] = useState('COURIER');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryAddressDetails, setDeliveryAddressDetails] = useState('');
+  const [showDeliveryAddressDetails, setShowDeliveryAddressDetails] = useState(false);
   const [pickupLocation, setPickupLocation] = useState('');
   const [pickupGeoId, setPickupGeoId] = useState(null);
   const [pickupPoints, setPickupPoints] = useState([]);
@@ -53,6 +107,7 @@ function CheckoutPage() {
   const [selectedOfferId, setSelectedOfferId] = useState('');
 
   const [pickupLoading, setPickupLoading] = useState(false);
+  const [pickupAutoDetecting, setPickupAutoDetecting] = useState(false);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [deliveryError, setDeliveryError] = useState('');
   const [status, setStatus] = useState(null);
@@ -63,6 +118,8 @@ function CheckoutPage() {
   const beginCheckoutTrackedRef = useRef(false);
   const shippingTrackedOfferRef = useRef('');
   const paymentStepTrackedRef = useRef(false);
+  const checkoutIdempotencyKeyRef = useRef('');
+  const statusRef = useRef(null);
 
   useEffect(() => {
     if (!email) {
@@ -91,7 +148,7 @@ function CheckoutPage() {
     setSelectedOfferId('');
     setDeliveryError('');
     shippingTrackedOfferRef.current = '';
-  }, [deliveryType, deliveryAddress, selectedPickupPointId]);
+  }, [deliveryType, deliveryAddress, deliveryAddressDetails, selectedPickupPointId]);
 
   useEffect(() => {
     setPickupPoints([]);
@@ -145,8 +202,13 @@ function CheckoutPage() {
     return price ? moneyToNumber(price) : 0;
   }, [selectedOffer]);
 
+  const fullDeliveryAddress = useMemo(
+    () => [deliveryAddress.trim(), deliveryAddressDetails.trim()].filter(Boolean).join(', '),
+    [deliveryAddress, deliveryAddressDetails]
+  );
+
   const totalWithDelivery = total + deliveryAmount;
-  const deliveryLabel = selectedOfferId ? `${deliveryAmount.toLocaleString('ru-RU')} ₽` : 'Рассчитаем после выбора адреса';
+  const deliveryLabel = selectedOfferId ? formatRub(deliveryAmount) : 'Рассчитаем после выбора адреса';
   const payableTotal = selectedOfferId ? totalWithDelivery : total;
 
   const formatInterval = (offer) => {
@@ -187,6 +249,11 @@ function CheckoutPage() {
       shipping_cost: Math.round(deliveryAmount),
       cart_total: Math.round(payableTotal)
     });
+    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_SHIPPING_SELECT, {
+      delivery_type: deliveryType,
+      offer_id: selectedOfferId,
+      shipping_cost: Math.round(deliveryAmount)
+    });
   }, [selectedOfferId, deliveryType, deliveryAmount, payableTotal]);
 
   useEffect(() => {
@@ -197,6 +264,13 @@ function CheckoutPage() {
     });
     paymentStepTrackedRef.current = true;
   }, [activeStep, deliveryType, payableTotal]);
+
+  useEffect(() => {
+    if (status?.type !== 'error') return;
+    if (statusRef.current && typeof statusRef.current.focus === 'function') {
+      statusRef.current.focus();
+    }
+  }, [status]);
 
   const applyStepFieldErrors = (keys, errors) => {
     setFieldErrors((prev) => {
@@ -230,6 +304,12 @@ function CheckoutPage() {
     }
 
     applyStepFieldErrors(['email'], errors);
+    if (errors.email) {
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_FIELD_ERROR, {
+        step: 'contact',
+        field: 'email'
+      });
+    }
     return Object.keys(errors).length === 0;
   };
 
@@ -244,13 +324,20 @@ function CheckoutPage() {
     }
 
     applyStepFieldErrors(['recipientFirstName', 'recipientPhone'], errors);
+    const errorField = errors.recipientFirstName ? 'recipientFirstName' : errors.recipientPhone ? 'recipientPhone' : '';
+    if (errorField) {
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_FIELD_ERROR, {
+        step: 'recipient',
+        field: errorField
+      });
+    }
     return Object.keys(errors).length === 0;
   };
 
   const validateDeliveryStep = () => {
     const errors = {};
 
-    if (deliveryType === 'COURIER' && !deliveryAddress.trim()) {
+    if (deliveryType === 'COURIER' && !fullDeliveryAddress) {
       errors.deliveryAddress = 'Укажите адрес доставки для расчёта интервалов.';
     }
     if (deliveryType === 'PICKUP') {
@@ -269,7 +356,56 @@ function CheckoutPage() {
       ['deliveryAddress', 'pickupLocation', 'selectedPickupPointId', 'selectedOfferId'],
       errors
     );
+    const firstDeliveryErrorField = ['deliveryAddress', 'pickupLocation', 'selectedPickupPointId', 'selectedOfferId']
+      .find((field) => Boolean(errors[field]));
+    if (firstDeliveryErrorField) {
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_FIELD_ERROR, {
+        step: 'delivery',
+        field: firstDeliveryErrorField
+      });
+    }
     return Object.keys(errors).length === 0;
+  };
+
+  const applyBackendErrors = (error) => {
+    const details = isApiRequestError(error) ? error.details : null;
+    const fieldErrors = Array.isArray(details?.fieldErrors) ? details.fieldErrors : [];
+    const mappedErrors = {};
+
+    fieldErrors.forEach((fieldError) => {
+      const field = mapBackendField(fieldError?.field);
+      if (!field) return;
+      const message =
+        typeof fieldError?.message === 'string' && fieldError.message.trim()
+          ? fieldError.message.trim()
+          : 'Проверьте это поле.';
+      mappedErrors[field] = message;
+    });
+
+    if (!Object.keys(mappedErrors).length) {
+      const fallbackMessage =
+        typeof details?.message === 'string' && details.message.trim()
+          ? details.message.trim()
+          : error?.message || '';
+      const inferredField = inferFieldByMessage(fallbackMessage);
+      if (inferredField) {
+        mappedErrors[inferredField] = fallbackMessage;
+      }
+    }
+
+    if (!Object.keys(mappedErrors).length) {
+      return false;
+    }
+
+    setFieldErrors((prev) => ({ ...prev, ...mappedErrors }));
+    const nextStep = Object.keys(mappedErrors)
+      .map((field) => FIELD_TO_STEP[field])
+      .filter((stepIndex) => Number.isInteger(stepIndex))
+      .sort((a, b) => a - b)[0];
+    if (Number.isInteger(nextStep)) {
+      setActiveStep(nextStep);
+    }
+    return true;
   };
 
   const applyPickupSelection = (point) => {
@@ -281,13 +417,126 @@ function CheckoutPage() {
     clearFieldError('selectedPickupPointId');
   };
 
+  const extractCityFromGeocodeResponse = (payload) => {
+    const feature = payload?.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject;
+    if (!feature) return '';
+    const components = feature?.metaDataProperty?.GeocoderMetaData?.Address?.Components || [];
+    const city =
+      components.find((item) => item.kind === 'locality')?.name
+      || components.find((item) => item.kind === 'province')?.name
+      || components.find((item) => item.kind === 'area')?.name
+      || '';
+    if (city) return city;
+    return feature?.metaDataProperty?.GeocoderMetaData?.Address?.formatted || '';
+  };
+
+  const detectCityByTimezone = () => {
+    if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') return '';
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const token = zone.split('/').pop() || '';
+    return token.replace(/_/g, ' ').trim();
+  };
+
+  const getBrowserPosition = () =>
+    new Promise((resolve, reject) => {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        reject(new Error('Geolocation is unavailable'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve(position),
+        (error) => reject(error),
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+      );
+    });
+
+  const resolveCityFromCoordinates = async (latitude, longitude) => {
+    const apiKey = process.env.REACT_APP_YANDEX_MAPS_API_KEY || '';
+    if (!apiKey) {
+      return detectCityByTimezone();
+    }
+
+    const query = new URLSearchParams({
+      apikey: apiKey,
+      format: 'json',
+      lang: 'ru_RU',
+      geocode: `${longitude},${latitude}`,
+      results: '1'
+    });
+
+    const response = await fetch(`https://geocode-maps.yandex.ru/1.x/?${query.toString()}`);
+    if (!response.ok) {
+      throw new Error('Failed to reverse geocode location');
+    }
+
+    const payload = await response.json();
+    const city = extractCityFromGeocodeResponse(payload);
+    return city || detectCityByTimezone();
+  };
+
+  const populatePickupPoints = (response) => {
+    const points = Array.isArray(response?.points) ? response.points : [];
+    const pointsWithUi = points.map((point, index) => ({ ...point, __uiId: pickupUiId(point, index) }));
+
+    setPickupPoints(points);
+    setPickupGeoId(response?.geoId ?? null);
+
+    if (pointsWithUi.length > 0) {
+      const firstSelectable = pointsWithUi.find((point) => Boolean(point.id)) || pointsWithUi[0];
+      applyPickupSelection(firstSelectable);
+    } else {
+      setSelectedPickupPointId('');
+      setSelectedPickupPointUiId('');
+      setSelectedPickupPointName('');
+    }
+
+    return pointsWithUi.length;
+  };
+
+  const fetchPickupPointsByLocation = async (locationLabel) => {
+    const trimmedLocation = (locationLabel || '').trim();
+    if (!trimmedLocation) {
+      throw new Error('Location is required');
+    }
+    const response = await getYandexPickupPoints({ location: trimmedLocation });
+    return populatePickupPoints(response);
+  };
+
+  const uniqueCities = (cities = []) =>
+    Array.from(
+      new Set(
+        cities
+          .map((city) => (city || '').trim())
+          .filter(Boolean)
+      )
+    );
+
+  const preloadPickupPointsByCities = async (cities = []) => {
+    const candidates = uniqueCities(cities);
+    for (const city of candidates) {
+      setPickupLocation(city);
+      clearFieldError('pickupLocation');
+      try {
+        const pointsCount = await fetchPickupPointsByLocation(city);
+        if (pointsCount > 0) {
+          return { ok: true, city };
+        }
+      } catch (err) {
+        console.warn(`Failed to preload pickup points for city "${city}":`, err);
+      }
+    }
+    return { ok: false, city: candidates[candidates.length - 1] || '' };
+  };
+
   const handleContactNext = () => {
     setStatus(null);
     if (!validateContactStep()) {
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'contact', outcome: 'fail' });
       setActiveStep(0);
       return;
     }
 
+    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'contact', outcome: 'success' });
     markCompleted('contact');
     setActiveStep(1);
   };
@@ -295,14 +544,17 @@ function CheckoutPage() {
   const handleRecipientNext = () => {
     setStatus(null);
     if (!validateContactStep()) {
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'recipient', outcome: 'fail', reason: 'contact' });
       setActiveStep(0);
       return;
     }
     if (!validateRecipientStep()) {
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'recipient', outcome: 'fail', reason: 'recipient' });
       setActiveStep(1);
       return;
     }
 
+    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'recipient', outcome: 'success' });
     markCompleted('recipient');
     setActiveStep(2);
   };
@@ -310,18 +562,22 @@ function CheckoutPage() {
   const handleDeliveryNext = () => {
     setStatus(null);
     if (!validateContactStep()) {
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'delivery', outcome: 'fail', reason: 'contact' });
       setActiveStep(0);
       return;
     }
     if (!validateRecipientStep()) {
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'delivery', outcome: 'fail', reason: 'recipient' });
       setActiveStep(1);
       return;
     }
     if (!validateDeliveryStep()) {
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'delivery', outcome: 'fail', reason: 'delivery' });
       setActiveStep(2);
       return;
     }
 
+    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'delivery', outcome: 'success' });
     markCompleted('delivery');
     setActiveStep(3);
   };
@@ -338,27 +594,82 @@ function CheckoutPage() {
 
     setPickupLoading(true);
     try {
-      const response = await getYandexPickupPoints({ location: pickupLocation.trim() });
-      const points = Array.isArray(response?.points) ? response.points : [];
-      const pointsWithUi = points.map((point, index) => ({ ...point, __uiId: pickupUiId(point, index) }));
-
-      setPickupPoints(points);
-      setPickupGeoId(response?.geoId ?? null);
+      const pointsCount = await fetchPickupPointsByLocation(pickupLocation.trim());
       clearFieldError('pickupLocation');
-
-      if (pointsWithUi.length > 0) {
-        const firstSelectable = pointsWithUi.find((point) => Boolean(point.id)) || pointsWithUi[0];
-        applyPickupSelection(firstSelectable);
-      } else {
-        setSelectedPickupPointId('');
-        setSelectedPickupPointUiId('');
-        setSelectedPickupPointName('');
+      if (pointsCount <= 0) {
+        setDeliveryError('По указанному городу не найдено пунктов выдачи. Уточните запрос.');
       }
     } catch (err) {
       console.error('Failed to load pickup points:', err);
       setDeliveryError('Не удалось загрузить пункты выдачи. Попробуйте ещё раз.');
     } finally {
       setPickupLoading(false);
+    }
+  };
+
+  const handleOpenPickupMap = async () => {
+    setIsPickupMapOpen(true);
+    setDeliveryError('');
+
+    if (pickupPoints.length || pickupLoading || pickupAutoDetecting) {
+      return;
+    }
+
+    const typedLocation = pickupLocation.trim();
+    if (typedLocation) {
+      setPickupLoading(true);
+      try {
+        const pointsCount = await fetchPickupPointsByLocation(typedLocation);
+        if (pointsCount <= 0) {
+          setDeliveryError('В выбранном городе не найдены пункты выдачи. Уточните город или выберите другой.');
+        }
+      } catch (err) {
+        console.error('Failed to preload pickup points:', err);
+        setDeliveryError('Не удалось загрузить пункты выдачи. Проверьте город или попробуйте позже.');
+      } finally {
+        setPickupLoading(false);
+      }
+      return;
+    }
+
+    setPickupAutoDetecting(true);
+    try {
+      const position = await getBrowserPosition();
+      const detectedCity = await resolveCityFromCoordinates(
+        position.coords.latitude,
+        position.coords.longitude
+      );
+      setPickupLoading(true);
+      try {
+        const preloadResult = await preloadPickupPointsByCities([
+          detectedCity,
+          detectCityByTimezone(),
+          DEFAULT_PICKUP_CITY
+        ]);
+        if (!preloadResult.ok) {
+          setPickupLocation(DEFAULT_PICKUP_CITY);
+          setDeliveryError('Карта открыта. Не удалось определить город, используем Москву по умолчанию.');
+        }
+      } finally {
+        setPickupLoading(false);
+      }
+    } catch (err) {
+      console.warn('Could not detect city automatically:', err);
+      setPickupLoading(true);
+      try {
+        const preloadResult = await preloadPickupPointsByCities([
+          detectCityByTimezone(),
+          DEFAULT_PICKUP_CITY
+        ]);
+        if (!preloadResult.ok) {
+          setPickupLocation(DEFAULT_PICKUP_CITY);
+          setDeliveryError('Карта открыта. Используем Москву по умолчанию, укажите город вручную при необходимости.');
+        }
+      } finally {
+        setPickupLoading(false);
+      }
+    } finally {
+      setPickupAutoDetecting(false);
     }
   };
 
@@ -379,7 +690,7 @@ function CheckoutPage() {
     }
 
     const deliveryFieldErrors = {};
-    if (deliveryType === 'COURIER' && !deliveryAddress.trim()) {
+    if (deliveryType === 'COURIER' && !fullDeliveryAddress) {
       deliveryFieldErrors.deliveryAddress = 'Укажите адрес доставки.';
     }
     if (deliveryType === 'PICKUP' && !selectedPickupPointId) {
@@ -396,7 +707,7 @@ function CheckoutPage() {
       const response = await getYandexDeliveryOffers({
         cartId: id,
         deliveryType,
-        address: deliveryType === 'COURIER' ? deliveryAddress.trim() : null,
+        address: deliveryType === 'COURIER' ? fullDeliveryAddress : null,
         pickupPointId: deliveryType === 'PICKUP' ? selectedPickupPointId : null,
         pickupPointName: deliveryType === 'PICKUP' ? selectedPickupPointName : null,
         firstName: recipientFirstName.trim(),
@@ -449,16 +760,20 @@ function CheckoutPage() {
     setIsSubmitting(true);
     try {
       const id = cartId || localStorage.getItem('cartId');
+      if (!checkoutIdempotencyKeyRef.current) {
+        checkoutIdempotencyKeyRef.current = createIdempotencyKey(id || 'guest');
+      }
       const response = await checkoutCart({
         cartId: id,
         receiptEmail: email.trim(),
         returnUrl: `${window.location.origin}/order/{token}`,
         orderPageUrl: `${window.location.origin}/order/{token}`,
         savePaymentMethod: isAuthenticated ? savePaymentMethod : false,
+        idempotencyKey: checkoutIdempotencyKeyRef.current,
         delivery: {
           deliveryType,
           offerId: selectedOfferId,
-          address: deliveryType === 'COURIER' ? deliveryAddress.trim() : null,
+          address: deliveryType === 'COURIER' ? fullDeliveryAddress : null,
           pickupPointId: deliveryType === 'PICKUP' ? selectedPickupPointId : null,
           pickupPointName: deliveryType === 'PICKUP' ? selectedPickupPointName : null,
           intervalFrom: selectedOffer?.intervalFrom || null,
@@ -473,14 +788,41 @@ function CheckoutPage() {
       clearCart();
       const confirmationUrl = response?.payment?.confirmationUrl;
       if (confirmationUrl) {
+        trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
+          outcome: 'success',
+          delivery_type: deliveryType,
+          cart_total: Math.round(payableTotal)
+        });
         window.location.href = confirmationUrl;
         return;
       }
 
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
+        outcome: 'fail',
+        reason: 'missing_confirmation_url'
+      });
       setStatus({ type: 'error', message: 'Не удалось получить ссылку оплаты. Попробуйте ещё раз.' });
     } catch (err) {
       console.error('Checkout failed:', err);
-      setStatus({ type: 'error', message: 'Не удалось оформить заказ. Попробуйте ещё раз.' });
+      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
+        outcome: 'fail',
+        reason: isApiRequestError(err) ? `http_${err.status}` : 'client_error'
+      });
+      const handled = applyBackendErrors(err);
+      if (handled) {
+        setStatus({ type: 'error', message: 'Проверьте поля с ошибками и попробуйте снова.' });
+      } else if (isApiRequestError(err) && err.status === 409) {
+        setStatus({
+          type: 'error',
+          message: 'Заказ с этим запросом уже обрабатывается. Подождите пару секунд и повторите попытку.'
+        });
+      } else if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
+        setStatus({ type: 'error', message: err.details.message.trim() });
+      } else if (typeof err?.message === 'string' && err.message.trim()) {
+        setStatus({ type: 'error', message: err.message.trim() });
+      } else {
+        setStatus({ type: 'error', message: 'Не удалось оформить заказ. Попробуйте ещё раз.' });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -545,11 +887,17 @@ function CheckoutPage() {
             <h1 className="text-3xl sm:text-4xl font-semibold">Быстрое оформление без лишних шагов</h1>
             <p className="mt-1 text-sm text-muted">Вы выбираете доставку и полную стоимость до оплаты. Регистрация не обязательна.</p>
           </div>
-          <Link to="/cart" className="button-ghost text-sm">← Вернуться в корзину</Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/info/delivery" className="button-ghost text-sm">Поддержка и доставка</Link>
+            <Link to="/cart" className="button-ghost text-sm">← Вернуться в корзину</Link>
+          </div>
         </div>
 
         {status && (
           <div
+            ref={statusRef}
+            role={status.type === 'error' ? 'alert' : 'status'}
+            tabIndex={-1}
             className={`mb-5 rounded-2xl border px-4 py-3 text-sm ${
               status.type === 'error'
                 ? 'border-red-200 bg-red-50 text-red-700'
@@ -574,13 +922,14 @@ function CheckoutPage() {
         </div>
 
         <div className="mb-6 soft-card p-4 md:p-5">
-          <ol className="grid gap-2 sm:grid-cols-4">
+          <ol className="grid gap-2 sm:grid-cols-4" aria-label="Прогресс оформления заказа">
             {CHECKOUT_STEPS.map((step, index) => {
               const isActive = activeStep === index;
               const isDone = Boolean(completedSteps[step.key]) || index < activeStep;
               return (
                 <li
                   key={step.key}
+                  aria-current={isActive ? 'step' : undefined}
                   className={`rounded-2xl border px-3 py-3 text-sm transition ${
                     isActive
                       ? 'border-primary/35 bg-primary/10'
@@ -607,7 +956,7 @@ function CheckoutPage() {
 
         <div className="lg:hidden mb-6">
           <details className="soft-card p-4">
-            <summary className="cursor-pointer text-sm font-semibold">Сводка заказа · {payableTotal.toLocaleString('ru-RU')} ₽</summary>
+            <summary className="cursor-pointer text-sm font-semibold">Сводка заказа · {formatRub(payableTotal)}</summary>
             <div className="mt-3 space-y-2 text-sm">
               {items.map((item) => (
                 <div key={item.id} className="flex items-start justify-between gap-3">
@@ -616,20 +965,25 @@ function CheckoutPage() {
                     <div className="text-xs text-muted">{item.quantity} шт.</div>
                   </div>
                   <div className="whitespace-nowrap font-semibold">
-                    {((item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity).toLocaleString('ru-RU')} ₽
+                    {formatRub((item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity)}
                   </div>
                 </div>
               ))}
               <hr className="my-2 border-ink/10" />
-              <div className="flex justify-between"><span>Товары</span><span>{total.toLocaleString('ru-RU')} ₽</span></div>
+              <div className="flex justify-between"><span>Товары</span><span>{formatRub(total)}</span></div>
               <div className="flex justify-between"><span>Доставка</span><span>{deliveryLabel}</span></div>
-              <div className="flex justify-between font-semibold"><span>К оплате</span><span>{payableTotal.toLocaleString('ru-RU')} ₽</span></div>
+              <div className="flex justify-between font-semibold"><span>К оплате</span><span>{formatRub(payableTotal)}</span></div>
             </div>
           </details>
         </div>
 
+        <div className="sr-only" aria-live="polite">
+          Текущая сумма к оплате: {formatRub(payableTotal)}
+        </div>
+
         <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_370px] lg:items-start">
           <form id="checkout-form" onSubmit={handleSubmit} className="space-y-5">
+            <p className="text-xs text-muted">Поля с пометкой «обязательно» нужно заполнить для продолжения.</p>
             <section className="soft-card p-6 md:p-7">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -647,8 +1001,9 @@ function CheckoutPage() {
               {activeStep === 0 ? (
                 <>
                   <label className="block text-sm">
-                    <span className="text-muted">Электронная почта</span>
+                    <span className="text-muted">Электронная почта (обязательно)</span>
                     <input
+                      id="checkout-email"
                       type="email"
                       value={email}
                       onChange={(event) => {
@@ -659,11 +1014,13 @@ function CheckoutPage() {
                       placeholder="you@example.com"
                       className="mt-2 w-full"
                       autoComplete="email"
+                      inputMode="email"
                       aria-invalid={Boolean(fieldErrors.email)}
+                      aria-errormessage={fieldErrors.email ? 'checkout-email-error' : undefined}
                       required
                     />
                     {fieldErrors.email && (
-                      <p className="mt-2 text-xs text-red-700">{fieldErrors.email}</p>
+                      <p id="checkout-email-error" className="mt-2 text-xs text-red-700">{fieldErrors.email}</p>
                     )}
                   </label>
 
@@ -705,8 +1062,9 @@ function CheckoutPage() {
                 <>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="block text-sm">
-                      <span className="text-muted">Имя</span>
+                      <span className="text-muted">Имя (обязательно)</span>
                       <input
+                        id="checkout-recipient-first-name"
                         type="text"
                         value={recipientFirstName}
                         onChange={(event) => {
@@ -717,15 +1075,17 @@ function CheckoutPage() {
                         className="mt-2 w-full"
                         autoComplete="shipping given-name"
                         aria-invalid={Boolean(fieldErrors.recipientFirstName)}
+                        aria-errormessage={fieldErrors.recipientFirstName ? 'checkout-recipient-first-name-error' : undefined}
                         required
                       />
                       {fieldErrors.recipientFirstName && (
-                        <p className="mt-2 text-xs text-red-700">{fieldErrors.recipientFirstName}</p>
+                        <p id="checkout-recipient-first-name-error" className="mt-2 text-xs text-red-700">{fieldErrors.recipientFirstName}</p>
                       )}
                     </label>
                     <label className="block text-sm">
-                      <span className="text-muted">Фамилия</span>
+                      <span className="text-muted">Фамилия (необязательно)</span>
                       <input
+                        id="checkout-recipient-last-name"
                         type="text"
                         value={recipientLastName}
                         onChange={(event) => setRecipientLastName(event.target.value)}
@@ -735,8 +1095,9 @@ function CheckoutPage() {
                       />
                     </label>
                     <label className="block text-sm sm:col-span-2">
-                      <span className="text-muted">Телефон</span>
+                      <span className="text-muted">Телефон (обязательно)</span>
                       <input
+                        id="checkout-recipient-phone"
                         type="tel"
                         value={recipientPhone}
                         onChange={(event) => {
@@ -746,11 +1107,13 @@ function CheckoutPage() {
                         placeholder="+7 900 000-00-00"
                         className="mt-2 w-full"
                         autoComplete="shipping tel"
+                        inputMode="tel"
                         aria-invalid={Boolean(fieldErrors.recipientPhone)}
+                        aria-errormessage={fieldErrors.recipientPhone ? 'checkout-recipient-phone-error' : undefined}
                         required
                       />
                       {fieldErrors.recipientPhone && (
-                        <p className="mt-2 text-xs text-red-700">{fieldErrors.recipientPhone}</p>
+                        <p id="checkout-recipient-phone-error" className="mt-2 text-xs text-red-700">{fieldErrors.recipientPhone}</p>
                       )}
                     </label>
                   </div>
@@ -814,31 +1177,61 @@ function CheckoutPage() {
                   </div>
 
                   {deliveryType === 'COURIER' ? (
-                    <label className="mt-4 block text-sm">
-                      <span className="text-muted">Адрес доставки</span>
-                      <input
-                        type="text"
-                        value={deliveryAddress}
-                        onChange={(event) => {
-                          setDeliveryAddress(event.target.value);
-                          clearFieldError('deliveryAddress');
-                        }}
-                        placeholder="Город, улица, дом, квартира"
-                        className="mt-2 w-full"
-                        autoComplete="shipping street-address"
-                        aria-invalid={Boolean(fieldErrors.deliveryAddress)}
-                        required
-                      />
-                      {fieldErrors.deliveryAddress && (
-                        <p className="mt-2 text-xs text-red-700">{fieldErrors.deliveryAddress}</p>
+                    <div className="mt-4">
+                      <label className="block text-sm">
+                        <span className="text-muted">Адрес доставки (обязательно)</span>
+                        <input
+                          id="checkout-delivery-address"
+                          type="text"
+                          value={deliveryAddress}
+                          onChange={(event) => {
+                            setDeliveryAddress(event.target.value);
+                            clearFieldError('deliveryAddress');
+                          }}
+                          placeholder="Город, улица, дом"
+                          className="mt-2 w-full"
+                          autoComplete="shipping street-address"
+                          aria-invalid={Boolean(fieldErrors.deliveryAddress)}
+                          aria-errormessage={fieldErrors.deliveryAddress ? 'checkout-delivery-address-error' : undefined}
+                          required
+                        />
+                        {fieldErrors.deliveryAddress && (
+                          <p id="checkout-delivery-address-error" className="mt-2 text-xs text-red-700">{fieldErrors.deliveryAddress}</p>
+                        )}
+                      </label>
+
+                      <button
+                        type="button"
+                        className="button-ghost mt-2 text-xs"
+                        aria-expanded={showDeliveryAddressDetails}
+                        aria-controls="checkout-delivery-address-details"
+                        onClick={() => setShowDeliveryAddressDetails((prev) => !prev)}
+                      >
+                        {showDeliveryAddressDetails ? 'Скрыть доп. адресные данные' : 'Добавить квартиру, подъезд или код домофона'}
+                      </button>
+
+                      {showDeliveryAddressDetails && (
+                        <label id="checkout-delivery-address-details" className="mt-2 block text-sm">
+                          <span className="text-muted">Дополнительная строка адреса (необязательно)</span>
+                          <input
+                            id="checkout-delivery-address-line2"
+                            type="text"
+                            value={deliveryAddressDetails}
+                            onChange={(event) => setDeliveryAddressDetails(event.target.value)}
+                            placeholder="Кв/офис, подъезд, этаж, домофон"
+                            className="mt-2 w-full"
+                            autoComplete="shipping address-line2"
+                          />
+                        </label>
                       )}
-                    </label>
+                    </div>
                   ) : (
                     <div className="mt-4 space-y-3">
                       <label className="block text-sm">
-                        <span className="text-muted">Город или адрес</span>
+                        <span className="text-muted">Город или адрес (обязательно)</span>
                         <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                           <input
+                            id="checkout-pickup-location"
                             type="text"
                             value={pickupLocation}
                             onChange={(event) => {
@@ -848,6 +1241,7 @@ function CheckoutPage() {
                             placeholder="Например, Санкт-Петербург"
                             className="w-full"
                             aria-invalid={Boolean(fieldErrors.pickupLocation)}
+                            aria-errormessage={fieldErrors.pickupLocation ? 'checkout-pickup-location-error' : undefined}
                           />
                           <button
                             type="button"
@@ -860,14 +1254,13 @@ function CheckoutPage() {
                           <button
                             type="button"
                             className="button-ghost text-sm whitespace-nowrap"
-                            disabled={!pickupPoints.length}
-                            onClick={() => setIsPickupMapOpen(true)}
+                            onClick={handleOpenPickupMap}
                           >
-                            Открыть карту
+                            {pickupAutoDetecting ? 'Определяем город…' : 'Открыть карту'}
                           </button>
                         </div>
                         {fieldErrors.pickupLocation && (
-                          <p className="mt-2 text-xs text-red-700">{fieldErrors.pickupLocation}</p>
+                          <p id="checkout-pickup-location-error" className="mt-2 text-xs text-red-700">{fieldErrors.pickupLocation}</p>
                         )}
                       </label>
 
@@ -885,7 +1278,7 @@ function CheckoutPage() {
                             <button
                               type="button"
                               className="button-ghost !px-2 !py-1 text-xs"
-                              onClick={() => setIsPickupMapOpen(true)}
+                              onClick={handleOpenPickupMap}
                             >
                               Изменить
                             </button>
@@ -920,13 +1313,13 @@ function CheckoutPage() {
                     </div>
 
                     {deliveryError && (
-                      <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                         {deliveryError}
                       </div>
                     )}
 
                     {fieldErrors.selectedOfferId && (
-                      <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                         {fieldErrors.selectedOfferId}
                       </div>
                     )}
@@ -970,7 +1363,7 @@ function CheckoutPage() {
                                   )}
                                 </div>
                               </div>
-                              <div className="text-sm font-semibold">{priceValue.toLocaleString('ru-RU')} ₽</div>
+                              <div className="text-sm font-semibold">{formatRub(priceValue)}</div>
                             </label>
                           );
                         })}
@@ -1031,7 +1424,7 @@ function CheckoutPage() {
                         <div className="font-semibold">{reviewDeliveryLabel}</div>
                         <div className="text-xs text-muted">
                           {deliveryType === 'COURIER'
-                            ? deliveryAddress
+                            ? fullDeliveryAddress
                             : selectedPickupPointName || selectedPickupPoint?.address || 'Пункт выдачи'}
                         </div>
                       </div>
@@ -1064,27 +1457,27 @@ function CheckoutPage() {
                       <div className="text-xs text-muted">{item.quantity} шт.</div>
                     </div>
                     <div className="font-semibold whitespace-nowrap">
-                      {((item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity).toLocaleString('ru-RU')} ₽
+                      {formatRub((item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity)}
                     </div>
                   </div>
                 ))}
               </div>
 
               <hr className="my-4 border-ink/10" />
-              <div className="space-y-2 text-sm">
+              <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span>Товары ({itemsCount})</span>
-                  <span>{total.toLocaleString('ru-RU')} ₽</span>
+                  <dt>Товары ({itemsCount})</dt>
+                  <dd>{formatRub(total)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <span>Доставка</span>
-                  <span>{deliveryLabel}</span>
+                  <dt>Доставка</dt>
+                  <dd>{deliveryLabel}</dd>
                 </div>
-              </div>
+              </dl>
               <hr className="my-4 border-ink/10" />
               <div className="flex justify-between text-lg font-semibold">
                 <span>К оплате</span>
-                <span>{payableTotal.toLocaleString('ru-RU')} ₽</span>
+                <span>{formatRub(payableTotal)}</span>
               </div>
             </div>
 
@@ -1101,7 +1494,7 @@ function CheckoutPage() {
         <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
           <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.16em] text-muted">{mobileAction.subtitle}</div>
-            <div className="text-sm font-semibold">К оплате: {payableTotal.toLocaleString('ru-RU')} ₽</div>
+            <div className="text-sm font-semibold">К оплате: {formatRub(payableTotal)}</div>
           </div>
           <button
             type="button"

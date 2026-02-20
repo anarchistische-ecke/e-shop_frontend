@@ -77,10 +77,14 @@ function PickupMapModal({
   const apiKey = process.env.REACT_APP_YANDEX_MAPS_API_KEY || '';
   const mapRootRef = useRef(null);
   const mapRef = useRef(null);
+  const dialogRef = useRef(null);
+  const closeButtonRef = useRef(null);
   const [ymapsApi, setYmapsApi] = useState(null);
   const [mapError, setMapError] = useState('');
   const [searchValue, setSearchValue] = useState(searchLabel || '');
   const [activeUiId, setActiveUiId] = useState('');
+  const [userCenter, setUserCenter] = useState(null);
+  const [isLocatingUser, setIsLocatingUser] = useState(false);
 
   const normalizedPoints = useMemo(
     () => (Array.isArray(points) ? points.map((point, index) => normalizePoint(point, index)) : []),
@@ -128,6 +132,23 @@ function PickupMapModal({
   }, [open, apiKey]);
 
   useEffect(() => {
+    if (!open) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+
+    setIsLocatingUser(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserCenter([position.coords.latitude, position.coords.longitude]);
+        setIsLocatingUser(false);
+      },
+      () => {
+        setIsLocatingUser(false);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  }, [open]);
+
+  useEffect(() => {
     if (!open || !ymapsApi || !mapRootRef.current) return;
     if (mapRef.current) return;
 
@@ -136,6 +157,8 @@ function PickupMapModal({
     );
     const defaultCenter = pointsWithCoords[0]
       ? [pointsWithCoords[0].__latitude, pointsWithCoords[0].__longitude]
+      : userCenter
+      ? userCenter
       : [55.751244, 37.618423];
 
     mapRef.current = new ymapsApi.Map(
@@ -156,7 +179,7 @@ function PickupMapModal({
         mapRef.current = null;
       }
     };
-  }, [open, ymapsApi, normalizedPoints]);
+  }, [open, ymapsApi, normalizedPoints, userCenter]);
 
   useEffect(() => {
     if (!open || !ymapsApi || !mapRef.current) return;
@@ -197,8 +220,10 @@ function PickupMapModal({
       map.setCenter([activePoint.__latitude, activePoint.__longitude], 13, { duration: 250 });
     } else if (markers.length) {
       map.setBounds(clusterer.getBounds(), { checkZoomRange: true, zoomMargin: 28 });
+    } else if (userCenter) {
+      map.setCenter(userCenter, 11, { duration: 250 });
     }
-  }, [open, ymapsApi, filteredPoints, activePoint]);
+  }, [open, ymapsApi, filteredPoints, activePoint, userCenter]);
 
   useEffect(() => {
     if (!open || typeof document === 'undefined') return undefined;
@@ -218,6 +243,37 @@ function PickupMapModal({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (closeButtonRef.current && typeof closeButtonRef.current.focus === 'function') {
+      closeButtonRef.current.focus();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || typeof window === 'undefined') return undefined;
+    const handleTabKey = (event) => {
+      if (event.key !== 'Tab') return;
+      const root = dialogRef.current;
+      if (!root) return;
+      const focusable = root.querySelectorAll(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', handleTabKey);
+    return () => window.removeEventListener('keydown', handleTabKey);
+  }, [open]);
+
   if (!open || typeof document === 'undefined') {
     return null;
   }
@@ -232,7 +288,14 @@ function PickupMapModal({
         onClick={onClose}
         aria-label="Закрыть выбор пункта выдачи"
       />
-      <div className="relative z-[121] m-auto h-[min(92vh,980px)] w-[min(96vw,1500px)] overflow-hidden rounded-3xl border border-white/60 bg-white shadow-[0_30px_80px_rgba(24,24,24,0.32)]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pickup-map-modal-title"
+        aria-describedby="pickup-map-modal-description"
+        className="relative z-[121] m-auto h-[min(92vh,980px)] w-[min(96vw,1500px)] overflow-hidden rounded-3xl border border-white/60 bg-white shadow-[0_30px_80px_rgba(24,24,24,0.32)]"
+      >
         <div className="grid h-full lg:grid-cols-[minmax(0,1fr)_420px]">
           <div className="relative bg-sand/20">
             {mapError ? (
@@ -246,18 +309,36 @@ function PickupMapModal({
 
           <aside className="flex h-full flex-col border-l border-ink/10 bg-white/95">
             <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
-              <h3 className="text-2xl font-semibold">Пункты выдачи</h3>
-              <button type="button" className="button-ghost !px-2" onClick={onClose}>✕</button>
+              <div>
+                <h3 id="pickup-map-modal-title" className="text-2xl font-semibold">Пункты выдачи</h3>
+                <p id="pickup-map-modal-description" className="mt-1 text-xs text-muted">
+                  Выберите удобную точку на карте или из списка.
+                </p>
+              </div>
+              <button
+                ref={closeButtonRef}
+                type="button"
+                className="button-ghost !h-11 !w-11 !rounded-full !px-0"
+                onClick={onClose}
+                aria-label="Закрыть окно выбора пункта выдачи"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="px-5 pt-4 pb-3">
+              <label className="sr-only" htmlFor="pickup-map-search">Поиск пункта выдачи</label>
               <input
+                id="pickup-map-search"
                 type="text"
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="Поиск по адресу или названию"
                 className="w-full"
               />
+              {isLocatingUser && (
+                <div className="mt-2 text-xs text-muted">Определяем ваш город…</div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto px-2 pb-3">
@@ -269,6 +350,7 @@ function PickupMapModal({
                       type="button"
                       key={point.__uiId}
                       onClick={() => setActiveUiId(point.__uiId)}
+                      aria-pressed={isActive}
                       className={`mx-3 mb-2 block w-[calc(100%-1.5rem)] rounded-2xl border px-4 py-3 text-left transition ${
                         isActive
                           ? 'border-primary/35 bg-primary/10 shadow-[0_16px_24px_rgba(182,91,74,0.16)]'

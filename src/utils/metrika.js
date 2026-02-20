@@ -8,8 +8,12 @@ export const METRIKA_GOALS = {
   CHECKOUT_CTA_CLICK: 'checkout_cta_click',
   BEGIN_CHECKOUT: 'begin_checkout',
   CHECKOUT_STEP_VIEW: 'checkout_step_view',
+  CHECKOUT_STEP_SUBMIT: 'checkout_step_submit',
+  CHECKOUT_FIELD_ERROR: 'checkout_field_error',
+  CHECKOUT_SHIPPING_SELECT: 'checkout_shipping_select',
   ADD_SHIPPING_INFO: 'add_shipping_info',
   ADD_PAYMENT_INFO: 'add_payment_info',
+  CHECKOUT_PAYMENT_RESULT: 'checkout_payment_result',
   PURCHASE: 'purchase'
 };
 
