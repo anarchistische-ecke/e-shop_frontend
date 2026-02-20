@@ -1,91 +1,145 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
-import { getProduct, getProducts } from '../api';
+import { getCategories, getProduct, getProducts } from '../api';
 import ProductCard from '../components/ProductCard';
 import { reviews } from '../data/reviews';
 import {
-  normalizeProductImages,
-  moneyToNumber,
   getPrimaryVariant,
-  getProductPrice
+  getProductPrice,
+  moneyToNumber,
+  normalizeProductImages,
 } from '../utils/product';
+
+function resolveCategoryToken(entity) {
+  if (!entity) return '';
+  return String(entity.slug || entity.id || entity.name || '');
+}
+
+function resolveProductCategoryToken(product) {
+  const categoryValue =
+    product?.category ||
+    product?.categoryId ||
+    product?.category_id ||
+    product?.categorySlug ||
+    product?.category_slug ||
+    product?.category?.id ||
+    product?.category?.slug ||
+    product?.category?.name;
+
+  return String(
+    typeof categoryValue === 'string'
+      ? categoryValue
+      : categoryValue?.id || categoryValue?.slug || categoryValue?.name || ''
+  );
+}
+
+function TrustIcon({ type }) {
+  if (type === 'delivery') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 7h11v8H3z" />
+        <path d="M14 10h4l3 3v2h-7" />
+        <circle cx="7" cy="18" r="1.5" />
+        <circle cx="17" cy="18" r="1.5" />
+      </svg>
+    );
+  }
+
+  if (type === 'returns') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 11a8 8 0 1 1 2.4 5.7" />
+        <path d="M3 15v-4h4" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3l7 3v5c0 4.5-2.8 7.8-7 10-4.2-2.2-7-5.5-7-10V6l7-3z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
 
 function ProductPage() {
   const { id } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { addItem } = useContext(CartContext);
+
   const [product, setProduct] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [activeTab, setActiveTab] = useState('about');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [bundleSelections, setBundleSelections] = useState({});
-  const { addItem } = useContext(CartContext);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isImageZoomOpen, setIsImageZoomOpen] = useState(false);
+  const [showZoomHint, setShowZoomHint] = useState(true);
+  const [sheetType, setSheetType] = useState('shipping');
+  const [isInfoSheetOpen, setIsInfoSheetOpen] = useState(false);
+  const [isVariantTransitioning, setIsVariantTransitioning] = useState(false);
+
+  const transitionTimerRef = useRef(null);
 
   useEffect(() => {
+    getCategories()
+      .then((data) => setCategories(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        console.error('Failed to fetch categories:', err);
+        setCategories([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    setActiveTab('about');
+    setActiveImageIndex(0);
     setRelatedProducts([]);
     setBundleSelections({});
-    setActiveTab('about');
-  }, [id]);
+    setIsLoading(true);
 
-  useEffect(() => {
     getProduct(id)
       .then((data) => {
-        if (data?.isActive === false) {
+        if (!data || data?.isActive === false) {
           setProduct(null);
           setSelectedVariant(null);
-          setActiveImageIndex(0);
           return;
         }
         setProduct(data);
-        if (data && data.variants && data.variants.length > 0) {
-          setSelectedVariant(data.variants[0]);
-        } else {
-          setSelectedVariant(null);
-        }
-        setActiveImageIndex(0);
+        const variants = Array.isArray(data.variants) ? data.variants : [];
+        setSelectedVariant(variants[0] || null);
       })
       .catch((err) => {
         console.error('Failed to fetch product:', err);
         setProduct(null);
-      });
+        setSelectedVariant(null);
+      })
+      .finally(() => setIsLoading(false));
   }, [id]);
 
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
     if (!product) return undefined;
-    const resolveProductCategoryKey = (item) => {
-      const categoryValue =
-        item?.category ||
-        item?.categoryId ||
-        item?.category_id ||
-        item?.categorySlug ||
-        item?.category_slug ||
-        item?.category?.id ||
-        item?.category?.slug ||
-        item?.category?.name;
-      const categoryKey =
-        typeof categoryValue === 'string'
-          ? categoryValue
-          : categoryValue?.id || categoryValue?.slug || categoryValue?.name || '';
-      return categoryKey ? String(categoryKey) : '';
-    };
 
     getProducts()
       .then((data) => {
-        if (!isMounted) return;
+        if (!mounted) return;
         const list = Array.isArray(data) ? data : [];
-        const targetKey = resolveProductCategoryKey(product);
+        const targetCategoryToken = resolveProductCategoryToken(product);
         const related = list.filter((item) => {
-          if (!item || item.id === product.id) return false;
-          if (!targetKey) return true;
-          return resolveProductCategoryKey(item) === targetKey;
+          if (!item || item.id === product.id || item?.isActive === false) return false;
+          if (!targetCategoryToken) return true;
+          return resolveProductCategoryToken(item) === targetCategoryToken;
         });
         setRelatedProducts(related.slice(0, 4));
       })
       .catch((err) => console.error('Failed to fetch related products:', err));
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, [product]);
 
@@ -101,14 +155,15 @@ function ProductPage() {
     });
   }, [relatedProducts]);
 
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+    };
+  }, []);
+
   const images = useMemo(() => normalizeProductImages(product?.images || []), [product]);
-  const variantNameById = useMemo(() => {
-    const map = {};
-    (product?.variants || []).forEach((v) => {
-      if (v?.id) map[v.id] = v.name || v.sku || v.id;
-    });
-    return map;
-  }, [product]);
 
   const orderedImages = useMemo(() => {
     if (!images.length) return [];
@@ -127,23 +182,48 @@ function ProductPage() {
       setActiveImageIndex(0);
       return;
     }
-    const variantIndex = selectedVariant?.id
-      ? orderedImages.findIndex((img) => img.variantId === selectedVariant.id)
-      : 0;
+
     setActiveImageIndex((prev) => {
-      const nextIndex =
-        variantIndex >= 0 ? variantIndex : Math.min(prev, orderedImages.length - 1);
-      return Number.isFinite(nextIndex) ? nextIndex : 0;
+      if (prev <= orderedImages.length - 1) return prev;
+      return 0;
     });
-  }, [orderedImages, selectedVariant]);
+  }, [orderedImages]);
 
   const activeImage = orderedImages[activeImageIndex] || null;
-  const mainImage = activeImage?.url || null;
+  const mainImage = activeImage?.url || '';
 
-  const productReviews = reviews.filter((r) => r.productId === id);
+  const productReviews = useMemo(
+    () => reviews.filter((review) => String(review.productId) === String(id)),
+    [id]
+  );
+
+  const ratingDistribution = useMemo(() => {
+    const distribution = [5, 4, 3, 2, 1].map((value) => ({
+      rating: value,
+      count: productReviews.filter((review) => Number(review.rating) === value).length,
+    }));
+
+    const maxCount = Math.max(1, ...distribution.map((entry) => entry.count));
+
+    return distribution.map((entry) => ({
+      ...entry,
+      width: `${Math.round((entry.count / maxCount) * 100)}%`,
+    }));
+  }, [productReviews]);
+
+  const variantNameById = useMemo(() => {
+    const map = {};
+    (product?.variants || []).forEach((variant) => {
+      if (!variant?.id) return;
+      map[variant.id] = variant.name || variant.sku || variant.id;
+    });
+    return map;
+  }, [product]);
+
   const specificationSections = useMemo(() => {
     const raw = product?.specifications;
     if (!Array.isArray(raw)) return [];
+
     return raw
       .map((section) => {
         if (!section) return null;
@@ -155,6 +235,7 @@ function ProductPage() {
               }))
               .filter((item) => item.label || item.value)
           : [];
+
         return {
           title: section.title || '',
           description: section.description || '',
@@ -163,6 +244,146 @@ function ProductPage() {
       })
       .filter((section) => section && (section.title || section.description || section.items.length > 0));
   }, [product]);
+
+  const activeCategory = useMemo(() => {
+    const productToken = resolveProductCategoryToken(product);
+    if (!productToken) return null;
+
+    return (
+      categories.find((category) => {
+        const token = resolveCategoryToken(category);
+        return token === productToken || String(category.id) === productToken;
+      }) || null
+    );
+  }, [categories, product]);
+
+  const fallbackSpecs = [
+    product?.size ? `Размер: ${product.size}` : 'Размеры соответствуют стандартам',
+    product?.color ? `Цвет: ${product.color}` : 'Стабильный оттенок после стирок',
+    product?.care || 'Уход: деликатная стирка при 30°',
+  ];
+
+  const highlights = [
+    product?.material ? `Материал: ${product.material}` : 'Натуральные ткани',
+    product?.threadCount ? `Плотность: ${product.threadCount}` : 'Мягкая воздухопроницаемая структура',
+    'Сертифицировано и подходит для чувствительной кожи',
+  ];
+
+  const price = selectedVariant
+    ? moneyToNumber(selectedVariant.price)
+    : moneyToNumber(product?.price || 0);
+  const oldPrice = product?.oldPrice ? moneyToNumber(product.oldPrice) : 0;
+  const hasDiscount = oldPrice > price;
+
+  const availableStock = selectedVariant
+    ? Number(selectedVariant.stock ?? selectedVariant.stockQuantity ?? 0)
+    : Number(product?.stock ?? product?.stockQuantity ?? 0);
+
+  const rating = Number(product?.rating || 0);
+  const reviewCount = Number(
+    product?.reviewCount || product?.reviewsCount || product?.reviews_count || productReviews.length
+  );
+  const isLowStock = availableStock > 0 && availableStock <= 3;
+
+  const bundleItems = relatedProducts.slice(0, 3);
+  const bundleAddOnTotal = bundleItems.reduce((sum, item) => {
+    if (!bundleSelections[item.id]) return sum;
+    return sum + getProductPrice(item);
+  }, 0);
+  const bundleTotal = price + bundleAddOnTotal;
+
+  const deliveryDate = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 3);
+    return date.toLocaleDateString('ru-RU', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+  }, []);
+
+  const selectImageByIndex = (index) => {
+    if (!orderedImages.length) return;
+    const safeIndex = (index + orderedImages.length) % orderedImages.length;
+    const nextImage = orderedImages[safeIndex];
+    setActiveImageIndex(safeIndex);
+
+    if (nextImage?.variantId && selectedVariant?.id !== nextImage.variantId) {
+      const variant = (product?.variants || []).find((item) => item.id === nextImage.variantId);
+      if (variant) {
+        setSelectedVariant(variant);
+      }
+    }
+  };
+
+  const handleVariantChange = (variant) => {
+    if (!variant || variant.id === selectedVariant?.id) return;
+
+    setIsVariantTransitioning(true);
+    setSelectedVariant(variant);
+
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
+    }
+
+    transitionTimerRef.current = setTimeout(() => {
+      setIsVariantTransitioning(false);
+    }, 200);
+  };
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    if (availableStock <= 0) return;
+
+    const variantId = selectedVariant?.id || product.id;
+    await addItem(product, variantId);
+  };
+
+  const handleBuyNow = async () => {
+    if (!product) return;
+    if (availableStock <= 0) return;
+
+    const variantId = selectedVariant?.id || product.id;
+    await addItem(product, variantId);
+    navigate('/checkout');
+  };
+
+  const handleAddBundle = async () => {
+    await handleAddToCart();
+    bundleItems.forEach((item) => {
+      if (!bundleSelections[item.id]) return;
+      const variant = getPrimaryVariant(item);
+      if (variant?.id) addItem(item, variant.id);
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="product-page py-8 sm:py-10">
+        <div className="container mx-auto px-4">
+          <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_420px]">
+            <div className="rounded-[30px] border border-ink/10 bg-white/90 p-4">
+              <div className="skeleton shimmer-safe h-[65vh] rounded-[24px]" />
+              <div className="mt-4 grid grid-cols-4 gap-2">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="skeleton shimmer-safe h-20 rounded-2xl" />
+                ))}
+              </div>
+            </div>
+            <div className="soft-card p-5 sm:p-6">
+              <div className="skeleton shimmer-safe h-6 w-2/5 rounded-full" />
+              <div className="mt-4 skeleton shimmer-safe h-8 w-4/5 rounded-full" />
+              <div className="mt-3 skeleton shimmer-safe h-5 w-3/5 rounded-full" />
+              <div className="mt-5 space-y-2">
+                <div className="skeleton shimmer-safe h-12 rounded-2xl" />
+                <div className="skeleton shimmer-safe h-12 rounded-2xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -175,214 +396,183 @@ function ProductPage() {
     );
   }
 
-  const price = selectedVariant
-    ? moneyToNumber(selectedVariant.price)
-    : moneyToNumber(product.price || 0);
-  const availableStock = selectedVariant
-    ? selectedVariant.stock ?? selectedVariant.stockQuantity ?? 0
-    : product.stock ?? product.stockQuantity ?? 0;
-  const oldPrice = product.oldPrice ? moneyToNumber(product.oldPrice) : null;
-  const rating = product.rating || 0;
-  const reviewCount = productReviews.length;
-  const isLowStock = availableStock > 0 && availableStock <= 3;
-
-  const highlightList = [
-    product.material ? `Материал: ${product.material}` : 'Натуральные ткани и мягкая текстура',
-    product.threadCount ? `Плотность: ${product.threadCount}` : 'Дышащая структура для спокойного сна',
-    'Сертифицировано и подходит для чувствительной кожи',
-  ];
-
-  const specList = [
-    product.size ? `Размер: ${product.size}` : 'Размеры соответствуют стандартам РФ',
-    product.color ? `Цвет: ${product.color}` : 'Стабильные оттенки после стирки',
-    product.care || 'Уход: деликатная стирка при 30°',
-  ];
-
-  const bundleItems = relatedProducts.slice(0, 3);
-  const bundleAddOnTotal = bundleItems.reduce((sum, item) => {
-    if (!bundleSelections[item.id]) return sum;
-    return sum + getProductPrice(item);
-  }, 0);
-  const bundleTotal = price + bundleAddOnTotal;
-
-  const handleAddToCart = () => {
-    if (availableStock <= 0) {
-      alert('Товар закончился на складе');
-      return;
-    }
-    const variantId = selectedVariant ? selectedVariant.id : product.id;
-    addItem(product, variantId);
-  };
-
-  const handleAddBundle = () => {
-    handleAddToCart();
-    bundleItems.forEach((item) => {
-      if (!bundleSelections[item.id]) return;
-      const variant = getPrimaryVariant(item);
-      if (variant?.id) {
-        addItem(item, variant.id);
-      }
-    });
-  };
-
-  const selectImageByIndex = (index) => {
-    if (!orderedImages.length) return;
-    const safeIndex = (index + orderedImages.length) % orderedImages.length;
-    const nextImage = orderedImages[safeIndex];
-    setActiveImageIndex(safeIndex);
-    if (nextImage?.variantId && selectedVariant?.id !== nextImage.variantId) {
-      const variant = (product?.variants || []).find((v) => v.id === nextImage.variantId);
-      if (variant) setSelectedVariant(variant);
-    }
-  };
-
-  const handleNextImage = () => selectImageByIndex(activeImageIndex + 1);
-  const handlePrevImage = () => selectImageByIndex(activeImageIndex - 1);
-
   return (
     <div className="product-page py-8 sm:py-10 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
       <div className="container mx-auto px-4">
-        <nav className="text-xs text-muted mb-5">
-          <Link to="/" className="hover:text-primary">Главная</Link> /{' '}
-          <Link to="/category/popular" className="hover:text-primary">Каталог</Link> /{' '}
+        <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs text-muted">
+          {location.state?.fromPath ? (
+            <Link to={location.state.fromPath} className="text-primary hover:text-accent">
+              ← {location.state.fromLabel || 'Назад к результатам'}
+            </Link>
+          ) : null}
+          <Link to="/" className="hover:text-primary">Главная</Link>
+          <span className="text-ink/40">›</span>
+          <Link to="/category/popular" className="hover:text-primary">Каталог</Link>
+          {activeCategory && (
+            <>
+              <span className="text-ink/40">›</span>
+              <Link to={`/category/${resolveCategoryToken(activeCategory)}`} className="hover:text-primary">
+                {activeCategory.name}
+              </Link>
+            </>
+          )}
+          <span className="text-ink/40">›</span>
           <span className="text-ink">{product.name}</span>
         </nav>
 
-        <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+        <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)]">
           <div>
             <div
-              className="relative w-full h-screen max-h-screen rounded-[28px] sm:rounded-[32px] overflow-hidden border border-white/80 shadow-[0_24px_60px_rgba(43,39,34,0.16)] bg-gradient-to-br from-sand/70 to-white"
-              style={{ height: '100dvh', maxHeight: '100dvh' }}
+              className={`relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/80 shadow-[0_24px_60px_rgba(43,39,34,0.16)] bg-gradient-to-br from-sand/70 to-white transition-opacity duration-200 ${
+                isVariantTransitioning ? 'opacity-80' : 'opacity-100'
+              }`}
             >
-              {mainImage ? (
-                <img
-                  src={mainImage}
-                  alt={product.name}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loading="eager"
-                  decoding="async"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
-                  Изображение появится после загрузки
-                </div>
-              )}
-              {activeImage?.variantId && (
-                <div className="absolute top-4 left-4 bg-white/85 backdrop-blur rounded-2xl px-3 py-1 text-xs font-medium border border-ink/10 shadow-sm">
-                  Вариант: {variantNameById[activeImage.variantId] || activeImage.variantId}
-                </div>
-              )}
-              {orderedImages.length > 1 && (
-                <>
+              <div className="relative w-full pt-[112%] sm:pt-[95%]">
+                {mainImage ? (
                   <button
                     type="button"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-ink rounded-2xl w-9 h-9 sm:w-10 sm:h-10 shadow border border-ink/10"
-                    onClick={handlePrevImage}
-                    aria-label="Предыдущее изображение"
+                    className="absolute inset-0 block"
+                    onClick={() => {
+                      setIsImageZoomOpen(true);
+                      setShowZoomHint(false);
+                    }}
+                    aria-label="Увеличить изображение"
                   >
-                    ‹
+                    <img
+                      src={mainImage}
+                      alt={product.name}
+                      className="absolute inset-0 h-full w-full object-cover"
+                      loading="eager"
+                      decoding="async"
+                    />
+                    <span className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/70 bg-white/88 text-ink shadow-sm">
+                      +
+                    </span>
                   </button>
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-ink rounded-2xl w-9 h-9 sm:w-10 sm:h-10 shadow border border-ink/10"
-                    onClick={handleNextImage}
-                    aria-label="Следующее изображение"
-                  >
-                    ›
-                  </button>
-                </>
-              )}
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
+                    Изображение появится после загрузки
+                  </div>
+                )}
+
+                {showZoomHint && (
+                  <p className="absolute bottom-3 left-3 rounded-xl bg-white/85 px-3 py-1 text-xs text-ink/75">
+                    Нажмите, чтобы увеличить
+                  </p>
+                )}
+
+                {activeImage?.variantId && (
+                  <div className="absolute top-3 left-3 rounded-2xl border border-ink/10 bg-white/88 px-3 py-1 text-xs">
+                    Вариант: {variantNameById[activeImage.variantId] || activeImage.variantId}
+                  </div>
+                )}
+
+                {orderedImages.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-2xl border border-ink/10 bg-white/90 text-ink shadow"
+                      onClick={() => selectImageByIndex(activeImageIndex - 1)}
+                      aria-label="Предыдущее изображение"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-2xl border border-ink/10 bg-white/90 text-ink shadow"
+                      onClick={() => selectImageByIndex(activeImageIndex + 1)}
+                      aria-label="Следующее изображение"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
-            <div className="flex gap-2 sm:gap-3 mt-4 overflow-x-auto pb-2 -mx-1 px-1 sm:mx-0 sm:px-0 scrollbar-hide snap-x snap-mandatory">
-              {(orderedImages.length > 0 ? orderedImages : [null]).map((img, idx) => (
+            <div className="mt-4 flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
+              {(orderedImages.length > 0 ? orderedImages : [null]).map((image, index) => (
                 <button
-                  key={img ? img.id || idx : idx}
+                  key={image ? image.id || index : index}
                   type="button"
-                  onClick={() => selectImageByIndex(idx)}
-                  className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border snap-center ${
-                    idx === activeImageIndex ? 'border-primary ring-2 ring-primary/30' : 'border-ink/10'
-                  } bg-sand/60 flex-shrink-0`}
+                  onClick={() => selectImageByIndex(index)}
+                  className={`relative h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 overflow-hidden rounded-2xl border snap-center ${
+                    index === activeImageIndex
+                      ? 'border-primary ring-2 ring-primary/30'
+                      : 'border-ink/10'
+                  } bg-sand/60`}
                 >
-                  {img ? (
-                    <>
-                      <img
-                        src={img.url}
-                        alt={`Изображение ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      {img.variantId && (
-                        <span className="absolute bottom-1 left-1 bg-accent/80 text-white text-[10px] px-1.5 py-0.5 rounded-2xl">
-                          {variantNameById[img.variantId] || 'Вариант'}
-                        </span>
-                      )}
-                    </>
+                  {image ? (
+                    <img src={image.url} alt={`Изображение ${index + 1}`} className="h-full w-full object-cover" />
                   ) : (
-                    <span className="w-full h-full flex items-center justify-center text-xs text-muted px-2 text-center">
-                      Пока без фото
-                    </span>
+                    <span className="flex h-full w-full items-center justify-center text-[10px] text-muted">Нет фото</span>
                   )}
                 </button>
               ))}
             </div>
 
             <div className="mt-6 grid gap-2 sm:grid-cols-3 sm:gap-3">
-              {highlightList.map((item) => (
-                <div key={item} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 text-xs sm:text-sm shadow-sm">
-                  {item}
+              {highlights.map((entry) => (
+                <div key={entry} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 text-xs sm:text-sm shadow-sm">
+                  {entry}
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="lg:sticky lg:top-24 h-fit">
+          <aside className="lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] h-fit space-y-4">
             <div className="soft-card p-5 sm:p-6">
               <p className="text-xs uppercase tracking-[0.28em] text-accent">Бестселлер</p>
-              <h1 className="text-xl sm:text-2xl font-semibold mt-2 mb-3">{product.name}</h1>
-              <div className="flex items-center gap-2 text-sm text-muted mb-3">
+              <h1 className="mt-2 text-xl sm:text-2xl font-semibold">{product.name}</h1>
+
+              <div className="mt-3 flex items-center gap-2 text-sm text-muted">
                 {rating > 0 ? (
                   <>
-                    <span className="text-primary">
-                      {'★'.repeat(Math.round(rating))}{'☆'.repeat(5 - Math.round(rating))}
-                    </span>
-                    <span className="text-ink/70">{rating.toFixed(1)}</span>
-                    <span className="text-ink/50">({reviewCount} отзывов)</span>
+                    <span className="text-primary">★ {rating.toFixed(1)}</span>
+                    <span>({reviewCount})</span>
                   </>
                 ) : (
-                  <span className="text-ink/50">Нет отзывов</span>
+                  <span>Пока без отзывов</span>
                 )}
               </div>
 
-              <div className="text-accent text-xl sm:text-2xl font-semibold mb-2">
+              <div className="mt-4 text-accent text-2xl font-semibold">
                 {price.toLocaleString('ru-RU')} ₽
-                {oldPrice && (
-                  <span className="text-base sm:text-lg line-through text-muted ml-3">
-                    {oldPrice.toLocaleString('ru-RU')} ₽
-                  </span>
+                {hasDiscount && (
+                  <span className="ml-3 text-base line-through text-muted">{oldPrice.toLocaleString('ru-RU')} ₽</span>
                 )}
               </div>
-              <p className="text-xs text-muted mb-4">
-                Цена за выбранный вариант.
-              </p>
+
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
+                <p>Delivers {deliveryDate}</p>
+                <button
+                  type="button"
+                  className="text-primary"
+                  onClick={() => {
+                    setSheetType('shipping');
+                    setIsInfoSheetOpen(true);
+                  }}
+                >
+                  Детали доставки
+                </button>
+              </div>
 
               {product.variants && product.variants.length > 1 && (
-                <div className="mb-4">
+                <div className="mt-5">
                   <p className="text-xs uppercase tracking-[0.2em] text-muted">Выберите вариант</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {product.variants.map((variant) => {
                       const isActive = selectedVariant?.id === variant.id;
                       return (
                         <button
                           key={variant.id}
                           type="button"
-                          className={`rounded-2xl border px-3 py-1.5 text-sm transition ${
+                          className={`min-h-[44px] rounded-2xl border px-3 py-1.5 text-sm transition ${
                             isActive
                               ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-ink/10 bg-white/85'
+                              : 'border-ink/10 bg-white/90 hover:border-primary/40 hover:text-primary'
                           }`}
-                          onClick={() => setSelectedVariant(variant)}
+                          onClick={() => handleVariantChange(variant)}
                         >
                           {variant.name || variant.sku || variant.id}
                         </button>
@@ -392,46 +582,77 @@ function ProductPage() {
                 </div>
               )}
 
-              <div className="flex items-center gap-3 mb-4 text-sm">
-                <span className={availableStock > 0 ? 'text-emerald-700' : 'text-red-700'}>
-                  {availableStock > 0 ? `В наличии: ${availableStock} шт.` : 'Нет в наличии'}
-                </span>
-                {isLowStock && <span className="text-xs text-amber-700">Осталось всего {availableStock}</span>}
+              <div className="mt-4 flex flex-col gap-1 text-sm">
+                {availableStock > 0 ? (
+                  <span className="text-emerald-700">В наличии: {availableStock} шт.</span>
+                ) : (
+                  <span className="text-red-700">Нет в наличии</span>
+                )}
+                {isLowStock && (
+                  <span className="text-xs text-amber-700">Осталось мало, возможен быстрый out of stock.</span>
+                )}
               </div>
 
-              <button
-                className="button w-full mb-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleAddToCart}
-                disabled={availableStock <= 0}
-              >
-                Добавить в корзину
-              </button>
-              <button className="button-gray w-full" type="button">
-                Добавить в вишлист
-              </button>
+              <div className="mt-5 space-y-2">
+                <button
+                  type="button"
+                  className="button w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleAddToCart}
+                  disabled={availableStock <= 0}
+                >
+                  Add to cart
+                </button>
+
+                <button
+                  type="button"
+                  className="button-gray w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleBuyNow}
+                  disabled={availableStock <= 0}
+                >
+                  Buy now
+                </button>
+
+                {availableStock <= 0 && (
+                  <button type="button" className="button-ghost w-full text-sm">
+                    Сообщить о поступлении
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className="button-ghost w-full text-sm"
+                  onClick={() => {
+                    setSheetType('returns');
+                    setIsInfoSheetOpen(true);
+                  }}
+                >
+                  Shipping & returns
+                </button>
+              </div>
             </div>
 
-            <div className="mt-4 soft-card p-5 text-sm space-y-3">
-              <div className="flex items-center gap-2">
-                <span>🚚</span>
+            <div className="soft-card p-5 text-sm space-y-3">
+              <div className="flex items-center gap-2 text-ink/85">
+                <TrustIcon type="delivery" />
                 <span>Бесплатная доставка от 5000 ₽</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span>↺</span>
-                <span>14 дней на возврат без вопросов</span>
+              <div className="flex items-center gap-2 text-ink/85">
+                <TrustIcon type="returns" />
+                <span>Free returns within 30 days</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span>♻️</span>
-                <span>Экологичные материалы и упаковка</span>
+              <div className="flex items-center gap-2 text-ink/85">
+                <TrustIcon type="secure" />
+                <span>Защищённая оплата через ЮKassa</span>
               </div>
             </div>
 
             {bundleItems.length > 0 && (
-              <div className="mt-4 soft-card p-5">
+              <div className="soft-card p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted">Соберите комплект</p>
-                <p className="text-sm text-muted mt-2">
-                  Чаще всего берут вместе — отметьте нужные позиции и добавьте всё сразу.
+                <p className="mt-2 text-sm text-muted">
+                  Часто покупают вместе: добавьте всё за один клик.
                 </p>
+
                 <div className="mt-3 space-y-3">
                   {bundleItems.map((item) => (
                     <label key={item.id} className="flex items-start gap-3 text-sm">
@@ -439,12 +660,12 @@ function ProductPage() {
                         type="checkbox"
                         className="mt-1 h-4 w-4 accent-primary"
                         checked={Boolean(bundleSelections[item.id])}
-                        onChange={(e) =>
+                        onChange={(event) => {
                           setBundleSelections((prev) => ({
                             ...prev,
-                            [item.id]: e.target.checked,
-                          }))
-                        }
+                            [item.id]: event.target.checked,
+                          }));
+                        }}
                       />
                       <span>
                         <span className="block font-medium">{item.name}</span>
@@ -453,33 +674,38 @@ function ProductPage() {
                     </label>
                   ))}
                 </div>
-                <div className="flex items-center justify-between text-sm mt-4">
+
+                <div className="mt-4 flex items-center justify-between text-sm">
                   <span className="text-muted">Итого</span>
                   <span className="font-semibold">{bundleTotal.toLocaleString('ru-RU')} ₽</span>
                 </div>
+
                 <button type="button" className="button w-full mt-3" onClick={handleAddBundle}>
                   Добавить комплект
                 </button>
               </div>
             )}
-          </div>
+          </aside>
         </div>
 
         <div className="mt-10 sm:mt-12">
           <div className="border-b border-ink/10 flex flex-wrap gap-6 text-sm">
             <button
+              type="button"
               onClick={() => setActiveTab('about')}
               className={`py-2 ${activeTab === 'about' ? 'border-b-2 border-primary font-semibold' : 'text-muted'}`}
             >
               О товаре
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('reviews')}
               className={`py-2 ${activeTab === 'reviews' ? 'border-b-2 border-primary font-semibold' : 'text-muted'}`}
             >
               Отзывы ({reviewCount})
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('details')}
               className={`py-2 ${activeTab === 'details' ? 'border-b-2 border-primary font-semibold' : 'text-muted'}`}
             >
@@ -494,45 +720,58 @@ function ProductPage() {
               </p>
             </div>
           )}
+
           {activeTab === 'reviews' && (
-            <div className="mt-4 space-y-3">
-              {productReviews.length > 0 ? (
-                productReviews.map((rev, idx) => (
-                  <div key={idx} className="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm">
-                    <div className="text-primary text-sm">
-                      {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+            <div className="mt-4 grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+              <div className="rounded-2xl border border-ink/10 bg-white/90 p-4">
+                <p className="text-sm font-semibold">Распределение оценок</p>
+                <div className="mt-3 space-y-2">
+                  {ratingDistribution.map((entry) => (
+                    <div key={entry.rating} className="grid grid-cols-[24px_minmax(0,1fr)_28px] items-center gap-2 text-xs text-muted">
+                      <span>{entry.rating}</span>
+                      <div className="h-2 rounded-full bg-secondary/70 overflow-hidden">
+                        <div className="h-full rounded-full bg-primary/65" style={{ width: entry.width }} />
+                      </div>
+                      <span className="text-right">{entry.count}</span>
                     </div>
-                    <p className="mt-2 text-sm">{rev.text}</p>
-                    <p className="text-xs text-muted italic">— {rev.author}</p>
-                  </div>
-                ))
-              ) : (
-                <p>На этот товар пока нет отзывов.</p>
-              )}
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {productReviews.length > 0 ? (
+                  productReviews.map((review, index) => (
+                    <div key={index} className="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm">
+                      <div className="text-primary text-sm">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
+                      <p className="mt-2 text-sm">{review.text}</p>
+                      <p className="text-xs text-muted italic">— {review.author}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted">На этот товар пока нет отзывов.</p>
+                )}
+              </div>
             </div>
           )}
+
           {activeTab === 'details' && (
             <div className="mt-4">
               {specificationSections.length > 0 ? (
                 <div className="space-y-8">
-                  {specificationSections.map((section, idx) => (
-                    <div key={`${section.title || 'section'}-${idx}`}>
+                  {specificationSections.map((section, index) => (
+                    <div key={`${section.title || 'section'}-${index}`}>
                       {section.title && (
-                        <h3 className="text-sm font-semibold text-ink mb-3">
-                          {section.title}
-                        </h3>
+                        <h3 className="text-sm font-semibold text-ink mb-3">{section.title}</h3>
                       )}
                       {section.items.length > 0 && (
                         <dl className="space-y-2">
-                          {section.items.map((item, itemIdx) => (
+                          {section.items.map((item, itemIndex) => (
                             <div
-                              key={`${item.label || 'item'}-${itemIdx}`}
+                              key={`${item.label || 'item'}-${itemIndex}`}
                               className="grid grid-cols-1 sm:grid-cols-[180px_minmax(0,1fr)] gap-1 sm:gap-6 text-sm"
                             >
                               <dt className="text-muted">{item.label || '—'}</dt>
-                              <dd className="text-ink whitespace-pre-line break-words">
-                                {item.value || '—'}
-                              </dd>
+                              <dd className="text-ink whitespace-pre-line break-words">{item.value || '—'}</dd>
                             </div>
                           ))}
                         </dl>
@@ -547,9 +786,9 @@ function ProductPage() {
                 </div>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                  {specList.map((item) => (
-                    <div key={item} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 shadow-sm">
-                      {item}
+                  {fallbackSpecs.map((entry) => (
+                    <div key={entry} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 shadow-sm">
+                      {entry}
                     </div>
                   ))}
                 </div>
@@ -560,7 +799,7 @@ function ProductPage() {
 
         {relatedProducts.length > 0 && (
           <section className="mt-10 sm:mt-12">
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-2xl font-semibold">Дополните набор</h2>
               <Link to="/category/popular" className="text-sm text-primary">Смотреть больше</Link>
             </div>
@@ -584,10 +823,79 @@ function ProductPage() {
             onClick={handleAddToCart}
             disabled={availableStock <= 0}
           >
-            В корзину
+            Add to cart
           </button>
         </div>
       </div>
+
+      {isImageZoomOpen && (
+        <div className="fixed inset-0 z-[70] bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="Увеличенное изображение">
+          <button
+            type="button"
+            className="absolute right-4 top-4 h-11 w-11 rounded-2xl border border-white/30 bg-black/40 text-white"
+            onClick={() => setIsImageZoomOpen(false)}
+            aria-label="Закрыть"
+          >
+            ✕
+          </button>
+          <div className="mx-auto flex h-full max-w-5xl items-center justify-center">
+            {mainImage ? (
+              <img src={mainImage} alt={product.name} className="max-h-full max-w-full object-contain" />
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {isInfoSheetOpen && (
+        <div className="fixed inset-0 z-[65]">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/35"
+            onClick={() => setIsInfoSheetOpen(false)}
+            aria-label="Закрыть"
+          />
+          <aside className="absolute right-0 top-0 h-full w-full max-w-md bg-white p-5 shadow-[0_24px_70px_rgba(43,39,34,0.26)] md:rounded-l-[26px]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-muted">
+                  {sheetType === 'shipping' ? 'Доставка' : 'Возвраты'}
+                </p>
+                <h2 className="text-2xl font-semibold mt-1">
+                  {sheetType === 'shipping' ? 'Shipping & delivery' : 'Returns policy'}
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="h-11 w-11 rounded-2xl border border-ink/10 text-ink/70"
+                onClick={() => setIsInfoSheetOpen(false)}
+                aria-label="Закрыть"
+              >
+                ✕
+              </button>
+            </div>
+
+            {sheetType === 'shipping' ? (
+              <div className="mt-4 space-y-3 text-sm text-ink/85">
+                <p>Ориентировочная дата доставки: {deliveryDate}.</p>
+                <p>Стоимость и интервалы подтверждаются до оплаты на шаге checkout.</p>
+                <p>
+                  Бесплатная доставка от 5000 ₽. Для удалённых регионов срок может увеличиваться.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3 text-sm text-ink/85">
+                <p>Возврат возможен в течение 30 дней после получения заказа.</p>
+                <p>Если товар не подошёл, оформите заявку через поддержку и выберите способ возврата.</p>
+                <p>
+                  Условия и исключения доступны в разделе
+                  {' '}
+                  <Link to="/usloviya-prodazhi" className="text-primary">«Условия продажи»</Link>.
+                </p>
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
     </div>
   );
 }

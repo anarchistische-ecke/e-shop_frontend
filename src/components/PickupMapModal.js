@@ -66,6 +66,49 @@ function loadYandexMaps(apiKey) {
   return mapSdkPromise;
 }
 
+function geocodeWithYandex(ymapsApi, coords, options = {}) {
+  return new Promise((resolve, reject) => {
+    try {
+      ymapsApi.geocode(coords, options).then(resolve, reject);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function extractCityFromGeoObject(geoObject) {
+  if (!geoObject) return '';
+  const metadata = geoObject.properties?.get?.('metaDataProperty.GeocoderMetaData.Address.Components') || [];
+  const city =
+    metadata.find((item) => item.kind === 'locality')?.name
+    || metadata.find((item) => item.kind === 'province')?.name
+    || metadata.find((item) => item.kind === 'area')?.name
+    || '';
+  if (city) return city;
+  return geoObject.getLocalities?.()?.[0]
+    || geoObject.getAdministrativeAreas?.()?.[0]
+    || '';
+}
+
+async function reverseGeocodeCity(ymapsApi, latitude, longitude) {
+  if (!ymapsApi || typeof ymapsApi.geocode !== 'function') return '';
+  try {
+    const result = await geocodeWithYandex(ymapsApi, [latitude, longitude], { kind: 'locality', results: 1 });
+    const first = result?.geoObjects?.get?.(0);
+    const city = extractCityFromGeoObject(first);
+    if (city) return city;
+  } catch (error) {
+  }
+
+  try {
+    const fallbackResult = await geocodeWithYandex(ymapsApi, [latitude, longitude], { results: 1 });
+    const first = fallbackResult?.geoObjects?.get?.(0);
+    return extractCityFromGeoObject(first);
+  } catch (error) {
+  }
+  return '';
+}
+
 function PickupMapModal({
   open,
   points,
@@ -74,6 +117,7 @@ function PickupMapModal({
   errorMessage,
   isLoading,
   onRetry,
+  onMapCityChange,
   onClose,
   onSelect
 }) {
@@ -82,6 +126,9 @@ function PickupMapModal({
   const mapRef = useRef(null);
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
+  const dragDebounceTimerRef = useRef(null);
+  const lastNotifiedCityRef = useRef('');
+  const lastUserMapInteractionAtRef = useRef(0);
   const [ymapsApi, setYmapsApi] = useState(null);
   const [mapError, setMapError] = useState('');
   const [searchValue, setSearchValue] = useState(searchLabel || '');
@@ -115,6 +162,7 @@ function PickupMapModal({
   useEffect(() => {
     if (!open) return;
     setSearchValue(searchLabel || '');
+    lastNotifiedCityRef.current = '';
     const selectedByServerId = normalizedPoints.find(
       (point) => point.__hasServerId && point.id === selectedPointId
     );
@@ -183,6 +231,47 @@ function PickupMapModal({
       }
     };
   }, [open, ymapsApi, normalizedPoints, userCenter]);
+
+  useEffect(() => {
+    if (!open || !ymapsApi || !mapRef.current || typeof onMapCityChange !== 'function') return undefined;
+
+    const map = mapRef.current;
+    const handleActionEnd = () => {
+      const interactedRecently = Date.now() - lastUserMapInteractionAtRef.current < 2500;
+      if (!interactedRecently) return;
+
+      const center = map.getCenter?.();
+      if (!Array.isArray(center) || center.length < 2) return;
+      const [latitude, longitude] = center;
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+      if (dragDebounceTimerRef.current) {
+        clearTimeout(dragDebounceTimerRef.current);
+      }
+
+      dragDebounceTimerRef.current = setTimeout(async () => {
+        try {
+          const city = (await reverseGeocodeCity(ymapsApi, latitude, longitude)).trim();
+          if (!city) return;
+          const cityToken = city.toLowerCase();
+          if (lastNotifiedCityRef.current === cityToken) return;
+          lastNotifiedCityRef.current = cityToken;
+          onMapCityChange(city);
+        } catch (error) {
+          console.warn('Failed to resolve city after map drag:', error);
+        }
+      }, 450);
+    };
+
+    map.events.add('actionend', handleActionEnd);
+    return () => {
+      map.events.remove('actionend', handleActionEnd);
+      if (dragDebounceTimerRef.current) {
+        clearTimeout(dragDebounceTimerRef.current);
+        dragDebounceTimerRef.current = null;
+      }
+    };
+  }, [open, ymapsApi, onMapCityChange]);
 
   useEffect(() => {
     if (!open || !ymapsApi || !mapRef.current) return;
@@ -306,7 +395,16 @@ function PickupMapModal({
                 {mapError}
               </div>
             ) : (
-              <div ref={mapRootRef} className="h-full w-full" />
+              <div
+                ref={mapRootRef}
+                className="h-full w-full"
+                onPointerDown={() => {
+                  lastUserMapInteractionAtRef.current = Date.now();
+                }}
+                onWheel={() => {
+                  lastUserMapInteractionAtRef.current = Date.now();
+                }}
+              />
             )}
           </div>
 
