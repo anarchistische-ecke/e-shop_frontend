@@ -31,7 +31,7 @@ function AboutPage() {
               Дом начинается с мягких тканей и спокойного сна
             </h1>
             <p className="text-base text-muted mt-4 max-w-2xl mx-auto">
-              Постельное Белье‑Юг — сеть магазинов уютных товаров для дома, представленная на рынке с 2015 года.
+              Постельное Белье‑ЮГ — сеть магазинов уютных товаров для дома, представленная на рынке с 2015 года.
               Наша миссия — сделать каждое мгновение, проведённое дома, счастливым и уютным.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3 text-xs text-muted">
@@ -88,7 +88,7 @@ function AboutPage() {
         <div className="container mx-auto px-4 max-w-2xl">
           <div className="soft-card p-6 md:p-8">
             <h2 className="text-xl font-semibold text-center">
-              Интернет‑магазин и мобильное приложение Постельное Белье‑Юг
+              Интернет‑магазин и мобильное приложение Постельное Белье‑ЮГ
             </h2>
             <ol className="list-decimal list-inside space-y-2 mt-4 text-base text-muted">
               <li>Оформите заказ не выходя из дома через сайт.</li>

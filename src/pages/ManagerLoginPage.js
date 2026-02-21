@@ -51,8 +51,8 @@ function ManagerLoginPage() {
     <section className="admin-auth-page">
       <div className="admin-auth-grid">
         <aside className="admin-auth-showcase" aria-hidden="true">
-          <p className="admin-auth-showcase__eyebrow">Manager access</p>
-          <h1 className="admin-auth-showcase__title">Кабинет менеджера Постельное Белье-Юг</h1>
+          <p className="admin-auth-showcase__eyebrow">Доступ менеджера</p>
+          <h1 className="admin-auth-showcase__title">Кабинет менеджера Постельное Белье-ЮГ</h1>
           <p className="admin-auth-showcase__text">
             Отправляйте ссылки на оплату, отслеживайте сделки и управляйте заказами клиентов.
           </p>

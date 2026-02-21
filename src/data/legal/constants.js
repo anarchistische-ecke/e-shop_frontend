@@ -6,7 +6,7 @@ export const legalTokens = {
   LEGAL_PHONE: '+7 961 466-88-33',
   LEGAL_EMAIL: 'postel-yug@yandex.ru',
   LEGAL_ADDRESS: 'Респ. Калмыкия, г. Элиста, МКР. 10, д. 15, к. 2 кв. 57',
-  SITE_NAME: 'Постельное Белье-Юг',
+  SITE_NAME: 'Постельное Белье-ЮГ',
   SITE_URL: 'https://yug-postel.ru',
   SITE_HOST: 'yug-postel.ru',
 };

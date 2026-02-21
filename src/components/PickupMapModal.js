@@ -66,47 +66,22 @@ function loadYandexMaps(apiKey) {
   return mapSdkPromise;
 }
 
-function geocodeWithYandex(ymapsApi, coords, options = {}) {
-  return new Promise((resolve, reject) => {
-    try {
-      ymapsApi.geocode(coords, options).then(resolve, reject);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-function extractCityFromGeoObject(geoObject) {
-  if (!geoObject) return '';
-  const metadata = geoObject.properties?.get?.('metaDataProperty.GeocoderMetaData.Address.Components') || [];
-  const city =
-    metadata.find((item) => item.kind === 'locality')?.name
-    || metadata.find((item) => item.kind === 'province')?.name
-    || metadata.find((item) => item.kind === 'area')?.name
-    || '';
-  if (city) return city;
-  return geoObject.getLocalities?.()?.[0]
-    || geoObject.getAdministrativeAreas?.()?.[0]
-    || '';
-}
-
-async function reverseGeocodeCity(ymapsApi, latitude, longitude) {
-  if (!ymapsApi || typeof ymapsApi.geocode !== 'function') return '';
-  try {
-    const result = await geocodeWithYandex(ymapsApi, [latitude, longitude], { kind: 'locality', results: 1 });
-    const first = result?.geoObjects?.get?.(0);
-    const city = extractCityFromGeoObject(first);
-    if (city) return city;
-  } catch (error) {
+function extractViewportBounds(map) {
+  const bounds = map?.getBounds?.();
+  if (!Array.isArray(bounds) || bounds.length < 2) return null;
+  const [cornerA, cornerB] = bounds;
+  if (!Array.isArray(cornerA) || !Array.isArray(cornerB)) return null;
+  const [lat1, lon1] = cornerA;
+  const [lat2, lon2] = cornerB;
+  if (![lat1, lon1, lat2, lon2].every((value) => Number.isFinite(value))) {
+    return null;
   }
-
-  try {
-    const fallbackResult = await geocodeWithYandex(ymapsApi, [latitude, longitude], { results: 1 });
-    const first = fallbackResult?.geoObjects?.get?.(0);
-    return extractCityFromGeoObject(first);
-  } catch (error) {
-  }
-  return '';
+  return {
+    latitudeFrom: Math.min(lat1, lat2),
+    latitudeTo: Math.max(lat1, lat2),
+    longitudeFrom: Math.min(lon1, lon2),
+    longitudeTo: Math.max(lon1, lon2)
+  };
 }
 
 function PickupMapModal({
@@ -117,7 +92,7 @@ function PickupMapModal({
   errorMessage,
   isLoading,
   onRetry,
-  onMapCityChange,
+  onMapViewportChange,
   onClose,
   onSelect
 }) {
@@ -126,8 +101,11 @@ function PickupMapModal({
   const mapRef = useRef(null);
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
-  const dragDebounceTimerRef = useRef(null);
-  const lastNotifiedCityRef = useRef('');
+  const viewportDebounceTimerRef = useRef(null);
+  const suppressViewportNotifyRef = useRef(false);
+  const lastNotifiedViewportRef = useRef('');
+  const initialViewportFittedRef = useRef(false);
+  const wasOpenRef = useRef(false);
   const [ymapsApi, setYmapsApi] = useState(null);
   const [mapError, setMapError] = useState('');
   const [searchValue, setSearchValue] = useState(searchLabel || '');
@@ -159,14 +137,40 @@ function PickupMapModal({
   );
 
   useEffect(() => {
-    if (!open) return;
+    const isOpening = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!isOpening) return;
     setSearchValue(searchLabel || '');
-    lastNotifiedCityRef.current = '';
+    lastNotifiedViewportRef.current = '';
+    initialViewportFittedRef.current = false;
+    suppressViewportNotifyRef.current = false;
+    if (!selectedPointId) {
+      setActiveUiId('');
+      return;
+    }
     const selectedByServerId = normalizedPoints.find(
       (point) => point.__hasServerId && point.id === selectedPointId
     );
-    setActiveUiId((selectedByServerId || normalizedPoints[0] || {}).__uiId || '');
+    setActiveUiId(selectedByServerId?.__uiId || '');
   }, [open, searchLabel, selectedPointId, normalizedPoints]);
+
+  useEffect(() => {
+    if (!open || !selectedPointId) return;
+    const selectedByServerId = normalizedPoints.find(
+      (point) => point.__hasServerId && point.id === selectedPointId
+    );
+    if (selectedByServerId) {
+      setActiveUiId(selectedByServerId.__uiId);
+    }
+  }, [open, selectedPointId, normalizedPoints]);
+
+  useEffect(() => {
+    if (!open) return;
+    setActiveUiId((current) => {
+      if (!current) return '';
+      return normalizedPoints.some((point) => point.__uiId === current) ? current : '';
+    });
+  }, [open, normalizedPoints]);
 
   useEffect(() => {
     if (!open) return;
@@ -232,42 +236,40 @@ function PickupMapModal({
   }, [open, ymapsApi, normalizedPoints, userCenter]);
 
   useEffect(() => {
-    if (!open || !ymapsApi || !mapRef.current || typeof onMapCityChange !== 'function') return undefined;
+    if (!open || !ymapsApi || !mapRef.current || typeof onMapViewportChange !== 'function') return undefined;
 
     const map = mapRef.current;
-    const handleDragEnd = () => {
-      const center = map.getCenter?.();
-      if (!Array.isArray(center) || center.length < 2) return;
-      const [latitude, longitude] = center;
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    const handleActionEnd = () => {
+      if (suppressViewportNotifyRef.current) return;
+      const bounds = extractViewportBounds(map);
+      if (!bounds) return;
 
-      if (dragDebounceTimerRef.current) {
-        clearTimeout(dragDebounceTimerRef.current);
+      if (viewportDebounceTimerRef.current) {
+        clearTimeout(viewportDebounceTimerRef.current);
       }
 
-      dragDebounceTimerRef.current = setTimeout(async () => {
-        try {
-          const city = (await reverseGeocodeCity(ymapsApi, latitude, longitude)).trim();
-          if (!city) return;
-          const cityToken = city.toLowerCase();
-          if (lastNotifiedCityRef.current === cityToken) return;
-          lastNotifiedCityRef.current = cityToken;
-          onMapCityChange(city);
-        } catch (error) {
-          console.warn('Failed to resolve city after map drag:', error);
-        }
-      }, 250);
+      viewportDebounceTimerRef.current = setTimeout(() => {
+        const token = [
+          bounds.latitudeFrom.toFixed(4),
+          bounds.latitudeTo.toFixed(4),
+          bounds.longitudeFrom.toFixed(4),
+          bounds.longitudeTo.toFixed(4)
+        ].join('|');
+        if (lastNotifiedViewportRef.current === token) return;
+        lastNotifiedViewportRef.current = token;
+        onMapViewportChange(bounds);
+      }, 280);
     };
 
-    map.events.add('dragend', handleDragEnd);
+    map.events.add('actionend', handleActionEnd);
     return () => {
-      map.events.remove('dragend', handleDragEnd);
-      if (dragDebounceTimerRef.current) {
-        clearTimeout(dragDebounceTimerRef.current);
-        dragDebounceTimerRef.current = null;
+      map.events.remove('actionend', handleActionEnd);
+      if (viewportDebounceTimerRef.current) {
+        clearTimeout(viewportDebounceTimerRef.current);
+        viewportDebounceTimerRef.current = null;
       }
     };
-  }, [open, ymapsApi, onMapCityChange]);
+  }, [open, ymapsApi, onMapViewportChange]);
 
   useEffect(() => {
     if (!open || !ymapsApi || !mapRef.current) return;
@@ -304,14 +306,39 @@ function PickupMapModal({
     clusterer.add(markers);
     map.geoObjects.add(clusterer);
 
-    if (activePoint && activePoint.__latitude !== null && activePoint.__longitude !== null) {
-      map.setCenter([activePoint.__latitude, activePoint.__longitude], 13, { duration: 250 });
-    } else if (markers.length) {
-      map.setBounds(clusterer.getBounds(), { checkZoomRange: true, zoomMargin: 28 });
-    } else if (userCenter) {
-      map.setCenter(userCenter, 11, { duration: 250 });
+    if (!initialViewportFittedRef.current) {
+      suppressViewportNotifyRef.current = true;
+      if (markers.length) {
+        map.setBounds(clusterer.getBounds(), { checkZoomRange: true, zoomMargin: 28 });
+      } else if (userCenter) {
+        map.setCenter(userCenter, 11, { duration: 250 });
+      }
+      initialViewportFittedRef.current = true;
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          suppressViewportNotifyRef.current = false;
+        }, 350);
+      } else {
+        suppressViewportNotifyRef.current = false;
+      }
     }
   }, [open, ymapsApi, filteredPoints, activePoint, userCenter]);
+
+  useEffect(() => {
+    if (!open || !mapRef.current || !activeUiId) return;
+    const selected = normalizedPoints.find((point) => point.__uiId === activeUiId);
+    if (!selected || selected.__latitude === null || selected.__longitude === null) return;
+
+    suppressViewportNotifyRef.current = true;
+    mapRef.current.setCenter([selected.__latitude, selected.__longitude], 13, { duration: 220 });
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        suppressViewportNotifyRef.current = false;
+      }, 300);
+    } else {
+      suppressViewportNotifyRef.current = false;
+    }
+  }, [open, activeUiId, normalizedPoints]);
 
   useEffect(() => {
     if (!open || typeof document === 'undefined') return undefined;

@@ -163,6 +163,19 @@ const SECTION_LABELS = {
   orders: 'Мои заказы',
   purchases: 'Купленные товары'
 };
+const ORDER_STATUS_LABELS = {
+  PENDING: 'Ожидает оплаты',
+  PROCESSING: 'В обработке',
+  PAID: 'Оплачен',
+  DELIVERED: 'Доставлен',
+  CANCELLED: 'Отменён',
+  REFUNDED: 'Возврат выполнен',
+};
+
+const formatOrderStatus = (status) => {
+  if (!status) return 'В обработке';
+  return ORDER_STATUS_LABELS[status] || status;
+};
 
 function AccountPage() {
   const { isAuthenticated, isReady, tokenParsed, logout, refreshProfile, hasRole, hasStrongAuth } = useAuth();
@@ -515,7 +528,7 @@ function AccountPage() {
                     type="email"
                     value={profile.email}
                     onChange={handleProfileChange('email')}
-                    placeholder="you@example.com"
+                    placeholder="email@example.ru"
                     className="w-full"
                   />
                 </div>
@@ -680,7 +693,7 @@ function AccountPage() {
                     >
                       <div>
                         <p className="text-sm font-semibold">Заказ {String(order.id).slice(0, 8)}...</p>
-                        <p className="text-xs text-muted">{dateStr} · {order.status || 'PENDING'}</p>
+                        <p className="text-xs text-muted">{dateStr} · {formatOrderStatus(order.status)}</p>
                       </div>
                       <div className="text-sm text-right">
                         <p className="font-semibold">{totalAmount.toLocaleString('ru-RU')} ₽</p>

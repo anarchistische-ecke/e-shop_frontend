@@ -114,7 +114,7 @@ function AdminLayout() {
         aria-label="Навигация панели администратора"
       >
         <div className="admin-shell__brand">
-          <p className="admin-shell__eyebrow">Постельное Белье-Юг</p>
+          <p className="admin-shell__eyebrow">Постельное Белье-ЮГ</p>
           <h2 className="admin-shell__brand-title">Admin Console</h2>
           <p className="admin-shell__brand-subtitle">Управление каталогом, заказами и контентом</p>
         </div>

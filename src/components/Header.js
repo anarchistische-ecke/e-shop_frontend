@@ -435,7 +435,7 @@ function Header() {
                 to="/"
                 className="font-display text-xl sm:text-2xl lg:text-3xl font-semibold text-ink tracking-tight hover:text-primary whitespace-nowrap"
               >
-                Постельное Белье-Юг
+                Постельное Белье-ЮГ
               </Link>
             </div>
 
@@ -468,7 +468,7 @@ function Header() {
               </form>
 
               {(isSearchOpen || isSearchFocused) && (searchTerm || hasSearchSuggestions) && (
-                <div className="absolute z-40 mt-3 w-full rounded-[26px] border border-ink/10 bg-white/98 p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]">
+                <div className="absolute z-40 mt-3 w-full rounded-[26px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]">
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</span>
                     <button
@@ -512,7 +512,7 @@ function Header() {
 
                   <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
                     <section>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted mb-2">Suggested searches</p>
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted mb-2">Подсказки поиска</p>
                       <div className="space-y-1">
                         {autocompleteData.suggestedQueries.length > 0 ? (
                           autocompleteData.suggestedQueries.map((suggestion) => (
@@ -536,7 +536,7 @@ function Header() {
                     </section>
 
                     <section>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted mb-2">Products</p>
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted mb-2">Товары</p>
                       <div className="space-y-1">
                         {autocompleteData.productSuggestions.length > 0 ? (
                           autocompleteData.productSuggestions.map((product) => {
@@ -629,7 +629,7 @@ function Header() {
                         : 'translate-y-2 opacity-0 pointer-events-none'
                     }`}
                   >
-                    <div className="rounded-[24px] border border-ink/10 bg-white/98 shadow-[0_24px_60px_rgba(43,39,34,0.18)] overflow-hidden">
+                    <div className="rounded-[24px] border border-ink/10 bg-white shadow-[0_24px_60px_rgba(43,39,34,0.18)] overflow-hidden">
                       <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-ink/10 bg-sand/40">
                         <div>
                           <p className="text-base font-semibold leading-tight">{displayName}</p>
@@ -676,7 +676,7 @@ function Header() {
 
       <div
         ref={megaMenuRef}
-        className="hidden lg:block bg-white/82 backdrop-blur border-b border-ink/10"
+        className="hidden lg:block bg-white/95 backdrop-blur border-b border-ink/10"
         onMouseLeave={closeMegaWithDelay}
       >
         <div className="container mx-auto px-4">
@@ -745,7 +745,7 @@ function Header() {
               className="pb-4"
               onMouseEnter={() => openMega(activeMegaCategory)}
             >
-              <div className="rounded-[24px] border border-ink/10 bg-white/98 p-5 shadow-[0_20px_48px_rgba(43,39,34,0.14)]">
+              <div className="rounded-[24px] border border-ink/10 bg-white p-5 shadow-[0_20px_48px_rgba(43,39,34,0.14)]">
                 <div className="mb-4 flex items-center justify-between">
                   <p className="text-xs uppercase tracking-[0.2em] text-muted">{activeMegaCategoryData.name}</p>
                   <Link to={`/category/${resolveCategoryToken(activeMegaCategoryData)}`} className="text-sm text-primary">
@@ -789,7 +789,7 @@ function Header() {
       </div>
 
       {isMenuOpen && (
-        <div className="lg:hidden border-b border-ink/10 bg-white/96 backdrop-blur">
+        <div className="lg:hidden border-b border-ink/10 bg-white backdrop-blur">
           <div className="container mx-auto px-4 py-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -862,7 +862,7 @@ function Header() {
         }`}
         style={{ top: 'calc(var(--site-header-height, 6.5rem) + 0.75rem)' }}
       >
-        <div className="rounded-[22px] border border-ink/10 bg-white/98 p-4 shadow-[0_22px_48px_rgba(43,39,34,0.22)]">
+        <div className="rounded-[22px] border border-ink/10 bg-white p-4 shadow-[0_22px_48px_rgba(43,39,34,0.22)]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">Добавлено в корзину</p>

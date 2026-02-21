@@ -544,7 +544,7 @@ function ProductPage() {
               </div>
 
               <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
-                <p>Delivers {deliveryDate}</p>
+                <p>Доставим {deliveryDate}</p>
                 <button
                   type="button"
                   className="text-primary"
@@ -589,7 +589,7 @@ function ProductPage() {
                   <span className="text-red-700">Нет в наличии</span>
                 )}
                 {isLowStock && (
-                  <span className="text-xs text-amber-700">Осталось мало, возможен быстрый out of stock.</span>
+                  <span className="text-xs text-amber-700">Осталось мало: возможна быстрая распродажа остатка.</span>
                 )}
               </div>
 
@@ -600,7 +600,7 @@ function ProductPage() {
                   onClick={handleAddToCart}
                   disabled={availableStock <= 0}
                 >
-                  Add to cart
+                  В корзину
                 </button>
 
                 <button
@@ -609,7 +609,7 @@ function ProductPage() {
                   onClick={handleBuyNow}
                   disabled={availableStock <= 0}
                 >
-                  Buy now
+                  Купить сейчас
                 </button>
 
                 {availableStock <= 0 && (
@@ -626,7 +626,7 @@ function ProductPage() {
                     setIsInfoSheetOpen(true);
                   }}
                 >
-                  Shipping & returns
+                  Доставка и возврат
                 </button>
               </div>
             </div>
@@ -638,7 +638,7 @@ function ProductPage() {
               </div>
               <div className="flex items-center gap-2 text-ink/85">
                 <TrustIcon type="returns" />
-                <span>Free returns within 30 days</span>
+                <span>Бесплатный возврат в течение 30 дней</span>
               </div>
               <div className="flex items-center gap-2 text-ink/85">
                 <TrustIcon type="secure" />
@@ -823,7 +823,7 @@ function ProductPage() {
             onClick={handleAddToCart}
             disabled={availableStock <= 0}
           >
-            Add to cart
+            В корзину
           </button>
         </div>
       </div>
@@ -861,7 +861,7 @@ function ProductPage() {
                   {sheetType === 'shipping' ? 'Доставка' : 'Возвраты'}
                 </p>
                 <h2 className="text-2xl font-semibold mt-1">
-                  {sheetType === 'shipping' ? 'Shipping & delivery' : 'Returns policy'}
+                  {sheetType === 'shipping' ? 'Доставка' : 'Условия возврата'}
                 </h2>
               </div>
               <button
@@ -877,7 +877,7 @@ function ProductPage() {
             {sheetType === 'shipping' ? (
               <div className="mt-4 space-y-3 text-sm text-ink/85">
                 <p>Ориентировочная дата доставки: {deliveryDate}.</p>
-                <p>Стоимость и интервалы подтверждаются до оплаты на шаге checkout.</p>
+                <p>Стоимость и интервалы подтверждаются до оплаты на шаге оформления заказа.</p>
                 <p>
                   Бесплатная доставка от 5000 ₽. Для удалённых регионов срок может увеличиваться.
                 </p>

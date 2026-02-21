@@ -98,14 +98,14 @@ function ProductCard({ product }) {
       : 'Подробности и характеристики на карточке товара';
 
   const badges = [
-    isLowStock ? `Low stock: ${stockCount}` : '',
-    displayRating >= 4.8 ? 'Bestseller' : '',
-    !hasDiscount && displayRating >= 4.5 ? 'New' : '',
+    isLowStock ? `Мало на складе: ${stockCount}` : '',
+    displayRating >= 4.8 ? 'Хит продаж' : '',
+    !hasDiscount && displayRating >= 4.5 ? 'Новинка' : '',
   ].filter(Boolean);
 
   return (
     <div
-      className="product-card group rounded-[24px] border border-ink/10 bg-white/92 p-3 shadow-[0_16px_34px_rgba(43,39,34,0.11)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_42px_rgba(43,39,34,0.16)]"
+      className="product-card group h-full rounded-[24px] border border-ink/10 bg-white/92 p-3 shadow-[0_16px_34px_rgba(43,39,34,0.11)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_42px_rgba(43,39,34,0.16)] flex flex-col"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -132,7 +132,7 @@ function ProductCard({ product }) {
 
           <div className="absolute inset-x-2 top-2 flex flex-wrap gap-2">
             {hasDiscount && (
-              <span className="rounded-full border border-primary/20 bg-primary/12 px-2.5 py-1 text-[11px] font-medium text-primary">
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
                 −{discount}%
               </span>
             )}
@@ -148,27 +148,29 @@ function ProductCard({ product }) {
         </div>
       </Link>
 
-      {images.length > 1 && (
-        <div className="mt-2 flex items-center gap-1 overflow-x-auto scrollbar-hide">
-          {images.slice(0, 4).map((image, index) => (
-            <button
-              key={image.id || `${product.id}-thumb-${index}`}
-              type="button"
-              className={`h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border ${
-                index === activeImageIndex
-                  ? 'border-primary/55 ring-2 ring-primary/20'
-                  : 'border-ink/15'
-              }`}
-              onClick={() => setActiveImageIndex(index)}
-              aria-label={`Показать изображение ${index + 1}`}
-            >
-              <img src={image.url} alt="" className="h-full w-full object-cover" loading="lazy" />
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="mt-2 min-h-[34px]">
+        {images.length > 1 && (
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+            {images.slice(0, 4).map((image, index) => (
+              <button
+                key={image.id || `${product.id}-thumb-${index}`}
+                type="button"
+                className={`h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border ${
+                  index === activeImageIndex
+                    ? 'border-primary/55 ring-2 ring-primary/20'
+                    : 'border-ink/15'
+                }`}
+                onClick={() => setActiveImageIndex(index)}
+                aria-label={`Показать изображение ${index + 1}`}
+              >
+                <img src={image.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 flex flex-1 flex-col gap-2">
         <Link
           to={`/product/${product.id}`}
           state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
@@ -190,7 +192,7 @@ function ProductCard({ product }) {
 
         <p className="line-clamp-1 text-xs text-muted">{attributeLine}</p>
 
-        <div className="mt-auto flex items-end justify-between gap-2">
+        <div className="mt-auto flex items-end justify-between gap-2 pt-1">
           <div className="flex items-baseline gap-2">
             <span className="text-base font-semibold text-accent">
               {currentPrice.toLocaleString('ru-RU')} ₽
