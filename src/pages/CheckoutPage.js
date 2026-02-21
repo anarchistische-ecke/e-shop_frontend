@@ -462,7 +462,11 @@ function CheckoutPage() {
     });
 
   const resolveCityFromCoordinates = async (latitude, longitude) => {
-    const apiKey = process.env.REACT_APP_YANDEX_MAPS_API_KEY || '';
+    const apiKey =
+      process.env.REACT_APP_YANDEX_GEOCODER_API_KEY
+      || process.env.REACT_APP_YANDEX_MAPS_API_KEY
+      || process.env.REACT_APP_YANDEX_MAPS_JS_API_KEY
+      || '';
     if (!apiKey) {
       return detectCityByTimezone();
     }
@@ -477,7 +481,7 @@ function CheckoutPage() {
 
     const response = await fetch(`https://geocode-maps.yandex.ru/1.x/?${query.toString()}`);
     if (!response.ok) {
-      throw new Error('Failed to reverse geocode location');
+      throw new Error(`Failed to reverse geocode location (${response.status})`);
     }
 
     const payload = await response.json();

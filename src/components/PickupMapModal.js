@@ -23,6 +23,10 @@ function loadYandexMaps(apiKey) {
     return Promise.reject(new Error('Yandex Maps can be loaded only in browser'));
   }
 
+  if (!apiKey) {
+    return Promise.reject(new Error('Yandex Maps API key is missing'));
+  }
+
   if (window.ymaps) {
     return new Promise((resolve) => {
       window.ymaps.ready(() => resolve(window.ymaps));
@@ -96,7 +100,10 @@ function PickupMapModal({
   onClose,
   onSelect
 }) {
-  const apiKey = process.env.REACT_APP_YANDEX_MAPS_API_KEY || '';
+  const apiKey =
+    process.env.REACT_APP_YANDEX_MAPS_JS_API_KEY
+    || process.env.REACT_APP_YANDEX_MAPS_API_KEY
+    || '';
   const mapRootRef = useRef(null);
   const mapRef = useRef(null);
   const dialogRef = useRef(null);
@@ -174,6 +181,10 @@ function PickupMapModal({
 
   useEffect(() => {
     if (!open) return;
+    if (!apiKey) {
+      setMapError('Карта недоступна: не задан ключ Yandex Maps JS API. Выберите пункт из списка справа.');
+      return;
+    }
     loadYandexMaps(apiKey)
       .then((api) => {
         setMapError('');
@@ -181,7 +192,12 @@ function PickupMapModal({
       })
       .catch((error) => {
         console.error('Failed to load Yandex Maps:', error);
-        setMapError('Не удалось загрузить карту. Выберите пункт из списка.');
+        const message = String(error?.message || '');
+        if (/invalid api key/i.test(message)) {
+          setMapError('Карта недоступна: ключ Yandex Maps JS API невалиден для текущего домена. Выберите пункт из списка справа.');
+          return;
+        }
+        setMapError('Не удалось загрузить карту. Выберите пункт из списка справа.');
       });
   }, [open, apiKey]);
 
@@ -215,17 +231,29 @@ function PickupMapModal({
       ? userCenter
       : [55.751244, 37.618423];
 
-    mapRef.current = new ymapsApi.Map(
-      mapRootRef.current,
-      {
-        center: defaultCenter,
-        zoom: pointsWithCoords.length ? 11 : 9,
-        controls: ['zoomControl']
-      },
-      {
-        suppressMapOpenBlock: true
+    try {
+      mapRef.current = new ymapsApi.Map(
+        mapRootRef.current,
+        {
+          center: defaultCenter,
+          zoom: pointsWithCoords.length ? 11 : 9,
+          controls: ['zoomControl']
+        },
+        {
+          suppressMapOpenBlock: true
+        }
+      );
+      setMapError('');
+    } catch (error) {
+      console.error('Failed to initialize Yandex map instance:', error);
+      const message = String(error?.message || '');
+      if (/invalid api key/i.test(message)) {
+        setMapError('Карта недоступна: ключ Yandex Maps JS API невалиден для текущего домена. Выберите пункт из списка справа.');
+      } else {
+        setMapError('Не удалось инициализировать карту. Выберите пункт из списка справа.');
       }
-    );
+      return undefined;
+    }
 
     return () => {
       if (mapRef.current) {
@@ -415,7 +443,12 @@ function PickupMapModal({
           <div className="relative bg-sand/20">
             {mapError ? (
               <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted">
-                {mapError}
+                <div>
+                  <p>{mapError}</p>
+                  <p className="mt-2 text-xs text-ink/70">
+                    Нужен ключ, созданный в кабинете Yandex Maps JS API и разрешённый для домена сайта.
+                  </p>
+                </div>
               </div>
             ) : (
               <div ref={mapRootRef} className="h-full w-full" />
