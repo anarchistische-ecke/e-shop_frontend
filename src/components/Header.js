@@ -418,7 +418,7 @@ function Header() {
 
   return (
     <header ref={headerRef} className="fixed top-0 left-0 right-0 z-40">
-      <div className="bg-white/90 backdrop-blur-xl border-b border-ink/10 shadow-[0_12px_28px_rgba(43,39,34,0.08)]">
+      <div className="relative z-30 bg-white/90 backdrop-blur-xl border-b border-ink/10 shadow-[0_12px_28px_rgba(43,39,34,0.08)]">
         <div className="container mx-auto px-4 py-3 sm:py-4">
           <div className="grid items-center gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto]">
             <div className="flex items-center gap-2">
@@ -468,7 +468,7 @@ function Header() {
               </form>
 
               {(isSearchOpen || isSearchFocused) && (searchTerm || hasSearchSuggestions) && (
-                <div className="absolute z-40 mt-3 w-full rounded-[26px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]">
+                <div className="absolute z-50 mt-3 w-full rounded-[26px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]">
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</span>
                     <button
@@ -676,7 +676,7 @@ function Header() {
 
       <div
         ref={megaMenuRef}
-        className="hidden lg:block bg-white/95 backdrop-blur border-b border-ink/10"
+        className="relative z-10 hidden lg:block bg-white/95 backdrop-blur border-b border-ink/10"
         onMouseLeave={closeMegaWithDelay}
       >
         <div className="container mx-auto px-4">
