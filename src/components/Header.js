@@ -367,6 +367,7 @@ function Header() {
 
   const handleSearchInputChange = (event) => {
     setSearchTerm(event.target.value);
+    setIsMenuOpen(false);
     setIsSearchOpen(true);
   };
 
@@ -415,17 +416,145 @@ function Header() {
   const megaChildren = activeMegaCategoryData
     ? childrenByParent[String(activeMegaCategoryData.id)] || []
     : [];
+  const isSearchPanelVisible = (isSearchOpen || isSearchFocused) && (searchTerm || hasSearchSuggestions);
+  const searchPanelBody = (
+    <>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</span>
+        <button
+          type="button"
+          onClick={() => setSearchScope('')}
+          className={`rounded-full border px-3 py-1 text-xs transition ${
+            !searchScope
+              ? 'border-primary/45 bg-primary/10 text-primary'
+              : 'border-ink/15 bg-white text-ink/70'
+          }`}
+        >
+          Везде
+        </button>
+        {scopeOptions.map((category) => {
+          const token = normalizeSearchText(resolveCategoryToken(category));
+          const isActive = searchScope === token;
+          return (
+            <button
+              key={resolveCategoryToken(category)}
+              type="button"
+              onClick={() => setSearchScope(isActive ? '' : token)}
+              className={`rounded-full border px-3 py-1 text-xs transition ${
+                isActive
+                  ? 'border-primary/45 bg-primary/10 text-primary'
+                  : 'border-ink/15 bg-white text-ink/70 hover:border-primary/35 hover:text-primary'
+              }`}
+            >
+              {category.name}
+            </button>
+          );
+        })}
+      </div>
+
+      {autocompleteData.hasCorrection && autocompleteData.correctedQuery && (
+        <p className="mb-3 text-xs text-muted">
+          Показываем подсказки для <span className="font-semibold text-ink">“{autocompleteData.correctedQuery}”</span>. Исходный запрос:
+          {' '}
+          <span className="font-semibold text-ink">“{searchTerm.trim()}”</span>.
+        </p>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <section>
+          <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">Подсказки поиска</p>
+          <div className="space-y-1">
+            {autocompleteData.suggestedQueries.length > 0 ? (
+              autocompleteData.suggestedQueries.map((suggestion) => (
+                <button
+                  key={`${suggestion.label}-${suggestion.scopeToken}`}
+                  type="button"
+                  onClick={() => {
+                    const nextScope = suggestion.scopeToken || searchScope;
+                    setSearchScope(nextScope);
+                    navigateSearch(suggestion.label, { scopeValue: nextScope });
+                  }}
+                  className="w-full rounded-xl border border-transparent px-3 py-2 text-left text-sm text-ink hover:border-ink/10 hover:bg-secondary/45"
+                >
+                  {suggestion.label}
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-sm text-muted">Начните вводить запрос, чтобы увидеть подсказки.</p>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">Товары</p>
+          <div className="space-y-1">
+            {autocompleteData.productSuggestions.length > 0 ? (
+              autocompleteData.productSuggestions.map((product) => {
+                const previewImage = getPrimaryImageUrl(product);
+                const previewPrice = getProductPrice(product);
+                return (
+                  <Link
+                    key={product.id}
+                    to={`/product/${product.id}`}
+                    state={{
+                      fromPath: `/category/search?${buildSearchParams(searchTerm.trim() || autocompleteData.correctedQuery || '', searchScope).toString()}`,
+                      fromLabel: 'Результаты поиска',
+                    }}
+                    onClick={() => {
+                      setIsSearchOpen(false);
+                      setIsSearchFocused(false);
+                    }}
+                    className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
+                  >
+                    <div className="h-11 w-11 overflow-hidden rounded-xl border border-ink/10 bg-sand/60">
+                      {previewImage ? (
+                        <img
+                          src={previewImage}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[10px] text-muted">Фото</div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-ink">{product.name}</p>
+                      <p className="text-xs text-muted">
+                        {(Number(product.rating) || 0) > 0
+                          ? `★ ${Number(product.rating).toFixed(1)} · ${product.reviewCount || product.reviewsCount || 0} отзывов`
+                          : 'Пока без отзывов'}
+                      </p>
+                    </div>
+                    <p className="whitespace-nowrap text-sm font-semibold text-accent">
+                      {previewPrice.toLocaleString('ru-RU')} ₽
+                    </p>
+                  </Link>
+                );
+              })
+            ) : (
+              <p className="px-3 py-2 text-sm text-muted">Товары появятся, когда запрос станет точнее.</p>
+            )}
+          </div>
+        </section>
+      </div>
+    </>
+  );
 
   return (
     <header ref={headerRef} className="fixed top-0 left-0 right-0 z-40">
-      <div className="relative z-30 bg-white/90 backdrop-blur-xl border-b border-ink/10 shadow-[0_12px_28px_rgba(43,39,34,0.08)]">
+      <div className="relative z-30 border-b border-ink/10 bg-white/90 shadow-[0_12px_28px_rgba(43,39,34,0.08)] backdrop-blur-xl">
         <div className="container mx-auto px-4 py-3 sm:py-4">
-          <div className="grid items-center gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto]">
-            <div className="flex items-center gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto]">
+            <div className="min-w-0 flex items-center gap-2">
               <button
                 type="button"
                 className="lg:hidden h-11 w-11 inline-flex items-center justify-center rounded-2xl border border-ink/10 bg-white text-ink hover:border-primary/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-                onClick={() => setIsMenuOpen((prev) => !prev)}
+                onClick={() => {
+                  setIsMenuOpen((prev) => !prev);
+                  setIsSearchOpen(false);
+                  setIsSearchFocused(false);
+                }}
                 aria-label="Открыть меню"
                 aria-expanded={isMenuOpen}
               >
@@ -433,13 +562,18 @@ function Header() {
               </button>
               <Link
                 to="/"
-                className="font-display text-xl sm:text-2xl lg:text-3xl font-semibold text-ink tracking-tight hover:text-primary whitespace-nowrap"
+                className="min-w-0 truncate font-display text-xl font-semibold tracking-tight text-ink hover:text-primary sm:text-2xl lg:text-3xl"
               >
                 Постельное Белье-ЮГ
               </Link>
             </div>
 
-            <div ref={searchRef} className="relative w-full">
+            <div
+              ref={searchRef}
+              className={`relative col-span-2 w-full md:col-span-1 md:col-start-2 ${
+                isSearchPanelVisible ? 'z-[80]' : 'z-20'
+              }`}
+            >
               <form onSubmit={handleSearchSubmit} className="relative">
                 <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
                 <input
@@ -447,10 +581,11 @@ function Header() {
                   value={searchTerm}
                   onChange={handleSearchInputChange}
                   onFocus={() => {
+                    setIsMenuOpen(false);
                     setIsSearchFocused(true);
                     setIsSearchOpen(true);
                   }}
-                  placeholder="Поиск по товарам, коллекциям и категориям"
+                  placeholder="Поиск по товарам и категориям"
                   className="w-full rounded-2xl border border-ink/10 bg-white pl-11 pr-12 py-3 text-sm shadow-[0_10px_24px_rgba(43,39,34,0.08)] focus:outline-none focus:ring-2 focus:ring-primary/30"
                   aria-label="Поиск товаров"
                   autoComplete="off"
@@ -467,128 +602,29 @@ function Header() {
                 )}
               </form>
 
-              {(isSearchOpen || isSearchFocused) && (searchTerm || hasSearchSuggestions) && (
-                <div className="absolute z-50 mt-3 w-full rounded-[26px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]">
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</span>
-                    <button
-                      type="button"
-                      onClick={() => setSearchScope('')}
-                      className={`rounded-full border px-3 py-1 text-xs transition ${
-                        !searchScope
-                          ? 'border-primary/45 bg-primary/10 text-primary'
-                          : 'border-ink/15 bg-white text-ink/70'
-                      }`}
-                    >
-                      Везде
-                    </button>
-                    {scopeOptions.map((category) => {
-                      const token = normalizeSearchText(resolveCategoryToken(category));
-                      const isActive = searchScope === token;
-                      return (
-                        <button
-                          key={resolveCategoryToken(category)}
-                          type="button"
-                          onClick={() => setSearchScope(isActive ? '' : token)}
-                          className={`rounded-full border px-3 py-1 text-xs transition ${
-                            isActive
-                              ? 'border-primary/45 bg-primary/10 text-primary'
-                              : 'border-ink/15 bg-white text-ink/70 hover:border-primary/35 hover:text-primary'
-                          }`}
-                        >
-                          {category.name}
-                        </button>
-                      );
-                    })}
+              {isSearchPanelVisible && (
+                <>
+                  <button
+                    type="button"
+                    className="fixed inset-0 z-40 bg-black/20 lg:hidden"
+                    onClick={() => {
+                      setIsSearchOpen(false);
+                      setIsSearchFocused(false);
+                    }}
+                    aria-label="Закрыть подсказки поиска"
+                  />
+                  <div
+                    className="fixed left-3 right-3 z-[70] max-h-[68vh] overflow-y-auto rounded-[24px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.22)] lg:hidden"
+                    style={{ top: 'calc(var(--site-header-height, 6.5rem) + 0.5rem)' }}
+                  >
+                    {searchPanelBody}
                   </div>
-
-                  {autocompleteData.hasCorrection && autocompleteData.correctedQuery && (
-                    <p className="mb-3 text-xs text-muted">
-                      Показываем подсказки для <span className="font-semibold text-ink">“{autocompleteData.correctedQuery}”</span>. Исходный запрос:
-                      {' '}
-                      <span className="font-semibold text-ink">“{searchTerm.trim()}”</span>.
-                    </p>
-                  )}
-
-                  <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-                    <section>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted mb-2">Подсказки поиска</p>
-                      <div className="space-y-1">
-                        {autocompleteData.suggestedQueries.length > 0 ? (
-                          autocompleteData.suggestedQueries.map((suggestion) => (
-                            <button
-                              key={`${suggestion.label}-${suggestion.scopeToken}`}
-                              type="button"
-                              onClick={() => {
-                                const nextScope = suggestion.scopeToken || searchScope;
-                                setSearchScope(nextScope);
-                                navigateSearch(suggestion.label, { scopeValue: nextScope });
-                              }}
-                              className="w-full rounded-xl border border-transparent px-3 py-2 text-left text-sm text-ink hover:border-ink/10 hover:bg-secondary/45"
-                            >
-                              {suggestion.label}
-                            </button>
-                          ))
-                        ) : (
-                          <p className="text-sm text-muted px-3 py-2">Начните вводить запрос, чтобы увидеть подсказки.</p>
-                        )}
-                      </div>
-                    </section>
-
-                    <section>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted mb-2">Товары</p>
-                      <div className="space-y-1">
-                        {autocompleteData.productSuggestions.length > 0 ? (
-                          autocompleteData.productSuggestions.map((product) => {
-                            const previewImage = getPrimaryImageUrl(product);
-                            const previewPrice = getProductPrice(product);
-                            return (
-                              <Link
-                                key={product.id}
-                                to={`/product/${product.id}`}
-                                state={{
-                                  fromPath: `/category/search?${buildSearchParams(searchTerm.trim() || autocompleteData.correctedQuery || '', searchScope).toString()}`,
-                                  fromLabel: 'Результаты поиска',
-                                }}
-                                onClick={() => {
-                                  setIsSearchOpen(false);
-                                  setIsSearchFocused(false);
-                                }}
-                                className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
-                              >
-                                <div className="h-11 w-11 overflow-hidden rounded-xl border border-ink/10 bg-sand/60">
-                                  {previewImage ? (
-                                    <img
-                                      src={previewImage}
-                                      alt={product.name}
-                                      className="h-full w-full object-cover"
-                                      loading="lazy"
-                                    />
-                                  ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-[10px] text-muted">Фото</div>
-                                  )}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-ink">{product.name}</p>
-                                  <p className="text-xs text-muted">
-                                    {(Number(product.rating) || 0) > 0
-                                      ? `★ ${Number(product.rating).toFixed(1)} · ${product.reviewCount || product.reviewsCount || 0} отзывов`
-                                      : 'Пока без отзывов'}
-                                  </p>
-                                </div>
-                                <p className="text-sm font-semibold text-accent whitespace-nowrap">
-                                  {previewPrice.toLocaleString('ru-RU')} ₽
-                                </p>
-                              </Link>
-                            );
-                          })
-                        ) : (
-                          <p className="text-sm text-muted px-3 py-2">Товары появятся, когда запрос станет точнее.</p>
-                        )}
-                      </div>
-                    </section>
+                  <div className="relative hidden lg:block">
+                    <div className="absolute z-50 mt-3 w-full rounded-[26px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]">
+                      {searchPanelBody}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
 
@@ -855,7 +891,7 @@ function Header() {
       )}
 
       <div
-        className={`fixed right-4 z-50 w-[min(92vw,390px)] transition-all duration-200 ${
+        className={`fixed left-1/2 z-50 w-[min(94vw,390px)] -translate-x-1/2 transition-all duration-200 sm:left-auto sm:right-4 sm:translate-x-0 ${
           lastAddedItem
             ? 'translate-y-0 opacity-100 pointer-events-auto'
             : '-translate-y-4 opacity-0 pointer-events-none'

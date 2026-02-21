@@ -176,10 +176,10 @@ function ProductCard({ product }) {
           state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
           className="block"
         >
-          <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
+          <p className="min-h-[2.75rem] line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
         </Link>
 
-        <div className="flex items-center gap-2 text-xs text-muted">
+        <div className="min-h-[1.1rem] flex items-center gap-2 text-xs text-muted">
           {displayRating > 0 ? (
             <>
               <span className="text-primary">★ {displayRating.toFixed(1)}</span>
@@ -190,9 +190,9 @@ function ProductCard({ product }) {
           )}
         </div>
 
-        <p className="line-clamp-1 text-xs text-muted">{attributeLine}</p>
+        <p className="min-h-[1.1rem] line-clamp-1 text-xs text-muted">{attributeLine}</p>
 
-        <div className="mt-auto flex items-end justify-between gap-2 pt-1">
+        <div className="mt-auto flex flex-col gap-2 pt-1 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-baseline gap-2">
             <span className="text-base font-semibold text-accent">
               {currentPrice.toLocaleString('ru-RU')} ₽
@@ -212,19 +212,16 @@ function ProductCard({ product }) {
 
 function AddToCartButton({ product, variantId }) {
   const { addItem } = useContext(CartContext);
-  const [isBouncing, setIsBouncing] = useState(false);
 
   const handleClick = async (event) => {
     event.preventDefault();
     await addItem(product, variantId);
-    setIsBouncing(true);
-    setTimeout(() => setIsBouncing(false), 450);
   };
 
   return (
     <button
       type="button"
-      className={`inline-flex min-h-[40px] items-center gap-1 rounded-2xl bg-accent text-white px-3 py-2 text-xs font-semibold shadow-[0_10px_20px_rgba(47,61,50,0.24)] transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${isBouncing ? 'animate-bounce' : ''}`}
+      className="inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-2xl bg-accent px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(47,61,50,0.24)] transition hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-auto"
       onClick={handleClick}
     >
       <span>В корзину</span>

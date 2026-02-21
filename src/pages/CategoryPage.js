@@ -864,7 +864,7 @@ function CategoryPage() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-            <div className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_10px_24px_rgba(43,39,34,0.07)]">
+            <div className="inline-flex min-h-[44px] w-full items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_10px_24px_rgba(43,39,34,0.07)] sm:w-auto">
               <span className="text-ink/55">↕</span>
               <label htmlFor="category-sort" className="text-ink/65">
                 Сорт:
@@ -873,7 +873,7 @@ function CategoryPage() {
                 id="category-sort"
                 value={sortKey}
                 onChange={(event) => setSortKey(event.target.value)}
-                className="control-inline min-w-[200px] bg-transparent pr-6 text-sm font-medium text-ink focus:outline-none"
+                className="control-inline min-w-0 w-full bg-transparent pr-6 text-sm font-medium text-ink focus:outline-none sm:min-w-[200px]"
                 aria-label="Сортировка товаров"
               >
                 <option value="bestMatch">Лучшее совпадение (рекомендуется)</option>
@@ -887,7 +887,7 @@ function CategoryPage() {
 
             <button
               type="button"
-              className="button-gray text-sm"
+              className="button-gray w-full text-sm sm:w-auto lg:hidden"
               onClick={() => setIsFilterOpen(true)}
             >
               Все фильтры{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
@@ -951,7 +951,7 @@ function CategoryPage() {
           </div>
         )}
 
-        <div className="mt-6 rounded-[24px] border border-ink/10 bg-white/85 p-4 shadow-[0_18px_34px_rgba(43,39,34,0.08)] md:p-5">
+        <div className="mt-6 hidden rounded-[24px] border border-ink/10 bg-white/85 p-4 shadow-[0_18px_34px_rgba(43,39,34,0.08)] md:p-5 lg:block">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="text-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
@@ -1182,27 +1182,27 @@ function CategoryPage() {
       </div>
 
       {isFilterOpen && (
-        <div className="fixed inset-0 z-50">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setIsFilterOpen(false)}
-            aria-label="Закрыть фильтры"
-          />
-          <div className="absolute bottom-0 left-0 right-0 max-h-[86vh] overflow-y-auto rounded-t-3xl bg-white/97 p-5 shadow-2xl slide-up-panel">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted">Фильтры</p>
-                <p className="text-base font-semibold">Уточните выбор</p>
+          <div className="fixed inset-0 z-50">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setIsFilterOpen(false)}
+              aria-label="Закрыть фильтры"
+            />
+            <div className="absolute bottom-0 left-0 right-0 max-h-[86vh] overflow-y-auto rounded-t-3xl bg-white/97 p-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] shadow-2xl slide-up-panel">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted">Фильтры</p>
+                  <p className="text-base font-semibold">Уточните выбор</p>
+                </div>
+                <button
+                  type="button"
+                  className="button-ghost min-h-[44px] text-xs"
+                  onClick={() => setIsFilterOpen(false)}
+                >
+                  Закрыть
+                </button>
               </div>
-              <button
-                type="button"
-                className="button-ghost text-xs"
-                onClick={() => setIsFilterOpen(false)}
-              >
-                Закрыть
-              </button>
-            </div>
 
             <div className="space-y-3">
               <label className="block text-sm">
@@ -1304,11 +1304,11 @@ function CategoryPage() {
 
             <div className={`mt-4 grid gap-2 ${activeFilterCount > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {activeFilterCount > 0 && (
-                <button type="button" className="button-gray" onClick={clearAllFilters}>
+                <button type="button" className="button-gray min-h-[44px]" onClick={clearAllFilters}>
                   Сбросить всё
                 </button>
               )}
-              <button type="button" className="button" onClick={() => setIsFilterOpen(false)}>
+              <button type="button" className="button min-h-[44px]" onClick={() => setIsFilterOpen(false)}>
                 Показать товары
               </button>
             </div>

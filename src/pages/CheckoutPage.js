@@ -1687,7 +1687,7 @@ function CheckoutPage() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 py-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] lg:hidden">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
           <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.16em] text-muted">{mobileAction.subtitle}</div>
