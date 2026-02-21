@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
 import { getCategories, getProduct, getProducts } from '../api';
@@ -10,6 +10,8 @@ import {
   moneyToNumber,
   normalizeProductImages,
 } from '../utils/product';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -32,6 +34,26 @@ function resolveProductCategoryToken(product) {
       ? categoryValue
       : categoryValue?.id || categoryValue?.slug || categoryValue?.name || ''
   );
+}
+
+function formatRub(value) {
+  return `${Math.max(0, Number(value) || 0).toLocaleString('ru-RU')} ₽`;
+}
+
+function detectScaleImage(images = []) {
+  const scalePattern = /human|model|hand|interior|room|lifestyle|body|context|size|scale|on-body|в\s*интерьере|в\s*масштабе/i;
+  return images.some((image) => {
+    const source = `${image?.id || ''} ${image?.alt || ''} ${image?.url || ''}`;
+    return scalePattern.test(source);
+  });
+}
+
+function detectDimensionsImage(images = []) {
+  const dimensionPattern = /dimension|measure|size-chart|размер|габарит|чертеж|схема/i;
+  return images.some((image) => {
+    const source = `${image?.id || ''} ${image?.alt || ''} ${image?.url || ''}`;
+    return dimensionPattern.test(source);
+  });
 }
 
 function TrustIcon({ type }) {
@@ -76,12 +98,15 @@ function ProductPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [bundleSelections, setBundleSelections] = useState({});
+  const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isImageZoomOpen, setIsImageZoomOpen] = useState(false);
   const [showZoomHint, setShowZoomHint] = useState(true);
   const [sheetType, setSheetType] = useState('shipping');
   const [isInfoSheetOpen, setIsInfoSheetOpen] = useState(false);
   const [isVariantTransitioning, setIsVariantTransitioning] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState('');
+  const [notifyState, setNotifyState] = useState({ type: '', message: '' });
 
   const transitionTimerRef = useRef(null);
 
@@ -95,10 +120,18 @@ function ProductPage() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setShowZoomHint(window.localStorage.getItem('pdp-zoom-hint-seen') !== '1');
+  }, []);
+
+  useEffect(() => {
     setActiveTab('about');
     setActiveImageIndex(0);
     setRelatedProducts([]);
     setBundleSelections({});
+    setQuantity(1);
+    setNotifyEmail('');
+    setNotifyState({ type: '', message: '' });
     setIsLoading(true);
 
     getProduct(id)
@@ -108,9 +141,10 @@ function ProductPage() {
           setSelectedVariant(null);
           return;
         }
+
         setProduct(data);
-        const variants = Array.isArray(data.variants) ? data.variants : [];
-        setSelectedVariant(variants[0] || null);
+        const primaryVariant = getPrimaryVariant(data);
+        setSelectedVariant(primaryVariant || null);
       })
       .catch((err) => {
         console.error('Failed to fetch product:', err);
@@ -192,6 +226,9 @@ function ProductPage() {
   const activeImage = orderedImages[activeImageIndex] || null;
   const mainImage = activeImage?.url || '';
 
+  const hasScaleImage = useMemo(() => detectScaleImage(orderedImages), [orderedImages]);
+  const hasDimensionsImage = useMemo(() => detectDimensionsImage(orderedImages), [orderedImages]);
+
   const productReviews = useMemo(
     () => reviews.filter((review) => String(review.productId) === String(id)),
     [id]
@@ -258,7 +295,7 @@ function ProductPage() {
   }, [categories, product]);
 
   const fallbackSpecs = [
-    product?.size ? `Размер: ${product.size}` : 'Размеры соответствуют стандартам',
+    product?.size ? `Размер: ${product.size}` : 'Размеры соответствуют стандартам категории',
     product?.color ? `Цвет: ${product.color}` : 'Стабильный оттенок после стирок',
     product?.care || 'Уход: деликатная стирка при 30°',
   ];
@@ -266,14 +303,20 @@ function ProductPage() {
   const highlights = [
     product?.material ? `Материал: ${product.material}` : 'Натуральные ткани',
     product?.threadCount ? `Плотность: ${product.threadCount}` : 'Мягкая воздухопроницаемая структура',
-    'Сертифицировано и подходит для чувствительной кожи',
+    'Подходит для ежедневного использования и частых стирок',
   ];
 
   const price = selectedVariant
     ? moneyToNumber(selectedVariant.price)
     : moneyToNumber(product?.price || 0);
-  const oldPrice = product?.oldPrice ? moneyToNumber(product.oldPrice) : 0;
+  const oldPrice =
+    selectedVariant?.oldPrice
+      ? moneyToNumber(selectedVariant.oldPrice)
+      : product?.oldPrice
+      ? moneyToNumber(product.oldPrice)
+      : 0;
   const hasDiscount = oldPrice > price;
+  const discountPercent = hasDiscount ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
 
   const availableStock = selectedVariant
     ? Number(selectedVariant.stock ?? selectedVariant.stockQuantity ?? 0)
@@ -290,7 +333,7 @@ function ProductPage() {
     if (!bundleSelections[item.id]) return sum;
     return sum + getProductPrice(item);
   }, 0);
-  const bundleTotal = price + bundleAddOnTotal;
+  const bundleTotal = price * quantity + bundleAddOnTotal;
 
   const deliveryDate = useMemo(() => {
     const date = new Date();
@@ -316,11 +359,25 @@ function ProductPage() {
     }
   };
 
+  const openImageZoom = () => {
+    setIsImageZoomOpen(true);
+    if (!showZoomHint) return;
+    setShowZoomHint(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('pdp-zoom-hint-seen', '1');
+    }
+  };
+
   const handleVariantChange = (variant) => {
     if (!variant || variant.id === selectedVariant?.id) return;
 
     setIsVariantTransitioning(true);
     setSelectedVariant(variant);
+
+    const scopedIndex = orderedImages.findIndex((image) => image.variantId === variant.id);
+    if (scopedIndex >= 0) {
+      setActiveImageIndex(scopedIndex);
+    }
 
     if (transitionTimerRef.current) {
       clearTimeout(transitionTimerRef.current);
@@ -332,19 +389,15 @@ function ProductPage() {
   };
 
   const handleAddToCart = async () => {
-    if (!product) return;
-    if (availableStock <= 0) return;
-
+    if (!product || availableStock <= 0) return;
     const variantId = selectedVariant?.id || product.id;
-    await addItem(product, variantId);
+    await addItem(product, variantId, quantity);
   };
 
   const handleBuyNow = async () => {
-    if (!product) return;
-    if (availableStock <= 0) return;
-
+    if (!product || availableStock <= 0) return;
     const variantId = selectedVariant?.id || product.id;
-    await addItem(product, variantId);
+    await addItem(product, variantId, quantity);
     navigate('/checkout');
   };
 
@@ -353,7 +406,25 @@ function ProductPage() {
     bundleItems.forEach((item) => {
       if (!bundleSelections[item.id]) return;
       const variant = getPrimaryVariant(item);
-      if (variant?.id) addItem(item, variant.id);
+      if (variant?.id) addItem(item, variant.id, 1);
+    });
+  };
+
+  const handleNotifyMe = () => {
+    const value = notifyEmail.trim();
+    if (!value) {
+      setNotifyState({ type: 'error', message: 'Введите email, чтобы получить уведомление.' });
+      return;
+    }
+
+    if (!EMAIL_RE.test(value)) {
+      setNotifyState({ type: 'error', message: 'Проверьте формат email. Например, name@example.ru.' });
+      return;
+    }
+
+    setNotifyState({
+      type: 'success',
+      message: `Отправим письмо на ${value}, когда вариант снова появится в наличии.`,
     });
   };
 
@@ -391,6 +462,7 @@ function ProductPage() {
         <div className="container mx-auto px-4">
           <h1 className="text-2xl font-semibold mb-2">Товар не найден</h1>
           <p>К сожалению, продукта с указанным идентификатором не существует.</p>
+          <Link to="/category/popular" className="button mt-4">Вернуться в каталог</Link>
         </div>
       </div>
     );
@@ -399,7 +471,7 @@ function ProductPage() {
   return (
     <div className="product-page py-8 sm:py-10 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
       <div className="container mx-auto px-4">
-        <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs text-muted">
+        <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Хлебные крошки">
           {location.state?.fromPath ? (
             <Link to={location.state.fromPath} className="text-primary hover:text-accent">
               ← {location.state.fromLabel || 'Назад к результатам'}
@@ -417,13 +489,13 @@ function ProductPage() {
             </>
           )}
           <span className="text-ink/40">›</span>
-          <span className="text-ink">{product.name}</span>
+          <span className="text-ink/80" aria-current="page">{product.name}</span>
         </nav>
 
         <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)]">
-          <div>
+          <section>
             <div
-              className={`relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/80 shadow-[0_24px_60px_rgba(43,39,34,0.16)] bg-gradient-to-br from-sand/70 to-white transition-opacity duration-200 ${
+              className={`group relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/80 shadow-[0_24px_60px_rgba(43,39,34,0.16)] bg-gradient-to-br from-sand/70 to-white transition-opacity duration-200 ${
                 isVariantTransitioning ? 'opacity-80' : 'opacity-100'
               }`}
             >
@@ -432,10 +504,7 @@ function ProductPage() {
                   <button
                     type="button"
                     className="absolute inset-0 block"
-                    onClick={() => {
-                      setIsImageZoomOpen(true);
-                      setShowZoomHint(false);
-                    }}
+                    onClick={openImageZoom}
                     aria-label="Увеличить изображение"
                   >
                     <img
@@ -445,7 +514,7 @@ function ProductPage() {
                       loading="eager"
                       decoding="async"
                     />
-                    <span className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/70 bg-white/88 text-ink shadow-sm">
+                    <span className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/70 bg-white/88 text-ink shadow-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       +
                     </span>
                   </button>
@@ -461,8 +530,17 @@ function ProductPage() {
                   </p>
                 )}
 
+                <div className="absolute left-3 top-3 flex flex-wrap gap-2 text-[11px]">
+                  {hasScaleImage && (
+                    <span className="rounded-full border border-ink/10 bg-white/90 px-2.5 py-1 text-ink/75">Есть фото в масштабе</span>
+                  )}
+                  {hasDimensionsImage && (
+                    <span className="rounded-full border border-ink/10 bg-white/90 px-2.5 py-1 text-ink/75">Есть схема размеров</span>
+                  )}
+                </div>
+
                 {activeImage?.variantId && (
-                  <div className="absolute top-3 left-3 rounded-2xl border border-ink/10 bg-white/88 px-3 py-1 text-xs">
+                  <div className="absolute top-3 right-14 rounded-2xl border border-ink/10 bg-white/88 px-3 py-1 text-xs">
                     Вариант: {variantNameById[activeImage.variantId] || activeImage.variantId}
                   </div>
                 )}
@@ -490,7 +568,14 @@ function ProductPage() {
               </div>
             </div>
 
-            <div className="mt-4 flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
+            <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted">
+              <p>Фото: {orderedImages.length || 1} · Масштаб и фактуру можно проверить через zoom</p>
+              <button type="button" className="text-primary" onClick={openImageZoom}>
+                Открыть крупно
+              </button>
+            </div>
+
+            <div className="mt-3 flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
               {(orderedImages.length > 0 ? orderedImages : [null]).map((image, index) => (
                 <button
                   key={image ? image.id || index : index}
@@ -518,42 +603,69 @@ function ProductPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </section>
 
           <aside className="lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] h-fit space-y-4">
-            <div className="soft-card p-5 sm:p-6">
-              <p className="text-xs uppercase tracking-[0.28em] text-accent">Бестселлер</p>
+            <div className={`soft-card p-5 sm:p-6 transition-opacity duration-200 ${isVariantTransitioning ? 'opacity-80' : 'opacity-100'}`}>
+              <p className="text-xs uppercase tracking-[0.25em] text-accent">Карточка товара</p>
               <h1 className="mt-2 text-xl sm:text-2xl font-semibold">{product.name}</h1>
 
               <div className="mt-3 flex items-center gap-2 text-sm text-muted">
                 {rating > 0 ? (
                   <>
                     <span className="text-primary">★ {rating.toFixed(1)}</span>
-                    <span>({reviewCount})</span>
+                    <button
+                      type="button"
+                      className="underline-offset-2 hover:text-primary hover:underline"
+                      onClick={() => setActiveTab('reviews')}
+                    >
+                      {reviewCount} отзывов
+                    </button>
                   </>
                 ) : (
                   <span>Пока без отзывов</span>
                 )}
               </div>
 
-              <div className="mt-4 text-accent text-2xl font-semibold">
-                {price.toLocaleString('ru-RU')} ₽
+              <div className="mt-4 flex items-end gap-3">
+                <p className="text-accent text-3xl font-semibold leading-none">{formatRub(price)}</p>
                 {hasDiscount && (
-                  <span className="ml-3 text-base line-through text-muted">{oldPrice.toLocaleString('ru-RU')} ₽</span>
+                  <>
+                    <span className="text-base line-through text-muted">{formatRub(oldPrice)}</span>
+                    <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                      −{discountPercent}%
+                    </span>
+                  </>
                 )}
               </div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
-                <p>Доставим {deliveryDate}</p>
+              <div className="mt-3 rounded-2xl border border-ink/10 bg-secondary/45 px-3 py-2 text-sm">
+                <p>
+                  Доставим <span className="font-semibold">{deliveryDate}</span>
+                  {' '}при заказе до 14:00 (местное время).
+                </p>
                 <button
                   type="button"
-                  className="text-primary"
+                  className="mt-1 text-xs text-primary"
                   onClick={() => {
                     setSheetType('shipping');
                     setIsInfoSheetOpen(true);
                   }}
                 >
-                  Детали доставки
+                  Как рассчитывается дата и стоимость
+                </button>
+              </div>
+
+              <div className="mt-2">
+                <button
+                  type="button"
+                  className="text-sm text-primary"
+                  onClick={() => {
+                    setSheetType('returns');
+                    setIsInfoSheetOpen(true);
+                  }}
+                >
+                  Доставка и возврат
                 </button>
               </div>
 
@@ -563,6 +675,7 @@ function ProductPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {product.variants.map((variant) => {
                       const isActive = selectedVariant?.id === variant.id;
+                      const variantStock = Number(variant?.stock ?? variant?.stockQuantity ?? 0);
                       return (
                         <button
                           key={variant.id}
@@ -574,13 +687,40 @@ function ProductPage() {
                           }`}
                           onClick={() => handleVariantChange(variant)}
                         >
-                          {variant.name || variant.sku || variant.id}
+                          <span className="block font-medium">{variant.name || variant.sku || variant.id}</span>
+                          <span className="block text-[11px] text-muted">
+                            {formatRub(moneyToNumber(variant.price))}
+                            {variantStock > 0 ? ` · ${variantStock} шт.` : ' · нет в наличии'}
+                          </span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
               )}
+
+              <div className="mt-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted">Количество</p>
+                <div className="mt-2 inline-flex items-center rounded-2xl border border-ink/10 bg-white/90 p-1">
+                  <button
+                    type="button"
+                    className="touch-target rounded-xl border border-transparent px-3 text-lg text-ink/75 hover:text-primary"
+                    onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                    aria-label="Уменьшить количество"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[42px] text-center text-sm font-semibold">{quantity}</span>
+                  <button
+                    type="button"
+                    className="touch-target rounded-xl border border-transparent px-3 text-lg text-ink/75 hover:text-primary"
+                    onClick={() => setQuantity((prev) => Math.min(99, prev + 1))}
+                    aria-label="Увеличить количество"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
 
               <div className="mt-4 flex flex-col gap-1 text-sm">
                 {availableStock > 0 ? (
@@ -589,7 +729,7 @@ function ProductPage() {
                   <span className="text-red-700">Нет в наличии</span>
                 )}
                 {isLowStock && (
-                  <span className="text-xs text-amber-700">Осталось мало: возможна быстрая распродажа остатка.</span>
+                  <span className="text-xs text-amber-700">Осталось мало: {availableStock} шт.</span>
                 )}
               </div>
 
@@ -600,7 +740,7 @@ function ProductPage() {
                   onClick={handleAddToCart}
                   disabled={availableStock <= 0}
                 >
-                  В корзину
+                  Добавить в корзину
                 </button>
 
                 <button
@@ -612,23 +752,48 @@ function ProductPage() {
                   Купить сейчас
                 </button>
 
-                {availableStock <= 0 && (
-                  <button type="button" className="button-ghost w-full text-sm">
-                    Сообщить о поступлении
-                  </button>
-                )}
-
                 <button
                   type="button"
                   className="button-ghost w-full text-sm"
                   onClick={() => {
-                    setSheetType('returns');
+                    setSheetType('shipping');
                     setIsInfoSheetOpen(true);
                   }}
                 >
-                  Доставка и возврат
+                  Условия доставки и возврата
                 </button>
               </div>
+
+              {availableStock <= 0 && (
+                <div className="mt-4 rounded-2xl border border-ink/10 bg-white/88 p-3 text-sm">
+                  <p className="font-medium text-ink">Сообщить о поступлении</p>
+                  <p className="mt-1 text-xs text-muted">Ожидаем пополнение в течение 5–9 дней. Оставьте email, чтобы не пропустить.</p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <input
+                      type="email"
+                      value={notifyEmail}
+                      onChange={(event) => {
+                        setNotifyEmail(event.target.value);
+                        if (notifyState.type) setNotifyState({ type: '', message: '' });
+                      }}
+                      placeholder="name@example.ru"
+                      className={notifyState.type === 'error' ? 'input-error' : ''}
+                      aria-label="Email для уведомления"
+                    />
+                    <button type="button" className="button-gray" onClick={handleNotifyMe}>
+                      Уведомить
+                    </button>
+                  </div>
+                  {notifyState.message && (
+                    <p className={`mt-2 text-xs ${notifyState.type === 'error' ? 'text-red-700' : 'text-emerald-700'}`}>
+                      {notifyState.message}
+                    </p>
+                  )}
+                  <Link to={`/category/${resolveCategoryToken(activeCategory) || 'popular'}`} className="mt-2 inline-block text-xs text-primary">
+                    Показать похожие товары
+                  </Link>
+                </div>
+              )}
             </div>
 
             <div className="soft-card p-5 text-sm space-y-3">
@@ -642,23 +807,21 @@ function ProductPage() {
               </div>
               <div className="flex items-center gap-2 text-ink/85">
                 <TrustIcon type="secure" />
-                <span>Защищённая оплата через ЮKassa</span>
+                <span>Защищённая оплата и безопасный checkout</span>
               </div>
             </div>
 
             {bundleItems.length > 0 && (
               <div className="soft-card p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted">Соберите комплект</p>
-                <p className="mt-2 text-sm text-muted">
-                  Часто покупают вместе: добавьте всё за один клик.
-                </p>
+                <p className="mt-2 text-sm text-muted">Часто покупают вместе: добавьте всё за один клик.</p>
 
                 <div className="mt-3 space-y-3">
                   {bundleItems.map((item) => (
                     <label key={item.id} className="flex items-start gap-3 text-sm">
                       <input
                         type="checkbox"
-                        className="mt-1 h-4 w-4 accent-primary"
+                        className="mt-1"
                         checked={Boolean(bundleSelections[item.id])}
                         onChange={(event) => {
                           setBundleSelections((prev) => ({
@@ -669,7 +832,7 @@ function ProductPage() {
                       />
                       <span>
                         <span className="block font-medium">{item.name}</span>
-                        <span className="text-xs text-muted">{getProductPrice(item).toLocaleString('ru-RU')} ₽</span>
+                        <span className="text-xs text-muted">{formatRub(getProductPrice(item))}</span>
                       </span>
                     </label>
                   ))}
@@ -677,7 +840,7 @@ function ProductPage() {
 
                 <div className="mt-4 flex items-center justify-between text-sm">
                   <span className="text-muted">Итого</span>
-                  <span className="font-semibold">{bundleTotal.toLocaleString('ru-RU')} ₽</span>
+                  <span className="font-semibold">{formatRub(bundleTotal)}</span>
                 </div>
 
                 <button type="button" className="button w-full mt-3" onClick={handleAddBundle}>
@@ -688,7 +851,7 @@ function ProductPage() {
           </aside>
         </div>
 
-        <div className="mt-10 sm:mt-12">
+        <section id="product-tabs" className="mt-10 sm:mt-12">
           <div className="border-b border-ink/10 flex flex-wrap gap-6 text-sm">
             <button
               type="button"
@@ -725,6 +888,10 @@ function ProductPage() {
             <div className="mt-4 grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
               <div className="rounded-2xl border border-ink/10 bg-white/90 p-4">
                 <p className="text-sm font-semibold">Распределение оценок</p>
+                <div className="mt-2 flex items-end gap-2">
+                  <span className="text-2xl font-semibold text-primary">{rating > 0 ? rating.toFixed(1) : '—'}</span>
+                  <span className="text-xs text-muted">на основе {reviewCount} отзывов</span>
+                </div>
                 <div className="mt-3 space-y-2">
                   {ratingDistribution.map((entry) => (
                     <div key={entry.rating} className="grid grid-cols-[24px_minmax(0,1fr)_28px] items-center gap-2 text-xs text-muted">
@@ -795,7 +962,7 @@ function ProductPage() {
               )}
             </div>
           )}
-        </div>
+        </section>
 
         {relatedProducts.length > 0 && (
           <section className="mt-10 sm:mt-12">
@@ -815,8 +982,8 @@ function ProductPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-ink/10 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden z-30">
         <div className="container mx-auto px-4 py-3 flex items-center gap-3">
           <div className="flex-1">
-            <p className="text-xs text-muted">Итого</p>
-            <p className="text-base font-semibold">{price.toLocaleString('ru-RU')} ₽</p>
+            <p className="text-xs text-muted">К оплате</p>
+            <p className="text-base font-semibold">{formatRub(price * quantity)}</p>
           </div>
           <button
             className="button flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -838,11 +1005,36 @@ function ProductPage() {
           >
             ✕
           </button>
+
+          {orderedImages.length > 1 && (
+            <>
+              <button
+                type="button"
+                className="absolute left-4 top-1/2 -translate-y-1/2 h-11 w-11 rounded-2xl border border-white/30 bg-black/40 text-white"
+                onClick={() => selectImageByIndex(activeImageIndex - 1)}
+                aria-label="Предыдущее изображение"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className="absolute right-4 top-1/2 -translate-y-1/2 h-11 w-11 rounded-2xl border border-white/30 bg-black/40 text-white"
+                onClick={() => selectImageByIndex(activeImageIndex + 1)}
+                aria-label="Следующее изображение"
+              >
+                ›
+              </button>
+            </>
+          )}
+
           <div className="mx-auto flex h-full max-w-5xl items-center justify-center">
             {mainImage ? (
               <img src={mainImage} alt={product.name} className="max-h-full max-w-full object-contain" />
             ) : null}
           </div>
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/25 bg-black/40 px-3 py-1 text-xs text-white/90">
+            {activeImageIndex + 1} / {Math.max(1, orderedImages.length)}
+          </p>
         </div>
       )}
 
@@ -854,7 +1046,7 @@ function ProductPage() {
             onClick={() => setIsInfoSheetOpen(false)}
             aria-label="Закрыть"
           />
-          <aside className="absolute right-0 top-0 h-full w-full max-w-md bg-white p-5 shadow-[0_24px_70px_rgba(43,39,34,0.26)] md:rounded-l-[26px]">
+          <aside className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-[0_24px_70px_rgba(43,39,34,0.26)] slide-up-panel md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:h-full md:w-full md:max-w-md md:rounded-l-[26px] md:rounded-t-none md:animate-none">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-muted">
@@ -876,19 +1068,16 @@ function ProductPage() {
 
             {sheetType === 'shipping' ? (
               <div className="mt-4 space-y-3 text-sm text-ink/85">
-                <p>Ориентировочная дата доставки: {deliveryDate}.</p>
-                <p>Стоимость и интервалы подтверждаются до оплаты на шаге оформления заказа.</p>
-                <p>
-                  Бесплатная доставка от 5000 ₽. Для удалённых регионов срок может увеличиваться.
-                </p>
+                <p>Ориентировочная дата доставки: {deliveryDate} (при заказе до 14:00 по местному времени).</p>
+                <p>Стоимость и доступные интервалы показываются до оплаты на шаге оформления заказа.</p>
+                <p>Бесплатная доставка от 5000 ₽. Для удалённых регионов срок может увеличиваться.</p>
               </div>
             ) : (
               <div className="mt-4 space-y-3 text-sm text-ink/85">
                 <p>Возврат возможен в течение 30 дней после получения заказа.</p>
-                <p>Если товар не подошёл, оформите заявку через поддержку и выберите способ возврата.</p>
+                <p>Если товар не подошёл, оформите заявку через поддержку и выберите удобный способ возврата.</p>
                 <p>
-                  Условия и исключения доступны в разделе
-                  {' '}
+                  Полные условия доступны в разделе{' '}
                   <Link to="/usloviya-prodazhi" className="text-primary">«Условия продажи»</Link>.
                 </p>
               </div>

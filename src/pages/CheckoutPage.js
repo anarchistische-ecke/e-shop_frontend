@@ -462,7 +462,11 @@ function CheckoutPage() {
     });
 
   const resolveCityFromCoordinates = async (latitude, longitude) => {
-    const apiKey = process.env.REACT_APP_YANDEX_MAPS_API_KEY || '';
+    const apiKey =
+      process.env.REACT_APP_YANDEX_GEOCODER_API_KEY
+      || process.env.REACT_APP_YANDEX_MAPS_API_KEY
+      || process.env.REACT_APP_YANDEX_MAPS_JS_API_KEY
+      || '';
     if (!apiKey) {
       return detectCityByTimezone();
     }
@@ -477,7 +481,7 @@ function CheckoutPage() {
 
     const response = await fetch(`https://geocode-maps.yandex.ru/1.x/?${query.toString()}`);
     if (!response.ok) {
-      throw new Error('Failed to reverse geocode location');
+      throw new Error(`Failed to reverse geocode location (${response.status})`);
     }
 
     const payload = await response.json();
@@ -1683,7 +1687,7 @@ function CheckoutPage() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 py-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] lg:hidden">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
           <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.16em] text-muted">{mobileAction.subtitle}</div>
