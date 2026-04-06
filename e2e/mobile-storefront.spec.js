@@ -15,6 +15,7 @@ test('customer can add a product to cart and open checkout on mobile', async ({ 
 
   await page.getByRole('button', { name: 'Добавить в корзину' }).click();
   await expect(page.getByText('Добавлено в корзину')).toBeVisible();
+  await expect(page.locator('a[aria-label="Корзина"]')).toContainText('1');
 
   await page.getByRole('link', { name: 'Открыть корзину' }).click();
   await expect(page).toHaveURL(/\/cart$/);
