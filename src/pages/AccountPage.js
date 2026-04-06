@@ -4,6 +4,8 @@ import {
   getCustomerOrders,
   updateCustomerProfile
 } from '../api';
+import NotificationBanner from '../components/NotificationBanner';
+import { Button, Card, Input, Select, Tabs } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import ManagerAccountPage from './ManagerAccountPage';
 
@@ -435,7 +437,7 @@ function AccountPage() {
     switch (activeSection) {
       case 'profile':
         return (
-          <div className="soft-card p-6 md:p-8 reveal-up">
+          <Card className="reveal-up" padding="lg">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <div>
                 <h2 className="text-xl sm:text-2xl font-semibold">Личные данные</h2>
@@ -447,41 +449,42 @@ function AccountPage() {
             </div>
 
             {saveStatus === 'saving' && (
-              <div className="mb-5 rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 text-sm text-muted">
-                Сохраняем изменения…
-              </div>
+              <NotificationBanner
+                notification={{ type: 'info', message: 'Сохраняем изменения…' }}
+                className="mb-5"
+              />
             )}
             {saveStatus === 'saved' && (
-              <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-                Данные сохранены. Мы обновим информацию в вашем профиле.
-              </div>
+              <NotificationBanner
+                notification={{ type: 'success', message: 'Данные сохранены. Мы обновим информацию в вашем профиле.' }}
+                className="mb-5"
+              />
             )}
             {saveStatus === 'error' && (
-              <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {saveMessage || 'Не удалось сохранить данные.'}
-              </div>
+              <NotificationBanner
+                notification={{ type: 'error', message: saveMessage || 'Не удалось сохранить данные.' }}
+                className="mb-5"
+              />
             )}
 
             <form onSubmit={handleSave} className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm text-muted block mb-1">Имя</label>
-                  <input
+                  <Input
                     type="text"
                     value={profile.firstName}
                     onChange={handleProfileChange('firstName')}
                     placeholder="Ольга"
-                    className="w-full"
                   />
                 </div>
                 <div>
                   <label className="text-sm text-muted block mb-1">Фамилия</label>
-                  <input
+                  <Input
                     type="text"
                     value={profile.lastName}
                     onChange={handleProfileChange('lastName')}
                     placeholder="Павленко"
-                    className="w-full"
                   />
                 </div>
               </div>
@@ -490,12 +493,12 @@ function AccountPage() {
                 <div>
                   <label className="text-sm text-muted block mb-1">Телефон</label>
                   <div className="relative">
-                    <input
+                    <Input
                       type="tel"
                       value={profile.phone}
                       onChange={handleProfileChange('phone')}
                       placeholder="+7 961 000-00-00"
-                      className="w-full pr-10"
+                      className="pr-10"
                       readOnly
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
@@ -524,95 +527,77 @@ function AccountPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm text-muted block mb-1">Электронная почта</label>
-                  <input
+                  <Input
                     type="email"
                     value={profile.email}
                     onChange={handleProfileChange('email')}
                     placeholder="email@example.ru"
-                    className="w-full"
                   />
                 </div>
                 <div>
                   <label className="text-sm text-muted block mb-1">Дата рождения</label>
-                  <input
+                  <Input
                     type="date"
                     value={profile.birthDate}
                     onChange={handleProfileChange('birthDate')}
-                    className="w-full"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="text-sm text-muted block mb-2">Ваш пол</label>
-                <div className="inline-flex items-center gap-2 rounded-full bg-secondary p-1">
-                  <button
-                    type="button"
-                    onClick={() => setProfile((prev) => ({ ...prev, gender: 'female' }))}
-                    className={`px-4 py-2 text-sm rounded-full transition ${
-                      profile.gender === 'female'
-                        ? 'bg-white shadow text-ink'
-                        : 'text-muted hover:text-ink'
-                    }`}
-                    aria-pressed={profile.gender === 'female'}
-                  >
-                    Женский
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProfile((prev) => ({ ...prev, gender: 'male' }))}
-                    className={`px-4 py-2 text-sm rounded-full transition ${
-                      profile.gender === 'male'
-                        ? 'bg-white shadow text-ink'
-                        : 'text-muted hover:text-ink'
-                    }`}
-                    aria-pressed={profile.gender === 'male'}
-                  >
-                    Мужской
-                  </button>
-                </div>
+                <Tabs
+                  ariaLabel="Выбор пола"
+                  value={profile.gender}
+                  onChange={(value) => setProfile((prev) => ({ ...prev, gender: value }))}
+                  items={[
+                    { value: 'female', label: 'Женский' },
+                    { value: 'male', label: 'Мужской' },
+                  ]}
+                  fullWidth
+                  className="max-w-md"
+                />
               </div>
 
               <div className="pt-2">
-                <button
+                <Button
                   type="submit"
-                  className="button"
                   disabled={saveStatus === 'saving' || isProfileLoading}
                   aria-busy={saveStatus === 'saving'}
                 >
                   {saveStatus === 'saving' ? 'Сохраняем…' : 'Сохранить данные'}
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
+          </Card>
         );
       case 'addresses':
         return (
-          <div className="soft-card p-6 md:p-8 reveal-up">
+          <Card className="reveal-up" padding="lg">
             <h2 className="text-xl sm:text-2xl font-semibold mb-3">Мои адреса</h2>
             <p className="text-sm text-muted">
               Сохраняйте любимые адреса, чтобы оформлять доставку быстрее.
             </p>
-            <button type="button" className="button-gray mt-5">
+            <Button type="button" variant="secondary" className="mt-5">
               Добавить новый адрес
-            </button>
-          </div>
+            </Button>
+          </Card>
         );
       case 'events':
         return (
-          <div className="soft-card p-6 md:p-8 reveal-up">
+          <Card className="reveal-up" padding="lg">
             <h2 className="text-xl sm:text-2xl font-semibold mb-3">Уютные события</h2>
             <p className="text-sm text-muted">
               Здесь появятся персональные приглашения, мастер-классы и закрытые распродажи.
             </p>
-            <div className="mt-5 rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 text-sm text-muted">
+            <Card variant="quiet" padding="sm" className="mt-5 text-sm text-muted">
               Пока событий нет, но мы уже готовим подборки специально для вас.
-            </div>
-          </div>
+            </Card>
+          </Card>
         );
       case 'bonuses':
         return (
-          <div className="soft-card p-6 md:p-8 reveal-up">
+          <Card className="reveal-up" padding="lg">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="text-xl sm:text-2xl font-semibold">Уютные бонусы</h2>
               <span className="text-xs uppercase tracking-[0.25em] text-primary">Баланс</span>
@@ -620,48 +605,49 @@ function AccountPage() {
             <p className="text-sm text-muted mb-3">Ваши бонусы доступны для списания на следующую покупку.</p>
             <div className="text-3xl font-semibold text-primary">{loyaltyPoints} баллов</div>
             <p className="text-xs text-muted mt-2">1 балл = 1 ₽. Бонусы действуют 365 дней.</p>
-            <Link to="/info/bonuses" className="button-gray mt-5">
+            <Button as={Link} to="/info/bonuses" variant="secondary" className="mt-5">
               Подробнее о программе
-            </Link>
-          </div>
+            </Button>
+          </Card>
         );
       case 'promocodes':
         return (
-          <div className="soft-card p-6 md:p-8 reveal-up">
+          <Card className="reveal-up" padding="lg">
             <h2 className="text-xl sm:text-2xl font-semibold mb-3">Мои промокоды</h2>
             <p className="text-sm text-muted">
               Здесь появятся все активные промокоды и персональные скидки.
             </p>
-            <div className="mt-5 rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 text-sm text-muted">
+            <Card variant="quiet" padding="sm" className="mt-5 text-sm text-muted">
               Пока нет активных промокодов. Первый бонус появится здесь автоматически.
-            </div>
-          </div>
+            </Card>
+          </Card>
         );
       case 'referral':
         return (
-          <div className="soft-card p-6 md:p-8 reveal-up">
+          <Card className="reveal-up" padding="lg">
             <h2 className="text-xl sm:text-2xl font-semibold mb-3">Приведи друга</h2>
             <p className="text-sm text-muted">
               Делитесь кодом с друзьями и получайте бонусы за их покупки.
             </p>
-            <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-ink/10 bg-white/80 px-4 py-3">
+            <Card variant="quiet" padding="sm" className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl">
               <span className="text-sm font-semibold tracking-[0.2em] text-ink">{referralCode}</span>
-              <button
+              <Button
                 type="button"
                 onClick={handleCopyCode}
-                className="button-ghost text-sm"
+                variant="ghost"
+                size="sm"
               >
                 {copyStatus === 'copied' ? 'Скопировано' : 'Скопировать'}
-              </button>
+              </Button>
               {copyStatus === 'error' && (
                 <span className="text-xs text-red-500">Не удалось скопировать</span>
               )}
-            </div>
-          </div>
+            </Card>
+          </Card>
         );
       case 'orders':
         return (
-          <div className="soft-card p-6 md:p-8 reveal-up">
+          <Card className="reveal-up" padding="lg">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="text-xl sm:text-2xl font-semibold">Мои заказы</h2>
               <span className="text-xs text-muted">{orders.length} заказов</span>
@@ -669,9 +655,7 @@ function AccountPage() {
             {isOrdersLoading ? (
               <p className="text-sm text-muted">Загружаем историю заказов…</p>
             ) : ordersError ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {ordersError}
-              </div>
+              <NotificationBanner notification={{ type: 'error', message: ordersError }} />
             ) : orders.length === 0 ? (
               <p className="text-sm text-muted">
                 У вас ещё нет заказов. Самое время подобрать уютный комплект.
@@ -699,13 +683,13 @@ function AccountPage() {
                         <p className="font-semibold">{totalAmount.toLocaleString('ru-RU')} ₽</p>
                         <div className="mt-1 flex flex-col items-end gap-1">
                           {order.publicToken && (
-                            <Link to={`/order/${order.publicToken}`} className="text-xs text-primary">
+                            <Button as={Link} to={`/order/${order.publicToken}`} variant="ghost" size="sm" className="!min-h-0 !px-0 !py-0 text-xs text-primary">
                               Открыть заказ
-                            </Link>
+                            </Button>
                           )}
-                          <button type="button" className="text-xs text-primary">
+                          <Button type="button" variant="ghost" size="sm" className="!min-h-0 !px-0 !py-0 text-xs text-primary">
                             Повторить заказ
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -713,19 +697,19 @@ function AccountPage() {
                 })}
               </div>
             )}
-          </div>
+          </Card>
         );
       case 'purchases':
         return (
-          <div className="soft-card p-6 md:p-8 reveal-up">
+          <Card className="reveal-up" padding="lg">
             <h2 className="text-xl sm:text-2xl font-semibold mb-3">Купленные товары</h2>
             <p className="text-sm text-muted">
               Подборки с вашими покупками появятся после первого заказа.
             </p>
-            <div className="mt-5 rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 text-sm text-muted">
+            <Card variant="quiet" padding="sm" className="mt-5 text-sm text-muted">
               Пока список покупок пуст. Мы сохраним здесь всё, что вы купили.
-            </div>
-          </div>
+            </Card>
+          </Card>
         );
       default:
         return null;
@@ -754,11 +738,11 @@ function AccountPage() {
 
         <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
           <aside className="space-y-4">
-            <div className="soft-card p-5 reveal-up">
+            <Card className="reveal-up" padding="md">
               <p className="text-xs uppercase tracking-[0.3em] text-muted">Ваш профиль</p>
               <h2 className="text-xl font-semibold mt-2">{displayName}</h2>
               <p className="text-sm text-muted mt-1">{displayPhone}</p>
-            </div>
+            </Card>
 
             <div className="rounded-3xl p-5 text-white relative overflow-hidden reveal-up bg-gradient-to-br from-[#c99b7b] via-[#b07c63] to-[#a5684d]">
               <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_top,#ffffff,transparent_65%)]" />
@@ -773,29 +757,31 @@ function AccountPage() {
               </div>
             </div>
 
-            <div className="soft-card p-4 reveal-up lg:hidden">
+            <Card className="reveal-up lg:hidden" padding="sm">
               <p className="text-xs uppercase tracking-[0.3em] text-muted">Раздел</p>
-              <select
+              <Select
                 value={activeSection}
                 onChange={(event) => handleSectionChange(event.target.value)}
-                className="w-full mt-3"
+                className="mt-3"
               >
                 {SECTION_OPTIONS.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
                   </option>
                 ))}
-              </select>
-              <button
+              </Select>
+              <Button
                 type="button"
                 onClick={handleLogout}
-                className="button-gray w-full mt-4"
+                block
+                variant="secondary"
+                className="mt-4"
               >
                 Выйти
-              </button>
-            </div>
+              </Button>
+            </Card>
 
-            <nav className="soft-card p-4 reveal-up hidden lg:block">
+            <Card as="nav" className="reveal-up hidden lg:block" padding="sm">
               <button
                 type="button"
                 onClick={() => handleSectionChange('profile')}
@@ -863,7 +849,7 @@ function AccountPage() {
                   <span className="text-sm font-medium">Выйти</span>
                 </button>
               </div>
-            </nav>
+            </Card>
           </aside>
 
           <section className="space-y-6">

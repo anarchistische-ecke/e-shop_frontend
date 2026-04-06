@@ -2,7 +2,9 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
 import { getCategories, getProduct, getProducts } from '../api';
+import NotificationBanner from '../components/NotificationBanner';
 import ProductCard from '../components/ProductCard';
+import { Button, Card, FieldError, Input, Modal, Tabs } from '../components/ui';
 import { reviews } from '../data/reviews';
 import {
   getPrimaryVariant,
@@ -107,8 +109,10 @@ function ProductPage() {
   const [isVariantTransitioning, setIsVariantTransitioning] = useState(false);
   const [notifyEmail, setNotifyEmail] = useState('');
   const [notifyState, setNotifyState] = useState({ type: '', message: '' });
+  const [cartStatus, setCartStatus] = useState(null);
 
   const transitionTimerRef = useRef(null);
+  const cartInputRef = useRef({ quantity: 1, variantId: null });
 
   useEffect(() => {
     getCategories()
@@ -125,6 +129,23 @@ function ProductPage() {
   }, []);
 
   useEffect(() => {
+    const nextInputs = {
+      quantity,
+      variantId: selectedVariant?.id || null
+    };
+    const prevInputs = cartInputRef.current;
+
+    if (
+      cartStatus &&
+      (prevInputs.quantity !== nextInputs.quantity || prevInputs.variantId !== nextInputs.variantId)
+    ) {
+      setCartStatus(null);
+    }
+
+    cartInputRef.current = nextInputs;
+  }, [cartStatus, quantity, selectedVariant?.id]);
+
+  useEffect(() => {
     setActiveTab('about');
     setActiveImageIndex(0);
     setRelatedProducts([]);
@@ -132,6 +153,7 @@ function ProductPage() {
     setQuantity(1);
     setNotifyEmail('');
     setNotifyState({ type: '', message: '' });
+    setCartStatus(null);
     setIsLoading(true);
 
     getProduct(id)
@@ -328,6 +350,15 @@ function ProductPage() {
   );
   const isLowStock = availableStock > 0 && availableStock <= 3;
 
+  const productTabs = useMemo(
+    () => [
+      { value: 'about', label: 'О товаре' },
+      { value: 'reviews', label: `Отзывы (${reviewCount})` },
+      { value: 'details', label: 'Характеристики' },
+    ],
+    [reviewCount]
+  );
+
   const bundleItems = relatedProducts.slice(0, 3);
   const bundleAddOnTotal = bundleItems.reduce((sum, item) => {
     if (!bundleSelections[item.id]) return sum;
@@ -391,23 +422,36 @@ function ProductPage() {
   const handleAddToCart = async () => {
     if (!product || availableStock <= 0) return;
     const variantId = selectedVariant?.id || product.id;
-    await addItem(product, variantId, quantity);
+    setCartStatus(null);
+    const result = await addItem(product, variantId, quantity);
+    if (result?.ok === false) {
+      setCartStatus(result.notification);
+      return false;
+    }
+    return true;
   };
 
   const handleBuyNow = async () => {
     if (!product || availableStock <= 0) return;
-    const variantId = selectedVariant?.id || product.id;
-    await addItem(product, variantId, quantity);
+    const didAdd = await handleAddToCart();
+    if (!didAdd) return;
     navigate('/checkout');
   };
 
   const handleAddBundle = async () => {
-    await handleAddToCart();
-    bundleItems.forEach((item) => {
-      if (!bundleSelections[item.id]) return;
+    const didAddPrimary = await handleAddToCart();
+    if (!didAddPrimary) return;
+
+    for (const item of bundleItems) {
+      if (!bundleSelections[item.id]) continue;
       const variant = getPrimaryVariant(item);
-      if (variant?.id) addItem(item, variant.id, 1);
-    });
+      if (!variant?.id) continue;
+      const result = await addItem(item, variant.id, 1);
+      if (result?.ok === false) {
+        setCartStatus(result.notification);
+        return;
+      }
+    }
   };
 
   const handleNotifyMe = () => {
@@ -441,7 +485,7 @@ function ProductPage() {
                 ))}
               </div>
             </div>
-            <div className="soft-card p-5 sm:p-6">
+            <Card padding="md" className="sm:p-6">
               <div className="skeleton shimmer-safe h-6 w-2/5 rounded-full" />
               <div className="mt-4 skeleton shimmer-safe h-8 w-4/5 rounded-full" />
               <div className="mt-3 skeleton shimmer-safe h-5 w-3/5 rounded-full" />
@@ -449,7 +493,7 @@ function ProductPage() {
                 <div className="skeleton shimmer-safe h-12 rounded-2xl" />
                 <div className="skeleton shimmer-safe h-12 rounded-2xl" />
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       </div>
@@ -462,7 +506,7 @@ function ProductPage() {
         <div className="container mx-auto px-4">
           <h1 className="text-2xl font-semibold mb-2">Товар не найден</h1>
           <p>К сожалению, продукта с указанным идентификатором не существует.</p>
-          <Link to="/category/popular" className="button mt-4">Вернуться в каталог</Link>
+          <Button as={Link} to="/category/popular" className="mt-4">Вернуться в каталог</Button>
         </div>
       </div>
     );
@@ -547,22 +591,24 @@ function ProductPage() {
 
                 {orderedImages.length > 1 && (
                   <>
-                    <button
-                      type="button"
-                      className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-2xl border border-ink/10 bg-white/90 text-ink shadow"
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-2xl bg-white/90"
                       onClick={() => selectImageByIndex(activeImageIndex - 1)}
                       aria-label="Предыдущее изображение"
                     >
                       ‹
-                    </button>
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-2xl border border-ink/10 bg-white/90 text-ink shadow"
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-2xl bg-white/90"
                       onClick={() => selectImageByIndex(activeImageIndex + 1)}
                       aria-label="Следующее изображение"
                     >
                       ›
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
@@ -570,9 +616,9 @@ function ProductPage() {
 
             <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted">
               <p>Фото: {orderedImages.length || 1} · Масштаб и фактуру можно проверить через zoom</p>
-              <button type="button" className="text-primary" onClick={openImageZoom}>
+              <Button variant="ghost" size="sm" className="!px-1 text-primary" onClick={openImageZoom}>
                 Открыть крупно
-              </button>
+              </Button>
             </div>
 
             <div className="mt-3 flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
@@ -598,15 +644,15 @@ function ProductPage() {
 
             <div className="mt-6 grid gap-2 sm:grid-cols-3 sm:gap-3">
               {highlights.map((entry) => (
-                <div key={entry} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 text-xs sm:text-sm shadow-sm">
+                <Card key={entry} variant="quiet" padding="sm" className="text-xs shadow-sm sm:text-sm">
                   {entry}
-                </div>
+                </Card>
               ))}
             </div>
           </section>
 
           <aside className="lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] h-fit space-y-4">
-            <div className={`soft-card p-5 sm:p-6 transition-opacity duration-200 ${isVariantTransitioning ? 'opacity-80' : 'opacity-100'}`}>
+            <Card padding="md" className={`sm:p-6 transition-opacity duration-200 ${isVariantTransitioning ? 'opacity-80' : 'opacity-100'}`}>
               <p className="text-xs uppercase tracking-[0.25em] text-accent">Карточка товара</p>
               <h1 className="mt-2 text-xl sm:text-2xl font-semibold">{product.name}</h1>
 
@@ -614,13 +660,14 @@ function ProductPage() {
                 {rating > 0 ? (
                   <>
                     <span className="text-primary">★ {rating.toFixed(1)}</span>
-                    <button
-                      type="button"
-                      className="underline-offset-2 hover:text-primary hover:underline"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="!min-h-0 !px-0 !py-0 underline-offset-2 hover:text-primary hover:underline"
                       onClick={() => setActiveTab('reviews')}
                     >
                       {reviewCount} отзывов
-                    </button>
+                    </Button>
                   </>
                 ) : (
                   <span>Пока без отзывов</span>
@@ -644,29 +691,31 @@ function ProductPage() {
                   Доставим <span className="font-semibold">{deliveryDate}</span>
                   {' '}при заказе до 14:00 (местное время).
                 </p>
-                <button
-                  type="button"
-                  className="mt-1 text-xs text-primary"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-1 !min-h-0 !px-0 !py-0 text-xs text-primary"
                   onClick={() => {
                     setSheetType('shipping');
                     setIsInfoSheetOpen(true);
                   }}
                 >
                   Как рассчитывается дата и стоимость
-                </button>
+                </Button>
               </div>
 
               <div className="mt-2">
-                <button
-                  type="button"
-                  className="text-sm text-primary"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="!min-h-0 !px-0 !py-0 text-sm text-primary"
                   onClick={() => {
                     setSheetType('returns');
                     setIsInfoSheetOpen(true);
                   }}
                 >
                   Доставка и возврат
-                </button>
+                </Button>
               </div>
 
               {product.variants && product.variants.length > 1 && (
@@ -677,12 +726,13 @@ function ProductPage() {
                       const isActive = selectedVariant?.id === variant.id;
                       const variantStock = Number(variant?.stock ?? variant?.stockQuantity ?? 0);
                       return (
-                        <button
+                        <Button
                           key={variant.id}
-                          type="button"
-                          className={`min-h-[44px] rounded-2xl border px-3 py-1.5 text-sm transition ${
+                          variant="secondary"
+                          size="sm"
+                          className={`h-auto min-h-[44px] px-3 py-1.5 text-sm ${
                             isActive
-                              ? 'border-primary bg-primary/10 text-primary'
+                              ? 'border-primary bg-primary/10 text-primary shadow-none'
                               : 'border-ink/10 bg-white/90 hover:border-primary/40 hover:text-primary'
                           }`}
                           onClick={() => handleVariantChange(variant)}
@@ -692,7 +742,7 @@ function ProductPage() {
                             {formatRub(moneyToNumber(variant.price))}
                             {variantStock > 0 ? ` · ${variantStock} шт.` : ' · нет в наличии'}
                           </span>
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>
@@ -702,23 +752,25 @@ function ProductPage() {
               <div className="mt-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted">Количество</p>
                 <div className="mt-2 inline-flex items-center rounded-2xl border border-ink/10 bg-white/90 p-1">
-                  <button
-                    type="button"
-                    className="touch-target rounded-xl border border-transparent px-3 text-lg text-ink/75 hover:text-primary"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-xl border border-transparent text-lg text-ink/75 hover:text-primary"
                     onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
                     aria-label="Уменьшить количество"
                   >
                     −
-                  </button>
+                  </Button>
                   <span className="min-w-[42px] text-center text-sm font-semibold">{quantity}</span>
-                  <button
-                    type="button"
-                    className="touch-target rounded-xl border border-transparent px-3 text-lg text-ink/75 hover:text-primary"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-xl border border-transparent text-lg text-ink/75 hover:text-primary"
                     onClick={() => setQuantity((prev) => Math.min(99, prev + 1))}
                     aria-label="Увеличить количество"
                   >
                     +
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -734,42 +786,45 @@ function ProductPage() {
               </div>
 
               <div className="mt-5 space-y-2">
-                <button
-                  type="button"
-                  className="button w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                <Button
+                  block
                   onClick={handleAddToCart}
                   disabled={availableStock <= 0}
                 >
                   Добавить в корзину
-                </button>
+                </Button>
 
-                <button
-                  type="button"
-                  className="button-gray w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                <Button
+                  variant="secondary"
+                  block
                   onClick={handleBuyNow}
                   disabled={availableStock <= 0}
                 >
                   Купить сейчас
-                </button>
+                </Button>
 
-                <button
-                  type="button"
-                  className="button-ghost w-full text-sm"
+                <Button
+                  variant="ghost"
+                  block
+                  size="sm"
+                  className="text-sm"
                   onClick={() => {
                     setSheetType('shipping');
                     setIsInfoSheetOpen(true);
                   }}
                 >
                   Условия доставки и возврата
-                </button>
+                </Button>
               </div>
 
+              {cartStatus ? <NotificationBanner notification={cartStatus} className="mt-3" /> : null}
+
               {availableStock <= 0 && (
-                <div className="mt-4 rounded-2xl border border-ink/10 bg-white/88 p-3 text-sm">
+                <Card variant="quiet" padding="sm" className="mt-4 text-sm">
                   <p className="font-medium text-ink">Сообщить о поступлении</p>
                   <p className="mt-1 text-xs text-muted">Ожидаем пополнение в течение 5–9 дней. Оставьте email, чтобы не пропустить.</p>
                   <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                    <input
+                    <Input
                       type="email"
                       value={notifyEmail}
                       onChange={(event) => {
@@ -777,26 +832,32 @@ function ProductPage() {
                         if (notifyState.type) setNotifyState({ type: '', message: '' });
                       }}
                       placeholder="name@example.ru"
-                      className={notifyState.type === 'error' ? 'input-error' : ''}
+                      invalid={notifyState.type === 'error'}
                       aria-label="Email для уведомления"
                     />
-                    <button type="button" className="button-gray" onClick={handleNotifyMe}>
+                    <Button variant="secondary" onClick={handleNotifyMe}>
                       Уведомить
-                    </button>
+                    </Button>
                   </div>
-                  {notifyState.message && (
-                    <p className={`mt-2 text-xs ${notifyState.type === 'error' ? 'text-red-700' : 'text-emerald-700'}`}>
-                      {notifyState.message}
-                    </p>
-                  )}
-                  <Link to={`/category/${resolveCategoryToken(activeCategory) || 'popular'}`} className="mt-2 inline-block text-xs text-primary">
+                  {notifyState.type === 'error' ? (
+                    <FieldError>{notifyState.message}</FieldError>
+                  ) : notifyState.message ? (
+                    <p className="mt-2 text-xs text-emerald-700">{notifyState.message}</p>
+                  ) : null}
+                  <Button
+                    as={Link}
+                    to={`/category/${resolveCategoryToken(activeCategory) || 'popular'}`}
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 inline-flex !min-h-0 !px-0 !py-0 text-xs text-primary"
+                  >
                     Показать похожие товары
-                  </Link>
-                </div>
+                  </Button>
+                </Card>
               )}
-            </div>
+            </Card>
 
-            <div className="soft-card p-5 text-sm space-y-3">
+            <Card padding="md" className="text-sm space-y-3">
               <div className="flex items-center gap-2 text-ink/85">
                 <TrustIcon type="delivery" />
                 <span>Бесплатная доставка от 5000 ₽</span>
@@ -809,31 +870,38 @@ function ProductPage() {
                 <TrustIcon type="secure" />
                 <span>Защищённая оплата и безопасный checkout</span>
               </div>
-            </div>
+            </Card>
 
             {bundleItems.length > 0 && (
-              <div className="soft-card p-5">
+              <Card padding="md">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted">Соберите комплект</p>
                 <p className="mt-2 text-sm text-muted">Часто покупают вместе: добавьте всё за один клик.</p>
 
                 <div className="mt-3 space-y-3">
                   {bundleItems.map((item) => (
-                    <label key={item.id} className="flex items-start gap-3 text-sm">
-                      <input
-                        type="checkbox"
-                        className="mt-1"
-                        checked={Boolean(bundleSelections[item.id])}
-                        onChange={(event) => {
-                          setBundleSelections((prev) => ({
-                            ...prev,
-                            [item.id]: event.target.checked,
-                          }));
-                        }}
-                      />
-                      <span>
-                        <span className="block font-medium">{item.name}</span>
-                        <span className="text-xs text-muted">{formatRub(getProductPrice(item))}</span>
-                      </span>
+                    <label key={item.id} className="block">
+                      <Card
+                        variant="quiet"
+                        padding="sm"
+                        interactive
+                        className="flex items-start gap-3 rounded-2xl text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={Boolean(bundleSelections[item.id])}
+                          onChange={(event) => {
+                            setBundleSelections((prev) => ({
+                              ...prev,
+                              [item.id]: event.target.checked,
+                            }));
+                          }}
+                        />
+                        <span>
+                          <span className="block font-medium">{item.name}</span>
+                          <span className="text-xs text-muted">{formatRub(getProductPrice(item))}</span>
+                        </span>
+                      </Card>
                     </label>
                   ))}
                 </div>
@@ -843,50 +911,35 @@ function ProductPage() {
                   <span className="font-semibold">{formatRub(bundleTotal)}</span>
                 </div>
 
-                <button type="button" className="button w-full mt-3" onClick={handleAddBundle}>
+                <Button block className="mt-3" onClick={handleAddBundle}>
                   Добавить комплект
-                </button>
-              </div>
+                </Button>
+              </Card>
             )}
           </aside>
         </div>
 
         <section id="product-tabs" className="mt-10 sm:mt-12">
-          <div className="border-b border-ink/10 flex flex-wrap gap-6 text-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab('about')}
-              className={`py-2 ${activeTab === 'about' ? 'border-b-2 border-primary font-semibold' : 'text-muted'}`}
-            >
-              О товаре
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('reviews')}
-              className={`py-2 ${activeTab === 'reviews' ? 'border-b-2 border-primary font-semibold' : 'text-muted'}`}
-            >
-              Отзывы ({reviewCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('details')}
-              className={`py-2 ${activeTab === 'details' ? 'border-b-2 border-primary font-semibold' : 'text-muted'}`}
-            >
-              Характеристики
-            </button>
-          </div>
+          <Tabs
+            items={productTabs}
+            value={activeTab}
+            onChange={setActiveTab}
+            ariaLabel="Разделы товара"
+            fullWidth
+            className="max-w-3xl"
+          />
 
           {activeTab === 'about' && (
-            <div className="mt-4">
+            <Card padding="md" className="mt-4">
               <p className="whitespace-pre-line text-sm leading-relaxed text-ink/80">
                 {product.description || 'Описание отсутствует.'}
               </p>
-            </div>
+            </Card>
           )}
 
           {activeTab === 'reviews' && (
             <div className="mt-4 grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-              <div className="rounded-2xl border border-ink/10 bg-white/90 p-4">
+              <Card variant="quiet" padding="md" className="rounded-3xl">
                 <p className="text-sm font-semibold">Распределение оценок</p>
                 <div className="mt-2 flex items-end gap-2">
                   <span className="text-2xl font-semibold text-primary">{rating > 0 ? rating.toFixed(1) : '—'}</span>
@@ -903,19 +956,21 @@ function ProductPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
 
               <div className="space-y-3">
                 {productReviews.length > 0 ? (
                   productReviews.map((review, index) => (
-                    <div key={index} className="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm">
+                    <Card key={index} variant="quiet" padding="md" className="rounded-3xl">
                       <div className="text-primary text-sm">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
                       <p className="mt-2 text-sm">{review.text}</p>
                       <p className="text-xs text-muted italic">— {review.author}</p>
-                    </div>
+                    </Card>
                   ))
                 ) : (
-                  <p className="text-sm text-muted">На этот товар пока нет отзывов.</p>
+                  <Card variant="quiet" padding="md">
+                    <p className="text-sm text-muted">На этот товар пока нет отзывов.</p>
+                  </Card>
                 )}
               </div>
             </div>
@@ -926,7 +981,7 @@ function ProductPage() {
               {specificationSections.length > 0 ? (
                 <div className="space-y-8">
                   {specificationSections.map((section, index) => (
-                    <div key={`${section.title || 'section'}-${index}`}>
+                    <Card key={`${section.title || 'section'}-${index}`} padding="md">
                       {section.title && (
                         <h3 className="text-sm font-semibold text-ink mb-3">{section.title}</h3>
                       )}
@@ -948,15 +1003,13 @@ function ProductPage() {
                           {section.description}
                         </p>
                       )}
-                    </div>
+                    </Card>
                   ))}
                 </div>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
                   {fallbackSpecs.map((entry) => (
-                    <div key={entry} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 shadow-sm">
-                      {entry}
-                    </div>
+                    <Card key={entry} variant="quiet" padding="sm">{entry}</Card>
                   ))}
                 </div>
               )}
@@ -968,7 +1021,9 @@ function ProductPage() {
           <section className="mt-10 sm:mt-12">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-2xl font-semibold">Дополните набор</h2>
-              <Link to="/category/popular" className="text-sm text-primary">Смотреть больше</Link>
+              <Button as={Link} to="/category/popular" variant="ghost" size="sm">
+                Смотреть больше
+              </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {relatedProducts.map((item) => (
@@ -980,111 +1035,107 @@ function ProductPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-ink/10 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden z-30">
-        <div className="container mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="flex-1">
-            <p className="text-xs text-muted">К оплате</p>
-            <p className="text-base font-semibold">{formatRub(price * quantity)}</p>
+        <div className="container mx-auto px-4 py-3">
+          {cartStatus ? <NotificationBanner notification={cartStatus} compact className="mb-3" /> : null}
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <p className="text-xs text-muted">К оплате</p>
+              <p className="text-base font-semibold">{formatRub(price * quantity)}</p>
+            </div>
+            <Button
+              block
+              className="flex-1"
+              onClick={handleAddToCart}
+              disabled={availableStock <= 0}
+            >
+              В корзину
+            </Button>
           </div>
-          <button
-            className="button flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={handleAddToCart}
-            disabled={availableStock <= 0}
-          >
-            В корзину
-          </button>
         </div>
       </div>
 
-      {isImageZoomOpen && (
-        <div className="fixed inset-0 z-[70] bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="Увеличенное изображение">
-          <button
-            type="button"
-            className="absolute right-4 top-4 h-11 w-11 rounded-2xl border border-white/30 bg-black/40 text-white"
+      <Modal
+        open={isImageZoomOpen}
+        onClose={() => setIsImageZoomOpen(false)}
+        placement="center"
+        size="lg"
+        showCloseButton={false}
+        closeLabel="Закрыть просмотр изображения"
+        overlayClassName="bg-black/80 backdrop-blur-sm"
+        panelClassName="max-w-5xl border-white/10 bg-black/35 p-0 shadow-none"
+      >
+        <div className="relative min-h-[60vh]">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="absolute right-4 top-4 z-10 border-white/30 bg-black/40 text-white hover:border-white/50 hover:bg-black/55 hover:text-white"
             onClick={() => setIsImageZoomOpen(false)}
             aria-label="Закрыть"
           >
             ✕
-          </button>
+          </Button>
 
           {orderedImages.length > 1 && (
             <>
-              <button
-                type="button"
-                className="absolute left-4 top-1/2 -translate-y-1/2 h-11 w-11 rounded-2xl border border-white/30 bg-black/40 text-white"
+              <Button
+                variant="secondary"
+                size="icon"
+                className="absolute left-4 top-1/2 z-10 -translate-y-1/2 border-white/30 bg-black/40 text-white hover:border-white/50 hover:bg-black/55 hover:text-white"
                 onClick={() => selectImageByIndex(activeImageIndex - 1)}
                 aria-label="Предыдущее изображение"
               >
                 ‹
-              </button>
-              <button
-                type="button"
-                className="absolute right-4 top-1/2 -translate-y-1/2 h-11 w-11 rounded-2xl border border-white/30 bg-black/40 text-white"
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="absolute right-4 top-1/2 z-10 -translate-y-1/2 border-white/30 bg-black/40 text-white hover:border-white/50 hover:bg-black/55 hover:text-white"
                 onClick={() => selectImageByIndex(activeImageIndex + 1)}
                 aria-label="Следующее изображение"
               >
                 ›
-              </button>
+              </Button>
             </>
           )}
 
-          <div className="mx-auto flex h-full max-w-5xl items-center justify-center">
+          <div className="mx-auto flex min-h-[60vh] max-w-5xl items-center justify-center p-6 sm:p-10">
             {mainImage ? (
-              <img src={mainImage} alt={product.name} className="max-h-full max-w-full object-contain" />
+              <img src={mainImage} alt={product.name} className="max-h-[75vh] w-auto max-w-full object-contain" />
             ) : null}
           </div>
           <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/25 bg-black/40 px-3 py-1 text-xs text-white/90">
             {activeImageIndex + 1} / {Math.max(1, orderedImages.length)}
           </p>
         </div>
-      )}
+      </Modal>
 
-      {isInfoSheetOpen && (
-        <div className="fixed inset-0 z-[65]">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/35"
-            onClick={() => setIsInfoSheetOpen(false)}
-            aria-label="Закрыть"
-          />
-          <aside className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-[0_24px_70px_rgba(43,39,34,0.26)] slide-up-panel md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:h-full md:w-full md:max-w-md md:rounded-l-[26px] md:rounded-t-none md:animate-none">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-muted">
-                  {sheetType === 'shipping' ? 'Доставка' : 'Возвраты'}
-                </p>
-                <h2 className="text-2xl font-semibold mt-1">
-                  {sheetType === 'shipping' ? 'Доставка' : 'Условия возврата'}
-                </h2>
-              </div>
-              <button
-                type="button"
-                className="h-11 w-11 rounded-2xl border border-ink/10 text-ink/70"
-                onClick={() => setIsInfoSheetOpen(false)}
-                aria-label="Закрыть"
-              >
-                ✕
-              </button>
-            </div>
-
-            {sheetType === 'shipping' ? (
-              <div className="mt-4 space-y-3 text-sm text-ink/85">
-                <p>Ориентировочная дата доставки: {deliveryDate} (при заказе до 14:00 по местному времени).</p>
-                <p>Стоимость и доступные интервалы показываются до оплаты на шаге оформления заказа.</p>
-                <p>Бесплатная доставка от 5000 ₽. Для удалённых регионов срок может увеличиваться.</p>
-              </div>
-            ) : (
-              <div className="mt-4 space-y-3 text-sm text-ink/85">
-                <p>Возврат возможен в течение 30 дней после получения заказа.</p>
-                <p>Если товар не подошёл, оформите заявку через поддержку и выберите удобный способ возврата.</p>
-                <p>
-                  Полные условия доступны в разделе{' '}
-                  <Link to="/usloviya-prodazhi" className="text-primary">«Условия продажи»</Link>.
-                </p>
-              </div>
-            )}
-          </aside>
-        </div>
-      )}
+      <Modal
+        open={isInfoSheetOpen}
+        onClose={() => setIsInfoSheetOpen(false)}
+        placement="sheet"
+        size="sm"
+        title={sheetType === 'shipping' ? 'Доставка' : 'Условия возврата'}
+        description={sheetType === 'shipping' ? 'Доставка' : 'Возвраты'}
+      >
+        {sheetType === 'shipping' ? (
+          <div className="space-y-3 text-sm text-ink/85">
+            <p>Ориентировочная дата доставки: {deliveryDate} (при заказе до 14:00 по местному времени).</p>
+            <p>Стоимость и доступные интервалы показываются до оплаты на шаге оформления заказа.</p>
+            <p>Бесплатная доставка от 5000 ₽. Для удалённых регионов срок может увеличиваться.</p>
+          </div>
+        ) : (
+          <div className="space-y-3 text-sm text-ink/85">
+            <p>Возврат возможен в течение 30 дней после получения заказа.</p>
+            <p>Если товар не подошёл, оформите заявку через поддержку и выберите удобный способ возврата.</p>
+            <p>
+              Полные условия доступны в разделе{' '}
+              <Link to="/usloviya-prodazhi" className="text-primary">
+                «Условия продажи»
+              </Link>.
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   setSession
 } from '../auth/session';
 import { isKeycloakConfigured, logout as keycloakLogout } from '../auth/keycloak';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
 const AuthContext = createContext({
   isReady: false,
@@ -56,27 +57,6 @@ const collectRoles = (payload, { clientId } = {}) => {
     payload.resource_access[clientId].roles.forEach((entry) => roles.add(normalizeRole(entry)));
   }
   return roles;
-};
-
-const resolveBasePath = () => {
-  const raw = process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '';
-  if (!raw) return '';
-  if (/^https?:\/\//i.test(raw)) {
-    try {
-      const path = new URL(raw).pathname.replace(/\/$/, '');
-      return path === '/' ? '' : path;
-    } catch (err) {
-      return '';
-    }
-  }
-  const normalized = raw.replace(/\/$/, '');
-  return normalized === '/' ? '' : normalized;
-};
-
-const buildRedirectUri = (path) => {
-  if (typeof window === 'undefined') return undefined;
-  const base = resolveBasePath();
-  return `${window.location.origin}${base}${path}`;
 };
 
 export function AuthProvider({ children }) {
@@ -141,7 +121,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     if (typeof window !== 'undefined' && isKeycloakConfigured()) {
       try {
-        await keycloakLogout({ redirectUri: buildRedirectUri('/') });
+        await keycloakLogout({ redirectUri: buildAbsoluteAppUrl('/') });
         return;
       } catch (err) {
         console.warn('Keycloak logout failed, falling back to local logout', err);

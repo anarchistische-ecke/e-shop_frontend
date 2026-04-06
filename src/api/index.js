@@ -260,13 +260,15 @@ export async function checkoutCart({
   orderPageUrl,
   savePaymentMethod,
   delivery,
-  idempotencyKey
+  idempotencyKey,
+  signal
 } = {}) {
   if (!idempotencyKey) {
     throw new Error('Idempotency key is required for checkout');
   }
   return request('/orders/checkout', {
     method: 'POST',
+    signal,
     headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod, delivery })
   });
@@ -314,6 +316,9 @@ export async function refreshPublicOrderPayment(token) {
   return request(`/orders/public/${token}/refresh-payment`, {
     method: 'POST'
   });
+}
+export async function getPublicPaymentConfig() {
+  return request('/payments/public-config');
 }
 export async function updateOrderStatus(id, status) {
   return request(

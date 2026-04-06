@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import NotificationBanner from '../components/NotificationBanner';
 import { useAuth } from '../contexts/AuthContext';
 import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
 function ManagerLoginPage() {
   const location = useLocation();
@@ -20,20 +22,12 @@ function ManagerLoginPage() {
     return path;
   };
 
-  const buildRedirectUri = (path) => {
-    if (typeof window === 'undefined') return undefined;
-    const rawBase = process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '';
-    const base = rawBase.replace(/\/$/, '');
-    const normalizedBase = base && base !== '/' ? base : '';
-    return `${window.location.origin}${normalizedBase}${path}`;
-  };
-
   const handleKeycloakLogin = async () => {
     setIsSubmitting(true);
     setStatus(null);
     try {
       await keycloakLogin({
-        redirectUri: buildRedirectUri(safeRedirectPath(redirectTo)),
+        redirectUri: buildAbsoluteAppUrl(safeRedirectPath(redirectTo)),
         prompt: 'login'
       });
     } catch (err) {
@@ -67,19 +61,7 @@ function ManagerLoginPage() {
           <p className="admin-auth-card__eyebrow">Вход менеджера</p>
           <h2 className="admin-auth-card__title">Добро пожаловать</h2>
 
-          {status && (
-            <div
-              role="status"
-              aria-live="polite"
-              className={`admin-auth-alert ${
-                status.type === 'success'
-                  ? 'admin-auth-alert--success'
-                  : 'admin-auth-alert--error'
-              }`}
-            >
-              {status.message}
-            </div>
-          )}
+          {status ? <NotificationBanner notification={status} className="mb-4" /> : null}
 
           {useKeycloak ? (
             <div className="space-y-4">
@@ -96,9 +78,13 @@ function ManagerLoginPage() {
               </button>
             </div>
           ) : (
-            <p className="text-sm text-red-600">
-              Keycloak не настроен. Для входа менеджера требуется Keycloak.
-            </p>
+            <NotificationBanner
+              notification={{
+                type: 'error',
+                title: 'Keycloak не настроен',
+                message: 'Для входа менеджера требуется настроенный Keycloak.'
+              }}
+            />
           )}
 
           {isReady && isAuthenticated && (!isManager || !hasStrongSession) && (

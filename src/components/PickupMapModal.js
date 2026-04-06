@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Button, Card, Input } from './ui';
+import { getDeliveryClientConfig } from '../utils/deliveryConfig';
 
 const MAP_SCRIPT_ID = 'yandex-maps-sdk';
 let mapSdkPromise;
@@ -100,10 +102,7 @@ function PickupMapModal({
   onClose,
   onSelect
 }) {
-  const apiKey =
-    process.env.REACT_APP_YANDEX_MAPS_JS_API_KEY
-    || process.env.REACT_APP_YANDEX_MAPS_API_KEY
-    || '';
+  const apiKey = getDeliveryClientConfig().mapsKey;
   const mapRootRef = useRef(null);
   const mapRef = useRef(null);
   const dialogRef = useRef(null);
@@ -463,26 +462,26 @@ function PickupMapModal({
                   Выберите удобную точку на карте или из списка.
                 </p>
               </div>
-              <button
+              <Button
                 ref={closeButtonRef}
-                type="button"
-                className="button-ghost !h-11 !w-11 !rounded-full !px-0"
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
                 onClick={onClose}
                 aria-label="Закрыть окно выбора пункта выдачи"
               >
                 ✕
-              </button>
+              </Button>
             </div>
 
             <div className="px-5 pt-4 pb-3">
               <label className="sr-only" htmlFor="pickup-map-search">Поиск пункта выдачи</label>
-              <input
+              <Input
                 id="pickup-map-search"
                 type="text"
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="Поиск по адресу или названию"
-                className="w-full"
               />
               {isLocatingUser && (
                 <div className="mt-2 text-xs text-muted">Определяем ваш город…</div>
@@ -493,14 +492,16 @@ function PickupMapModal({
               <div className="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                 {errorMessage}
                 {onRetry && (
-                  <button
+                  <Button
                     type="button"
-                    className="button-ghost ml-2 !px-2 !py-1 text-xs"
+                    variant="ghost"
+                    size="sm"
+                    className="ml-2 !min-h-0 !px-2 !py-1 text-xs"
                     onClick={onRetry}
                     disabled={Boolean(isLoading)}
                   >
                     {isLoading ? 'Обновляем…' : 'Повторить'}
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -536,7 +537,7 @@ function PickupMapModal({
             </div>
 
             <div className="border-t border-ink/10 bg-white px-5 py-4">
-              <div className="mb-3 rounded-2xl border border-ink/10 bg-secondary/40 px-4 py-3">
+              <Card variant="tint" padding="sm" className="mb-3 rounded-2xl bg-secondary/40 shadow-none">
                 <div className="text-xs uppercase tracking-[0.16em] text-muted">Выбранный пункт</div>
                 <div className="mt-1 text-sm font-semibold">{activePoint?.name || 'Не выбран'}</div>
                 <div className="mt-1 text-xs text-muted">{activePoint?.address || 'Выберите пункт на карте или в списке'}</div>
@@ -545,10 +546,10 @@ function PickupMapModal({
                     Этот пункт нельзя выбрать: отсутствует идентификатор точки.
                   </div>
                 )}
-              </div>
-              <button
+              </Card>
+              <Button
                 type="button"
-                className="button w-full"
+                block
                 disabled={!canConfirm}
                 onClick={() => {
                   if (!activePoint || !activePoint.__hasServerId) return;
@@ -556,7 +557,7 @@ function PickupMapModal({
                 }}
               >
                 Выбрать этот пункт
-              </button>
+              </Button>
             </div>
           </aside>
         </div>

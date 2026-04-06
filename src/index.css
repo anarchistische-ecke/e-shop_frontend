@@ -208,17 +208,47 @@ body {
    `.button` class creates a consistent button style across the app with our
    custom colour palette. */
 @layer components {
-  .button {
-    /* Main action button with warm gradient lift */
-    @apply inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(182,91,74,0.35)] hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_22px_40px_rgba(182,91,74,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200;
-  }
-  .button-gray {
-    /* A secondary button variant used for less prominent actions. */
-    @apply inline-flex items-center justify-center rounded-2xl bg-white/85 text-ink border border-ink/10 px-5 py-3 text-sm font-semibold shadow-[0_12px_24px_rgba(43,39,34,0.12)] hover:border-primary/40 hover:text-primary hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200;
-  }
+  .ui-button,
+  .button,
+  .button-gray,
   .button-ghost {
-    @apply inline-flex items-center justify-center rounded-2xl border border-transparent px-4 py-2 text-sm font-semibold text-ink/80 hover:bg-white/70 hover:border-ink/10 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition;
+    @apply touch-target inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:pointer-events-none disabled:opacity-55 disabled:shadow-none;
   }
+  .ui-button--sm {
+    @apply px-4 py-2 text-sm;
+  }
+  .ui-button--md {
+    @apply px-5 py-3 text-sm;
+  }
+  .ui-button--lg {
+    @apply px-6 py-3.5 text-base;
+  }
+  .ui-button--icon {
+    @apply h-11 w-11 rounded-2xl p-0;
+  }
+  .ui-button--primary,
+  .button {
+    @apply bg-primary text-white shadow-[0_18px_36px_rgba(182,91,74,0.35)] hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_22px_40px_rgba(182,91,74,0.4)] focus-visible:ring-primary/40;
+  }
+  .ui-button--secondary,
+  .button-gray {
+    @apply border border-ink/10 bg-white/85 text-ink shadow-[0_12px_24px_rgba(43,39,34,0.12)] hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary focus-visible:ring-primary/30;
+  }
+  .ui-button--ghost,
+  .button-ghost {
+    @apply border border-transparent bg-transparent px-4 py-2.5 text-sm text-ink/80 hover:border-ink/10 hover:bg-white/70 hover:text-ink focus-visible:ring-primary/30;
+  }
+  .ui-button--subtle {
+    @apply border border-ink/10 bg-secondary/60 text-ink shadow-none hover:border-primary/30 hover:bg-secondary/80 hover:text-primary focus-visible:ring-primary/25;
+  }
+  .ui-input,
+  .ui-select,
+  .ui-textarea {
+    @apply w-full text-sm;
+  }
+  .ui-input--invalid,
+  .ui-select--invalid,
+  .ui-textarea--invalid,
   .input-error {
     @apply border-red-400 bg-red-50/80 text-red-900 focus:border-red-500 focus:ring-red-300/70;
     box-shadow:
@@ -226,8 +256,91 @@ body {
       0 0 0 3px rgba(220, 38, 38, 0.14),
       0 12px 24px rgba(127, 29, 29, 0.12);
   }
+  .ui-field-error {
+    @apply mt-2 inline-flex items-start gap-1 text-xs text-red-700;
+  }
+  .ui-card {
+    @apply rounded-[28px] border;
+  }
+  .ui-card--soft,
+  .soft-card {
+    @apply border-white/80 bg-white/90 shadow-[0_24px_50px_rgba(43,39,34,0.1)];
+  }
+  .ui-card--quiet {
+    @apply border-ink/10 bg-white/85 shadow-[0_16px_34px_rgba(43,39,34,0.11)];
+  }
+  .ui-card--outline {
+    @apply border-ink/10 bg-transparent shadow-none;
+  }
+  .ui-card--tint {
+    @apply border-primary/20 bg-primary/5 shadow-[0_16px_32px_rgba(182,91,74,0.08)];
+  }
+  .ui-card--interactive {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_42px_rgba(43,39,34,0.16)];
+  }
   .control-inline {
     @apply border-0 bg-transparent p-0 shadow-none min-h-0 rounded-none focus:outline-none focus:ring-0;
+  }
+  .ui-tabs__list {
+    @apply inline-flex min-h-[48px] w-full flex-wrap gap-1 rounded-[22px] border border-ink/10 bg-secondary/55 p-1;
+  }
+  .ui-tabs__trigger {
+    @apply touch-target inline-flex min-w-[44px] items-center justify-center rounded-2xl px-4 py-2 text-sm text-ink/75 transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30;
+  }
+  .ui-tabs__trigger--active {
+    @apply bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.12)];
+  }
+  .ui-tabs__trigger--fill {
+    @apply flex-1;
+  }
+  .ui-modal__overlay {
+    @apply fixed inset-0 z-[100] bg-black/45 backdrop-blur-[2px];
+  }
+  .ui-modal__overlay--center {
+    @apply p-4;
+  }
+  .ui-modal__overlay--sheet {
+    @apply p-0 md:p-4;
+  }
+  .ui-modal__viewport {
+    @apply flex min-h-full w-full;
+  }
+  .ui-modal__viewport--center {
+    @apply items-center justify-center;
+  }
+  .ui-modal__viewport--sheet {
+    @apply items-end md:items-stretch md:justify-end;
+  }
+  .ui-modal__panel {
+    @apply relative w-full border border-white/80 shadow-[0_24px_70px_rgba(43,39,34,0.26)];
+    background-color: rgba(255, 255, 255, 0.96);
+  }
+  .ui-modal__panel--center {
+    @apply rounded-[28px] p-5 md:p-6;
+  }
+  .ui-modal__panel--sheet {
+    @apply max-h-[86vh] overflow-y-auto rounded-t-3xl p-5 slide-up-panel md:h-full md:max-h-none md:max-w-md md:rounded-l-[26px] md:rounded-t-none md:p-6;
+  }
+  .ui-modal__panel--sm {
+    @apply max-w-md;
+  }
+  .ui-modal__panel--md {
+    @apply max-w-2xl;
+  }
+  .ui-modal__panel--lg {
+    @apply max-w-4xl;
+  }
+  .ui-modal__header {
+    @apply mb-4 flex items-start justify-between gap-3;
+  }
+  .ui-modal__title {
+    @apply text-2xl font-semibold;
+  }
+  .ui-modal__description {
+    @apply mt-1 text-sm text-muted;
+  }
+  .ui-toast {
+    @apply shadow-[0_18px_44px_rgba(43,39,34,0.14)];
   }
   .catalog-hero {
     background:
@@ -248,10 +361,6 @@ body {
       radial-gradient(circle at 90% 12%, rgba(var(--tone-sage), 0.25), transparent 50%),
       linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(var(--catalog-sand), 0.96));
   }
-  .soft-card {
-    @apply rounded-[28px] border border-white/80 bg-white/90 shadow-[0_24px_50px_rgba(43,39,34,0.1)];
-  }
-
   .admin-shell {
     @apply relative min-h-screen overflow-x-hidden text-ink;
   }

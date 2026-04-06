@@ -1,17 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Button, Card } from '../components/ui';
 
 function NotFound() {
   return (
     <div className="not-found py-8 md:py-12">
       <div className="container mx-auto px-4 text-center">
-        <div className="soft-card p-8">
+        <Card className="text-center" padding="lg">
           <h1 className="text-2xl sm:text-3xl font-semibold mb-2">404 — Страница не найдена</h1>
           <p className="mb-4 text-muted">К сожалению, запрашиваемая страница не существует или была удалена.</p>
-          <Link to="/" className="button">
+          <Button as={Link} to="/">
             Вернуться на главную
-          </Link>
-        </div>
+          </Button>
+        </Card>
       </div>
     </div>
   );

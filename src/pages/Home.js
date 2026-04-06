@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
+import { Button, Card } from '../components/ui';
 import { getProducts, getCategories } from '../api';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
 import { getPrimaryImageUrl, getProductPrice, resolveImageUrl } from '../utils/product';
@@ -167,20 +168,24 @@ function Home() {
               </h1>
               <p className="text-sm sm:text-base text-muted max-w-xl">{heroSubtitle}</p>
               <div className="flex flex-wrap gap-3">
-                <Link to={primaryCtaLink} className="button">{primaryCtaLabel}</Link>
-                <Link to={secondaryCtaLink} className="button-gray">{secondaryCtaLabel}</Link>
+                <Button as={Link} to={primaryCtaLink}>{primaryCtaLabel}</Button>
+                <Button as={Link} to={secondaryCtaLink} variant="secondary">{secondaryCtaLabel}</Button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 {heroHighlights.map((feat) => (
-                  <Link
+                  <Card
                     key={feat.title}
+                    as={Link}
                     to={feat.link}
-                    className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 shadow-[0_12px_24px_rgba(43,39,34,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(43,39,34,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    variant="quiet"
+                    padding="sm"
+                    interactive
+                    className="rounded-2xl"
                     aria-label={feat.title}
                   >
                     <p className="text-sm font-semibold mb-1">{feat.title}</p>
                     <p className="text-xs text-muted mb-0">{feat.subtitle}</p>
-                  </Link>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -213,9 +218,15 @@ function Home() {
                       <p className="text-sm text-muted m-0">В наличии любимые оттенки</p>
                     )}
                   </div>
-                  <Link to={featuredProduct ? `/product/${featuredProduct.id}` : '/category/popular'} className="button-ghost text-primary">
+                  <Button
+                    as={Link}
+                    to={featuredProduct ? `/product/${featuredProduct.id}` : '/category/popular'}
+                    variant="ghost"
+                    size="sm"
+                    className="text-primary"
+                  >
                     Подробнее →
-                  </Link>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -236,8 +247,8 @@ function Home() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link to="/catalog" className="button">В каталог</Link>
-              <Link to="/category/new" className="button-gray">Новинки</Link>
+              <Button as={Link} to="/catalog">В каталог</Button>
+              <Button as={Link} to="/category/new" variant="secondary">Новинки</Button>
             </div>
           </div>
           <div className="relative z-10 mt-6">
@@ -310,24 +321,26 @@ function Home() {
               </div>
               {topCategories.length > 3 && (
                 <>
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="icon"
                     onClick={() => scrollCategories(-1)}
-                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-ink shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2"
                     aria-label="Прокрутить категории влево"
                     aria-controls="category-carousel"
                   >
                     ←
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
                     onClick={() => scrollCategories(1)}
-                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-ink shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2"
                     aria-label="Прокрутить категории вправо"
                     aria-controls="category-carousel"
                   >
                     →
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -338,9 +351,9 @@ function Home() {
       <section className="container mx-auto px-4 py-10">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
           <h2 className="text-2xl font-semibold">Бестселлеры недели</h2>
-          <Link to="/category/popular" className="text-primary text-sm">
+          <Button as={Link} to="/category/popular" variant="ghost" size="sm" className="self-start text-primary">
             Смотреть все
-          </Link>
+          </Button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {visibleProducts.slice(0, 8).map((prod) => (
@@ -354,7 +367,7 @@ function Home() {
 
       <section className="container mx-auto px-4 py-10">
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="soft-card p-6 md:p-8">
+          <Card padding="lg">
             <p className="text-xs uppercase tracking-[0.3em] text-accent">Комплект недели</p>
             <h3 className="text-2xl font-semibold mt-2">Соберите идеальную спальню за один клик</h3>
             <p className="text-sm text-muted mt-3 max-w-xl">
@@ -363,30 +376,30 @@ function Home() {
             </p>
             <div className="mt-4 grid sm:grid-cols-3 gap-3 text-sm">
               {['Комплект простыней', 'Пододеяльник 200×220', '2 наволочки 50×70'].map((item) => (
-                <div key={item} className="rounded-2xl border border-white/70 bg-white/85 px-3 py-3 text-center shadow-sm">
+                <Card key={item} variant="quiet" padding="sm" className="rounded-2xl text-center">
                   {item}
-                </div>
+                </Card>
               ))}
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Link to={primaryCtaLink} className="button">Собрать комплект</Link>
-              <Link to="/category/popular" className="button-gray">Подобрать самостоятельно</Link>
+              <Button as={Link} to={primaryCtaLink}>Собрать комплект</Button>
+              <Button as={Link} to="/category/popular" variant="secondary">Подобрать самостоятельно</Button>
             </div>
-          </div>
-          <div className="soft-card p-6 md:p-8">
+          </Card>
+          <Card padding="lg">
             <p className="text-xs uppercase tracking-[0.3em] text-accent">Сезонные подборки</p>
             <div className="mt-4 space-y-4">
               {seasonalTiles.map((tile) => (
-                <div key={tile.title} className="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm">
+                <Card key={tile.title} variant="quiet" padding="sm" className="rounded-2xl">
                   <h4 className="text-lg font-semibold">{tile.title}</h4>
                   <p className="text-sm text-muted mt-1">{tile.subtitle}</p>
-                  <Link to={tile.link} className="text-sm text-primary mt-2 inline-flex items-center gap-2">
+                  <Button as={Link} to={tile.link} variant="ghost" size="sm" className="mt-2 text-primary !px-0">
                     {tile.cta} →
-                  </Link>
-                </div>
+                  </Button>
+                </Card>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       </section>
 
@@ -394,9 +407,9 @@ function Home() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <h2 className="text-2xl font-semibold">Новинки с мягким характером</h2>
-            <Link to="/category/new" className="text-primary text-sm">
+            <Button as={Link} to="/category/new" variant="ghost" size="sm" className="self-start text-primary">
               Смотреть все
-            </Link>
+            </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {visibleProducts.slice(0, 4).map((prod) => (
@@ -411,7 +424,7 @@ function Home() {
 
       <section className="py-12">
         <div className="container mx-auto px-4 max-w-4xl text-center">
-          <div className="soft-card p-8 md:p-10">
+          <Card padding="lg" className="text-center">
             <h2 className="text-2xl md:text-3xl font-semibold">
               Постельное Белье‑ЮГ — пространство для отдыха и перезагрузки
             </h2>
@@ -420,10 +433,10 @@ function Home() {
               стиль вашего дома: фильтры по категориям, брендам и готовые подборки облегчают выбор.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
-              <Link to="/catalog" className="button">В каталог</Link>
-              <Link to="/info/production" className="button-gray">О производстве</Link>
+              <Button as={Link} to="/catalog">В каталог</Button>
+              <Button as={Link} to="/info/production" variant="secondary">О производстве</Button>
             </div>
-          </div>
+          </Card>
         </div>
       </section>
     </div>

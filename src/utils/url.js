@@ -1,0 +1,60 @@
+const APP_ROOT_PATH = '/';
+
+function normalizeBasePath(rawPath = '') {
+  if (!rawPath) return '';
+
+  if (/^https?:\/\//i.test(rawPath)) {
+    try {
+      const parsedPath = new URL(rawPath).pathname.replace(/\/$/, '');
+      return parsedPath === '/' ? '' : parsedPath;
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const normalizedPath = rawPath.replace(/\/$/, '');
+  if (!normalizedPath || normalizedPath === '/') {
+    return '';
+  }
+
+  return normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+}
+
+function normalizeAppPath(path = APP_ROOT_PATH) {
+  if (typeof path !== 'string' || !path.trim()) {
+    return APP_ROOT_PATH;
+  }
+
+  if (path === APP_ROOT_PATH) {
+    return APP_ROOT_PATH;
+  }
+
+  if (path.startsWith('//')) {
+    return `/${path.replace(/^\/+/, '')}`;
+  }
+
+  return path.startsWith('/') ? path : `/${path}`;
+}
+
+export function resolveAppBasePath() {
+  return normalizeBasePath(process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '');
+}
+
+export function buildAppPath(path = APP_ROOT_PATH) {
+  const basePath = resolveAppBasePath();
+  const normalizedPath = normalizeAppPath(path);
+
+  if (normalizedPath === APP_ROOT_PATH) {
+    return basePath ? `${basePath}/` : APP_ROOT_PATH;
+  }
+
+  return `${basePath}${normalizedPath}`;
+}
+
+export function buildAbsoluteAppUrl(path = APP_ROOT_PATH) {
+  if (typeof window === 'undefined' || !window.location) {
+    return undefined;
+  }
+
+  return `${window.location.origin}${buildAppPath(path)}`;
+}

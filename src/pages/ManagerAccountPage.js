@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getManagerDashboard } from '../api';
+import NotificationBanner from '../components/NotificationBanner';
+import { Button, Card } from '../components/ui';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -87,27 +89,27 @@ function ManagerAccountPage() {
 
         <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
           <aside className="space-y-4">
-            <div className="soft-card p-5 reveal-up">
+            <Card className="reveal-up" padding="md">
               <p className="text-xs uppercase tracking-[0.3em] text-muted">Профиль</p>
               <h2 className="text-xl font-semibold mt-2">{displayName}</h2>
               <p className="text-sm text-muted mt-1">Роль: менеджер</p>
               <p className="text-xs text-muted mt-2">Последний заказ: {lastOrderLabel}</p>
-            </div>
+            </Card>
 
-            <div className="soft-card p-5 reveal-up">
+            <Card className="reveal-up" padding="md">
               <p className="text-xs uppercase tracking-[0.3em] text-muted">Быстрые действия</p>
               <div className="mt-4 space-y-2">
-                <Link to="/cart" className="button w-full">
+                <Button as={Link} to="/cart" block>
                   Создать ссылку на оплату
-                </Link>
-                <Link to="/catalog" className="button-gray w-full">
+                </Button>
+                <Button as={Link} to="/catalog" block variant="secondary">
                   Перейти в каталог
-                </Link>
-                <button type="button" onClick={handleLogout} className="button-ghost w-full">
+                </Button>
+                <Button type="button" onClick={handleLogout} block variant="ghost">
                   Выйти из аккаунта
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
 
             <div className="rounded-3xl p-5 text-white relative overflow-hidden reveal-up bg-gradient-to-br from-[#7aa59b] via-[#5e8f84] to-[#4c7a6f]">
               <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top,#ffffff,transparent_65%)]" />
@@ -122,33 +124,33 @@ function ManagerAccountPage() {
 
           <section className="space-y-6">
             <div id="overview" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="soft-card p-5 reveal-up">
+              <Card className="reveal-up" padding="md">
                 <p className="text-xs uppercase tracking-[0.3em] text-muted">Выручка</p>
                 <p className="text-2xl font-semibold mt-2">
                   {totalSales.toLocaleString('ru-RU')} ₽
                 </p>
                 <p className="text-xs text-muted mt-2">Все сделки за период работы</p>
-              </div>
-              <div className="soft-card p-5 reveal-up">
+              </Card>
+              <Card className="reveal-up" padding="md">
                 <p className="text-xs uppercase tracking-[0.3em] text-muted">Заказы</p>
                 <p className="text-2xl font-semibold mt-2">{stats.totalOrders ?? 0}</p>
                 <p className="text-xs text-muted mt-2">Всего оформлено</p>
-              </div>
-              <div className="soft-card p-5 reveal-up">
+              </Card>
+              <Card className="reveal-up" padding="md">
                 <p className="text-xs uppercase tracking-[0.3em] text-muted">Оплачено</p>
                 <p className="text-2xl font-semibold mt-2">{stats.paidOrders ?? 0}</p>
                 <p className="text-xs text-muted mt-2">Завершённые оплаты</p>
-              </div>
-              <div className="soft-card p-5 reveal-up">
+              </Card>
+              <Card className="reveal-up" padding="md">
                 <p className="text-xs uppercase tracking-[0.3em] text-muted">Средний чек</p>
                 <p className="text-2xl font-semibold mt-2">
                   {averageOrderValue.toLocaleString('ru-RU')} ₽
                 </p>
                 <p className="text-xs text-muted mt-2">Среднее значение заказов</p>
-              </div>
+              </Card>
             </div>
 
-            <div id="orders" className="soft-card p-6 md:p-8 reveal-up">
+            <Card id="orders" className="reveal-up" padding="lg">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-semibold">Последние заказы</h2>
@@ -164,9 +166,7 @@ function ManagerAccountPage() {
               {isLoading ? (
                 <p className="text-sm text-muted">Загружаем данные по заказам…</p>
               ) : error ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
-                </div>
+                <NotificationBanner notification={{ type: 'error', message: error }} />
               ) : recentOrders.length === 0 ? (
                 <p className="text-sm text-muted">Заказы появятся после создания первой ссылки.</p>
               ) : (
@@ -184,34 +184,34 @@ function ManagerAccountPage() {
                           <p className="text-sm font-semibold">Заказ {String(order.id).slice(0, 8)}...</p>
                           <p className="text-xs text-muted">{dateLabel} · {formatStatus(order.status)}</p>
                         </div>
-                        <div className="text-sm text-right">
-                          <p className="font-semibold">{total.toLocaleString('ru-RU')} ₽</p>
-                          <div className="mt-1 flex flex-col items-end gap-1">
-                            {order.publicToken && (
-                              <Link to={`/order/${order.publicToken}`} className="text-xs text-primary">
+                      <div className="text-sm text-right">
+                        <p className="font-semibold">{total.toLocaleString('ru-RU')} ₽</p>
+                        <div className="mt-1 flex flex-col items-end gap-1">
+                          {order.publicToken && (
+                              <Button as={Link} to={`/order/${order.publicToken}`} variant="ghost" size="sm" className="!min-h-0 !px-0 !py-0 text-xs text-primary">
                                 Открыть заказ
-                              </Link>
-                            )}
-                          </div>
+                              </Button>
+                          )}
                         </div>
+                      </div>
                       </div>
                     );
                   })}
                 </div>
               )}
-            </div>
+            </Card>
 
             <div id="links" className="grid gap-4 md:grid-cols-2">
-              <div className="soft-card p-6 reveal-up">
+              <Card className="reveal-up" padding="md">
                 <h3 className="text-lg font-semibold mb-2">Ссылки на оплату</h3>
                 <p className="text-sm text-muted">
                   Создавайте ссылку в корзине и отправляйте клиенту удобным способом.
                 </p>
-                <Link to="/cart" className="button mt-4">
+                <Button as={Link} to="/cart" className="mt-4">
                   Перейти в корзину менеджера
-                </Link>
-              </div>
-              <div className="soft-card p-6 reveal-up">
+                </Button>
+              </Card>
+              <Card className="reveal-up" padding="md">
                 <h3 className="text-lg font-semibold mb-2">Статус оплат</h3>
                 <div className="space-y-2 text-sm text-muted">
                   <div className="flex items-center justify-between">
@@ -231,7 +231,7 @@ function ManagerAccountPage() {
                     <span className="font-semibold text-ink">{stats.refundedOrders ?? 0}</span>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
           </section>
         </div>

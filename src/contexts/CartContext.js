@@ -7,6 +7,9 @@ import {
   removeCartItem,
   getProducts
 } from '../api';
+import { useNotifications } from './NotificationContext';
+import { normalizeCartQuantity } from '../utils/cart';
+import { createNotification } from '../utils/notifications';
 import { moneyToNumber, getPrimaryImageUrl, getPrimaryVariant } from '../utils/product';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 
@@ -55,7 +58,30 @@ function enrichCartItems(items = [], variantMap = {}) {
   });
 }
 
+function buildAddToCartErrorNotification(err, { reason = 'request_failed' } = {}) {
+  if (reason === 'missing_variant') {
+    return createNotification({
+      type: 'error',
+      title: 'Не удалось добавить в корзину',
+      message: 'У этого товара сейчас нет доступного варианта для покупки.'
+    });
+  }
+
+  const fallbackMessage = 'Возможно, товар закончился или недоступен.';
+  const message =
+    typeof err?.message === 'string' && err.message.trim()
+      ? err.message.trim()
+      : fallbackMessage;
+
+  return createNotification({
+    type: 'error',
+    title: 'Не удалось добавить в корзину',
+    message
+  });
+}
+
 export function CartProvider({ children }) {
+  const { notify } = useNotifications();
   // Persist cart ID in localStorage
   const [cartId, setCartId] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -122,7 +148,7 @@ export function CartProvider({ children }) {
 
   // Add item to cart (handles single or multiple variants per product)
   const addItem = useCallback(
-    async (product, variantId = null, quantity = 1) => {
+    async (product, variantId = null, quantity = 1, { notifyOnError = true } = {}) => {
       let id = cartId;
       try {
         if (!id) {
@@ -134,7 +160,11 @@ export function CartProvider({ children }) {
         const targetVariant = variantId || getPrimaryVariant(product)?.id;
         if (!targetVariant) {
           console.error('Product has no variants to add to cart');
-          return;
+          const notification = buildAddToCartErrorNotification(null, { reason: 'missing_variant' });
+          if (notifyOnError) {
+            notify(notification);
+          }
+          return { ok: false, notification };
         }
         const variants = Array.isArray(product?.variants)
           ? product.variants
@@ -142,8 +172,8 @@ export function CartProvider({ children }) {
           ? Array.from(product.variants)
           : [];
         const selectedVariant = variants.find((variant) => variant?.id === targetVariant) || getPrimaryVariant(product);
-        const quantityValue = Math.max(1, Number(quantity) || 1);
-        await addItemToCart(id, targetVariant, quantity);
+        const quantityValue = normalizeCartQuantity(quantity);
+        await addItemToCart(id, targetVariant, quantityValue);
         await syncCart(id);
         setLastAddedItem({
           id: `${targetVariant}-${Date.now()}`,
@@ -159,12 +189,17 @@ export function CartProvider({ children }) {
           variant_id: targetVariant,
           quantity: quantityValue
         });
+        return { ok: true };
       } catch (err) {
         console.error('Failed to add item to cart:', err);
-        alert('Не удалось добавить товар в корзину. Возможно, товар закончился или недоступен.');
+        const notification = buildAddToCartErrorNotification(err);
+        if (notifyOnError) {
+          notify(notification);
+        }
+        return { ok: false, notification };
       }
     },
-    [cartId, syncCart]
+    [cartId, notify, syncCart]
   );
 
   const removeItem = useCallback(

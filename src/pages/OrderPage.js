@@ -1,9 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment } from '../api';
+import NotificationBanner from '../components/NotificationBanner';
+import { Button, Card, Input } from '../components/ui';
+import { usePaymentConfig } from '../contexts/PaymentConfigContext';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+import { createNotification } from '../utils/notifications';
+import {
+  getOrderPaymentNotice,
+  getPaymentSummaryLabel
+} from '../utils/payment';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
 const statusLabels = {
   PENDING: 'Ожидает оплаты',
@@ -33,6 +42,7 @@ function SuccessIcon() {
 function OrderPage() {
   const { token } = useParams();
   const { tokenParsed } = useAuth();
+  const { paymentConfig } = usePaymentConfig();
 
   const [order, setOrder] = useState(null);
   const [receiptEmail, setReceiptEmail] = useState('');
@@ -65,10 +75,11 @@ function OrderPage() {
       .catch((err) => {
         console.error('Failed to load order:', err);
         if (!mounted) return;
-        setStatus({
+        setStatus(createNotification({
           type: 'error',
-          message: 'Не удалось загрузить заказ. Проверьте ссылку и попробуйте ещё раз.',
-        });
+          title: 'Не удалось загрузить заказ',
+          message: 'Проверьте ссылку и попробуйте ещё раз.'
+        }));
       })
       .finally(() => {
         if (!mounted) return;
@@ -94,10 +105,11 @@ function OrderPage() {
     } catch (err) {
       if (!silent) {
         console.error('Failed to refresh payment status:', err);
-        setStatus({
-          type: 'error',
-          message: 'Не удалось обновить статус оплаты. Попробуйте ещё раз.',
-        });
+        setStatus(createNotification({
+          type: 'warning',
+          title: 'Не удалось обновить статус оплаты',
+          message: 'Попробуйте ещё раз или вернитесь к оплате позже.'
+        }));
       }
     } finally {
       if (!silent) setIsRefreshing(false);
@@ -155,10 +167,11 @@ function OrderPage() {
 
   const handlePay = async () => {
     if (!receiptEmail.trim()) {
-      setStatus({
+      setStatus(createNotification({
         type: 'error',
-        message: 'Укажите email для отправки чека перед оплатой.',
-      });
+        title: 'Укажите email для чека',
+        message: 'Перед повторной оплатой нужен адрес для отправки чека.'
+      }));
       return;
     }
 
@@ -168,7 +181,7 @@ function OrderPage() {
       const response = await payPublicOrder({
         token,
         receiptEmail: receiptEmail.trim(),
-        returnUrl: `${window.location.origin}/order/${token}`,
+        returnUrl: buildAbsoluteAppUrl(`/order/${token}`),
       });
 
       if (response?.confirmationUrl) {
@@ -176,16 +189,26 @@ function OrderPage() {
         return;
       }
 
-      setStatus({
-        type: 'error',
-        message: 'Не удалось получить ссылку оплаты. Попробуйте ещё раз.',
-      });
+      setStatus(createNotification({
+        type: 'warning',
+        title: 'Платёжная ссылка не получена',
+        message: 'Проверьте статус заказа или безопасно повторите попытку ещё раз.',
+        action: {
+          label: 'Проверить статус оплаты',
+          onClick: () => refreshPaymentStatus()
+        }
+      }));
     } catch (err) {
       console.error('Payment creation failed:', err);
-      setStatus({
+      setStatus(createNotification({
         type: 'error',
-        message: 'Не удалось создать платёж. Попробуйте ещё раз.',
-      });
+        title: 'Не удалось открыть оплату',
+        message: 'Попробуйте ещё раз или сначала обновите статус заказа.',
+        action: {
+          label: 'Проверить статус оплаты',
+          onClick: () => refreshPaymentStatus()
+        }
+      }));
     } finally {
       setIsPaying(false);
     }
@@ -203,15 +226,26 @@ function OrderPage() {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <p className="text-muted mb-4">Заказ не найден.</p>
-        <Link to="/" className="button-ghost">Вернуться на главную</Link>
+        <Button as={Link} to="/" variant="ghost">Вернуться на главную</Button>
       </div>
     );
   }
 
   const orderStatus = order.status || 'PENDING';
   const statusLabel = statusLabels[orderStatus] || orderStatus;
-  const canPay = orderStatus !== 'PAID' && orderStatus !== 'DELIVERED' && orderStatus !== 'REFUNDED';
-  const canRefresh = orderStatus !== 'PAID' && orderStatus !== 'DELIVERED' && orderStatus !== 'REFUNDED';
+  const canPay = orderStatus === 'PENDING' || orderStatus === 'PROCESSING';
+  const canRefresh = canPay;
+  const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
+  const paymentNotice = canPay
+    ? getOrderPaymentNotice(paymentConfig, orderStatus)
+    : null;
+  const paymentRecoveryNotice = canPay
+    ? createNotification({
+        type: paymentNotice.type,
+        title: paymentNotice.title,
+        message: paymentNotice.message
+      })
+    : null;
 
   const isConfirmed = orderStatus === 'PAID' || orderStatus === 'DELIVERED';
   const shipping = order.delivery || {};
@@ -284,12 +318,12 @@ function OrderPage() {
             </h1>
             <p className="text-sm text-muted mt-1">{statusLabel}</p>
           </div>
-          <Link to="/" className="button-ghost text-sm">
+          <Button as={Link} to="/" variant="ghost" size="sm">
             Продолжить покупки →
-          </Link>
+          </Button>
         </div>
 
-        <div className="mb-6 rounded-2xl border border-primary/25 bg-white/92 p-5 shadow-[0_20px_40px_rgba(43,39,34,0.1)]">
+        <Card variant="soft" padding="md" className="mb-6 border-primary/25">
           <div className="flex items-start gap-3">
             <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${isConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-secondary text-ink/75'}`}>
               <SuccessIcon />
@@ -308,27 +342,17 @@ function OrderPage() {
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <button type="button" className="button-gray w-full">Отслеживать заказ</button>
-            <Link to="/usloviya-prodazhi#return" className="button-gray w-full text-center">Оформить возврат</Link>
-            <Link to="/info/delivery" className="button-ghost w-full text-center">Связаться с поддержкой</Link>
+            <Button type="button" block variant="secondary">Отслеживать заказ</Button>
+            <Button as={Link} to="/usloviya-prodazhi#return" block variant="secondary">Оформить возврат</Button>
+            <Button as={Link} to="/info/delivery" block variant="ghost">Связаться с поддержкой</Button>
           </div>
-        </div>
+        </Card>
 
-        {status && (
-          <div
-            className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
-              status.type === 'error'
-                ? 'border-red-200 bg-red-50 text-red-700'
-                : 'border-green-200 bg-green-50 text-green-700'
-            }`}
-          >
-            {status.message}
-          </div>
-        )}
+        {status ? <NotificationBanner notification={status} className="mb-6" /> : null}
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <section className="soft-card p-6 md:p-7">
+            <Card as="section" padding="lg">
               <h2 className="text-xl font-semibold mb-4">Статус доставки</h2>
               <ol className="space-y-3">
                 {timelineSteps.map((step, index) => {
@@ -344,15 +368,15 @@ function OrderPage() {
                 })}
               </ol>
 
-              <div className="mt-5 rounded-2xl border border-ink/10 bg-white/90 p-4 text-sm space-y-1">
+              <Card variant="quiet" padding="sm" className="mt-5 text-sm space-y-1">
                 <p><span className="text-muted">Способ:</span> {deliveryType}</p>
                 <p><span className="text-muted">Адрес/пункт:</span> {deliveryAddress}</p>
                 <p><span className="text-muted">Перевозчик:</span> {carrierName}</p>
                 <p><span className="text-muted">Трек-номер:</span> {trackingNumber || 'Появится после отгрузки'}</p>
-              </div>
-            </section>
+              </Card>
+            </Card>
 
-            <section className="soft-card p-6 md:p-7">
+            <Card as="section" padding="lg">
               <h2 className="text-xl font-semibold mb-4">Товары в заказе</h2>
               <div className="space-y-3">
                 {(order.items || []).map((item) => {
@@ -374,11 +398,11 @@ function OrderPage() {
                   );
                 })}
               </div>
-            </section>
+            </Card>
           </div>
 
           <aside className="space-y-4 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] self-start">
-            <div className="soft-card p-5">
+            <Card padding="md">
               <h3 className="text-xl font-semibold mb-4">Итоги заказа</h3>
               <div className="flex justify-between mb-2 text-sm">
                 <span>Товары ({order.items?.length || 0})</span>
@@ -388,6 +412,10 @@ function OrderPage() {
                 <span>Доставка</span>
                 <span>{moneyToNumber(shipping.pricingTotal || shipping.pricing || 0).toLocaleString('ru-RU')} ₽</span>
               </div>
+              <div className="flex justify-between mb-2 text-sm text-muted">
+                <span>Оплата</span>
+                <span>{paymentSummaryLabel}</span>
+              </div>
               <hr className="my-3 border-ink/10" />
               <div className="flex justify-between font-semibold text-base mb-4">
                 <span>Итого</span>
@@ -396,42 +424,51 @@ function OrderPage() {
 
               {canPay ? (
                 <div className="space-y-2">
+                  {paymentRecoveryNotice ? (
+                    <NotificationBanner notification={paymentRecoveryNotice} compact />
+                  ) : null}
                   <label className="block text-sm">
                     <span className="text-muted">Email для чека</span>
-                    <input
+                    <Input
                       type="email"
                       value={receiptEmail}
                       onChange={(event) => setReceiptEmail(event.target.value)}
                       placeholder="email@example.ru"
-                      className="mt-2 w-full"
+                      className="mt-2"
                     />
                   </label>
 
-                  <button className="button w-full" onClick={handlePay} disabled={isPaying}>
-                    {isPaying ? 'Создаём платёж…' : 'Оплатить заказ'}
-                  </button>
+                  <Button block onClick={handlePay} disabled={isPaying}>
+                    {isPaying
+                      ? `Открываем ${paymentConfig.providerName}…`
+                      : paymentNotice.ctaLabel}
+                  </Button>
                   {canRefresh && (
-                    <button
+                    <Button
                       type="button"
-                      className="button-gray w-full"
+                      block
+                      variant="secondary"
                       onClick={() => refreshPaymentStatus()}
                       disabled={isRefreshing}
                     >
-                      {isRefreshing ? 'Проверяем оплату…' : 'Обновить статус'}
-                    </button>
+                      {isRefreshing ? 'Проверяем оплату…' : 'Проверить статус оплаты'}
+                    </Button>
                   )}
+                  <p className="text-xs text-muted">
+                    Пока заказ ожидает оплату, страница автоматически обновляет статус. После успешного банка подтверждение появится здесь.
+                  </p>
                 </div>
               ) : (
                 <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
                   Оплата получена. Спасибо за заказ!
                 </div>
               )}
-            </div>
+            </Card>
 
-            <div className="soft-card p-4 text-sm space-y-2">
+            <Card padding="sm" className="text-sm space-y-2">
               <p className="font-semibold">Спокойная доставка</p>
               <p className="text-muted">Следите за заказом на этой странице: статус, интервал и обновления по доставке собраны в одном месте.</p>
-            </div>
+            </Card>
           </aside>
         </div>
       </div>

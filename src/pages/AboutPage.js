@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Button, Card } from '../components/ui';
 
 function AboutPage() {
   if (typeof window !== 'undefined') {
@@ -25,7 +26,7 @@ function AboutPage() {
     <div className="about-page">
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <div className="soft-card p-8 md:p-10 text-center">
+          <Card className="text-center" padding="lg">
             <p className="text-xs uppercase tracking-[0.3em] text-muted">О компании</p>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold mt-2">
               Дом начинается с мягких тканей и спокойного сна
@@ -39,7 +40,7 @@ function AboutPage() {
               <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Натуральные материалы</span>
               <span className="rounded-full border border-ink/10 bg-white/80 px-3 py-1">Сервис без спешки</span>
             </div>
-          </div>
+          </Card>
         </div>
       </section>
 
@@ -86,7 +87,7 @@ function AboutPage() {
 
       <section className="py-10">
         <div className="container mx-auto px-4 max-w-2xl">
-          <div className="soft-card p-6 md:p-8">
+          <Card padding="lg">
             <h2 className="text-xl font-semibold text-center">
               Интернет‑магазин и мобильное приложение Постельное Белье‑ЮГ
             </h2>
@@ -103,9 +104,9 @@ function AboutPage() {
               </li>
             </ol>
             <div className="mt-6 flex justify-center">
-              <Link to="/category/popular" className="button">Перейти к покупкам</Link>
+              <Button as={Link} to="/category/popular">Перейти к покупкам</Button>
             </div>
-          </div>
+          </Card>
         </div>
       </section>
     </div>
@@ -120,15 +121,15 @@ function InfoBlock({ title, text, imageOnLeft = true, cta }) {
           {imageOnLeft && (
             <div className="h-56 rounded-3xl bg-gradient-to-br from-[#f3ebe3] to-[#e6d9cd]" />
           )}
-          <div className="soft-card p-6 md:p-8">
+          <Card padding="lg">
             <h2 className="text-xl font-semibold mb-2">{title}</h2>
             <p className="text-base text-muted">{text}</p>
             {cta && (
-              <Link to={cta.to} className="button inline-block mt-4">
+              <Button as={Link} to={cta.to} className="mt-4">
                 {cta.label}
-              </Link>
+              </Button>
             )}
-          </div>
+          </Card>
           {!imageOnLeft && (
             <div className="h-56 rounded-3xl bg-gradient-to-br from-[#f1ece6] to-[#e2d4c7]" />
           )}

@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import {
+  Button,
+  Card,
+  FilterChip,
+  FilterToggle,
+  Input,
+  Modal,
+  PaginationButton,
+  Select,
+} from '../components/ui';
 import { getBrands, getCategories, getProducts } from '../api';
 import {
   formatPrice,
@@ -110,33 +120,27 @@ function buildDiversityRanking(list) {
 function SearchScopeChips({ options, activeScope, onScopeChange }) {
   return (
     <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-      <button
+      <FilterChip
         type="button"
         onClick={() => onScopeChange('')}
-        className={`rounded-full border px-3 py-1.5 text-xs whitespace-nowrap transition ${
-          !activeScope
-            ? 'border-primary/45 bg-primary/10 text-primary'
-            : 'border-ink/10 bg-white/85 text-ink/70 hover:border-primary/45 hover:text-primary'
-        }`}
+        active={!activeScope}
+        className="whitespace-nowrap"
       >
         Весь каталог
-      </button>
+      </FilterChip>
       {options.map((option) => {
         const token = normalizeSearchText(resolveCategoryToken(option));
         const isActive = token === activeScope;
         return (
-          <button
+          <FilterChip
             key={resolveCategoryToken(option)}
             type="button"
             onClick={() => onScopeChange(isActive ? '' : token)}
-            className={`rounded-full border px-3 py-1.5 text-xs whitespace-nowrap transition ${
-              isActive
-                ? 'border-primary/45 bg-primary/10 text-primary'
-                : 'border-ink/10 bg-white/85 text-ink/70 hover:border-primary/45 hover:text-primary'
-            }`}
+            active={isActive}
+            className="whitespace-nowrap"
           >
             {option.name}
-          </button>
+          </FilterChip>
         );
       })}
     </div>
@@ -199,10 +203,14 @@ function CategoryCard({ product, fromPath, fromLabel }) {
       : 'Подробные характеристики на странице товара';
 
   return (
-    <Link
+    <Card
+      as={Link}
       to={`/product/${product.id}`}
       state={{ fromPath, fromLabel }}
-      className="group block rounded-[24px] border border-ink/10 bg-white/92 p-3 shadow-[0_16px_34px_rgba(43,39,34,0.11)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_42px_rgba(43,39,34,0.16)]"
+      variant="quiet"
+      padding="sm"
+      interactive
+      className="group block rounded-[24px]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -286,7 +294,7 @@ function CategoryCard({ product, fromPath, fromLabel }) {
           <span className="text-xs text-primary">Открыть →</span>
         </div>
       </div>
-    </Link>
+    </Card>
   );
 }
 
@@ -830,13 +838,15 @@ function CategoryPage() {
       <div className="container mx-auto px-4">
         <nav className="text-xs text-muted flex flex-wrap items-center gap-2">
           {location.state?.fromPath ? (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => navigate(-1)}
-              className="text-primary hover:text-accent"
+              className="!min-h-0 !px-0 !py-0 text-primary hover:text-accent"
             >
               ← Назад
-            </button>
+            </Button>
           ) : null}
           <Link to="/" className="hover:text-primary transition">Главная</Link>
           <span className="text-ink/40">›</span>
@@ -869,7 +879,7 @@ function CategoryPage() {
               <label htmlFor="category-sort" className="text-ink/65">
                 Сорт:
               </label>
-              <select
+              <Select
                 id="category-sort"
                 value={sortKey}
                 onChange={(event) => setSortKey(event.target.value)}
@@ -882,38 +892,41 @@ function CategoryPage() {
                 <option value="priceDesc">Цена: по убыванию</option>
                 <option value="rating">Рейтинг</option>
                 <option value="discount">По скидке</option>
-              </select>
+              </Select>
             </div>
 
-            <button
+            <Button
               type="button"
-              className="button-gray w-full text-sm sm:w-auto lg:hidden"
+              variant="secondary"
+              block
+              size="sm"
+              className="sm:w-auto lg:hidden"
               onClick={() => setIsFilterOpen(true)}
             >
               Все фильтры{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-            </button>
+            </Button>
 
             <div className="hidden sm:flex items-center gap-1 rounded-2xl border border-ink/10 bg-white/90 p-1">
-              <button
+              <Button
                 type="button"
+                variant={viewMode === 'grid' ? 'primary' : 'ghost'}
+                size="icon"
                 onClick={() => setViewMode('grid')}
-                className={`h-10 w-10 rounded-xl transition ${
-                  viewMode === 'grid' ? 'bg-primary text-white' : 'text-ink/60 hover:text-primary'
-                }`}
+                className="rounded-xl"
                 aria-label="Крупная сетка"
               >
                 ▦
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant={viewMode === 'compact' ? 'primary' : 'ghost'}
+                size="icon"
                 onClick={() => setViewMode('compact')}
-                className={`h-10 w-10 rounded-xl transition ${
-                  viewMode === 'compact' ? 'bg-primary text-white' : 'text-ink/60 hover:text-primary'
-                }`}
+                className="rounded-xl"
                 aria-label="Компактная сетка"
               >
                 ▩
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -938,24 +951,24 @@ function CategoryPage() {
               const token = normalizeSearchText(resolveCategoryToken(category));
               const count = childCategoryCounts[token];
               return (
-                <button
+                <FilterChip
                   key={resolveCategoryToken(category)}
                   type="button"
-                  className="rounded-2xl border border-ink/10 bg-white/85 px-4 py-2 text-sm hover:border-primary/45 hover:text-primary transition"
+                  className="rounded-2xl text-sm"
                   onClick={() => navigate(`/category/${resolveCategoryToken(category)}`)}
                 >
                   {category.name}{count ? ` (${count})` : ''}
-                </button>
+                </FilterChip>
               );
             })}
           </div>
         )}
 
-        <div className="mt-6 hidden rounded-[24px] border border-ink/10 bg-white/85 p-4 shadow-[0_18px_34px_rgba(43,39,34,0.08)] md:p-5 lg:block">
+        <Card className="mt-6 hidden md:p-5 lg:block" variant="quiet" padding="sm">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="text-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
-              <select
+              <Select
                 value={brandFilter}
                 onChange={(event) => updateBrandFilter(event.target.value)}
                 className="mt-1 w-full"
@@ -966,36 +979,34 @@ function CategoryPage() {
                     {brand.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <div className="text-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена, ₽</span>
               <div className="mt-1 grid grid-cols-2 gap-2">
-                <input
+                <Input
                   type="number"
                   min="0"
                   inputMode="numeric"
                   placeholder={priceBounds.min ? `От ${formatPrice(priceBounds.min)}` : 'От 0'}
                   value={priceMin}
                   onChange={(event) => setPriceMin(event.target.value)}
-                  className="w-full"
                 />
-                <input
+                <Input
                   type="number"
                   min="0"
                   inputMode="numeric"
                   placeholder={priceBounds.max ? `До ${formatPrice(priceBounds.max)}` : 'До 0'}
                   value={priceMax}
                   onChange={(event) => setPriceMax(event.target.value)}
-                  className="w-full"
                 />
               </div>
             </div>
 
             <label className="text-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-muted">Рейтинг</span>
-              <select
+              <Select
                 value={minRating}
                 onChange={(event) => setMinRating(event.target.value)}
                 className="mt-1 w-full"
@@ -1004,20 +1015,17 @@ function CategoryPage() {
                 <option value="4.5">От 4.5</option>
                 <option value="4">От 4.0</option>
                 <option value="3.5">От 3.5</option>
-              </select>
+              </Select>
             </label>
 
             <div className="text-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-muted">Быстрые фильтры</span>
               <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                <button
+                <FilterToggle
                   type="button"
                   onClick={() => setInStockOnly((prev) => !prev)}
-                  className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 text-left text-sm transition ${
-                    inStockOnly
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-ink/10 bg-white text-ink/75 hover:border-primary/35 hover:text-primary'
-                  }`}
+                  active={inStockOnly}
+                  aria-pressed={inStockOnly}
                 >
                   <span
                     className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
@@ -1028,15 +1036,12 @@ function CategoryPage() {
                     {inStockOnly ? '✓' : ''}
                   </span>
                   <span>Только в наличии</span>
-                </button>
-                <button
+                </FilterToggle>
+                <FilterToggle
                   type="button"
                   onClick={() => setOnSaleOnly((prev) => !prev)}
-                  className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 text-left text-sm transition ${
-                    onSaleOnly
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-ink/10 bg-white text-ink/75 hover:border-primary/35 hover:text-primary'
-                  }`}
+                  active={onSaleOnly}
+                  aria-pressed={onSaleOnly}
                 >
                   <span
                     className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
@@ -1047,36 +1052,38 @@ function CategoryPage() {
                     {onSaleOnly ? '✓' : ''}
                   </span>
                   <span>Со скидкой</span>
-                </button>
+                </FilterToggle>
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {activeFilters.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Card className="mt-4 flex flex-wrap items-center gap-2" variant="quiet" padding="sm">
             <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Применено</span>
             <div className="flex flex-1 items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {activeFilters.map((filter, index) => (
-                <button
+                <FilterChip
                   key={`${filter.label}-${index}`}
                   type="button"
                   onClick={filter.onClear}
-                  className="inline-flex min-h-[36px] items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs text-primary hover:bg-primary/15"
+                  active
                 >
                   {filter.label}
                   <span aria-hidden="true">×</span>
-                </button>
+                </FilterChip>
               ))}
             </div>
-            <button
+            <Button
               type="button"
-              className="text-xs text-primary whitespace-nowrap"
+              variant="ghost"
+              size="sm"
+              className="whitespace-nowrap text-primary"
               onClick={clearAllFilters}
             >
               Очистить всё
-            </button>
-          </div>
+            </Button>
+          </Card>
         )}
 
         <div ref={resultsRef} className="mt-6">
@@ -1085,7 +1092,7 @@ function CategoryPage() {
               {Array.from({ length: itemsPerPage }).map((_, index) => (
                 <div
                   key={`skeleton-${index}`}
-                  className="rounded-[24px] border border-ink/10 bg-white/90 p-3 shadow-sm"
+                  className="ui-card ui-card--quiet p-3"
                 >
                   <div className="skeleton shimmer-safe h-[180px] w-full rounded-2xl" />
                   <div className="mt-3 space-y-2">
@@ -1113,14 +1120,15 @@ function CategoryPage() {
               {totalPages > 1 && (
                 <div className="mt-8 flex flex-col items-center gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
+                    <Button
                       type="button"
-                      className="button-gray px-3 py-2 text-sm"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                       disabled={safePage === 1}
                     >
                       Назад
-                    </button>
+                    </Button>
                     {visiblePages.map((page, index) => {
                       if (page === '...') {
                         return (
@@ -1131,28 +1139,25 @@ function CategoryPage() {
 
                       const isActive = page === safePage;
                       return (
-                        <button
+                        <PaginationButton
                           key={page}
                           type="button"
-                          className={`h-10 w-10 rounded-full text-sm transition ${
-                            isActive
-                              ? 'bg-primary text-white shadow-sm'
-                              : 'border border-ink/10 bg-white/90 hover:border-primary/45 hover:text-primary'
-                          }`}
+                          active={isActive}
                           onClick={() => setCurrentPage(page)}
                         >
                           {page}
-                        </button>
+                        </PaginationButton>
                       );
                     })}
-                    <button
+                    <Button
                       type="button"
-                      className="button-gray px-3 py-2 text-sm"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                       disabled={safePage === totalPages}
                     >
                       Вперёд
-                    </button>
+                    </Button>
                   </div>
                   <p className="text-xs text-muted">
                     Страница {safePage} из {totalPages}
@@ -1161,160 +1166,128 @@ function CategoryPage() {
               )}
             </>
           ) : (
-            <div className="soft-card p-8 text-center">
+            <Card className="text-center" padding="lg">
               <p className="text-lg font-semibold mb-2">Ничего не нашли</p>
               <p className="text-sm text-muted mb-4">
                 Попробуйте изменить сортировку, снять фильтры или расширить область поиска.
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 {activeFilters.length > 0 && (
-                  <button type="button" className="button-gray" onClick={clearAllFilters}>
+                  <Button type="button" variant="secondary" onClick={clearAllFilters}>
                     Сбросить фильтры
-                  </button>
+                  </Button>
                 )}
-                <button type="button" className="button" onClick={() => setSortKey('bestMatch')}>
+                <Button type="button" onClick={() => setSortKey('bestMatch')}>
                   Показать рекомендации
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           )}
         </div>
       </div>
 
-      {isFilterOpen && (
-          <div className="fixed inset-0 z-50">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setIsFilterOpen(false)}
-              aria-label="Закрыть фильтры"
-            />
-            <div className="absolute bottom-0 left-0 right-0 max-h-[86vh] overflow-y-auto rounded-t-3xl bg-white/97 p-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] shadow-2xl slide-up-panel">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted">Фильтры</p>
-                  <p className="text-base font-semibold">Уточните выбор</p>
-                </div>
-                <button
-                  type="button"
-                  className="button-ghost min-h-[44px] text-xs"
-                  onClick={() => setIsFilterOpen(false)}
-                >
-                  Закрыть
-                </button>
-              </div>
+      <Modal
+        open={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        placement="sheet"
+        size="sm"
+        title="Уточните выбор"
+        description="Фильтры"
+        className="lg:hidden"
+      >
+        <div className="space-y-3">
+          <label className="block text-sm">
+            <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
+            <Select
+              value={brandFilter}
+              onChange={(event) => updateBrandFilter(event.target.value)}
+              className="mt-1"
+            >
+              <option value="">Все бренды</option>
+              {brands.map((brand) => (
+                <option key={brand.slug || brand.id} value={brand.slug || brand.id}>
+                  {brand.name}
+                </option>
+              ))}
+            </Select>
+          </label>
 
-            <div className="space-y-3">
-              <label className="block text-sm">
-                <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
-                <select
-                  value={brandFilter}
-                  onChange={(event) => updateBrandFilter(event.target.value)}
-                  className="mt-1 w-full"
-                >
-                  <option value="">Все бренды</option>
-                  {brands.map((brand) => (
-                    <option key={brand.slug || brand.id} value={brand.slug || brand.id}>
-                      {brand.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена от</span>
+              <Input
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={priceMin}
+                onChange={(event) => setPriceMin(event.target.value)}
+                className="mt-1"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена до</span>
+              <Input
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={priceMax}
+                onChange={(event) => setPriceMax(event.target.value)}
+                className="mt-1"
+              />
+            </label>
+          </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <label className="text-sm">
-                  <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена от</span>
-                  <input
-                    type="number"
-                    min="0"
-                    inputMode="numeric"
-                    value={priceMin}
-                    onChange={(event) => setPriceMin(event.target.value)}
-                    className="mt-1 w-full"
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена до</span>
-                  <input
-                    type="number"
-                    min="0"
-                    inputMode="numeric"
-                    value={priceMax}
-                    onChange={(event) => setPriceMax(event.target.value)}
-                    className="mt-1 w-full"
-                  />
-                </label>
-              </div>
+          <label className="block text-sm">
+            <span className="text-xs uppercase tracking-[0.18em] text-muted">Рейтинг</span>
+            <Select
+              value={minRating}
+              onChange={(event) => setMinRating(event.target.value)}
+              className="mt-1"
+            >
+              <option value="">Любой</option>
+              <option value="4.5">От 4.5</option>
+              <option value="4">От 4.0</option>
+              <option value="3.5">От 3.5</option>
+            </Select>
+          </label>
 
-              <label className="block text-sm">
-                <span className="text-xs uppercase tracking-[0.18em] text-muted">Рейтинг</span>
-                <select
-                  value={minRating}
-                  onChange={(event) => setMinRating(event.target.value)}
-                  className="mt-1 w-full"
-                >
-                  <option value="">Любой</option>
-                  <option value="4.5">От 4.5</option>
-                  <option value="4">От 4.0</option>
-                  <option value="3.5">От 3.5</option>
-                </select>
-              </label>
-
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setInStockOnly((prev) => !prev)}
-                  className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 text-left text-sm transition ${
-                    inStockOnly
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-ink/10 bg-white text-ink/75'
-                  }`}
-                >
-                  <span
-                    className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                      inStockOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {inStockOnly ? '✓' : ''}
-                  </span>
-                  <span>Только в наличии</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOnSaleOnly((prev) => !prev)}
-                  className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 text-left text-sm transition ${
-                    onSaleOnly
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-ink/10 bg-white text-ink/75'
-                  }`}
-                >
-                  <span
-                    className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                      onSaleOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {onSaleOnly ? '✓' : ''}
-                  </span>
-                  <span>Со скидкой</span>
-                </button>
-              </div>
-            </div>
-
-            <div className={`mt-4 grid gap-2 ${activeFilterCount > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {activeFilterCount > 0 && (
-                <button type="button" className="button-gray min-h-[44px]" onClick={clearAllFilters}>
-                  Сбросить всё
-                </button>
-              )}
-              <button type="button" className="button min-h-[44px]" onClick={() => setIsFilterOpen(false)}>
-                Показать товары
-              </button>
-            </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <FilterToggle type="button" onClick={() => setInStockOnly((prev) => !prev)} active={inStockOnly} aria-pressed={inStockOnly}>
+              <span
+                className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                  inStockOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
+                }`}
+                aria-hidden="true"
+              >
+                {inStockOnly ? '✓' : ''}
+              </span>
+              <span>Только в наличии</span>
+            </FilterToggle>
+            <FilterToggle type="button" onClick={() => setOnSaleOnly((prev) => !prev)} active={onSaleOnly} aria-pressed={onSaleOnly}>
+              <span
+                className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                  onSaleOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
+                }`}
+                aria-hidden="true"
+              >
+                {onSaleOnly ? '✓' : ''}
+              </span>
+              <span>Со скидкой</span>
+            </FilterToggle>
           </div>
         </div>
-      )}
+
+        <div className={`mt-4 grid gap-2 ${activeFilterCount > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {activeFilterCount > 0 && (
+            <Button type="button" variant="secondary" block onClick={clearAllFilters}>
+              Сбросить всё
+            </Button>
+          )}
+          <Button type="button" block onClick={() => setIsFilterOpen(false)}>
+            Показать товары
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

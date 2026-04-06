@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import NotificationBanner from '../components/NotificationBanner';
 import { useAuth } from '../contexts/AuthContext';
 import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
 function AdminLoginPage() {
   const location = useLocation();
@@ -22,20 +24,12 @@ function AdminLoginPage() {
     return path;
   };
 
-  const buildRedirectUri = (path) => {
-    if (typeof window === 'undefined') return undefined;
-    const rawBase = process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '';
-    const base = rawBase.replace(/\/$/, '');
-    const normalizedBase = base && base !== '/' ? base : '';
-    return `${window.location.origin}${normalizedBase}${path}`;
-  };
-
   const handleKeycloakLogin = async () => {
     setIsSubmitting(true);
     setStatus(null);
     try {
       await keycloakLogin({
-        redirectUri: buildRedirectUri('/admin/login'),
+        redirectUri: buildAbsoluteAppUrl('/admin/login'),
         prompt: 'login'
       });
     } catch (err) {
@@ -74,29 +68,22 @@ function AdminLoginPage() {
           <p className="admin-auth-card__eyebrow">Вход администратора</p>
           <h2 className="admin-auth-card__title">Добро пожаловать</h2>
 
-          {status && (
-            <div
-              role="status"
-              aria-live="polite"
-              className={`admin-auth-alert ${
-                status.type === 'success'
-                  ? 'admin-auth-alert--success'
-                  : 'admin-auth-alert--error'
-              }`}
-            >
-              {status.message}
-            </div>
-          )}
+          {status ? <NotificationBanner notification={status} className="mb-4" /> : null}
 
           <div className="space-y-4">
             <p className="text-sm text-muted">
               Авторизация выполняется через Keycloak.
             </p>
-            {!keycloakReady && (
-              <p className="text-sm text-red-600">
-                Keycloak не настроен. Проверьте переменные окружения.
-              </p>
-            )}
+            {!keycloakReady ? (
+              <NotificationBanner
+                notification={{
+                  type: 'error',
+                  title: 'Keycloak не настроен',
+                  message: 'Проверьте переменные окружения перед входом.'
+                }}
+                className="mb-3"
+              />
+            ) : null}
             <button
               type="button"
               className="button w-full"
