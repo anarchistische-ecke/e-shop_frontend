@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { PaymentConfigProvider } from './contexts/PaymentConfigContext';
 import App from './pages/App';
 import { initYandexMetrika } from './utils/metrika';
 import { resolveAppBasePath } from './utils/url';
@@ -22,9 +23,11 @@ root.render(
     <BrowserRouter basename={basename}>
       <NotificationProvider>
         <AuthProvider>
-          <CartProvider>
-            <App />
-          </CartProvider>
+          <PaymentConfigProvider>
+            <CartProvider>
+              <App />
+            </CartProvider>
+          </PaymentConfigProvider>
         </AuthProvider>
       </NotificationProvider>
     </BrowserRouter>

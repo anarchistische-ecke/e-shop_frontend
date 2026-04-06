@@ -21,6 +21,7 @@ test('customer can add a product to cart and open checkout on mobile', async ({ 
   await expect(page).toHaveURL(/\/cart$/);
   await expect(page.getByRole('heading', { name: 'Ваши товары для уюта' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Сатиновый комплект Sand' })).toBeVisible();
+  await expect(page.getByText('ТестКасса (карта / СБП)')).toBeVisible();
 
   await page.getByRole('button', { name: 'Оформить заказ' }).click();
   await expect(page).toHaveURL(/\/checkout$/);

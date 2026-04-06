@@ -148,9 +148,20 @@ const publicOrder = {
   },
 };
 
+const paymentProvider = {
+  enabled: true,
+  providerCode: 'TEST_GATEWAY',
+  providerName: 'ТестКасса',
+  methodSummary: 'карта / СБП',
+  checkoutDescription:
+    'Оплата на защищённой странице ТестКасса. Данные карты не хранятся в браузере магазина.',
+  resumePaymentLabel: 'Продолжить оплату через ТестКасса',
+};
+
 module.exports = {
   brands,
   categories,
+  paymentProvider,
   products,
   publicOrder,
 };

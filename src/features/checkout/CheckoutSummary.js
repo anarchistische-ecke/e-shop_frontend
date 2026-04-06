@@ -1,5 +1,7 @@
 import React from 'react';
 import { moneyToNumber } from '../../utils/product';
+import { usePaymentConfig } from '../../contexts/PaymentConfigContext';
+import { getCheckoutPaymentDescription } from '../../utils/payment';
 import { Button, Card } from '../../components/ui';
 
 function CheckoutSummary({
@@ -11,6 +13,9 @@ function CheckoutSummary({
   formatRub,
   mobileAction
 }) {
+  const { paymentConfig } = usePaymentConfig();
+  const paymentDescription = getCheckoutPaymentDescription(paymentConfig);
+
   return (
     <>
       <div className="lg:hidden mb-6">
@@ -77,7 +82,7 @@ function CheckoutSummary({
 
         <Card padding="sm" className="text-sm space-y-2">
           <p className="font-semibold">Доверие и безопасность</p>
-          <p className="text-muted">Платёж проходит на защищённой странице ЮKassa. Данные карты не хранятся в браузере магазина.</p>
+          <p className="text-muted">{paymentDescription}</p>
           <p className="text-muted">Доставка рассчитывается через интеграцию Яндекс и отображается до оплаты.</p>
         </Card>
       </aside>

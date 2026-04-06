@@ -1,4 +1,10 @@
-const { brands, categories, products, publicOrder } = require('../fixtures/storefront');
+const {
+  brands,
+  categories,
+  paymentProvider,
+  products,
+  publicOrder,
+} = require('../fixtures/storefront');
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -58,6 +64,10 @@ async function mockStorefrontApi(page) {
 
     if (pathname === '/brands' && method === 'GET') {
       return fulfillJson(route, clone(brands));
+    }
+
+    if (pathname === '/payments/public-config' && method === 'GET') {
+      return fulfillJson(route, clone(paymentProvider));
     }
 
     if (pathname === '/products' && method === 'GET') {

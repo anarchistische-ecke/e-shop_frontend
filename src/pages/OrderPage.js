@@ -3,9 +3,15 @@ import { Link, useParams } from 'react-router-dom';
 import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import { Button, Card, Input } from '../components/ui';
+import { usePaymentConfig } from '../contexts/PaymentConfigContext';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+import { createNotification } from '../utils/notifications';
+import {
+  getOrderPaymentNotice,
+  getPaymentSummaryLabel
+} from '../utils/payment';
 import { buildAbsoluteAppUrl } from '../utils/url';
 
 const statusLabels = {
@@ -36,6 +42,7 @@ function SuccessIcon() {
 function OrderPage() {
   const { token } = useParams();
   const { tokenParsed } = useAuth();
+  const { paymentConfig } = usePaymentConfig();
 
   const [order, setOrder] = useState(null);
   const [receiptEmail, setReceiptEmail] = useState('');
@@ -68,10 +75,11 @@ function OrderPage() {
       .catch((err) => {
         console.error('Failed to load order:', err);
         if (!mounted) return;
-        setStatus({
+        setStatus(createNotification({
           type: 'error',
-          message: 'Не удалось загрузить заказ. Проверьте ссылку и попробуйте ещё раз.',
-        });
+          title: 'Не удалось загрузить заказ',
+          message: 'Проверьте ссылку и попробуйте ещё раз.'
+        }));
       })
       .finally(() => {
         if (!mounted) return;
@@ -97,10 +105,11 @@ function OrderPage() {
     } catch (err) {
       if (!silent) {
         console.error('Failed to refresh payment status:', err);
-        setStatus({
-          type: 'error',
-          message: 'Не удалось обновить статус оплаты. Попробуйте ещё раз.',
-        });
+        setStatus(createNotification({
+          type: 'warning',
+          title: 'Не удалось обновить статус оплаты',
+          message: 'Попробуйте ещё раз или вернитесь к оплате позже.'
+        }));
       }
     } finally {
       if (!silent) setIsRefreshing(false);
@@ -158,10 +167,11 @@ function OrderPage() {
 
   const handlePay = async () => {
     if (!receiptEmail.trim()) {
-      setStatus({
+      setStatus(createNotification({
         type: 'error',
-        message: 'Укажите email для отправки чека перед оплатой.',
-      });
+        title: 'Укажите email для чека',
+        message: 'Перед повторной оплатой нужен адрес для отправки чека.'
+      }));
       return;
     }
 
@@ -179,16 +189,26 @@ function OrderPage() {
         return;
       }
 
-      setStatus({
-        type: 'error',
-        message: 'Не удалось получить ссылку оплаты. Попробуйте ещё раз.',
-      });
+      setStatus(createNotification({
+        type: 'warning',
+        title: 'Платёжная ссылка не получена',
+        message: 'Проверьте статус заказа или безопасно повторите попытку ещё раз.',
+        action: {
+          label: 'Проверить статус оплаты',
+          onClick: () => refreshPaymentStatus()
+        }
+      }));
     } catch (err) {
       console.error('Payment creation failed:', err);
-      setStatus({
+      setStatus(createNotification({
         type: 'error',
-        message: 'Не удалось создать платёж. Попробуйте ещё раз.',
-      });
+        title: 'Не удалось открыть оплату',
+        message: 'Попробуйте ещё раз или сначала обновите статус заказа.',
+        action: {
+          label: 'Проверить статус оплаты',
+          onClick: () => refreshPaymentStatus()
+        }
+      }));
     } finally {
       setIsPaying(false);
     }
@@ -213,8 +233,19 @@ function OrderPage() {
 
   const orderStatus = order.status || 'PENDING';
   const statusLabel = statusLabels[orderStatus] || orderStatus;
-  const canPay = orderStatus !== 'PAID' && orderStatus !== 'DELIVERED' && orderStatus !== 'REFUNDED';
-  const canRefresh = orderStatus !== 'PAID' && orderStatus !== 'DELIVERED' && orderStatus !== 'REFUNDED';
+  const canPay = orderStatus === 'PENDING' || orderStatus === 'PROCESSING';
+  const canRefresh = canPay;
+  const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
+  const paymentNotice = canPay
+    ? getOrderPaymentNotice(paymentConfig, orderStatus)
+    : null;
+  const paymentRecoveryNotice = canPay
+    ? createNotification({
+        type: paymentNotice.type,
+        title: paymentNotice.title,
+        message: paymentNotice.message
+      })
+    : null;
 
   const isConfirmed = orderStatus === 'PAID' || orderStatus === 'DELIVERED';
   const shipping = order.delivery || {};
@@ -381,6 +412,10 @@ function OrderPage() {
                 <span>Доставка</span>
                 <span>{moneyToNumber(shipping.pricingTotal || shipping.pricing || 0).toLocaleString('ru-RU')} ₽</span>
               </div>
+              <div className="flex justify-between mb-2 text-sm text-muted">
+                <span>Оплата</span>
+                <span>{paymentSummaryLabel}</span>
+              </div>
               <hr className="my-3 border-ink/10" />
               <div className="flex justify-between font-semibold text-base mb-4">
                 <span>Итого</span>
@@ -389,6 +424,9 @@ function OrderPage() {
 
               {canPay ? (
                 <div className="space-y-2">
+                  {paymentRecoveryNotice ? (
+                    <NotificationBanner notification={paymentRecoveryNotice} compact />
+                  ) : null}
                   <label className="block text-sm">
                     <span className="text-muted">Email для чека</span>
                     <Input
@@ -401,7 +439,9 @@ function OrderPage() {
                   </label>
 
                   <Button block onClick={handlePay} disabled={isPaying}>
-                    {isPaying ? 'Создаём платёж…' : 'Оплатить заказ'}
+                    {isPaying
+                      ? `Открываем ${paymentConfig.providerName}…`
+                      : paymentNotice.ctaLabel}
                   </Button>
                   {canRefresh && (
                     <Button
@@ -411,9 +451,12 @@ function OrderPage() {
                       onClick={() => refreshPaymentStatus()}
                       disabled={isRefreshing}
                     >
-                      {isRefreshing ? 'Проверяем оплату…' : 'Обновить статус'}
+                      {isRefreshing ? 'Проверяем оплату…' : 'Проверить статус оплаты'}
                     </Button>
                   )}
+                  <p className="text-xs text-muted">
+                    Пока заказ ожидает оплату, страница автоматически обновляет статус. После успешного банка подтверждение появится здесь.
+                  </p>
                 </div>
               ) : (
                 <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">

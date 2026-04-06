@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { usePaymentConfig } from '../../contexts/PaymentConfigContext';
+import { getReviewPaymentHint } from '../../utils/payment';
 import { Button, Card } from '../../components/ui';
 
 function ReviewStep({
@@ -25,6 +27,9 @@ function ReviewStep({
   onSubmit,
   onSafeRetry
 }) {
+  const { paymentConfig } = usePaymentConfig();
+  const reviewPaymentHint = getReviewPaymentHint(paymentConfig);
+
   return (
     <Card as="section" padding="lg">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -98,7 +103,7 @@ function ReviewStep({
                 </Button>
               ))}
             </div>
-            <p className="mt-2 text-xs text-muted">Или оплатите картой на следующем шаге через ЮKassa.</p>
+            <p className="mt-2 text-xs text-muted">{reviewPaymentHint}</p>
             {expressMessage ? <p className="mt-2 text-xs text-primary">{expressMessage}</p> : null}
           </Card>
 

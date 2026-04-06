@@ -317,6 +317,9 @@ export async function refreshPublicOrderPayment(token) {
     method: 'POST'
   });
 }
+export async function getPublicPaymentConfig() {
+  return request('/payments/public-config');
+}
 export async function updateOrderStatus(id, status) {
   return request(
     `/orders/${id}/status?status=${encodeURIComponent(status)}`,

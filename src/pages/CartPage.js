@@ -5,14 +5,20 @@ import { createManagerOrderLink } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
+import { usePaymentConfig } from '../contexts/PaymentConfigContext';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 import { buildAbsoluteAppUrl } from '../utils/url';
+import {
+  getCheckoutPaymentDescription,
+  getPaymentSummaryLabel
+} from '../utils/payment';
 import { Button, Card, Input } from '../components/ui';
 
 function CartPage() {
   const { items, removeItem, updateQuantity, clearCart } = useContext(CartContext);
   const navigate = useNavigate();
   const { isAuthenticated, hasRole } = useAuth();
+  const { paymentConfig } = usePaymentConfig();
   const [managerEmail, setManagerEmail] = useState('');
   const [managerLink, setManagerLink] = useState('');
   const [managerStatus, setManagerStatus] = useState(null);
@@ -26,6 +32,8 @@ function CartPage() {
     0
   );
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
+  const paymentDescription = getCheckoutPaymentDescription(paymentConfig);
 
   useEffect(() => {
     setQuantityDrafts((prev) => {
@@ -260,7 +268,7 @@ function CartPage() {
                 </div>
                 <div className="flex justify-between mb-2 text-sm text-muted">
                   <span>Оплата</span>
-                  <span>ЮKassa (карта / SberPay)</span>
+                  <span>{paymentSummaryLabel}</span>
                 </div>
                 <hr className="my-3 border-ink/10" />
                 <div className="flex justify-between font-semibold text-base mb-4">
@@ -334,7 +342,7 @@ function CartPage() {
               <Card padding="sm" className="text-sm space-y-2">
                 <p className="font-semibold">Почему с нами спокойно</p>
                 <p className="text-muted">Доставка Яндекс и пункты выдачи: сначала видите стоимость и интервал, потом оплачиваете.</p>
-                <p className="text-muted">Оплата через защищённую страницу ЮKassa. Поддержка ежедневно с 9:00 до 21:00.</p>
+                <p className="text-muted">{paymentDescription} Поддержка ежедневно с 9:00 до 21:00.</p>
               </Card>
             </div>
           </div>
