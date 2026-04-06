@@ -7,4 +7,5 @@ export { default as Select } from './Select';
 export { default as Tabs } from './Tabs';
 export { default as Textarea } from './Textarea';
 export { default as Toast } from './Toast';
+export { FilterChip, FilterToggle, PaginationButton } from './FilterControls';
 export { cn } from './cn';

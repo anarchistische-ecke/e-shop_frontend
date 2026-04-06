@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Button,
+  Card,
+  FilterChip,
+  FilterToggle,
+  Input,
+  Modal,
+  PaginationButton,
+  Select,
+} from '../components/ui';
 import { getBrands, getCategories, getProducts } from '../api';
 import ProductCard from '../components/ProductCard';
 import { formatPrice, getProductPrice, moneyToNumber } from '../utils/product';
@@ -468,7 +478,7 @@ function CataloguePage() {
           <span className="text-ink">Каталог</span>
         </nav>
 
-        <div className="mt-4 grid gap-3 rounded-[28px] border border-white/70 bg-white/88 p-5 shadow-[0_20px_46px_rgba(43,39,34,0.1)] md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-6">
+        <Card className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-6" padding="md">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Каталог товаров</p>
             <h1 className="mt-1 text-2xl font-semibold sm:text-3xl md:text-4xl">
@@ -478,34 +488,36 @@ function CataloguePage() {
               Сначала оцените ассортимент, затем уточняйте фильтрами. По умолчанию показываем разные модели, а не дубли.
             </p>
           </div>
-          <Link to="/category/popular" className="button-gray w-full justify-center md:w-auto">
+          <Button as={Link} to="/category/popular" variant="secondary" block className="md:w-auto">
             Бестселлеры
-          </Link>
-        </div>
+          </Button>
+        </Card>
 
-        <section className="mt-5 rounded-[24px] border border-ink/10 bg-white/90 p-4 shadow-[0_16px_32px_rgba(43,39,34,0.08)] md:p-5">
+        <Card as="section" variant="quiet" className="mt-5 md:p-5" padding="sm">
           <label htmlFor="catalog-search" className="text-xs uppercase tracking-[0.2em] text-muted">
             Поиск по каталогу
           </label>
           <div className="relative mt-2">
             <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
-            <input
+            <Input
               id="catalog-search"
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Например: сатин 200x220, плед, подушки"
-              className="w-full rounded-2xl border border-ink/10 bg-white py-3 pl-11 pr-12 text-sm shadow-[0_8px_20px_rgba(43,39,34,0.07)] focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="bg-white pl-11 pr-12 shadow-[0_8px_20px_rgba(43,39,34,0.07)]"
             />
             {query && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setQuery('')}
-                className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-2xl text-ink/55 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                className="absolute right-1 top-1/2 -translate-y-1/2"
                 aria-label="Очистить поиск"
               >
                 ×
-              </button>
+              </Button>
             )}
           </div>
 
@@ -519,45 +531,39 @@ function CataloguePage() {
           <div className="mt-3">
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</p>
             <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              <button
+              <FilterChip
                 type="button"
                 onClick={() => setScopeToken('')}
-                className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs transition ${
-                  !scopeToken
-                    ? 'border-primary/45 bg-primary/10 text-primary'
-                    : 'border-ink/10 bg-white/85 text-ink/70 hover:border-primary/45 hover:text-primary'
-                }`}
+                active={!scopeToken}
+                className="whitespace-nowrap"
               >
                 Весь каталог
-              </button>
+              </FilterChip>
               {topCategories.slice(0, 10).map((category) => {
                 const token = normalizeSearchText(resolveCategoryToken(category));
                 const isActive = scopeToken === token;
                 return (
-                  <button
+                  <FilterChip
                     key={resolveCategoryToken(category)}
                     type="button"
                     onClick={() => setScopeToken(isActive ? '' : token)}
-                    className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs transition ${
-                      isActive
-                        ? 'border-primary/45 bg-primary/10 text-primary'
-                        : 'border-ink/10 bg-white/85 text-ink/70 hover:border-primary/45 hover:text-primary'
-                    }`}
+                    active={isActive}
+                    className="whitespace-nowrap"
                   >
                     {category.name}
-                  </button>
+                  </FilterChip>
                 );
               })}
             </div>
           </div>
-        </section>
+        </Card>
 
-        <section className="mt-5 rounded-[24px] border border-ink/10 bg-white/88 p-4 shadow-[0_14px_30px_rgba(43,39,34,0.08)]">
+        <Card as="section" variant="quiet" className="mt-5" padding="sm">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
             <div className="inline-grid min-h-[44px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_8px_18px_rgba(43,39,34,0.06)]">
               <span className="text-ink/55">↕</span>
               <label htmlFor="catalog-sort" className="sr-only">Сортировка товаров</label>
-              <select
+              <Select
                 id="catalog-sort"
                 value={sortKey}
                 onChange={(event) => setSortKey(event.target.value)}
@@ -568,16 +574,19 @@ function CataloguePage() {
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
-            <button
+            <Button
               type="button"
-              className="button-gray w-full justify-center text-sm lg:hidden"
+              variant="secondary"
+              block
+              size="sm"
+              className="lg:hidden"
               onClick={() => setIsFilterOpen(true)}
             >
               Все фильтры{activeFilters.length > 0 ? ` (${activeFilters.length})` : ''}
-            </button>
+            </Button>
           </div>
 
           <div className="mt-2 text-xs text-muted">
@@ -590,7 +599,7 @@ function CataloguePage() {
           <div className="mt-4 hidden gap-3 lg:grid xl:grid-cols-4">
             <label className="text-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
-              <select
+              <Select
                 value={brandFilter}
                 onChange={(event) => setBrandFilter(event.target.value)}
                 className="mt-1 w-full"
@@ -601,36 +610,34 @@ function CataloguePage() {
                     {brand.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <div className="text-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена, ₽</span>
               <div className="mt-1 grid grid-cols-2 gap-2">
-                <input
+                <Input
                   type="number"
                   min="0"
                   inputMode="numeric"
                   value={priceMin}
                   onChange={(event) => setPriceMin(event.target.value)}
                   placeholder={priceBounds.min ? `От ${formatPrice(priceBounds.min)}` : 'От 0'}
-                  className="w-full"
                 />
-                <input
+                <Input
                   type="number"
                   min="0"
                   inputMode="numeric"
                   value={priceMax}
                   onChange={(event) => setPriceMax(event.target.value)}
                   placeholder={priceBounds.max ? `До ${formatPrice(priceBounds.max)}` : 'До 0'}
-                  className="w-full"
                 />
               </div>
             </div>
 
             <label className="text-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-muted">Рейтинг</span>
-              <select
+              <Select
                 value={minRating}
                 onChange={(event) => setMinRating(event.target.value)}
                 className="mt-1 w-full"
@@ -639,20 +646,17 @@ function CataloguePage() {
                 <option value="4.5">От 4.5</option>
                 <option value="4">От 4.0</option>
                 <option value="3.5">От 3.5</option>
-              </select>
+              </Select>
             </label>
 
             <div className="text-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-muted">Быстрые фильтры</span>
               <div className="mt-1 grid grid-cols-1 gap-2">
-                <button
+                <FilterToggle
                   type="button"
                   onClick={() => setInStockOnly((prev) => !prev)}
-                  className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 text-left text-sm transition ${
-                    inStockOnly
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-ink/10 bg-white text-ink/75 hover:border-primary/35 hover:text-primary'
-                  }`}
+                  active={inStockOnly}
+                  aria-pressed={inStockOnly}
                 >
                   <span
                     className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
@@ -663,16 +667,13 @@ function CataloguePage() {
                     {inStockOnly ? '✓' : ''}
                   </span>
                   <span>Только в наличии</span>
-                </button>
+                </FilterToggle>
 
-                <button
+                <FilterToggle
                   type="button"
                   onClick={() => setOnSaleOnly((prev) => !prev)}
-                  className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 text-left text-sm transition ${
-                    onSaleOnly
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-ink/10 bg-white text-ink/75 hover:border-primary/35 hover:text-primary'
-                  }`}
+                  active={onSaleOnly}
+                  aria-pressed={onSaleOnly}
                 >
                   <span
                     className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
@@ -683,36 +684,38 @@ function CataloguePage() {
                     {onSaleOnly ? '✓' : ''}
                   </span>
                   <span>Со скидкой</span>
-                </button>
+                </FilterToggle>
               </div>
             </div>
           </div>
-        </section>
+        </Card>
 
         {activeFilters.length > 0 && (
-          <section className="mt-4 grid gap-2 rounded-2xl border border-ink/10 bg-white/90 p-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
+          <Card as="section" variant="quiet" className="mt-4 grid gap-2 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center" padding="sm">
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Применено</p>
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {activeFilters.map((filter, index) => (
-                <button
+                <FilterChip
                   key={`${filter.label}-${index}`}
                   type="button"
                   onClick={filter.onClear}
-                  className="inline-flex min-h-[36px] items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs text-primary hover:bg-primary/15"
+                  active
                 >
                   {filter.label}
                   <span aria-hidden="true">×</span>
-                </button>
+                </FilterChip>
               ))}
             </div>
-            <button
+            <Button
               type="button"
-              className="text-left text-xs text-primary hover:text-accent md:text-right"
+              variant="ghost"
+              size="sm"
+              className="justify-start text-primary md:justify-end"
               onClick={clearAllFilters}
             >
               Очистить всё
-            </button>
-          </section>
+            </Button>
+          </Card>
         )}
 
         <section ref={resultsRef} className="mt-6">
@@ -726,7 +729,7 @@ function CataloguePage() {
               {Array.from({ length: itemsPerPage }).map((_, index) => (
                 <div
                   key={`catalog-skeleton-${index}`}
-                  className="rounded-[24px] border border-ink/10 bg-white/90 p-3 shadow-sm"
+                  className="ui-card ui-card--quiet p-3"
                 >
                   <div className="skeleton shimmer-safe h-[190px] w-full rounded-2xl" />
                   <div className="mt-3 space-y-2">
@@ -751,11 +754,11 @@ function CataloguePage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
-                      className="button-gray px-3 py-2 text-sm"
+                      className=""
                       onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                       disabled={safePage === 1}
                     >
-                      Назад
+                      <Button variant="secondary" size="sm" disabled={safePage === 1}>Назад</Button>
                     </button>
                     {visiblePages.map((page, index) => {
                       if (page === '...') {
@@ -766,196 +769,160 @@ function CataloguePage() {
                       }
                       const isActive = page === safePage;
                       return (
-                        <button
+                        <PaginationButton
                           key={page}
                           type="button"
-                          className={`h-10 w-10 rounded-full text-sm transition ${
-                            isActive
-                              ? 'bg-primary text-white shadow-sm'
-                              : 'border border-ink/10 bg-white/90 hover:border-primary/45 hover:text-primary'
-                          }`}
+                          active={isActive}
                           onClick={() => setCurrentPage(page)}
                         >
                           {page}
-                        </button>
+                        </PaginationButton>
                       );
                     })}
-                    <button
+                    <Button
                       type="button"
-                      className="button-gray px-3 py-2 text-sm"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                       disabled={safePage === totalPages}
                     >
                       Вперёд
-                    </button>
+                    </Button>
                   </div>
                   <p className="text-xs text-muted">Страница {safePage} из {totalPages}</p>
                 </div>
               )}
             </>
           ) : (
-            <div className="soft-card p-8 text-center">
+            <Card className="text-center" padding="lg">
               <p className="mb-2 text-lg font-semibold">Ничего не найдено</p>
               <p className="mb-4 text-sm text-muted">
                 Попробуйте расширить область поиска или снять часть фильтров.
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 {activeFilters.length > 0 && (
-                  <button type="button" className="button-gray" onClick={clearAllFilters}>
+                  <Button type="button" variant="secondary" onClick={clearAllFilters}>
                     Сбросить фильтры
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   type="button"
-                  className="button"
                   onClick={() => {
                     setQuery('');
                     setScopeToken('');
                   }}
                 >
                   Показать весь каталог
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           )}
         </section>
       </div>
 
-      {isFilterOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setIsFilterOpen(false)}
-            aria-label="Закрыть фильтры"
-          />
-          <div className="absolute bottom-0 left-0 right-0 max-h-[86vh] overflow-y-auto rounded-t-3xl bg-white/98 p-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] shadow-2xl slide-up-panel">
-            <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted">Фильтры каталога</p>
-                <p className="text-base font-semibold">Уточните выбор</p>
-              </div>
-              <button
-                type="button"
-                className="button-ghost min-h-[44px] text-xs"
-                onClick={() => setIsFilterOpen(false)}
+      <Modal
+        open={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        placement="sheet"
+        size="sm"
+        title="Уточните выбор"
+        description="Фильтры каталога"
+        className="lg:hidden"
+      >
+        <div className="space-y-3">
+          <label className="block text-sm">
+            <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
+            <Select
+              value={brandFilter}
+              onChange={(event) => setBrandFilter(event.target.value)}
+              className="mt-1"
+            >
+              <option value="">Все бренды</option>
+              {brands.map((brand) => (
+                <option key={brand.slug || brand.id} value={brand.slug || brand.id}>
+                  {brand.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена от</span>
+              <Input
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={priceMin}
+                onChange={(event) => setPriceMin(event.target.value)}
+                className="mt-1"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена до</span>
+              <Input
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={priceMax}
+                onChange={(event) => setPriceMax(event.target.value)}
+                className="mt-1"
+              />
+            </label>
+          </div>
+
+          <label className="block text-sm">
+            <span className="text-xs uppercase tracking-[0.18em] text-muted">Рейтинг</span>
+            <Select
+              value={minRating}
+              onChange={(event) => setMinRating(event.target.value)}
+              className="mt-1"
+            >
+              <option value="">Любой</option>
+              <option value="4.5">От 4.5</option>
+              <option value="4">От 4.0</option>
+              <option value="3.5">От 3.5</option>
+            </Select>
+          </label>
+
+          <div className="grid grid-cols-1 gap-2">
+            <FilterToggle type="button" onClick={() => setInStockOnly((prev) => !prev)} active={inStockOnly} aria-pressed={inStockOnly}>
+              <span
+                className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                  inStockOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
+                }`}
+                aria-hidden="true"
               >
-                Закрыть
-              </button>
-            </div>
+                {inStockOnly ? '✓' : ''}
+              </span>
+              <span>Только в наличии</span>
+            </FilterToggle>
 
-            <div className="space-y-3">
-              <label className="block text-sm">
-                <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
-                <select
-                  value={brandFilter}
-                  onChange={(event) => setBrandFilter(event.target.value)}
-                  className="mt-1 w-full"
-                >
-                  <option value="">Все бренды</option>
-                  {brands.map((brand) => (
-                    <option key={brand.slug || brand.id} value={brand.slug || brand.id}>
-                      {brand.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="text-sm">
-                  <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена от</span>
-                  <input
-                    type="number"
-                    min="0"
-                    inputMode="numeric"
-                    value={priceMin}
-                    onChange={(event) => setPriceMin(event.target.value)}
-                    className="mt-1 w-full"
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена до</span>
-                  <input
-                    type="number"
-                    min="0"
-                    inputMode="numeric"
-                    value={priceMax}
-                    onChange={(event) => setPriceMax(event.target.value)}
-                    className="mt-1 w-full"
-                  />
-                </label>
-              </div>
-
-              <label className="block text-sm">
-                <span className="text-xs uppercase tracking-[0.18em] text-muted">Рейтинг</span>
-                <select
-                  value={minRating}
-                  onChange={(event) => setMinRating(event.target.value)}
-                  className="mt-1 w-full"
-                >
-                  <option value="">Любой</option>
-                  <option value="4.5">От 4.5</option>
-                  <option value="4">От 4.0</option>
-                  <option value="3.5">От 3.5</option>
-                </select>
-              </label>
-
-              <div className="grid grid-cols-1 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setInStockOnly((prev) => !prev)}
-                  className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 text-left text-sm transition ${
-                    inStockOnly
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-ink/10 bg-white text-ink/75'
-                  }`}
-                >
-                  <span
-                    className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                      inStockOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {inStockOnly ? '✓' : ''}
-                  </span>
-                  <span>Только в наличии</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setOnSaleOnly((prev) => !prev)}
-                  className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl border px-3 text-left text-sm transition ${
-                    onSaleOnly
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-ink/10 bg-white text-ink/75'
-                  }`}
-                >
-                  <span
-                    className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                      onSaleOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {onSaleOnly ? '✓' : ''}
-                  </span>
-                  <span>Со скидкой</span>
-                </button>
-              </div>
-            </div>
-
-            <div className={`mt-4 grid gap-2 ${activeFilters.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {activeFilters.length > 0 && (
-                <button type="button" className="button-gray min-h-[44px]" onClick={clearAllFilters}>
-                  Сбросить всё
-                </button>
-              )}
-              <button type="button" className="button min-h-[44px]" onClick={() => setIsFilterOpen(false)}>
-                Показать товары
-              </button>
-            </div>
+            <FilterToggle type="button" onClick={() => setOnSaleOnly((prev) => !prev)} active={onSaleOnly} aria-pressed={onSaleOnly}>
+              <span
+                className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                  onSaleOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
+                }`}
+                aria-hidden="true"
+              >
+                {onSaleOnly ? '✓' : ''}
+              </span>
+              <span>Со скидкой</span>
+            </FilterToggle>
           </div>
         </div>
-      )}
+
+        <div className={`mt-4 grid gap-2 ${activeFilters.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {activeFilters.length > 0 && (
+            <Button type="button" variant="secondary" block onClick={clearAllFilters}>
+              Сбросить всё
+            </Button>
+          )}
+          <Button type="button" block onClick={() => setIsFilterOpen(false)}>
+            Показать товары
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

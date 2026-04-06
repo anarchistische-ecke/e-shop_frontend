@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useContext, useMemo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Button, Card, FilterChip, Input } from './ui';
 import { getCategories, getProducts } from '../api';
 import { CartContext } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -508,33 +509,25 @@ function Header() {
     <>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</span>
-        <button
+        <FilterChip
           type="button"
           onClick={() => setSearchScope('')}
-          className={`rounded-full border px-3 py-1 text-xs transition ${
-            !searchScope
-              ? 'border-primary/45 bg-primary/10 text-primary'
-              : 'border-ink/15 bg-white text-ink/70'
-          }`}
+          active={!searchScope}
         >
           Везде
-        </button>
+        </FilterChip>
         {scopeOptions.map((category) => {
           const token = normalizeSearchText(resolveCategoryToken(category));
           const isActive = searchScope === token;
           return (
-            <button
+            <FilterChip
               key={resolveCategoryToken(category)}
               type="button"
               onClick={() => setSearchScope(isActive ? '' : token)}
-              className={`rounded-full border px-3 py-1 text-xs transition ${
-                isActive
-                  ? 'border-primary/45 bg-primary/10 text-primary'
-                  : 'border-ink/15 bg-white text-ink/70 hover:border-primary/35 hover:text-primary'
-              }`}
+              active={isActive}
             >
               {category.name}
-            </button>
+            </FilterChip>
           );
         })}
       </div>
@@ -638,9 +631,11 @@ function Header() {
         <div className="container mx-auto px-4 py-3 sm:py-4">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
             <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
-              <button
+              <Button
                 type="button"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-ink/10 bg-white text-ink transition hover:border-primary/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 lg:hidden"
+                variant="secondary"
+                size="icon"
+                className="lg:hidden"
                 onClick={() => {
                   setIsMenuOpen((prev) => !prev);
                   setIsSearchOpen(false);
@@ -650,7 +645,7 @@ function Header() {
                 aria-expanded={isMenuOpen}
               >
                 {isMenuOpen ? '✕' : '☰'}
-              </button>
+              </Button>
 
               <div className="min-w-0">
                 <Link
@@ -673,7 +668,7 @@ function Header() {
             >
               <form onSubmit={handleSearchSubmit} className="relative">
                 <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
-                <input
+                <Input
                   type="text"
                   value={searchTerm}
                   onChange={handleSearchInputChange}
@@ -683,19 +678,21 @@ function Header() {
                     setIsSearchOpen(true);
                   }}
                   placeholder="Поиск по товарам, коллекциям и категориям"
-                  className="w-full rounded-2xl border border-ink/10 bg-white py-3 pl-11 pr-12 text-sm shadow-[0_10px_24px_rgba(43,39,34,0.08)] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="bg-white pl-11 pr-12 shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
                   aria-label="Поиск товаров"
                   autoComplete="off"
                 />
                 {searchTerm && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={clearSearch}
-                    className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-2xl text-ink/55 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                    className="absolute right-1 top-1/2 -translate-y-1/2"
                     aria-label="Очистить поиск"
                   >
                     ×
-                  </button>
+                  </Button>
                 )}
               </form>
 
@@ -728,17 +725,23 @@ function Header() {
             </div>
 
             <div className="flex items-center justify-end gap-2">
-              <Link
+              <Button
+                as={Link}
                 to="/catalog"
-                className="hidden h-11 items-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink transition hover:border-primary/45 hover:text-primary lg:inline-flex"
+                variant="secondary"
+                size="sm"
+                className="hidden lg:inline-flex"
               >
                 Каталог
-              </Link>
+              </Button>
 
-              <Link
+              <Button
+                as={Link}
                 to="/cart"
                 aria-label="Корзина"
-                className="relative inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-2xl border border-ink/10 bg-white px-3 text-ink shadow-[0_10px_20px_rgba(43,39,34,0.06)] transition hover:border-primary/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                variant="secondary"
+                size="sm"
+                className="relative px-3"
               >
                 <CartIcon className="h-5 w-5" />
                 <span className="hidden sm:inline text-sm font-medium">Корзина</span>
@@ -747,23 +750,28 @@ function Header() {
                     {totalItems}
                   </span>
                 )}
-              </Link>
+              </Button>
 
               {isAuthenticated ? (
                 <>
-                  <Link
+                  <Button
+                    as={Link}
                     to="/account"
                     aria-label="Личный кабинет"
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-ink/10 bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.06)] transition hover:border-primary/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 md:hidden"
+                    variant="secondary"
+                    size="icon"
+                    className="md:hidden"
                   >
                     <UserIcon className="h-5 w-5" />
-                  </Link>
+                  </Button>
 
                   <div ref={accountMenuRef} className="relative hidden md:block">
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="sm"
                       aria-label="Личный кабинет"
-                      className="inline-flex h-11 items-center gap-2 rounded-2xl border border-ink/10 bg-white px-3 text-ink shadow-[0_10px_20px_rgba(43,39,34,0.06)] transition hover:border-primary/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      className="gap-2 px-3"
                       onClick={handleAccountTrigger}
                       aria-expanded={isAccountMenuOpen}
                     >
@@ -771,7 +779,7 @@ function Header() {
                         <UserIcon className="h-4 w-4" />
                       </span>
                       <span className="hidden text-sm font-medium lg:inline">Мой кабинет</span>
-                    </button>
+                    </Button>
 
                     <div
                       className={`absolute right-0 top-full mt-3 w-72 transition-all duration-200 ${
@@ -786,14 +794,15 @@ function Header() {
                             <p className="text-base font-semibold leading-tight">{displayName}</p>
                             <p className="mt-1 text-xs text-muted">{displayPhone}</p>
                           </div>
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={handleLogout}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 text-ink/70 hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                             aria-label="Выйти"
                           >
                             ↗
-                          </button>
+                          </Button>
                         </div>
                         <div className="py-2">
                           {accountLinks.map((entry) => (
@@ -812,14 +821,17 @@ function Header() {
                   </div>
                 </>
               ) : (
-                <Link
+                <Button
+                  as={Link}
                   to="/login"
                   aria-label="Войти"
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-ink/10 bg-white px-3 text-ink shadow-[0_10px_20px_rgba(43,39,34,0.06)] transition hover:border-primary/45 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 px-3"
                 >
                   <UserIcon className="h-5 w-5" />
                   <span className="hidden sm:inline text-sm">Войти</span>
-                </Link>
+                </Button>
               )}
             </div>
           </div>
@@ -988,7 +1000,7 @@ function Header() {
             <div className="border-b border-ink/10 px-4 py-4">
               <form onSubmit={handleMobileDrawerSearchSubmit} className="relative">
                 <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
-                <input
+                <Input
                   type="text"
                   value={searchTerm}
                   onChange={handleMobileDrawerSearchInput}
@@ -997,7 +1009,7 @@ function Header() {
                     setIsSearchFocused(false);
                   }}
                   placeholder="Поиск по каталогу"
-                  className="w-full rounded-2xl border border-ink/10 bg-white py-2.5 pl-10 pr-3 text-sm"
+                  className="bg-white pl-10 pr-3"
                   aria-label="Поиск по каталогу"
                 />
               </form>
@@ -1098,20 +1110,21 @@ function Header() {
         }`}
         style={{ top: 'calc(var(--site-header-height, 6.5rem) + 0.75rem)' }}
       >
-        <div className="rounded-[22px] border border-ink/10 bg-white p-4 shadow-[0_22px_48px_rgba(43,39,34,0.22)]">
+        <Card variant="quiet" padding="sm" className="rounded-[22px] shadow-[0_22px_48px_rgba(43,39,34,0.22)]">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">Добавлено в корзину</p>
               <p className="text-sm font-semibold text-ink">{lastAddedItem?.name || 'Товар'}</p>
             </div>
-            <button
+            <Button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl text-ink/55 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              variant="ghost"
+              size="icon"
               onClick={dismissLastAddedItem}
               aria-label="Закрыть уведомление"
             >
               ✕
-            </button>
+            </Button>
           </div>
 
           <div className="mt-3 grid grid-cols-[56px_minmax(0,1fr)] gap-3">
@@ -1134,14 +1147,14 @@ function Header() {
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <Link to="/cart" className="button-gray !px-3 !py-2 text-xs" onClick={dismissLastAddedItem}>
+            <Button as={Link} to="/cart" variant="secondary" size="sm" className="text-xs" onClick={dismissLastAddedItem}>
               Открыть корзину
-            </Link>
-            <Link to="/checkout" className="button !px-3 !py-2 text-xs" onClick={dismissLastAddedItem}>
+            </Button>
+            <Button as={Link} to="/checkout" size="sm" className="text-xs" onClick={dismissLastAddedItem}>
               К оформлению
-            </Link>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     </header>
   );

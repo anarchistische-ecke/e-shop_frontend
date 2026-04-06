@@ -28,3 +28,5 @@ coverage/
 .eslintcache
 tmp/
 temp/
+playwright-report/
+test-results/

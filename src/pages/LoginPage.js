@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import NotificationBanner from '../components/NotificationBanner';
+import { Button, Card } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
 import { buildAbsoluteAppUrl } from '../utils/url';
@@ -45,7 +46,7 @@ function LoginPage() {
   return (
     <div className="login-page py-8 md:py-10">
       <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto soft-card p-6 md:p-8">
+        <Card className="mx-auto max-w-4xl" padding="lg">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div>
               <p className="text-sm uppercase tracking-[0.2em] text-accent">Личный кабинет</p>
@@ -71,15 +72,14 @@ function LoginPage() {
             />
           ) : null}
 
-          <button
-            type="button"
-            className="button w-full"
+          <Button
+            block
             onClick={handleKeycloakLogin}
             disabled={isSubmitting || !keycloakReady}
           >
             {isSubmitting ? 'Перенаправляем…' : 'Войти'}
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     </div>
   );
