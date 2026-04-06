@@ -7,6 +7,7 @@ import {
   removeCartItem,
   getProducts
 } from '../api';
+import { normalizeCartQuantity } from '../utils/cart';
 import { moneyToNumber, getPrimaryImageUrl, getPrimaryVariant } from '../utils/product';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 
@@ -142,8 +143,8 @@ export function CartProvider({ children }) {
           ? Array.from(product.variants)
           : [];
         const selectedVariant = variants.find((variant) => variant?.id === targetVariant) || getPrimaryVariant(product);
-        const quantityValue = Math.max(1, Number(quantity) || 1);
-        await addItemToCart(id, targetVariant, quantity);
+        const quantityValue = normalizeCartQuantity(quantity);
+        await addItemToCart(id, targetVariant, quantityValue);
         await syncCart(id);
         setLastAddedItem({
           id: `${targetVariant}-${Date.now()}`,
