@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
 function LoginPage() {
   const location = useLocation();
@@ -18,14 +19,6 @@ function LoginPage() {
     return path;
   };
 
-  const buildRedirectUri = (path) => {
-    if (typeof window === 'undefined') return undefined;
-    const rawBase = process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '';
-    const base = rawBase.replace(/\/$/, '');
-    const normalizedBase = base && base !== '/' ? base : '';
-    return `${window.location.origin}${normalizedBase}${path}`;
-  };
-
   const handleKeycloakLogin = async () => {
     setStatus(null);
     if (!keycloakReady) {
@@ -35,7 +28,7 @@ function LoginPage() {
     setIsSubmitting(true);
     try {
       await keycloakLogin({
-        redirectUri: buildRedirectUri(safeRedirectPath(redirectTo))
+        redirectUri: buildAbsoluteAppUrl(safeRedirectPath(redirectTo))
       });
     } catch (err) {
       console.error('Login redirect failed:', err);

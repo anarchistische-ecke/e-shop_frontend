@@ -4,6 +4,7 @@ import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment } from '../ap
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
 const statusLabels = {
   PENDING: 'Ожидает оплаты',
@@ -168,7 +169,7 @@ function OrderPage() {
       const response = await payPublicOrder({
         token,
         receiptEmail: receiptEmail.trim(),
-        returnUrl: `${window.location.origin}/order/${token}`,
+        returnUrl: buildAbsoluteAppUrl(`/order/${token}`),
       });
 
       if (response?.confirmationUrl) {

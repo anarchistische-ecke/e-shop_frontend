@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { legalTokens } from '../../data/legal/constants';
+import { buildAbsoluteAppUrl } from '../../utils/url';
 
 const LEGAL_DOCUMENTS = [
   {
@@ -54,11 +55,7 @@ const resolvePublicUrl = () => {
 
 const buildRuntimeTokens = () => {
   const publicUrl = resolvePublicUrl();
-  const origin =
-    typeof window !== 'undefined' && window.location
-      ? window.location.origin
-      : '';
-  const siteUrl = origin ? `${origin}${publicUrl}` : legalTokens.SITE_URL;
+  const siteUrl = buildAbsoluteAppUrl('/')?.replace(/\/$/, '') || legalTokens.SITE_URL;
   let siteHost = legalTokens.SITE_HOST;
   try {
     siteHost = siteUrl ? new URL(siteUrl).host : siteHost;

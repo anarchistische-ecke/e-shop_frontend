@@ -5,6 +5,7 @@ import { createManagerOrderLink } from '../api';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
 function CartPage() {
   const { items, removeItem, updateQuantity, clearCart } = useContext(CartContext);
@@ -80,10 +81,10 @@ function CartPage() {
       const response = await createManagerOrderLink({
         cartId,
         receiptEmail: email || null,
-        orderPageUrl: `${window.location.origin}/order/{token}`,
+        orderPageUrl: buildAbsoluteAppUrl('/order/{token}'),
         sendEmail: Boolean(sendEmail)
       });
-      const link = `${window.location.origin}/order/${response.publicToken}`;
+      const link = buildAbsoluteAppUrl(`/order/${response.publicToken}`);
       setManagerLink(link);
       if (copyAfter && navigator.clipboard) {
         await navigator.clipboard.writeText(link);

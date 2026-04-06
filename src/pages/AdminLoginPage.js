@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
 function AdminLoginPage() {
   const location = useLocation();
@@ -22,20 +23,12 @@ function AdminLoginPage() {
     return path;
   };
 
-  const buildRedirectUri = (path) => {
-    if (typeof window === 'undefined') return undefined;
-    const rawBase = process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '';
-    const base = rawBase.replace(/\/$/, '');
-    const normalizedBase = base && base !== '/' ? base : '';
-    return `${window.location.origin}${normalizedBase}${path}`;
-  };
-
   const handleKeycloakLogin = async () => {
     setIsSubmitting(true);
     setStatus(null);
     try {
       await keycloakLogin({
-        redirectUri: buildRedirectUri('/admin/login'),
+        redirectUri: buildAbsoluteAppUrl('/admin/login'),
         prompt: 'login'
       });
     } catch (err) {

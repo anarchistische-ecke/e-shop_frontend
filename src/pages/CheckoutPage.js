@@ -11,6 +11,7 @@ import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import PickupMapModal from '../components/PickupMapModal';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
 const CHECKOUT_STEPS = [
   { key: 'contact', title: 'Контакт' },
@@ -923,8 +924,8 @@ function CheckoutPage() {
       const response = await checkoutCart({
         cartId: id,
         receiptEmail: email.trim(),
-        returnUrl: `${window.location.origin}/order/{token}`,
-        orderPageUrl: `${window.location.origin}/order/{token}`,
+        returnUrl: buildAbsoluteAppUrl('/order/{token}'),
+        orderPageUrl: buildAbsoluteAppUrl('/order/{token}'),
         savePaymentMethod: isAuthenticated ? savePaymentMethod : false,
         idempotencyKey: checkoutIdempotencyKeyRef.current,
         delivery: {
