@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment } from '../api';
+import NotificationBanner from '../components/NotificationBanner';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
@@ -315,17 +316,7 @@ function OrderPage() {
           </div>
         </div>
 
-        {status && (
-          <div
-            className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
-              status.type === 'error'
-                ? 'border-red-200 bg-red-50 text-red-700'
-                : 'border-green-200 bg-green-50 text-green-700'
-            }`}
-          >
-            {status.message}
-          </div>
-        )}
+        {status ? <NotificationBanner notification={status} className="mb-6" /> : null}
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">

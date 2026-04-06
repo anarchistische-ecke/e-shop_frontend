@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import NotificationBanner from '../components/NotificationBanner';
 import { useAuth } from '../contexts/AuthContext';
 import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
 import { buildAbsoluteAppUrl } from '../utils/url';
@@ -58,22 +59,17 @@ function LoginPage() {
             </span>
           </div>
 
-          {status && (
-            <div
-              className={`mb-6 rounded-lg border px-4 py-3 text-sm ${
-                status.type === 'success'
-                  ? 'border-green-300 bg-green-50 text-green-800'
-                  : 'border-red-300 bg-red-50 text-red-800'
-              }`}
-            >
-              {status.message}
-            </div>
-          )}
-          {!keycloakReady && (
-            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
-              Сервис входа временно недоступен. Попробуйте позже.
-            </div>
-          )}
+          {status ? <NotificationBanner notification={status} className="mb-6" /> : null}
+          {!keycloakReady ? (
+            <NotificationBanner
+              notification={{
+                type: 'error',
+                title: 'Сервис входа временно недоступен',
+                message: 'Попробуйте позже.'
+              }}
+              className="mb-6"
+            />
+          ) : null}
 
           <button
             type="button"

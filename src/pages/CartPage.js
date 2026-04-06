@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { CartContext } from '../contexts/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { createManagerOrderLink } from '../api';
+import NotificationBanner from '../components/NotificationBanner';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
@@ -321,17 +322,7 @@ function CartPage() {
                       </button>
                     </div>
                   )}
-                  {managerStatus && (
-                    <div
-                      className={`rounded-2xl border px-3 py-2 text-xs ${
-                        managerStatus.type === 'error'
-                          ? 'border-red-200 bg-red-50 text-red-700'
-                          : 'border-green-200 bg-green-50 text-green-700'
-                      }`}
-                    >
-                      {managerStatus.message}
-                    </div>
-                  )}
+                  {managerStatus ? <NotificationBanner notification={managerStatus} compact /> : null}
                 </div>
               )}
               <div className="soft-card p-4 text-sm space-y-2">

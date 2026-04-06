@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import App from './pages/App';
 import { initYandexMetrika } from './utils/metrika';
 import { resolveAppBasePath } from './utils/url';
@@ -19,11 +20,13 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <BrowserRouter basename={basename}>
-      <AuthProvider>
-        <CartProvider>
-          <App />
-        </CartProvider>
-      </AuthProvider>
+      <NotificationProvider>
+        <AuthProvider>
+          <CartProvider>
+            <App />
+          </CartProvider>
+        </AuthProvider>
+      </NotificationProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

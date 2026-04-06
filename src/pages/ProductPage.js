@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
 import { getCategories, getProduct, getProducts } from '../api';
+import NotificationBanner from '../components/NotificationBanner';
 import ProductCard from '../components/ProductCard';
 import { reviews } from '../data/reviews';
 import {
@@ -107,8 +108,10 @@ function ProductPage() {
   const [isVariantTransitioning, setIsVariantTransitioning] = useState(false);
   const [notifyEmail, setNotifyEmail] = useState('');
   const [notifyState, setNotifyState] = useState({ type: '', message: '' });
+  const [cartStatus, setCartStatus] = useState(null);
 
   const transitionTimerRef = useRef(null);
+  const cartInputRef = useRef({ quantity: 1, variantId: null });
 
   useEffect(() => {
     getCategories()
@@ -125,6 +128,23 @@ function ProductPage() {
   }, []);
 
   useEffect(() => {
+    const nextInputs = {
+      quantity,
+      variantId: selectedVariant?.id || null
+    };
+    const prevInputs = cartInputRef.current;
+
+    if (
+      cartStatus &&
+      (prevInputs.quantity !== nextInputs.quantity || prevInputs.variantId !== nextInputs.variantId)
+    ) {
+      setCartStatus(null);
+    }
+
+    cartInputRef.current = nextInputs;
+  }, [cartStatus, quantity, selectedVariant?.id]);
+
+  useEffect(() => {
     setActiveTab('about');
     setActiveImageIndex(0);
     setRelatedProducts([]);
@@ -132,6 +152,7 @@ function ProductPage() {
     setQuantity(1);
     setNotifyEmail('');
     setNotifyState({ type: '', message: '' });
+    setCartStatus(null);
     setIsLoading(true);
 
     getProduct(id)
@@ -391,23 +412,36 @@ function ProductPage() {
   const handleAddToCart = async () => {
     if (!product || availableStock <= 0) return;
     const variantId = selectedVariant?.id || product.id;
-    await addItem(product, variantId, quantity);
+    setCartStatus(null);
+    const result = await addItem(product, variantId, quantity);
+    if (result?.ok === false) {
+      setCartStatus(result.notification);
+      return false;
+    }
+    return true;
   };
 
   const handleBuyNow = async () => {
     if (!product || availableStock <= 0) return;
-    const variantId = selectedVariant?.id || product.id;
-    await addItem(product, variantId, quantity);
+    const didAdd = await handleAddToCart();
+    if (!didAdd) return;
     navigate('/checkout');
   };
 
   const handleAddBundle = async () => {
-    await handleAddToCart();
-    bundleItems.forEach((item) => {
-      if (!bundleSelections[item.id]) return;
+    const didAddPrimary = await handleAddToCart();
+    if (!didAddPrimary) return;
+
+    for (const item of bundleItems) {
+      if (!bundleSelections[item.id]) continue;
       const variant = getPrimaryVariant(item);
-      if (variant?.id) addItem(item, variant.id, 1);
-    });
+      if (!variant?.id) continue;
+      const result = await addItem(item, variant.id, 1);
+      if (result?.ok === false) {
+        setCartStatus(result.notification);
+        return;
+      }
+    }
   };
 
   const handleNotifyMe = () => {
@@ -764,6 +798,8 @@ function ProductPage() {
                 </button>
               </div>
 
+              {cartStatus ? <NotificationBanner notification={cartStatus} className="mt-3" /> : null}
+
               {availableStock <= 0 && (
                 <div className="mt-4 rounded-2xl border border-ink/10 bg-white/88 p-3 text-sm">
                   <p className="font-medium text-ink">Сообщить о поступлении</p>
@@ -980,18 +1016,21 @@ function ProductPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-ink/10 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden z-30">
-        <div className="container mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="flex-1">
-            <p className="text-xs text-muted">К оплате</p>
-            <p className="text-base font-semibold">{formatRub(price * quantity)}</p>
+        <div className="container mx-auto px-4 py-3">
+          {cartStatus ? <NotificationBanner notification={cartStatus} compact className="mb-3" /> : null}
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <p className="text-xs text-muted">К оплате</p>
+              <p className="text-base font-semibold">{formatRub(price * quantity)}</p>
+            </div>
+            <button
+              className="button flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleAddToCart}
+              disabled={availableStock <= 0}
+            >
+              В корзину
+            </button>
           </div>
-          <button
-            className="button flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={handleAddToCart}
-            disabled={availableStock <= 0}
-          >
-            В корзину
-          </button>
         </div>
       </div>
 

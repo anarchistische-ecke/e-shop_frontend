@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import NotificationBanner from './NotificationBanner';
 import { CartContext } from '../contexts/CartContext';
 import { reviews } from '../data/reviews';
 import {
@@ -212,20 +213,32 @@ function ProductCard({ product }) {
 
 function AddToCartButton({ product, variantId }) {
   const { addItem } = useContext(CartContext);
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    setStatus(null);
+  }, [product?.id, variantId]);
 
   const handleClick = async (event) => {
     event.preventDefault();
-    await addItem(product, variantId);
+    setStatus(null);
+    const result = await addItem(product, variantId, 1);
+    if (result?.ok === false) {
+      setStatus(result.notification);
+    }
   };
 
   return (
-    <button
-      type="button"
-      className="inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-2xl bg-accent px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(47,61,50,0.24)] transition hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-auto"
-      onClick={handleClick}
-    >
-      <span>В корзину</span>
-    </button>
+    <div className="w-full sm:w-auto">
+      <button
+        type="button"
+        className="inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-2xl bg-accent px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(47,61,50,0.24)] transition hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-auto"
+        onClick={handleClick}
+      >
+        <span>В корзину</span>
+      </button>
+      {status ? <NotificationBanner notification={status} compact className="mt-2 sm:max-w-[240px]" /> : null}
+    </div>
   );
 }
 

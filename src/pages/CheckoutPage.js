@@ -9,6 +9,7 @@ import {
 } from '../api';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationBanner from '../components/NotificationBanner';
 import PickupMapModal from '../components/PickupMapModal';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 import { buildAbsoluteAppUrl } from '../utils/url';
@@ -1051,20 +1052,9 @@ function CheckoutPage() {
           </div>
         </div>
 
-        {status && (
-          <div
-            ref={statusRef}
-            role={status.type === 'error' ? 'alert' : 'status'}
-            tabIndex={-1}
-            className={`mb-5 rounded-2xl border px-4 py-3 text-sm ${
-              status.type === 'error'
-                ? 'border-red-200 bg-red-50 text-red-700'
-                : 'border-green-200 bg-green-50 text-green-700'
-            }`}
-          >
-            {status.message}
-          </div>
-        )}
+        {status ? (
+          <NotificationBanner ref={statusRef} notification={status} tabIndex={-1} className="mb-5" />
+        ) : null}
 
         <div className="mb-5 rounded-[24px] border border-primary/20 bg-white/90 p-4 shadow-[0_18px_36px_rgba(43,39,34,0.08)]">
           <p className="text-sm font-semibold text-ink">Оформление как гость</p>
