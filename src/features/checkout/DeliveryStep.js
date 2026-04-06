@@ -7,6 +7,8 @@ function DeliveryStep({
   deliveryAddressDetails,
   showDeliveryAddressDetails,
   pickupLocation,
+  pickupLocationHint,
+  pickupLocationSuggestion,
   pickupGeoId,
   selectedPickupPoint,
   selectedPickupPointName,
@@ -28,6 +30,8 @@ function DeliveryStep({
   onPickupLocationChange,
   onPickupSearch,
   onOpenPickupMap,
+  onConfirmPickupLocationSuggestion,
+  onDismissPickupLocationSuggestion,
   onOfferSelect,
   onFetchOffers,
   onContinue,
@@ -170,6 +174,38 @@ function DeliveryStep({
                   </p>
                 ) : null}
               </label>
+
+              {pickupLocationSuggestion ? (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-ink/90">
+                  <p className="font-semibold">{pickupLocationSuggestion.title}</p>
+                  <p className="mt-1 text-xs text-muted">{pickupLocationSuggestion.message}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="button text-sm"
+                      onClick={onConfirmPickupLocationSuggestion}
+                      disabled={pickupLoading || pickupAutoDetecting || disabled}
+                    >
+                      Использовать {pickupLocationSuggestion.city}
+                    </button>
+                    <button
+                      type="button"
+                      className="button-ghost text-sm"
+                      onClick={onDismissPickupLocationSuggestion}
+                      disabled={disabled}
+                    >
+                      Ввести вручную
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {pickupLocationHint ? (
+                <div className="rounded-2xl border border-ink/10 bg-white/85 px-4 py-3 text-sm text-ink/90">
+                  <p className="font-semibold">{pickupLocationHint.title}</p>
+                  <p className="mt-1 text-xs text-muted">{pickupLocationHint.message}</p>
+                </div>
+              ) : null}
 
               {pickupGeoId ? (
                 <div className="text-xs text-muted">GeoID региона: {pickupGeoId}</div>

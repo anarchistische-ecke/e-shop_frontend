@@ -11,12 +11,13 @@ import { buildAbsoluteAppUrl } from '../../utils/url';
 import { createNotification } from '../../utils/notifications';
 import { moneyToNumber } from '../../utils/product';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../../utils/metrika';
-import {
-  CHECKOUT_REQUEST_TIMEOUT_MS,
-  CHECKOUT_STEPS,
-  DEFAULT_PICKUP_CITY
-} from './constants';
+import { getDeliveryClientConfig } from '../../utils/deliveryConfig';
+import { CHECKOUT_REQUEST_TIMEOUT_MS, CHECKOUT_STEPS } from './constants';
 import { clearCheckoutDraft, loadCheckoutDraft, saveCheckoutDraft } from './draftStorage';
+import {
+  loadLastConfirmedPickupLocation,
+  saveLastConfirmedPickupLocation
+} from './locationStorage';
 import {
   mapCheckoutBackendErrors,
   STEP_FIELD_ORDER,
@@ -34,7 +35,6 @@ import {
   normalizeViewportBounds,
   pickupUiId,
   resolveCheckoutAttempt,
-  uniqueCities,
   viewportToken
 } from './utils';
 
@@ -119,11 +119,37 @@ function createSafeRetryState(kind, { orderToken = '', message = '' } = {}) {
   };
 }
 
+function createPickupLocationSuggestion(city, source = 'timezone') {
+  const normalizedCity = String(city || '').trim();
+  if (!normalizedCity) {
+    return null;
+  }
+
+  if (source === 'geocoder') {
+    return {
+      city: normalizedCity,
+      source,
+      title: `Подтвердите город: ${normalizedCity}`,
+      message:
+        'Мы определили город по геопозиции устройства. Подтвердите его перед загрузкой пунктов выдачи и интервалов доставки.'
+    };
+  }
+
+  return {
+    city: normalizedCity,
+    source,
+    title: `Похоже, ваш город — ${normalizedCity}`,
+    message:
+      'Это предположение по часовому поясу. Подтвердите город или введите его вручную, прежде чем загружать пункты выдачи.'
+  };
+}
+
 export function useCheckoutState() {
   const { items: liveItems, cartId } = useContext(CartContext);
   const { tokenParsed, isAuthenticated, hasRole } = useAuth();
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
+  const deliveryClientConfig = useMemo(() => getDeliveryClientConfig(), []);
 
   const initialCartIdRef = useRef(cartId || getStoredCartId());
   const initialDraftRef = useRef(loadCheckoutDraft(initialCartIdRef.current) || {});
@@ -131,6 +157,8 @@ export function useCheckoutState() {
   const initialAttemptRef = useRef(createInitialAttempt(initialDraft));
   const initialAttempt = initialAttemptRef.current;
   const formDraft = initialDraft.form || {};
+  const initialStoredPickupLocationRef = useRef(loadLastConfirmedPickupLocation());
+  const initialStoredPickupLocation = initialStoredPickupLocationRef.current;
 
   const [activeStep, setActiveStep] = useState(
     Number.isInteger(formDraft.activeStep)
@@ -155,12 +183,15 @@ export function useCheckoutState() {
   const [showDeliveryAddressDetails, setShowDeliveryAddressDetails] = useState(
     Boolean(formDraft.showDeliveryAddressDetails)
   );
-  const [pickupLocation, setPickupLocation] = useState(formDraft.pickupLocation || '');
+  const [pickupLocation, setPickupLocation] = useState(
+    formDraft.pickupLocation || initialStoredPickupLocation || ''
+  );
   const [pickupGeoId, setPickupGeoId] = useState(formDraft.pickupGeoId ?? null);
   const [pickupPoints, setPickupPoints] = useState(Array.isArray(formDraft.pickupPoints) ? formDraft.pickupPoints : []);
   const [selectedPickupPointId, setSelectedPickupPointId] = useState(formDraft.selectedPickupPointId || '');
   const [selectedPickupPointUiId, setSelectedPickupPointUiId] = useState(formDraft.selectedPickupPointUiId || '');
   const [selectedPickupPointName, setSelectedPickupPointName] = useState(formDraft.selectedPickupPointName || '');
+  const [pickupLocationSuggestion, setPickupLocationSuggestion] = useState(null);
 
   const [deliveryOffers, setDeliveryOffers] = useState(Array.isArray(formDraft.deliveryOffers) ? formDraft.deliveryOffers : []);
   const [selectedOfferId, setSelectedOfferId] = useState(formDraft.selectedOfferId || '');
@@ -265,6 +296,17 @@ export function useCheckoutState() {
     pickupViewportSyncRef.current = { inFlight: '', lastResolved: '' };
   }, [pickupLocation]);
 
+  useEffect(() => {
+    if (!pickupLocationSuggestion) {
+      return;
+    }
+    const normalizedPickupLocation = pickupLocation.trim().toLowerCase();
+    const normalizedSuggestedCity = String(pickupLocationSuggestion.city || '').trim().toLowerCase();
+    if (normalizedPickupLocation && normalizedPickupLocation !== normalizedSuggestedCity) {
+      setPickupLocationSuggestion(null);
+    }
+  }, [pickupLocation, pickupLocationSuggestion]);
+
   const enrichedPickupPoints = useMemo(
     () => pickupPoints.map((point, index) => ({ ...point, __uiId: pickupUiId(point, index) })),
     [pickupPoints]
@@ -341,6 +383,34 @@ export function useCheckoutState() {
     : null;
 
   const topNotification = processingNotice || status;
+
+  const pickupLocationHint = useMemo(() => {
+    if (deliveryType !== 'PICKUP' || pickupLocationSuggestion || pickupLocation.trim() || selectedPickupPointId) {
+      return null;
+    }
+
+    if (!deliveryClientConfig.canReverseGeocode) {
+      return {
+        title: 'Введите ваш город',
+        message: deliveryClientConfig.canRenderPickupMap
+          ? 'Автоопределение города недоступно. Введите город вручную, затем загрузите пункты выдачи.'
+          : 'Автоопределение и карта недоступны в текущей конфигурации. Введите город вручную, затем загрузите пункты выдачи.'
+      };
+    }
+
+    return {
+      title: 'Введите ваш город',
+      message:
+        'Введите город вручную или подтвердите предложенный город перед загрузкой пунктов выдачи.'
+    };
+  }, [
+    deliveryClientConfig.canRenderPickupMap,
+    deliveryClientConfig.canReverseGeocode,
+    deliveryType,
+    pickupLocation,
+    pickupLocationSuggestion,
+    selectedPickupPointId
+  ]);
 
   const draftPayload = useMemo(
     () => ({
@@ -482,6 +552,12 @@ export function useCheckoutState() {
     }
   }, [activeStep, expressMessage]);
 
+  useEffect(() => {
+    if (deliveryType !== 'PICKUP' && pickupLocationSuggestion) {
+      setPickupLocationSuggestion(null);
+    }
+  }, [deliveryType, pickupLocationSuggestion]);
+
   const currentAttemptSignature = useMemo(() => {
     return buildCheckoutAttemptSignature({
       cartId: effectiveCartId,
@@ -621,13 +697,9 @@ export function useCheckoutState() {
   );
 
   const resolveCityFromCoordinates = useCallback(async (latitude, longitude) => {
-    const apiKey =
-      process.env.REACT_APP_YANDEX_GEOCODER_API_KEY ||
-      process.env.REACT_APP_YANDEX_MAPS_API_KEY ||
-      process.env.REACT_APP_YANDEX_MAPS_JS_API_KEY ||
-      '';
+    const apiKey = deliveryClientConfig.geocoderKey;
     if (!apiKey) {
-      return detectCityByTimezone();
+      return '';
     }
 
     const query = new URLSearchParams({
@@ -645,8 +717,8 @@ export function useCheckoutState() {
 
     const payload = await response.json();
     const city = extractCityFromGeocodeResponse(payload);
-    return city || detectCityByTimezone();
-  }, []);
+    return city || '';
+  }, [deliveryClientConfig.geocoderKey]);
 
   const populatePickupPoints = useCallback((response, options = {}) => {
     const { autoSelectFirst = true, preserveSelection = true } = options;
@@ -706,20 +778,50 @@ export function useCheckoutState() {
     return populatePickupPoints(response, options);
   }, [populatePickupPoints]);
 
-  const preloadPickupPointsByCities = useCallback(async (cities = []) => {
-    const candidates = uniqueCities(cities);
-    for (const city of candidates) {
-      try {
-        const pointsCount = await fetchPickupPointsByLocation(city);
-        if (pointsCount > 0) {
-          return { ok: true, city };
-        }
-      } catch (err) {
-        console.warn(`Failed to preload pickup points for city "${city}":`, err);
-      }
+  const loadPickupPointsForLocation = useCallback(async (
+    locationLabel,
+    {
+      openMap = false,
+      autoSelectFirst = true,
+      preserveSelection = true,
+      emptyMessage = 'По указанному городу не найдено пунктов выдачи. Уточните запрос.',
+      failureMessage = 'Не удалось загрузить пункты выдачи. Попробуйте ещё раз.'
+    } = {}
+  ) => {
+    const normalizedLocation = String(locationLabel || '').trim();
+    if (!normalizedLocation) {
+      return 0;
     }
-    return { ok: false, city: candidates[candidates.length - 1] || '' };
-  }, [fetchPickupPointsByLocation]);
+
+    if (openMap) {
+      setIsPickupMapOpen(true);
+    }
+
+    setPickupLoading(true);
+    try {
+      const pointsCount = await fetchPickupPointsByLocation(normalizedLocation, {
+        autoSelectFirst,
+        preserveSelection
+      });
+      clearFieldError('pickupLocation');
+      setPickupLocationSuggestion(null);
+      saveLastConfirmedPickupLocation(normalizedLocation);
+      if (pointsCount <= 0) {
+        setDeliveryError(emptyMessage);
+      }
+      return pointsCount;
+    } catch (err) {
+      console.error('Failed to load pickup points:', err);
+      if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
+        setDeliveryError(err.details.message.trim());
+      } else {
+        setDeliveryError(failureMessage);
+      }
+      return 0;
+    } finally {
+      setPickupLoading(false);
+    }
+  }, [clearFieldError, fetchPickupPointsByLocation]);
 
   const handleMapViewportChange = useCallback(async (bounds) => {
     if (!isPickupMapOpen) return;
@@ -830,103 +932,108 @@ export function useCheckoutState() {
       return;
     }
 
-    setPickupLoading(true);
-    try {
-      const city = pickupLocation.trim();
-      const pointsCount = await fetchPickupPointsByLocation(city);
-      clearFieldError('pickupLocation');
-      if (pointsCount <= 0) {
-        setDeliveryError('По указанному городу не найдено пунктов выдачи. Уточните запрос.');
-      }
-    } catch (err) {
-      console.error('Failed to load pickup points:', err);
-      if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
-        setDeliveryError(err.details.message.trim());
-      } else {
-        setDeliveryError('Не удалось загрузить пункты выдачи. Попробуйте ещё раз.');
-      }
-    } finally {
-      setPickupLoading(false);
-    }
-  }, [applyStepFieldErrors, clearFieldError, fetchPickupPointsByLocation, pickupLocation]);
+    await loadPickupPointsForLocation(pickupLocation, {
+      preserveSelection: false,
+      emptyMessage: 'По указанному городу не найдено пунктов выдачи. Уточните запрос.',
+      failureMessage: 'Не удалось загрузить пункты выдачи. Попробуйте ещё раз.'
+    });
+  }, [applyStepFieldErrors, loadPickupPointsForLocation, pickupLocation]);
 
   const handleOpenPickupMap = useCallback(async () => {
-    setIsPickupMapOpen(true);
     setDeliveryError('');
     pickupViewportSyncRef.current = { inFlight: '', lastResolved: '' };
 
-    if (pickupPoints.length || pickupLoading || pickupAutoDetecting) {
+    if (pickupLoading || pickupAutoDetecting) {
+      return;
+    }
+    if (pickupPoints.length) {
+      setIsPickupMapOpen(true);
       return;
     }
 
     const typedLocation = pickupLocation.trim();
+    const rememberedLocation = loadLastConfirmedPickupLocation();
     if (typedLocation) {
-      setPickupLoading(true);
-      try {
-        const pointsCount = await fetchPickupPointsByLocation(typedLocation);
-        if (pointsCount <= 0) {
-          setDeliveryError('В выбранном городе не найдены пункты выдачи. Уточните город или выберите другой.');
-        }
-      } catch (err) {
-        console.error('Failed to preload pickup points:', err);
-        if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
-          setDeliveryError(err.details.message.trim());
-        } else {
-          setDeliveryError('Не удалось загрузить пункты выдачи. Проверьте город или попробуйте позже.');
-        }
-      } finally {
-        setPickupLoading(false);
-      }
+      await loadPickupPointsForLocation(typedLocation, {
+        openMap: true,
+        autoSelectFirst: false,
+        preserveSelection: false,
+        emptyMessage: 'В выбранном городе не найдены пункты выдачи. Уточните город или выберите другой.',
+        failureMessage: 'Не удалось загрузить пункты выдачи. Проверьте город или попробуйте позже.'
+      });
+      return;
+    }
+    if (rememberedLocation) {
+      setPickupLocation(rememberedLocation);
+      await loadPickupPointsForLocation(rememberedLocation, {
+        openMap: true,
+        autoSelectFirst: false,
+        preserveSelection: false,
+        emptyMessage: 'В последнем выбранном городе не найдены пункты выдачи. Уточните город или выберите другой.',
+        failureMessage: 'Не удалось загрузить пункты выдачи. Проверьте город или попробуйте позже.'
+      });
       return;
     }
 
     setPickupAutoDetecting(true);
     try {
-      const position = await getBrowserPosition();
-      const detectedCity = await resolveCityFromCoordinates(
-        position.coords.latitude,
-        position.coords.longitude
-      );
-      setPickupLoading(true);
-      try {
-        const preloadResult = await preloadPickupPointsByCities([
-          detectedCity,
-          detectCityByTimezone(),
-          DEFAULT_PICKUP_CITY
-        ]);
-        if (!preloadResult.ok) {
-          setDeliveryError('Карта открыта. Не удалось определить город, используем Москву по умолчанию.');
+      if (deliveryClientConfig.canReverseGeocode) {
+        try {
+          const position = await getBrowserPosition();
+          const detectedCity = await resolveCityFromCoordinates(
+            position.coords.latitude,
+            position.coords.longitude
+          );
+          if (detectedCity) {
+            setPickupLocationSuggestion(createPickupLocationSuggestion(detectedCity, 'geocoder'));
+            return;
+          }
+        } catch (err) {
+          console.warn('Could not detect city automatically:', err);
         }
-      } finally {
-        setPickupLoading(false);
       }
-    } catch (err) {
-      console.warn('Could not detect city automatically:', err);
-      setPickupLoading(true);
-      try {
-        const preloadResult = await preloadPickupPointsByCities([
-          detectCityByTimezone(),
-          DEFAULT_PICKUP_CITY
-        ]);
-        if (!preloadResult.ok) {
-          setDeliveryError('Карта открыта. Используем Москву по умолчанию, укажите город вручную при необходимости.');
-        }
-      } finally {
-        setPickupLoading(false);
+
+      const timezoneCity = detectCityByTimezone();
+      if (timezoneCity) {
+        setPickupLocationSuggestion(createPickupLocationSuggestion(timezoneCity, 'timezone'));
+      } else {
+        setDeliveryError('Введите ваш город, чтобы увидеть пункты выдачи.');
       }
     } finally {
       setPickupAutoDetecting(false);
     }
   }, [
-    fetchPickupPointsByLocation,
+    detectCityByTimezone,
     getBrowserPosition,
+    loadPickupPointsForLocation,
+    deliveryClientConfig.canReverseGeocode,
     pickupAutoDetecting,
     pickupLoading,
     pickupLocation,
     pickupPoints.length,
-    preloadPickupPointsByCities,
     resolveCityFromCoordinates
   ]);
+
+  const handleConfirmPickupLocationSuggestion = useCallback(async () => {
+    const suggestedCity = String(pickupLocationSuggestion?.city || '').trim();
+    if (!suggestedCity) {
+      return;
+    }
+
+    setPickupLocation(suggestedCity);
+    await loadPickupPointsForLocation(suggestedCity, {
+      openMap: true,
+      autoSelectFirst: false,
+      preserveSelection: false,
+      emptyMessage: 'В подтверждённом городе не найдены пункты выдачи. Уточните город или выберите другой.',
+      failureMessage: 'Не удалось загрузить пункты выдачи. Проверьте город или попробуйте позже.'
+    });
+  }, [loadPickupPointsForLocation, pickupLocationSuggestion]);
+
+  const handleDismissPickupLocationSuggestion = useCallback(() => {
+    setPickupLocationSuggestion(null);
+    setDeliveryError('Введите ваш город, чтобы увидеть пункты выдачи.');
+  }, []);
 
   const handleFetchOffers = useCallback(async () => {
     setDeliveryError('');
@@ -1057,8 +1164,12 @@ export function useCheckoutState() {
   const handlePickupPointSelect = useCallback((point) => {
     clearStatus();
     clearRecoveryState();
+    if (pickupLocation.trim()) {
+      saveLastConfirmedPickupLocation(pickupLocation);
+    }
+    setPickupLocationSuggestion(null);
     applyPickupSelection(point);
-  }, [applyPickupSelection, clearRecoveryState, clearStatus]);
+  }, [applyPickupSelection, clearRecoveryState, clearStatus, pickupLocation]);
 
   const handleEmailBlur = useCallback(() => {
     validateStep('contact');
@@ -1331,6 +1442,8 @@ export function useCheckoutState() {
     showDeliveryAddressDetails,
     setShowDeliveryAddressDetails,
     pickupLocation,
+    pickupLocationHint,
+    pickupLocationSuggestion,
     setPickupLocation,
     pickupGeoId,
     selectedPickupPoint,
@@ -1369,6 +1482,8 @@ export function useCheckoutState() {
     handleMapViewportChange,
     handlePickupSearch,
     handleOpenPickupMap,
+    handleConfirmPickupLocationSuggestion,
+    handleDismissPickupLocationSuggestion,
     handleFetchOffers,
     handleExpressCheckout,
     handleContactNext,

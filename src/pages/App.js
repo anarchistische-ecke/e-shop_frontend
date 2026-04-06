@@ -40,6 +40,7 @@ import SalesTermsPage from './legal/SalesTermsPage';
 import OrderPage from './OrderPage';
 import NotFound from './NotFound';
 import { trackMetrikaHit } from '../utils/metrika';
+import DeliveryConfigNotice from '../components/DeliveryConfigNotice';
 
 function App() {
   const location = useLocation();
@@ -53,6 +54,7 @@ function App() {
   return (
     <>
       <ScrollToTop />
+      <DeliveryConfigNotice />
       {!isAdminRoute && <Header />}
       <main
         className={isAdminRoute ? 'min-h-screen' : 'min-h-[80vh]'}

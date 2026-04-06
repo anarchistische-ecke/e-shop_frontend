@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { getDeliveryClientConfig } from '../utils/deliveryConfig';
 
 const MAP_SCRIPT_ID = 'yandex-maps-sdk';
 let mapSdkPromise;
@@ -100,10 +101,7 @@ function PickupMapModal({
   onClose,
   onSelect
 }) {
-  const apiKey =
-    process.env.REACT_APP_YANDEX_MAPS_JS_API_KEY
-    || process.env.REACT_APP_YANDEX_MAPS_API_KEY
-    || '';
+  const apiKey = getDeliveryClientConfig().mapsKey;
   const mapRootRef = useRef(null);
   const mapRef = useRef(null);
   const dialogRef = useRef(null);

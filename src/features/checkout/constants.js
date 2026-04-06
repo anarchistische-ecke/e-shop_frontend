@@ -20,6 +20,5 @@ export const FIELD_TO_STEP = {
   selectedOfferId: CHECKOUT_STEP_INDEX.delivery
 };
 
-export const DEFAULT_PICKUP_CITY = 'Москва';
 export const CHECKOUT_DRAFT_VERSION = 1;
 export const CHECKOUT_REQUEST_TIMEOUT_MS = 30000;

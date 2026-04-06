@@ -37,6 +37,8 @@ function CheckoutPage() {
     showDeliveryAddressDetails,
     setShowDeliveryAddressDetails,
     pickupLocation,
+    pickupLocationHint,
+    pickupLocationSuggestion,
     setPickupLocation,
     pickupGeoId,
     selectedPickupPoint,
@@ -70,6 +72,8 @@ function CheckoutPage() {
     handleMapViewportChange,
     handlePickupSearch,
     handleOpenPickupMap,
+    handleConfirmPickupLocationSuggestion,
+    handleDismissPickupLocationSuggestion,
     handlePickupPointSelect,
     handleFetchOffers,
     handleExpressCheckout,
@@ -274,6 +278,8 @@ function CheckoutPage() {
               deliveryAddressDetails={deliveryAddressDetails}
               showDeliveryAddressDetails={showDeliveryAddressDetails}
               pickupLocation={pickupLocation}
+              pickupLocationHint={pickupLocationHint}
+              pickupLocationSuggestion={pickupLocationSuggestion}
               pickupGeoId={pickupGeoId}
               selectedPickupPoint={selectedPickupPoint}
               selectedPickupPointName={selectedPickupPointName}
@@ -315,6 +321,8 @@ function CheckoutPage() {
               }}
               onPickupSearch={handlePickupSearch}
               onOpenPickupMap={handleOpenPickupMap}
+              onConfirmPickupLocationSuggestion={handleConfirmPickupLocationSuggestion}
+              onDismissPickupLocationSuggestion={handleDismissPickupLocationSuggestion}
               onOfferSelect={(offerId) => {
                 clearStatus();
                 clearRecoveryState();
