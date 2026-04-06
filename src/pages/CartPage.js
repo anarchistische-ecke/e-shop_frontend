@@ -7,6 +7,7 @@ import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 import { buildAbsoluteAppUrl } from '../utils/url';
+import { Button, Card, Input } from '../components/ui';
 
 function CartPage() {
   const { items, removeItem, updateQuantity, clearCart } = useContext(CartContext);
@@ -130,28 +131,30 @@ function CartPage() {
             <h1 className="text-2xl sm:text-3xl font-semibold">Ваши товары для уюта</h1>
             <p className="text-sm text-muted mt-1">Проверьте состав заказа и добавьте подарок к комплекту.</p>
           </div>
-          <Link to="/category/popular" className="button-ghost text-sm">
+          <Button as={Link} to="/category/popular" variant="ghost" size="sm">
             Продолжить покупки →
-          </Link>
+          </Button>
         </div>
 
         {items.length === 0 ? (
-          <div className="soft-card p-8 text-center">
+          <Card className="text-center p-8">
             <p className="text-lg font-semibold mb-2">Корзина пока пуста</p>
             <p className="text-sm text-muted mb-4">
               Выберите товары в каталоге и добавьте их в корзину — мы подготовим всё к доставке.
             </p>
-            <Link to="/category/popular" className="button">
+            <Button as={Link} to="/category/popular">
               Перейти в каталог
-            </Link>
-          </div>
+            </Button>
+          </Card>
         ) : (
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="w-full lg:flex-1 space-y-4">
               {items.map((item) => (
-                <div
+                <Card
                   key={item.id}
-                  className="rounded-[26px] border border-white/70 bg-white/85 p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-[0_18px_40px_rgba(43,39,34,0.1)]"
+                  variant="quiet"
+                  padding="sm"
+                  className="flex flex-col gap-4 sm:flex-row sm:items-center"
                 >
                   <div className="w-full sm:w-24 h-24 rounded-2xl overflow-hidden bg-sand/60 border border-white/70 flex-shrink-0">
                     {item.productInfo?.imageUrl ? (
@@ -172,22 +175,23 @@ function CartPage() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
                       <div className="flex items-center gap-1 rounded-2xl border border-ink/10 bg-white/85 p-1">
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => {
                             const nextQuantity = Math.max(1, item.quantity - 1);
                             setQuantityDraft(item.id, String(nextQuantity));
                             updateQuantity(item.id, nextQuantity);
                           }}
-                          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-transparent text-lg leading-none hover:border-ink/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                          className="rounded-xl border border-transparent text-lg leading-none hover:border-ink/15"
                           aria-label={`Уменьшить количество: ${item.productInfo?.name || 'Товар'}`}
                         >
                           −
-                        </button>
+                        </Button>
                         <label className="sr-only" htmlFor={`cart-item-qty-${item.id}`}>
                           Количество товара {item.productInfo?.name || 'Товар'}
                         </label>
-                        <input
+                        <Input
                           id={`cart-item-qty-${item.id}`}
                           type="text"
                           inputMode="numeric"
@@ -207,41 +211,44 @@ function CartPage() {
                           }}
                           aria-label={`Количество: ${item.productInfo?.name || 'Товар'}`}
                         />
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => {
                             const nextQuantity = item.quantity + 1;
                             setQuantityDraft(item.id, String(nextQuantity));
                             updateQuantity(item.id, nextQuantity);
                           }}
-                          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-transparent text-lg leading-none hover:border-ink/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                          className="rounded-xl border border-transparent text-lg leading-none hover:border-ink/15"
                           aria-label={`Увеличить количество: ${item.productInfo?.name || 'Товар'}`}
                         >
                           +
-                        </button>
+                        </Button>
                       </div>
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="text-xs text-primary"
+                        className="!px-1 text-xs text-primary hover:text-primary"
                       >
                         Добавить ещё одну
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => removeItem(item.id)}
-                        className="text-xs text-muted hover:text-primary"
+                        className="!px-1 text-xs text-muted hover:text-primary"
                       >
                         Удалить
-                      </button>
+                      </Button>
                     </div>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
 
             <div className="w-full lg:max-w-sm space-y-4">
-              <div className="soft-card p-5">
+              <Card padding="md">
                 <h3 className="text-xl font-semibold mb-4">Сводка заказа</h3>
                 <div className="flex justify-between mb-2 text-sm">
                   <span>Товары ({itemCount})</span>
@@ -262,9 +269,9 @@ function CartPage() {
                 </div>
                 {!isManager && (
                   <>
-                    <button className="button w-full mb-2" onClick={handleCheckout}>
+                    <Button block className="mb-2" onClick={handleCheckout}>
                       Оформить заказ
-                    </button>
+                    </Button>
                     {!isAuthenticated && (
                       <div className="mb-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-ink/90">
                         Оформление без регистрации уже включено. Для постоянных клиентов доступен вход в аккаунт на шаге оформления.
@@ -272,12 +279,12 @@ function CartPage() {
                     )}
                   </>
                 )}
-                <button className="button-gray w-full" onClick={clearCart}>
+                <Button variant="secondary" block onClick={clearCart}>
                   Очистить корзину
-                </button>
-              </div>
+                </Button>
+              </Card>
               {isManager && (
-                <div className="soft-card p-5 space-y-4">
+                <Card padding="md" className="space-y-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-accent">Инструменты менеджера</p>
                     <h3 className="text-lg font-semibold mt-2">Ссылка на оплату для клиента</h3>
@@ -287,7 +294,7 @@ function CartPage() {
                   </div>
                   <label className="text-sm">
                     <span className="text-muted">Email клиента (для отправки)</span>
-                    <input
+                    <Input
                       type="email"
                       className="mt-2 w-full"
                       placeholder="client@example.com"
@@ -296,40 +303,39 @@ function CartPage() {
                     />
                   </label>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      className="button w-full"
+                    <Button
+                      block
                       onClick={() => handleCreateManagerLink({ sendEmail: true })}
                       disabled={isCreatingLink}
                     >
                       {isCreatingLink ? 'Создаём ссылку…' : 'Отправить ссылку'}
-                    </button>
-                    <button
-                      type="button"
-                      className="button-gray w-full"
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      block
                       onClick={() => handleCreateManagerLink({ sendEmail: false, copyAfter: true })}
                       disabled={isCreatingLink}
                     >
                       {isCreatingLink ? 'Готовим…' : 'Создать и скопировать'}
-                    </button>
+                    </Button>
                   </div>
                   {managerLink && (
-                    <div className="rounded-2xl border border-white/70 bg-white/85 p-3 text-xs break-all shadow-sm">
+                    <Card variant="quiet" padding="sm" className="text-xs break-all shadow-sm">
                       <div className="text-muted mb-2">Ссылка для клиента</div>
                       <div className="font-semibold">{managerLink}</div>
-                      <button type="button" className="button-ghost text-xs mt-2" onClick={handleCopyLink}>
+                      <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={handleCopyLink}>
                         Скопировать ссылку
-                      </button>
-                    </div>
+                      </Button>
+                    </Card>
                   )}
                   {managerStatus ? <NotificationBanner notification={managerStatus} compact /> : null}
-                </div>
+                </Card>
               )}
-              <div className="soft-card p-4 text-sm space-y-2">
+              <Card padding="sm" className="text-sm space-y-2">
                 <p className="font-semibold">Почему с нами спокойно</p>
                 <p className="text-muted">Доставка Яндекс и пункты выдачи: сначала видите стоимость и интервал, потом оплачиваете.</p>
                 <p className="text-muted">Оплата через защищённую страницу ЮKassa. Поддержка ежедневно с 9:00 до 21:00.</p>
-              </div>
+              </Card>
             </div>
           </div>
         )}

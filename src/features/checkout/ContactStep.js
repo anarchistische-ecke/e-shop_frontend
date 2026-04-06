@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button, Card, FieldError, Input } from '../../components/ui';
 
 function ContactStep({
   active,
@@ -14,7 +15,7 @@ function ContactStep({
   disabled = false
 }) {
   return (
-    <section className="soft-card p-6 md:p-7">
+    <Card as="section" padding="lg">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">1</span>
@@ -24,7 +25,9 @@ function ContactStep({
           </div>
         </div>
         {!active ? (
-          <button type="button" className="button-ghost text-xs" onClick={onEdit} disabled={disabled}>Изменить</button>
+          <Button variant="ghost" size="sm" className="text-xs" onClick={onEdit} disabled={disabled}>
+            Изменить
+          </Button>
         ) : null}
       </div>
 
@@ -32,7 +35,7 @@ function ContactStep({
         <>
           <label className="block text-sm">
             <span className="text-muted">Электронная почта (обязательно)</span>
-            <input
+            <Input
               id="checkout-email"
               type="email"
               value={email}
@@ -47,12 +50,7 @@ function ContactStep({
               required
               disabled={disabled}
             />
-            {fieldErrors.email ? (
-              <p id="checkout-email-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
-                <span aria-hidden="true">⚠</span>
-                <span>{fieldErrors.email}</span>
-              </p>
-            ) : null}
+            <FieldError id="checkout-email-error">{fieldErrors.email}</FieldError>
           </label>
 
           {isAuthenticated ? (
@@ -67,14 +65,14 @@ function ContactStep({
             </label>
           ) : null}
 
-          <button type="button" className="button mt-5" onClick={onContinue} disabled={disabled}>
+          <Button className="mt-5" onClick={onContinue} disabled={disabled}>
             Продолжить
-          </button>
+          </Button>
         </>
       ) : (
         <p className="text-sm text-muted">{email}</p>
       )}
-    </section>
+    </Card>
   );
 }
 

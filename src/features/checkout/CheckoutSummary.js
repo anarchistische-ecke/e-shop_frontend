@@ -1,5 +1,6 @@
 import React from 'react';
 import { moneyToNumber } from '../../utils/product';
+import { Button, Card } from '../../components/ui';
 
 function CheckoutSummary({
   items,
@@ -13,7 +14,7 @@ function CheckoutSummary({
   return (
     <>
       <div className="lg:hidden mb-6">
-        <details className="soft-card p-4">
+        <Card as="details" padding="sm">
           <summary className="cursor-pointer text-sm font-semibold">Сводка заказа · {formatRub(payableTotal)}</summary>
           <div className="mt-3 space-y-2 text-sm">
             {items.map((item) => (
@@ -32,7 +33,7 @@ function CheckoutSummary({
             <div className="flex justify-between"><span>Доставка</span><span>{deliveryLabel}</span></div>
             <div className="flex justify-between font-semibold"><span>К оплате</span><span>{formatRub(payableTotal)}</span></div>
           </div>
-        </details>
+        </Card>
       </div>
 
       <div className="sr-only" aria-live="polite">
@@ -40,7 +41,7 @@ function CheckoutSummary({
       </div>
 
       <aside className="hidden lg:block space-y-4 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] self-start">
-        <div className="soft-card p-5">
+        <Card padding="md">
           <h2 className="text-2xl font-semibold mb-4">Ваш заказ</h2>
           <div className="space-y-2 text-sm">
             {items.map((item) => (
@@ -72,13 +73,13 @@ function CheckoutSummary({
             <span>К оплате</span>
             <span>{formatRub(payableTotal)}</span>
           </div>
-        </div>
+        </Card>
 
-        <div className="soft-card p-4 text-sm space-y-2">
+        <Card padding="sm" className="text-sm space-y-2">
           <p className="font-semibold">Доверие и безопасность</p>
           <p className="text-muted">Платёж проходит на защищённой странице ЮKassa. Данные карты не хранятся в браузере магазина.</p>
           <p className="text-muted">Доставка рассчитывается через интеграцию Яндекс и отображается до оплаты.</p>
-        </div>
+        </Card>
       </aside>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] lg:hidden">
@@ -87,14 +88,13 @@ function CheckoutSummary({
             <div className="text-[11px] uppercase tracking-[0.16em] text-muted">{mobileAction.subtitle}</div>
             <div className="text-sm font-semibold">К оплате: {formatRub(payableTotal)}</div>
           </div>
-          <button
-            type="button"
-            className="button ml-auto !px-4 !py-2.5"
+          <Button
+            className="ml-auto !px-4 !py-2.5"
             onClick={mobileAction.action}
             disabled={mobileAction.disabled}
           >
             {mobileAction.label}
-          </button>
+          </Button>
         </div>
       </div>
     </>

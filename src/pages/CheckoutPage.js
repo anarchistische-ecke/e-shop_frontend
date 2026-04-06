@@ -10,6 +10,7 @@ import DeliveryStep from '../features/checkout/DeliveryStep';
 import ReviewStep from '../features/checkout/ReviewStep';
 import { CHECKOUT_STEPS } from '../features/checkout/constants';
 import { useCheckoutState } from '../features/checkout/useCheckoutState';
+import { Button, Card } from '../components/ui';
 
 function CheckoutPage() {
   const statusRef = useRef(null);
@@ -106,15 +107,15 @@ function CheckoutPage() {
     return (
       <div className="checkout-page py-10">
         <div className="container mx-auto px-4">
-          <div className="soft-card p-8 text-center">
+          <Card className="p-8 text-center">
             <h1 className="text-2xl font-semibold">Корзина пуста</h1>
             <p className="mt-2 text-sm text-muted">
               Добавьте товары в корзину, чтобы перейти к оформлению заказа.
             </p>
-            <Link to="/cart" className="button mt-5">
+            <Button as={Link} to="/cart" className="mt-5">
               Вернуться в корзину
-            </Link>
-          </div>
+            </Button>
+          </Card>
         </div>
       </div>
     );
@@ -153,22 +154,28 @@ function CheckoutPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Link
+            <Button
+              as={Link}
               to="/info/delivery"
-              className={`button-ghost text-sm${disabledLinkClass}`}
+              variant="ghost"
+              size="sm"
+              className={disabledLinkClass}
               aria-disabled={isSubmitting}
               onClick={handleDisabledNavigation}
             >
               Поддержка и доставка
-            </Link>
-            <Link
+            </Button>
+            <Button
+              as={Link}
               to="/cart"
-              className={`button-ghost text-sm${disabledLinkClass}`}
+              variant="ghost"
+              size="sm"
+              className={disabledLinkClass}
               aria-disabled={isSubmitting}
               onClick={handleDisabledNavigation}
             >
               ← Вернуться в корзину
-            </Link>
+            </Button>
           </div>
         </div>
 
@@ -182,30 +189,34 @@ function CheckoutPage() {
           />
         ) : null}
 
-        <div className="mb-5 rounded-[24px] border border-primary/20 bg-white/90 p-4 shadow-[0_18px_36px_rgba(43,39,34,0.08)]">
+        <Card variant="tint" padding="sm" className="mb-5 bg-white/90 shadow-[0_18px_36px_rgba(43,39,34,0.08)]">
           <p className="text-sm font-semibold text-ink">Оформление как гость</p>
           <p className="mt-1 text-xs text-muted">
             Достаточно email и контакта получателя. Аккаунт можно использовать только если вам так удобнее.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              className="button-gray w-full justify-start text-left !py-2.5"
+            <Button
+              variant="secondary"
+              block
+              className="justify-start text-left !py-2.5"
               onClick={handleGuestCheckout}
               disabled={isSubmitting}
             >
               Оформить как гость
-            </button>
-            <Link
+            </Button>
+            <Button
+              as={Link}
               to="/login"
-              className={`button-ghost w-full justify-start text-left !py-2.5${disabledLinkClass}`}
+              variant="ghost"
+              block
+              className={`justify-start text-left !py-2.5${disabledLinkClass}`}
               aria-disabled={isSubmitting}
               onClick={handleDisabledNavigation}
             >
               Войти в аккаунт
-            </Link>
+            </Button>
           </div>
-        </div>
+        </Card>
 
         <CheckoutStepper
           steps={CHECKOUT_STEPS}

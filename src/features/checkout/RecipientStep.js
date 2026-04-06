@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button, Card, FieldError, Input } from '../../components/ui';
 
 function RecipientStep({
   active,
@@ -14,7 +15,7 @@ function RecipientStep({
   disabled = false
 }) {
   return (
-    <section className="soft-card p-6 md:p-7">
+    <Card as="section" padding="lg">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">2</span>
@@ -24,7 +25,9 @@ function RecipientStep({
           </div>
         </div>
         {!active ? (
-          <button type="button" className="button-ghost text-xs" onClick={onEdit} disabled={disabled}>Изменить</button>
+          <Button variant="ghost" size="sm" className="text-xs" onClick={onEdit} disabled={disabled}>
+            Изменить
+          </Button>
         ) : null}
       </div>
 
@@ -33,7 +36,7 @@ function RecipientStep({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="text-muted">Имя (обязательно)</span>
-              <input
+              <Input
                 id="checkout-recipient-first-name"
                 type="text"
                 value={recipientFirstName}
@@ -46,16 +49,13 @@ function RecipientStep({
                 required
                 disabled={disabled}
               />
-              {fieldErrors.recipientFirstName ? (
-                <p id="checkout-recipient-first-name-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
-                  <span aria-hidden="true">⚠</span>
-                  <span>{fieldErrors.recipientFirstName}</span>
-                </p>
-              ) : null}
+              <FieldError id="checkout-recipient-first-name-error">
+                {fieldErrors.recipientFirstName}
+              </FieldError>
             </label>
             <label className="block text-sm">
               <span className="text-muted">Фамилия (необязательно)</span>
-              <input
+              <Input
                 id="checkout-recipient-last-name"
                 type="text"
                 value={recipientLastName}
@@ -68,7 +68,7 @@ function RecipientStep({
             </label>
             <label className="block text-sm sm:col-span-2">
               <span className="text-muted">Телефон (обязательно)</span>
-              <input
+              <Input
                 id="checkout-recipient-phone"
                 type="tel"
                 value={recipientPhone}
@@ -82,26 +82,21 @@ function RecipientStep({
                 required
                 disabled={disabled}
               />
-              {fieldErrors.recipientPhone ? (
-                <p id="checkout-recipient-phone-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
-                  <span aria-hidden="true">⚠</span>
-                  <span>{fieldErrors.recipientPhone}</span>
-                </p>
-              ) : null}
+              <FieldError id="checkout-recipient-phone-error">{fieldErrors.recipientPhone}</FieldError>
               <p className="mt-1 text-xs text-muted">Номер нужен, чтобы курьер мог уточнить детали доставки.</p>
             </label>
           </div>
 
-          <button type="button" className="button mt-5" onClick={onContinue} disabled={disabled}>
+          <Button className="mt-5" onClick={onContinue} disabled={disabled}>
             Продолжить
-          </button>
+          </Button>
         </>
       ) : (
         <p className="text-sm text-muted">
           {recipientFirstName} {recipientLastName} · {recipientPhone}
         </p>
       )}
-    </section>
+    </Card>
   );
 }
 

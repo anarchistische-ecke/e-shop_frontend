@@ -1,8 +1,9 @@
 import React from 'react';
+import { Card } from '../../components/ui';
 
 function CheckoutStepper({ steps, activeStep, completedSteps, disabled = false }) {
   return (
-    <div className="mb-6 soft-card p-4 md:p-5">
+    <Card className="mb-6 p-4 md:p-5">
       <ol className="grid gap-2 sm:grid-cols-4" aria-label="Прогресс оформления заказа">
         {steps.map((step, index) => {
           const isActive = activeStep === index;
@@ -34,7 +35,7 @@ function CheckoutStepper({ steps, activeStep, completedSteps, disabled = false }
           );
         })}
       </ol>
-    </div>
+    </Card>
   );
 }
 

@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import NotificationBanner from './NotificationBanner';
 import { CartContext } from '../contexts/CartContext';
+import { Button, Card } from './ui';
 import { reviews } from '../data/reviews';
 import {
   getPrimaryVariant,
@@ -105,8 +106,11 @@ function ProductCard({ product }) {
   ].filter(Boolean);
 
   return (
-    <div
-      className="product-card group h-full rounded-[24px] border border-ink/10 bg-white/92 p-3 shadow-[0_16px_34px_rgba(43,39,34,0.11)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_42px_rgba(43,39,34,0.16)] flex flex-col"
+    <Card
+      variant="quiet"
+      padding="sm"
+      interactive
+      className="product-card group h-full flex flex-col"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -207,7 +211,7 @@ function ProductCard({ product }) {
           <AddToCartButton product={product} variantId={primaryVariant?.id} />
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -230,13 +234,13 @@ function AddToCartButton({ product, variantId }) {
 
   return (
     <div className="w-full sm:w-auto">
-      <button
-        type="button"
-        className="inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-2xl bg-accent px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(47,61,50,0.24)] transition hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-auto"
+      <Button
+        size="sm"
+        className="w-full bg-accent px-3 py-2 text-xs shadow-[0_10px_20px_rgba(47,61,50,0.24)] hover:bg-accent/90 sm:w-auto"
         onClick={handleClick}
       >
         <span>В корзину</span>
-      </button>
+      </Button>
       {status ? <NotificationBanner notification={status} compact className="mt-2 sm:max-w-[240px]" /> : null}
     </div>
   );

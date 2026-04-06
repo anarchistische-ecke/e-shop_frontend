@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button, Card, FieldError, Input, Tabs } from '../../components/ui';
 
 function DeliveryStep({
   active,
@@ -39,7 +40,7 @@ function DeliveryStep({
   disabled = false
 }) {
   return (
-    <section className="soft-card p-6 md:p-7">
+    <Card as="section" padding="lg">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">3</span>
@@ -49,44 +50,30 @@ function DeliveryStep({
           </div>
         </div>
         {!active ? (
-          <button type="button" className="button-ghost text-xs" onClick={onEdit} disabled={disabled}>Изменить</button>
+          <Button variant="ghost" size="sm" className="text-xs" onClick={onEdit} disabled={disabled}>
+            Изменить
+          </Button>
         ) : null}
       </div>
 
       {active ? (
         <>
-          <div className="rounded-2xl border border-ink/10 bg-secondary/55 p-1 inline-flex gap-1">
-            <button
-              type="button"
-              onClick={() => onDeliveryTypeChange('COURIER')}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                deliveryType === 'COURIER'
-                  ? 'bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.12)]'
-                  : 'text-muted hover:text-ink'
-              }`}
-              disabled={disabled}
-            >
-              Курьер
-            </button>
-            <button
-              type="button"
-              onClick={() => onDeliveryTypeChange('PICKUP')}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                deliveryType === 'PICKUP'
-                  ? 'bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.12)]'
-                  : 'text-muted hover:text-ink'
-              }`}
-              disabled={disabled}
-            >
-              Пункт выдачи
-            </button>
-          </div>
+          <Tabs
+            ariaLabel="Тип доставки"
+            value={deliveryType}
+            onChange={onDeliveryTypeChange}
+            items={[
+              { value: 'COURIER', label: 'Курьер' },
+              { value: 'PICKUP', label: 'Пункт выдачи' }
+            ]}
+            listClassName="!inline-flex !w-auto"
+          />
 
           {deliveryType === 'COURIER' ? (
             <div className="mt-4">
               <label className="block text-sm">
                 <span className="text-muted">Адрес доставки (обязательно)</span>
-                <input
+                <Input
                   id="checkout-delivery-address"
                   type="text"
                   value={deliveryAddress}
@@ -99,29 +86,27 @@ function DeliveryStep({
                   required
                   disabled={disabled}
                 />
-                {fieldErrors.deliveryAddress ? (
-                  <p id="checkout-delivery-address-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
-                    <span aria-hidden="true">⚠</span>
-                    <span>{fieldErrors.deliveryAddress}</span>
-                  </p>
-                ) : null}
+                <FieldError id="checkout-delivery-address-error">
+                  {fieldErrors.deliveryAddress}
+                </FieldError>
               </label>
 
-              <button
-                type="button"
-                className="button-ghost mt-2 text-xs"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 text-xs"
                 aria-expanded={showDeliveryAddressDetails}
                 aria-controls="checkout-delivery-address-details"
                 onClick={onToggleDeliveryAddressDetails}
                 disabled={disabled}
               >
                 {showDeliveryAddressDetails ? 'Скрыть доп. адресные данные' : 'Добавить квартиру, подъезд или код домофона'}
-              </button>
+              </Button>
 
               {showDeliveryAddressDetails ? (
                 <label id="checkout-delivery-address-details" className="mt-2 block text-sm">
                   <span className="text-muted">Дополнительная строка адреса (необязательно)</span>
-                  <input
+                  <Input
                     id="checkout-delivery-address-line2"
                     type="text"
                     value={deliveryAddressDetails}
@@ -139,7 +124,7 @@ function DeliveryStep({
               <label className="block text-sm">
                 <span className="text-muted">Город или адрес (обязательно)</span>
                 <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
-                  <input
+                  <Input
                     id="checkout-pickup-location"
                     type="text"
                     value={pickupLocation}
@@ -150,61 +135,59 @@ function DeliveryStep({
                     aria-errormessage={fieldErrors.pickupLocation ? 'checkout-pickup-location-error' : undefined}
                     disabled={disabled}
                   />
-                  <button
-                    type="button"
-                    className="button-gray text-sm whitespace-nowrap"
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="whitespace-nowrap"
                     onClick={onPickupSearch}
                     disabled={pickupLoading || disabled}
                   >
                     {pickupLoading ? 'Ищем…' : 'Найти пункты'}
-                  </button>
-                  <button
-                    type="button"
-                    className="button-ghost text-sm whitespace-nowrap"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="whitespace-nowrap"
                     onClick={onOpenPickupMap}
                     disabled={disabled}
                   >
                     {pickupAutoDetecting ? 'Определяем город…' : 'Открыть карту'}
-                  </button>
+                  </Button>
                 </div>
-                {fieldErrors.pickupLocation ? (
-                  <p id="checkout-pickup-location-error" className="mt-2 inline-flex items-center gap-1 text-xs text-red-700">
-                    <span aria-hidden="true">⚠</span>
-                    <span>{fieldErrors.pickupLocation}</span>
-                  </p>
-                ) : null}
+                <FieldError id="checkout-pickup-location-error">{fieldErrors.pickupLocation}</FieldError>
               </label>
 
               {pickupLocationSuggestion ? (
-                <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-ink/90">
+                <Card variant="tint" padding="sm" className="text-sm text-ink/90">
                   <p className="font-semibold">{pickupLocationSuggestion.title}</p>
                   <p className="mt-1 text-xs text-muted">{pickupLocationSuggestion.message}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="button text-sm"
+                    <Button
+                      size="sm"
+                      className="text-sm"
                       onClick={onConfirmPickupLocationSuggestion}
                       disabled={pickupLoading || pickupAutoDetecting || disabled}
                     >
                       Использовать {pickupLocationSuggestion.city}
-                    </button>
-                    <button
-                      type="button"
-                      className="button-ghost text-sm"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-sm"
                       onClick={onDismissPickupLocationSuggestion}
                       disabled={disabled}
                     >
                       Ввести вручную
-                    </button>
+                    </Button>
                   </div>
-                </div>
+                </Card>
               ) : null}
 
               {pickupLocationHint ? (
-                <div className="rounded-2xl border border-ink/10 bg-white/85 px-4 py-3 text-sm text-ink/90">
+                <Card variant="quiet" padding="sm" className="text-sm text-ink/90">
                   <p className="font-semibold">{pickupLocationHint.title}</p>
                   <p className="mt-1 text-xs text-muted">{pickupLocationHint.message}</p>
-                </div>
+                </Card>
               ) : null}
 
               {pickupGeoId ? (
@@ -212,51 +195,51 @@ function DeliveryStep({
               ) : null}
 
               {selectedPickupPoint ? (
-                <div className="rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3">
+                <Card variant="tint" padding="sm">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <div className="text-sm font-semibold text-ink">{selectedPickupPoint.name || 'Пункт выдачи'}</div>
                       <div className="mt-1 text-xs text-muted">{selectedPickupPoint.address || 'Адрес уточняется'}</div>
                     </div>
-                    <button
-                      type="button"
-                      className="button-ghost !px-2 !py-1 text-xs"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="!px-2 !py-1 text-xs"
                       onClick={onOpenPickupMap}
                       disabled={disabled}
                     >
                       Изменить
-                    </button>
+                    </Button>
                   </div>
                   {!selectedPickupPoint.id ? (
                     <div className="mt-2 text-xs text-red-600">
                       Для этой точки нет идентификатора. Выберите другой пункт.
                     </div>
                   ) : null}
-                </div>
+                </Card>
               ) : (
                 <p className="text-xs text-muted">Сначала найдите пункт выдачи по адресу или городу.</p>
               )}
 
-              {fieldErrors.selectedPickupPointId ? (
-                <p className="text-xs text-red-700">{fieldErrors.selectedPickupPointId}</p>
-              ) : null}
+              <FieldError>{fieldErrors.selectedPickupPointId}</FieldError>
             </div>
           )}
 
-          <div className="mt-5 rounded-2xl border border-ink/10 bg-white/80 p-4">
+          <Card variant="quiet" padding="sm" className="mt-5 bg-white/80">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold">Варианты доставки</h3>
                 <p className="text-xs text-muted mt-1">Стоимость обновляется автоматически после заполнения адреса.</p>
               </div>
-              <button
-                type="button"
-                className="button-gray text-sm"
+              <Button
+                variant="secondary"
+                size="sm"
+                className="text-sm"
                 onClick={onFetchOffers}
                 disabled={deliveryLoading || disabled}
               >
                 {deliveryLoading ? 'Рассчитываем…' : 'Рассчитать'}
-              </button>
+              </Button>
             </div>
 
             {deliveryError ? (
@@ -266,12 +249,9 @@ function DeliveryStep({
             ) : null}
 
             {fieldErrors.selectedOfferId ? (
-              <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                <span className="inline-flex items-center gap-1">
-                  <span aria-hidden="true">⚠</span>
-                  <span>{fieldErrors.selectedOfferId}</span>
-                </span>
-              </div>
+              <FieldError className="mb-3 mt-0 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+                {fieldErrors.selectedOfferId}
+              </FieldError>
             ) : null}
 
             {deliveryOffers.length > 0 ? (
@@ -321,16 +301,16 @@ function DeliveryStep({
                 Нажмите «Рассчитать», чтобы получить доступные интервалы и финальную стоимость.
               </p>
             )}
-          </div>
+          </Card>
 
-          <button type="button" className="button mt-5" onClick={onContinue} disabled={disabled}>
+          <Button className="mt-5" onClick={onContinue} disabled={disabled}>
             Продолжить
-          </button>
+          </Button>
         </>
       ) : (
         <p className="text-sm text-muted">{reviewDeliveryLabel}</p>
       )}
-    </section>
+    </Card>
   );
 }
 
