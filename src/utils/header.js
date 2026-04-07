@@ -1,12 +1,19 @@
+import { buildCatalogSearchHref } from '../features/product-list/url';
+import {
+  buildCategoryCollections,
+  resolveCategoryToken,
+  sortCategories
+} from '../features/product-list/selectors';
 import { normalizeSearchText } from './search';
 
-export function resolveCategoryToken(category) {
-  return String(category?.slug || category?.id || category?.name || '');
-}
+export { buildCategoryCollections, resolveCategoryToken, sortCategories };
 
-export function resolveWayfindingLabel(pathname = '') {
+export function resolveWayfindingLabel(pathname = '', search = '') {
   if (pathname === '/') return 'Главная';
-  if (pathname.startsWith('/catalog')) return 'Каталог';
+  if (pathname.startsWith('/catalog')) {
+    const params = new URLSearchParams(search || '');
+    return params.get('query') ? 'Поиск' : 'Каталог';
+  }
   if (pathname.startsWith('/category/search')) return 'Поиск';
   if (pathname.startsWith('/category/')) return 'Категория';
   if (pathname.startsWith('/product/')) return 'Карточка товара';
@@ -16,92 +23,22 @@ export function resolveWayfindingLabel(pathname = '') {
   return 'Раздел магазина';
 }
 
-export function sortCategories(categories = []) {
-  return categories
-    .slice()
-    .sort(
-      (a, b) =>
-        (a.position ?? 0) - (b.position ?? 0) ||
-        (a.name || '').localeCompare(b.name || '')
-    );
-}
-
-export function buildCategoryCollections(categories = []) {
-  const list = Array.isArray(categories) ? categories : [];
-  const categoryByToken = {};
-  const categoryByNormalizedToken = {};
-  const childrenByParent = {};
-
-  list.forEach((category) => {
-    const token = resolveCategoryToken(category);
-    if (token) {
-      categoryByToken[token] = category;
-    }
-
-    const normalizedToken = normalizeSearchText(token);
-    if (normalizedToken) {
-      categoryByNormalizedToken[normalizedToken] = category;
-    }
-
-    const normalizedId = normalizeSearchText(String(category?.id || ''));
-    if (normalizedId) {
-      categoryByNormalizedToken[normalizedId] = category;
-    }
-
-    const normalizedSlug = normalizeSearchText(String(category?.slug || ''));
-    if (normalizedSlug) {
-      categoryByNormalizedToken[normalizedSlug] = category;
-    }
-
-    const parentToken = String(category?.parentId || '');
-    if (!parentToken) {
-      return;
-    }
-
-    if (!childrenByParent[parentToken]) {
-      childrenByParent[parentToken] = [];
-    }
-    childrenByParent[parentToken].push(category);
-  });
-
-  Object.keys(childrenByParent).forEach((parentToken) => {
-    childrenByParent[parentToken] = sortCategories(childrenByParent[parentToken]);
-  });
-
-  return {
-    navCategories: sortCategories(list.filter((category) => !category?.parentId)),
-    categoryByToken,
-    categoryByNormalizedToken,
-    childrenByParent
-  };
-}
-
 export function buildHeaderSearchParams({
   queryValue,
   scopeValue = '',
-  originalQuery = '',
-  categoryByNormalizedToken = {}
+  originalQuery = ''
 }) {
-  const params = new URLSearchParams();
-  params.set('query', String(queryValue || ''));
-
-  if (scopeValue) {
-    const scopeCategory = categoryByNormalizedToken[scopeValue];
-    params.set('scope', scopeValue);
-    if (scopeCategory?.name) {
-      params.set('scopeLabel', scopeCategory.name);
-    }
-  }
-
-  if (
-    originalQuery &&
-    normalizeSearchText(originalQuery) !== normalizeSearchText(queryValue)
-  ) {
-    params.set('original', originalQuery);
-    params.set('corrected', queryValue);
-  }
-
-  return params;
+  const href = buildCatalogSearchHref({
+    query: String(queryValue || ''),
+    scope: scopeValue,
+    original:
+      originalQuery &&
+      normalizeSearchText(originalQuery) !== normalizeSearchText(queryValue)
+        ? originalQuery
+        : ''
+  });
+  const [_, search = ''] = href.split('?');
+  return new URLSearchParams(search);
 }
 
 export function buildAccountLinks(isManager) {

@@ -1,8 +1,8 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getCategories, getProducts } from '../../api';
 import { CartContext } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useProductDirectoryData } from '../../features/product-list/data';
 import {
   buildAccountLinks,
   buildCategoryCollections,
@@ -20,11 +20,10 @@ export function useHeaderState() {
   const [mobilePath, setMobilePath] = useState([]);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [activeMegaCategory, setActiveMegaCategory] = useState('');
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { categories, products } = useProductDirectoryData();
   const { items, lastAddedItem, dismissLastAddedItem } = useContext(CartContext);
   const { hasRole, isAuthenticated, logout, tokenParsed } = useAuth();
 
@@ -40,13 +39,12 @@ export function useHeaderState() {
   const {
     navCategories,
     categoryByToken,
-    categoryByNormalizedToken,
     childrenByParent
   } = useMemo(() => buildCategoryCollections(categories), [categories]);
 
   const wayfindingLabel = useMemo(
-    () => resolveWayfindingLabel(location.pathname),
-    [location.pathname]
+    () => resolveWayfindingLabel(location.pathname, location.search),
+    [location.pathname, location.search]
   );
 
   const totalItems = useMemo(
@@ -159,25 +157,6 @@ export function useHeaderState() {
     }
     const height = Math.ceil(headerEl.getBoundingClientRect().height);
     document.documentElement.style.setProperty('--site-header-height', `${height}px`);
-  }, []);
-
-  useEffect(() => {
-    getCategories()
-      .then((data) => setCategories(Array.isArray(data) ? data : []))
-      .catch((error) => {
-        console.error('Failed to fetch categories:', error);
-        setCategories([]);
-      });
-
-    getProducts()
-      .then((data) => {
-        const list = Array.isArray(data) ? data : [];
-        setProducts(list.filter((product) => product?.isActive !== false));
-      })
-      .catch((error) => {
-        console.error('Failed to fetch products for search:', error);
-        setProducts([]);
-      });
   }, []);
 
   useEffect(() => {
@@ -331,10 +310,9 @@ export function useHeaderState() {
       buildHeaderSearchParams({
         queryValue,
         scopeValue,
-        originalQuery,
-        categoryByNormalizedToken
+        originalQuery
       }),
-    [categoryByNormalizedToken, searchScope]
+    [searchScope]
   );
 
   const navigateSearch = useCallback(
@@ -350,7 +328,7 @@ export function useHeaderState() {
         options.originalQuery || ''
       );
 
-      navigate(`/category/search?${params.toString()}`);
+      navigate(`/catalog?${params.toString()}`);
       closeSearch();
       closeMenu();
       closeMega();

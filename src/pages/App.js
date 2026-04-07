@@ -30,6 +30,7 @@ import DeliveryInfoPage from './DeliveryInfoPage';
 import BonusesInfoPage from './BonusesInfoPage';
 import ProductionInfoPage from './ProductionInfoPage';
 import CataloguePage from './CataloguePage';
+import SearchRedirectPage from './SearchRedirectPage';
 import LegalInfoPage from './LegalInfoPage';
 import PrivacyPolicyPage from './legal/PrivacyPolicyPage';
 import UserAgreementPage from './legal/UserAgreementPage';
@@ -67,6 +68,7 @@ function App() {
         <Routes>
           {/* Public user-facing routes */}
           <Route path="/" element={<Home />} />
+          <Route path="/category/search" element={<SearchRedirectPage />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/cart" element={<CartPage />} />

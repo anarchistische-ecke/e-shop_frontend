@@ -1,23 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Button,
-  Card,
-  FilterChip,
-  FilterToggle,
-  Input,
-  Modal,
-  PaginationButton,
-  Select,
-} from '../components/ui';
-import { getBrands, getCategories, getProducts } from '../api';
+import { Button, Card, FilterChip, Input, Select } from '../components/ui';
 import ProductCard from '../components/ProductCard';
-import { formatPrice, getProductPrice, moneyToNumber } from '../utils/product';
+import { PRODUCT_LIST_SORT_OPTIONS } from '../features/product-list/constants';
 import {
-  normalizeSearchText,
-  resolveSearchCorrection,
-  searchProducts,
-} from '../utils/search';
+  ProductFiltersDesktop,
+  ProductFiltersSheet,
+  ProductFiltersTrigger
+} from '../features/product-list/ProductFilters';
+import ProductPagination from '../features/product-list/ProductPagination';
+import { resolveCategoryToken } from '../features/product-list/selectors';
+import { useProductList } from '../features/product-list/useProductList';
+import { useProductListRouteState } from '../features/product-list/useProductListRouteState';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { normalizeSearchText } from '../utils/search';
 
 function SearchIcon({ className = 'h-4 w-4' }) {
   return (
@@ -37,434 +33,85 @@ function SearchIcon({ className = 'h-4 w-4' }) {
   );
 }
 
-function resolveCategoryToken(category) {
-  if (!category) return '';
-  return String(category.slug || category.id || category.name || '');
-}
-
-function resolveProductCategoryToken(product) {
-  const categoryValue =
-    product?.category ||
-    product?.categoryId ||
-    product?.category_id ||
-    product?.categorySlug ||
-    product?.category_slug ||
-    product?.category?.id ||
-    product?.category?.slug ||
-    product?.category?.name;
-
-  return String(
-    typeof categoryValue === 'string'
-      ? categoryValue
-      : categoryValue?.id || categoryValue?.slug || categoryValue?.name || ''
-  );
-}
-
-function resolveBrandToken(product) {
-  if (!product) return '';
-  if (typeof product.brand === 'string') return product.brand;
-  if (product.brand && typeof product.brand === 'object') {
-    return product.brand.slug || product.brand.id || product.brand.name || '';
-  }
-  return product.brandSlug || product.brandId || product.brand_id || '';
-}
-
-function getStockCount(product) {
-  if (!product) return 0;
-  if (product.stock !== undefined || product.stockQuantity !== undefined) {
-    return Number(product.stock ?? product.stockQuantity ?? 0);
-  }
-  const variants = Array.isArray(product.variants) ? product.variants : Array.from(product.variants || []);
-  return variants.reduce(
-    (sum, variant) => sum + Number(variant?.stock ?? variant?.stockQuantity ?? 0),
-    0
-  );
-}
-
-function getReviewCount(product) {
-  return Number(product?.reviewCount || product?.reviewsCount || product?.reviews_count || 0);
-}
-
-function buildDiversityRanking(list) {
-  if (!list.length) return new Map();
-
-  const byPrice = [...list].sort((a, b) => getProductPrice(a) - getProductPrice(b));
-  const bucketCount = 3;
-  const buckets = Array.from({ length: bucketCount }, () => []);
-
-  byPrice.forEach((item, index) => {
-    const bucketIndex = Math.min(
-      bucketCount - 1,
-      Math.floor((index / Math.max(1, byPrice.length - 1)) * bucketCount)
-    );
-    buckets[bucketIndex].push(item);
-  });
-
-  buckets.forEach((bucket) => {
-    bucket.sort((a, b) => {
-      const ratingDelta = (b?.rating || 0) - (a?.rating || 0);
-      if (ratingDelta !== 0) return ratingDelta;
-      return getReviewCount(b) - getReviewCount(a);
-    });
-  });
-
-  const ordered = [];
-  let hasItems = true;
-  while (hasItems) {
-    hasItems = false;
-    buckets.forEach((bucket) => {
-      if (bucket.length > 0) {
-        hasItems = true;
-        ordered.push(bucket.shift());
-      }
-    });
-  }
-
-  const ranking = new Map();
-  ordered.forEach((item, index) => {
-    ranking.set(item.id, ordered.length - index);
-  });
-
-  return ranking;
-}
-
-const sortOptions = [
-  { value: 'bestMatch', label: 'Лучшее совпадение' },
-  { value: 'newest', label: 'Сначала новые' },
-  { value: 'priceAsc', label: 'Цена: по возрастанию' },
-  { value: 'priceDesc', label: 'Цена: по убыванию' },
-  { value: 'rating', label: 'Рейтинг' },
-  { value: 'discount', label: 'По скидке' },
-];
-
 function CataloguePage() {
-  const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const [query, setQuery] = useState('');
-  const [scopeToken, setScopeToken] = useState('');
-  const [sortKey, setSortKey] = useState('bestMatch');
-  const [brandFilter, setBrandFilter] = useState('');
-  const [priceMin, setPriceMin] = useState('');
-  const [priceMax, setPriceMax] = useState('');
-  const [minRating, setMinRating] = useState('');
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [onSaleOnly, setOnSaleOnly] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-
+  const [searchInput, setSearchInput] = useState('');
   const resultsRef = useRef(null);
-  const itemsPerPage = 12;
+
+  const { params, updateParams, clearFilters } = useProductListRouteState({
+    source: 'catalog'
+  });
+  const list = useProductList({
+    source: 'catalog',
+    params
+  });
+
+  useBodyScrollLock(isFilterOpen);
 
   useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-
-    Promise.all([getCategories(), getBrands(), getProducts()])
-      .then(([categoriesResponse, brandsResponse, productsResponse]) => {
-        if (!isMounted) return;
-        setCategories(Array.isArray(categoriesResponse) ? categoriesResponse : []);
-        setBrands(Array.isArray(brandsResponse) ? brandsResponse : []);
-        const list = Array.isArray(productsResponse) ? productsResponse : [];
-        setProducts(list.filter((product) => product?.isActive !== false));
-      })
-      .catch((error) => {
-        console.error('Failed to fetch catalogue data:', error);
-        if (!isMounted) return;
-        setCategories([]);
-        setBrands([]);
-        setProducts([]);
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    setSearchInput(params.query || '');
+  }, [params.query]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [query, scopeToken, sortKey, brandFilter, priceMin, priceMax, minRating, inStockOnly, onSaleOnly]);
-
-  useEffect(() => {
-    if (!isFilterOpen) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isFilterOpen]);
-
-  useEffect(() => {
-    if (currentPage <= 1 || !resultsRef.current) return;
+    if (params.page <= 1 || !resultsRef.current) {
+      return;
+    }
     resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [currentPage]);
+  }, [params.page]);
 
-  const topCategories = useMemo(() => {
-    return categories
-      .filter((category) => !category.parentId)
-      .slice()
-      .sort(
-        (a, b) =>
-          (a.position ?? 0) - (b.position ?? 0) ||
-          (a.name || '').localeCompare(b.name || '')
-      );
-  }, [categories]);
+  const activeSortLabel =
+    PRODUCT_LIST_SORT_OPTIONS.find((option) => option.value === params.sort)?.label ||
+    'Лучшее совпадение';
+  const hasQuery = Boolean(normalizeSearchText(params.query));
 
-  const categoryNameByToken = useMemo(() => {
-    const map = {};
-    categories.forEach((category) => {
-      const token = normalizeSearchText(resolveCategoryToken(category));
-      if (!token) return;
-      map[token] = category.name;
-      map[normalizeSearchText(String(category.id || ''))] = category.name;
-      map[normalizeSearchText(String(category.slug || ''))] = category.name;
-    });
-    return map;
-  }, [categories]);
-
-  const searchResults = useMemo(() => {
-    const normalizedQuery = normalizeSearchText(query);
-    if (!normalizedQuery) {
-      return {
-        list: products,
-        correctionApplied: false,
-        appliedQuery: '',
-      };
+  const clearFilterByKey = (key) => {
+    if (key === 'brand') {
+      updateParams({ brand: '' });
+      return;
     }
-
-    const direct = searchProducts(products, normalizedQuery, {
-      categoryNameByToken,
-      scopeToken,
-      allowFuzzy: true,
-    });
-    if (direct.length > 0) {
-      return {
-        list: direct,
-        correctionApplied: false,
-        appliedQuery: normalizedQuery,
-      };
+    if (key === 'price') {
+      updateParams({ minPrice: '', maxPrice: '' });
+      return;
     }
-
-    const dictionary = [
-      ...categories.map((category) => category.name),
-      ...products.map((product) => product.name),
-    ];
-    const correction = resolveSearchCorrection(normalizedQuery, dictionary);
-
-    if (!correction.isCorrected || !correction.correctedQuery) {
-      return {
-        list: direct,
-        correctionApplied: false,
-        appliedQuery: normalizedQuery,
-      };
+    if (key === 'rating') {
+      updateParams({ rating: '' });
+      return;
     }
-
-    const corrected = searchProducts(products, correction.correctedQuery, {
-      categoryNameByToken,
-      scopeToken,
-      allowFuzzy: true,
-    });
-
-    return {
-      list: corrected,
-      correctionApplied: corrected.length > 0,
-      appliedQuery: correction.correctedQuery,
-    };
-  }, [query, products, categories, categoryNameByToken, scopeToken]);
-
-  const priceBounds = useMemo(() => {
-    const prices = searchResults.list
-      .map((product) => getProductPrice(product))
-      .filter((price) => Number.isFinite(price) && price > 0);
-    if (!prices.length) return { min: 0, max: 0 };
-    return { min: Math.min(...prices), max: Math.max(...prices) };
-  }, [searchResults.list]);
-
-  const minRatingValue = minRating ? Number(minRating) : 0;
-
-  const priceFilter = useMemo(() => {
-    const minValue = priceMin !== '' ? Number(priceMin) : null;
-    const maxValue = priceMax !== '' ? Number(priceMax) : null;
-
-    let safeMin = Number.isFinite(minValue) ? minValue : null;
-    let safeMax = Number.isFinite(maxValue) ? maxValue : null;
-    if (safeMin !== null && safeMax !== null && safeMin > safeMax) {
-      [safeMin, safeMax] = [safeMax, safeMin];
+    if (key === 'inStock') {
+      updateParams({ inStock: false });
+      return;
     }
-
-    return { min: safeMin, max: safeMax };
-  }, [priceMin, priceMax]);
-
-  const filteredProducts = useMemo(() => {
-    return searchResults.list.filter((product) => {
-      if (brandFilter) {
-        const token = String(resolveBrandToken(product));
-        if (!token || token !== brandFilter) return false;
-      }
-
-      const price = getProductPrice(product);
-      if (priceFilter.min !== null && price < priceFilter.min) return false;
-      if (priceFilter.max !== null && price > priceFilter.max) return false;
-
-      if (minRatingValue && Number(product?.rating || 0) < minRatingValue) return false;
-      if (inStockOnly && getStockCount(product) <= 0) return false;
-
-      if (onSaleOnly) {
-        const oldPrice = product?.oldPrice ? moneyToNumber(product.oldPrice) : 0;
-        if (!oldPrice || oldPrice <= price) return false;
-      }
-
-      return true;
-    });
-  }, [searchResults.list, brandFilter, priceFilter, minRatingValue, inStockOnly, onSaleOnly]);
-
-  const diversityRank = useMemo(
-    () => buildDiversityRanking(filteredProducts),
-    [filteredProducts]
-  );
-
-  const queryRank = useMemo(() => {
-    const rank = new Map();
-    searchResults.list.forEach((product, index) => {
-      rank.set(product.id, searchResults.list.length - index);
-    });
-    return rank;
-  }, [searchResults.list]);
-
-  const sortedProducts = useMemo(() => {
-    const list = [...filteredProducts];
-    const hasQuery = Boolean(normalizeSearchText(query));
-
-    const sorters = {
-      bestMatch: (a, b) => {
-        const rankA = hasQuery ? (queryRank.get(a.id) || 0) : (diversityRank.get(a.id) || 0);
-        const rankB = hasQuery ? (queryRank.get(b.id) || 0) : (diversityRank.get(b.id) || 0);
-        if (rankB !== rankA) return rankB - rankA;
-
-        const ratingDelta = (b?.rating || 0) - (a?.rating || 0);
-        if (ratingDelta !== 0) return ratingDelta;
-        return getReviewCount(b) - getReviewCount(a);
-      },
-      newest: (a, b) => String(b.id).localeCompare(String(a.id)),
-      priceAsc: (a, b) => getProductPrice(a) - getProductPrice(b),
-      priceDesc: (a, b) => getProductPrice(b) - getProductPrice(a),
-      rating: (a, b) => {
-        const delta = (b?.rating || 0) - (a?.rating || 0);
-        if (delta !== 0) return delta;
-        return getReviewCount(b) - getReviewCount(a);
-      },
-      discount: (a, b) => {
-        const discountA = (() => {
-          const old = a?.oldPrice ? moneyToNumber(a.oldPrice) : 0;
-          const current = getProductPrice(a);
-          return old > current ? (old - current) / old : 0;
-        })();
-        const discountB = (() => {
-          const old = b?.oldPrice ? moneyToNumber(b.oldPrice) : 0;
-          const current = getProductPrice(b);
-          return old > current ? (old - current) / old : 0;
-        })();
-        return discountB - discountA;
-      },
-    };
-
-    const sorter = sorters[sortKey] || sorters.bestMatch;
-    list.sort(sorter);
-    return list;
-  }, [filteredProducts, sortKey, diversityRank, queryRank, query]);
-
-  const totalItems = sortedProducts.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-  const safePage = Math.min(currentPage, totalPages);
-  const pagedProducts = sortedProducts.slice((safePage - 1) * itemsPerPage, safePage * itemsPerPage);
-
-  const visiblePages = useMemo(() => {
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    if (key === 'sale') {
+      updateParams({ sale: false });
     }
-
-    const pages = [1];
-    const start = Math.max(2, safePage - 1);
-    const end = Math.min(totalPages - 1, safePage + 1);
-
-    if (start > 2) pages.push('...');
-    for (let page = start; page <= end; page += 1) pages.push(page);
-    if (end < totalPages - 1) pages.push('...');
-    pages.push(totalPages);
-
-    return pages;
-  }, [safePage, totalPages]);
-
-  const activeBrand = brands.find((brand) => String(brand.slug || brand.id) === brandFilter);
-  const activeSortLabel = sortOptions.find((item) => item.value === sortKey)?.label || 'Лучшее совпадение';
-  const scopeCategoryLabel = scopeToken
-    ? categories.find((category) => normalizeSearchText(resolveCategoryToken(category)) === scopeToken)?.name || scopeToken
-    : '';
-
-  const activeFilters = [];
-
-  if (brandFilter) {
-    activeFilters.push({
-      label: `Бренд: ${activeBrand?.name || brandFilter}`,
-      onClear: () => setBrandFilter(''),
-    });
-  }
-  if (priceFilter.min !== null || priceFilter.max !== null) {
-    const parts = [];
-    if (priceFilter.min !== null) parts.push(`от ${formatPrice(priceFilter.min)} ₽`);
-    if (priceFilter.max !== null) parts.push(`до ${formatPrice(priceFilter.max)} ₽`);
-    activeFilters.push({
-      label: `Цена ${parts.join(' ')}`,
-      onClear: () => {
-        setPriceMin('');
-        setPriceMax('');
-      },
-    });
-  }
-  if (minRatingValue) {
-    activeFilters.push({
-      label: `Рейтинг от ${minRatingValue}`,
-      onClear: () => setMinRating(''),
-    });
-  }
-  if (inStockOnly) {
-    activeFilters.push({
-      label: 'Только в наличии',
-      onClear: () => setInStockOnly(false),
-    });
-  }
-  if (onSaleOnly) {
-    activeFilters.push({
-      label: 'Со скидкой',
-      onClear: () => setOnSaleOnly(false),
-    });
-  }
-
-  const clearAllFilters = () => {
-    setBrandFilter('');
-    setPriceMin('');
-    setPriceMax('');
-    setMinRating('');
-    setInStockOnly(false);
-    setOnSaleOnly(false);
   };
 
-  const searchCorrectionNote = (() => {
-    const normalized = normalizeSearchText(query);
-    if (!normalized) return '';
-    if (searchResults.correctionApplied && searchResults.appliedQuery) {
-      return `Показываем результаты для “${searchResults.appliedQuery}”. Ваш запрос: “${normalized}”.`;
-    }
-    return '';
-  })();
+  const topCategories = useMemo(
+    () => list.navCategories.slice(0, 10),
+    [list.navCategories]
+  );
 
-  const hasQuery = Boolean(normalizeSearchText(query));
+  const filterProps = {
+    brands: list.brands,
+    priceBounds: list.priceBounds,
+    params,
+    activeFilterCount: list.activeFilters.length,
+    onBrandChange: (brand) => updateParams({ brand }),
+    onMinPriceChange: (minPrice) => updateParams({ minPrice }),
+    onMaxPriceChange: (maxPrice) => updateParams({ maxPrice }),
+    onRatingChange: (rating) => updateParams({ rating }),
+    onToggleInStock: () => updateParams({ inStock: !params.inStock }),
+    onToggleSale: () => updateParams({ sale: !params.sale }),
+    onClearAll: clearFilters
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    updateParams({
+      query: searchInput.trim(),
+      original: ''
+    });
+  };
 
   return (
     <div className="catalogue-page relative overflow-hidden py-8 md:py-10">
@@ -475,17 +122,19 @@ function CataloguePage() {
         <nav className="flex flex-wrap items-center gap-2 text-xs text-muted">
           <Link to="/" className="transition hover:text-primary">Главная</Link>
           <span className="text-ink/40">›</span>
-          <span className="text-ink">Каталог</span>
+          <span className="text-ink">{hasQuery ? 'Поиск' : 'Каталог'}</span>
         </nav>
 
         <Card className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-6" padding="md">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-accent">Каталог товаров</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-accent">
+              {hasQuery ? 'Поиск по каталогу' : 'Каталог товаров'}
+            </p>
             <h1 className="mt-1 text-2xl font-semibold sm:text-3xl md:text-4xl">
-              Подбор текстиля без лишних кликов
+              {hasQuery ? 'Результаты поиска по всему каталогу' : 'Подбор текстиля без лишних кликов'}
             </h1>
             <p className="mt-2 text-sm text-muted">
-              Сначала оцените ассортимент, затем уточняйте фильтрами. По умолчанию показываем разные модели, а не дубли.
+              {list.headingNote}
             </p>
           </div>
           <Button as={Link} to="/category/popular" variant="secondary" block className="md:w-auto">
@@ -494,59 +143,71 @@ function CataloguePage() {
         </Card>
 
         <Card as="section" variant="quiet" className="mt-5 md:p-5" padding="sm">
-          <label htmlFor="catalog-search" className="text-xs uppercase tracking-[0.2em] text-muted">
-            Поиск по каталогу
-          </label>
-          <div className="relative mt-2">
-            <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
-            <Input
-              id="catalog-search"
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Например: сатин 200x220, плед, подушки"
-              className="bg-white pl-11 pr-12 shadow-[0_8px_20px_rgba(43,39,34,0.07)]"
-            />
-            {query && (
+          <form onSubmit={handleSearchSubmit}>
+            <label htmlFor="catalog-search" className="text-xs uppercase tracking-[0.2em] text-muted">
+              Поиск по каталогу
+            </label>
+            <div className="relative mt-2">
+              <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
+              <Input
+                id="catalog-search"
+                type="text"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Например: сатин 200x220, плед, подушки"
+                className="bg-white pl-11 pr-24 shadow-[0_8px_20px_rgba(43,39,34,0.07)]"
+              />
+              {searchInput ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setSearchInput('');
+                    updateParams({ query: '', original: '' });
+                  }}
+                  className="absolute right-12 top-1/2 -translate-y-1/2"
+                  aria-label="Очистить поиск"
+                >
+                  ×
+                </Button>
+              ) : null}
               <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setQuery('')}
+                type="submit"
+                size="sm"
                 className="absolute right-1 top-1/2 -translate-y-1/2"
-                aria-label="Очистить поиск"
               >
-                ×
+                Найти
               </Button>
-            )}
-          </div>
+            </div>
+          </form>
 
-          {searchCorrectionNote && (
-            <p className="mt-2 text-xs text-primary">{searchCorrectionNote}</p>
-          )}
-          {scopeCategoryLabel && (
-            <p className="mt-2 text-xs text-muted">Область поиска: {scopeCategoryLabel}</p>
-          )}
+          {list.searchCorrectionNote ? (
+            <p className="mt-2 text-xs text-primary">{list.searchCorrectionNote}</p>
+          ) : null}
+          {list.scopeCategoryLabel ? (
+            <p className="mt-2 text-xs text-muted">Область поиска: {list.scopeCategoryLabel}</p>
+          ) : null}
 
           <div className="mt-3">
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</p>
             <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               <FilterChip
                 type="button"
-                onClick={() => setScopeToken('')}
-                active={!scopeToken}
+                onClick={() => updateParams({ scope: '' })}
+                active={!params.scope}
                 className="whitespace-nowrap"
               >
                 Весь каталог
               </FilterChip>
-              {topCategories.slice(0, 10).map((category) => {
+              {topCategories.map((category) => {
                 const token = normalizeSearchText(resolveCategoryToken(category));
-                const isActive = scopeToken === token;
+                const isActive = params.scope === token;
                 return (
                   <FilterChip
                     key={resolveCategoryToken(category)}
                     type="button"
-                    onClick={() => setScopeToken(isActive ? '' : token)}
+                    onClick={() => updateParams({ scope: isActive ? '' : token })}
                     active={isActive}
                     className="whitespace-nowrap"
                   >
@@ -559,17 +220,17 @@ function CataloguePage() {
         </Card>
 
         <Card as="section" variant="quiet" className="mt-5" padding="sm">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
             <div className="inline-grid min-h-[44px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_8px_18px_rgba(43,39,34,0.06)]">
               <span className="text-ink/55">↕</span>
               <label htmlFor="catalog-sort" className="sr-only">Сортировка товаров</label>
               <Select
                 id="catalog-sort"
-                value={sortKey}
-                onChange={(event) => setSortKey(event.target.value)}
+                value={params.sort}
+                onChange={(event) => updateParams({ sort: event.target.value })}
                 className="control-inline w-full pr-6 text-sm font-medium text-ink"
               >
-                {sortOptions.map((option) => (
+                {PRODUCT_LIST_SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -577,128 +238,49 @@ function CataloguePage() {
               </Select>
             </div>
 
-            <Button
-              type="button"
-              variant="secondary"
-              block
-              size="sm"
-              className="lg:hidden"
-              onClick={() => setIsFilterOpen(true)}
-            >
-              Все фильтры{activeFilters.length > 0 ? ` (${activeFilters.length})` : ''}
-            </Button>
+            <ProductFiltersTrigger
+              activeFilterCount={list.activeFilters.length}
+              isOpen={isFilterOpen}
+              onOpenFilters={() => setIsFilterOpen(true)}
+            />
           </div>
+
+          <ProductFiltersDesktop
+            {...filterProps}
+            className="mt-4 hidden gap-3 lg:grid xl:grid-cols-4"
+          />
 
           <div className="mt-2 text-xs text-muted">
-            Сортировка: <span className="font-semibold text-ink"> {activeSortLabel}</span>
-            {sortKey === 'bestMatch' && (
-              <span className="ml-2">Рекомендуем на основе релевантности, популярности и разнообразия товаров.</span>
-            )}
-          </div>
-
-          <div className="mt-4 hidden gap-3 lg:grid xl:grid-cols-4">
-            <label className="text-sm">
-              <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
-              <Select
-                value={brandFilter}
-                onChange={(event) => setBrandFilter(event.target.value)}
-                className="mt-1 w-full"
-              >
-                <option value="">Все бренды</option>
-                {brands.map((brand) => (
-                  <option key={brand.slug || brand.id} value={brand.slug || brand.id}>
-                    {brand.name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-
-            <div className="text-sm">
-              <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена, ₽</span>
-              <div className="mt-1 grid grid-cols-2 gap-2">
-                <Input
-                  type="number"
-                  min="0"
-                  inputMode="numeric"
-                  value={priceMin}
-                  onChange={(event) => setPriceMin(event.target.value)}
-                  placeholder={priceBounds.min ? `От ${formatPrice(priceBounds.min)}` : 'От 0'}
-                />
-                <Input
-                  type="number"
-                  min="0"
-                  inputMode="numeric"
-                  value={priceMax}
-                  onChange={(event) => setPriceMax(event.target.value)}
-                  placeholder={priceBounds.max ? `До ${formatPrice(priceBounds.max)}` : 'До 0'}
-                />
-              </div>
-            </div>
-
-            <label className="text-sm">
-              <span className="text-xs uppercase tracking-[0.18em] text-muted">Рейтинг</span>
-              <Select
-                value={minRating}
-                onChange={(event) => setMinRating(event.target.value)}
-                className="mt-1 w-full"
-              >
-                <option value="">Любой</option>
-                <option value="4.5">От 4.5</option>
-                <option value="4">От 4.0</option>
-                <option value="3.5">От 3.5</option>
-              </Select>
-            </label>
-
-            <div className="text-sm">
-              <span className="text-xs uppercase tracking-[0.18em] text-muted">Быстрые фильтры</span>
-              <div className="mt-1 grid grid-cols-1 gap-2">
-                <FilterToggle
-                  type="button"
-                  onClick={() => setInStockOnly((prev) => !prev)}
-                  active={inStockOnly}
-                  aria-pressed={inStockOnly}
-                >
-                  <span
-                    className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                      inStockOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {inStockOnly ? '✓' : ''}
-                  </span>
-                  <span>Только в наличии</span>
-                </FilterToggle>
-
-                <FilterToggle
-                  type="button"
-                  onClick={() => setOnSaleOnly((prev) => !prev)}
-                  active={onSaleOnly}
-                  aria-pressed={onSaleOnly}
-                >
-                  <span
-                    className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                      onSaleOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {onSaleOnly ? '✓' : ''}
-                  </span>
-                  <span>Со скидкой</span>
-                </FilterToggle>
-              </div>
-            </div>
+            Сортировка: <span className="font-semibold text-ink">{activeSortLabel}</span>
+            {params.sort === 'bestMatch' ? (
+              <span className="ml-2">
+                Рекомендуем на основе релевантности, популярности и разнообразия товаров.
+              </span>
+            ) : null}
           </div>
         </Card>
 
-        {activeFilters.length > 0 && (
-          <Card as="section" variant="quiet" className="mt-4 grid gap-2 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center" padding="sm">
+        <ProductFiltersSheet
+          {...filterProps}
+          isFilterOpen={isFilterOpen}
+          onCloseFilters={() => setIsFilterOpen(false)}
+          description="Фильтры каталога"
+        />
+
+        {list.activeFilters.length > 0 ? (
+          <Card
+            as="section"
+            variant="quiet"
+            className="mt-4 grid gap-2 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+            padding="sm"
+          >
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Применено</p>
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {activeFilters.map((filter, index) => (
+              {list.activeFilters.map((filter) => (
                 <FilterChip
-                  key={`${filter.label}-${index}`}
+                  key={filter.key}
                   type="button"
-                  onClick={filter.onClear}
+                  onClick={() => clearFilterByKey(filter.key)}
                   active
                 >
                   {filter.label}
@@ -711,26 +293,23 @@ function CataloguePage() {
               variant="ghost"
               size="sm"
               className="justify-start text-primary md:justify-end"
-              onClick={clearAllFilters}
+              onClick={clearFilters}
             >
               Очистить всё
             </Button>
           </Card>
-        )}
+        ) : null}
 
         <section ref={resultsRef} className="mt-6">
           <div className="mb-3 text-sm text-muted">
-            {loading ? 'Загружаем каталог…' : `${totalItems} товаров в выдаче`}
-            {hasQuery ? ` · Запрос: “${normalizeSearchText(query)}”` : ''}
+            {list.loading ? 'Загружаем каталог…' : `${list.totalItems} товаров в выдаче`}
+            {hasQuery ? ` · Запрос: “${params.query}”` : ''}
           </div>
 
-          {loading ? (
+          {list.loading ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: itemsPerPage }).map((_, index) => (
-                <div
-                  key={`catalog-skeleton-${index}`}
-                  className="ui-card ui-card--quiet p-3"
-                >
+              {Array.from({ length: list.pageSize }).map((_, index) => (
+                <div key={`catalog-skeleton-${index}`} className="ui-card ui-card--quiet p-3">
                   <div className="skeleton shimmer-safe h-[190px] w-full rounded-2xl" />
                   <div className="mt-3 space-y-2">
                     <div className="skeleton shimmer-safe h-4 w-11/12 rounded-full" />
@@ -741,188 +320,50 @@ function CataloguePage() {
                 </div>
               ))}
             </div>
-          ) : totalItems > 0 ? (
+          ) : list.error ? (
+            <Card className="text-center" padding="lg">
+              <p className="text-lg font-semibold mb-2">Не удалось загрузить каталог</p>
+              <p className="text-sm text-muted">
+                Обновите страницу или попробуйте позже.
+              </p>
+            </Card>
+          ) : list.totalItems > 0 ? (
             <>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {pagedProducts.map((product) => (
+                {list.pagedProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
 
-              {totalPages > 1 && (
-                <div className="mt-8 flex flex-col items-center gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      className=""
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={safePage === 1}
-                    >
-                      <Button variant="secondary" size="sm" disabled={safePage === 1}>Назад</Button>
-                    </button>
-                    {visiblePages.map((page, index) => {
-                      if (page === '...') {
-                        return (
-                          <span key={`ellipsis-${index}`} className="px-2 text-sm text-muted">...
-                          </span>
-                        );
-                      }
-                      const isActive = page === safePage;
-                      return (
-                        <PaginationButton
-                          key={page}
-                          type="button"
-                          active={isActive}
-                          onClick={() => setCurrentPage(page)}
-                        >
-                          {page}
-                        </PaginationButton>
-                      );
-                    })}
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={safePage === totalPages}
-                    >
-                      Вперёд
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted">Страница {safePage} из {totalPages}</p>
-                </div>
-              )}
+              <ProductPagination
+                safePage={list.safePage}
+                totalPages={list.totalPages}
+                visiblePages={list.visiblePages}
+                onPageChange={(page) => updateParams({ page }, { resetPage: false })}
+              />
             </>
           ) : (
             <Card className="text-center" padding="lg">
-              <p className="mb-2 text-lg font-semibold">Ничего не найдено</p>
-              <p className="mb-4 text-sm text-muted">
-                Попробуйте расширить область поиска или снять часть фильтров.
+              <p className="text-lg font-semibold mb-2">Ничего не нашли</p>
+              <p className="text-sm text-muted mb-4">
+                Попробуйте изменить запрос, снять фильтры или расширить область поиска.
               </p>
               <div className="flex flex-wrap justify-center gap-2">
-                {activeFilters.length > 0 && (
-                  <Button type="button" variant="secondary" onClick={clearAllFilters}>
+                {list.activeFilters.length > 0 ? (
+                  <Button type="button" variant="secondary" onClick={clearFilters}>
                     Сбросить фильтры
                   </Button>
-                )}
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setQuery('');
-                    setScopeToken('');
-                  }}
-                >
-                  Показать весь каталог
-                </Button>
+                ) : null}
+                {hasQuery ? (
+                  <Button type="button" onClick={() => updateParams({ query: '', original: '' })}>
+                    Показать весь каталог
+                  </Button>
+                ) : null}
               </div>
             </Card>
           )}
         </section>
       </div>
-
-      <Modal
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        placement="sheet"
-        size="sm"
-        title="Уточните выбор"
-        description="Фильтры каталога"
-        className="lg:hidden"
-      >
-        <div className="space-y-3">
-          <label className="block text-sm">
-            <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
-            <Select
-              value={brandFilter}
-              onChange={(event) => setBrandFilter(event.target.value)}
-              className="mt-1"
-            >
-              <option value="">Все бренды</option>
-              {brands.map((brand) => (
-                <option key={brand.slug || brand.id} value={brand.slug || brand.id}>
-                  {brand.name}
-                </option>
-              ))}
-            </Select>
-          </label>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm">
-              <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена от</span>
-              <Input
-                type="number"
-                min="0"
-                inputMode="numeric"
-                value={priceMin}
-                onChange={(event) => setPriceMin(event.target.value)}
-                className="mt-1"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена до</span>
-              <Input
-                type="number"
-                min="0"
-                inputMode="numeric"
-                value={priceMax}
-                onChange={(event) => setPriceMax(event.target.value)}
-                className="mt-1"
-              />
-            </label>
-          </div>
-
-          <label className="block text-sm">
-            <span className="text-xs uppercase tracking-[0.18em] text-muted">Рейтинг</span>
-            <Select
-              value={minRating}
-              onChange={(event) => setMinRating(event.target.value)}
-              className="mt-1"
-            >
-              <option value="">Любой</option>
-              <option value="4.5">От 4.5</option>
-              <option value="4">От 4.0</option>
-              <option value="3.5">От 3.5</option>
-            </Select>
-          </label>
-
-          <div className="grid grid-cols-1 gap-2">
-            <FilterToggle type="button" onClick={() => setInStockOnly((prev) => !prev)} active={inStockOnly} aria-pressed={inStockOnly}>
-              <span
-                className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                  inStockOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
-                }`}
-                aria-hidden="true"
-              >
-                {inStockOnly ? '✓' : ''}
-              </span>
-              <span>Только в наличии</span>
-            </FilterToggle>
-
-            <FilterToggle type="button" onClick={() => setOnSaleOnly((prev) => !prev)} active={onSaleOnly} aria-pressed={onSaleOnly}>
-              <span
-                className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                  onSaleOnly ? 'border-primary/45 bg-primary/20' : 'border-ink/20 bg-white'
-                }`}
-                aria-hidden="true"
-              >
-                {onSaleOnly ? '✓' : ''}
-              </span>
-              <span>Со скидкой</span>
-            </FilterToggle>
-          </div>
-        </div>
-
-        <div className={`mt-4 grid gap-2 ${activeFilters.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {activeFilters.length > 0 && (
-            <Button type="button" variant="secondary" block onClick={clearAllFilters}>
-              Сбросить всё
-            </Button>
-          )}
-          <Button type="button" block onClick={() => setIsFilterOpen(false)}>
-            Показать товары
-          </Button>
-        </div>
-      </Modal>
     </div>
   );
 }

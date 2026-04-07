@@ -100,7 +100,7 @@ function SearchPanelBody({
                     key={product.id}
                     to={`/product/${product.id}`}
                     state={{
-                      fromPath: `/category/search?${buildSearchParams(
+                      fromPath: `/catalog?${buildSearchParams(
                         searchTerm.trim() || autocompleteData.correctedQuery || '',
                         searchScope
                       ).toString()}`,
