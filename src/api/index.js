@@ -258,6 +258,7 @@ export async function checkoutCart({
   receiptEmail,
   returnUrl,
   orderPageUrl,
+  confirmationMode,
   savePaymentMethod,
   delivery,
   idempotencyKey,
@@ -270,7 +271,15 @@ export async function checkoutCart({
     method: 'POST',
     signal,
     headers: { 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod, delivery })
+    body: JSON.stringify({
+      cartId,
+      receiptEmail,
+      returnUrl,
+      orderPageUrl,
+      confirmationMode,
+      savePaymentMethod,
+      delivery
+    })
   });
 }
 export async function getYandexDeliveryOffers(payload = {}) {
@@ -306,10 +315,10 @@ export async function getOrder(id) {
 export async function getPublicOrder(token) {
   return request(`/orders/public/${token}`);
 }
-export async function payPublicOrder({ token, receiptEmail, returnUrl } = {}) {
+export async function payPublicOrder({ token, receiptEmail, returnUrl, confirmationMode } = {}) {
   return request(`/orders/public/${token}/pay`, {
     method: 'POST',
-    body: JSON.stringify({ receiptEmail, returnUrl })
+    body: JSON.stringify({ receiptEmail, returnUrl, confirmationMode })
   });
 }
 export async function refreshPublicOrderPayment(token) {

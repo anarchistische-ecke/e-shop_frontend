@@ -117,6 +117,7 @@ export function buildCheckoutAttemptSignature({
   receiptEmail,
   returnUrl,
   orderPageUrl,
+  confirmationMode,
   savePaymentMethod,
   delivery
 } = {}) {
@@ -125,6 +126,7 @@ export function buildCheckoutAttemptSignature({
     normalizeValue(receiptEmail),
     normalizeValue(returnUrl),
     normalizeValue(orderPageUrl),
+    normalizeValue(confirmationMode),
     savePaymentMethod ? '1' : '0'
   ];
 

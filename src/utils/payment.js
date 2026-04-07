@@ -5,11 +5,18 @@ export const FALLBACK_PAYMENT_CONFIG = {
   methodSummary: 'банковская карта',
   checkoutDescription:
     'Оплата на защищённой странице платёжного партнёра. Данные карты не хранятся в браузере магазина.',
-  resumePaymentLabel: 'Продолжить оплату'
+  resumePaymentLabel: 'Продолжить оплату',
+  confirmationMode: 'REDIRECT',
+  supportsEmbedded: false,
+  widgetScriptUrl: 'https://yookassa.ru/checkout-widget/v1/checkout-widget.js'
 };
 
 function safeString(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeConfirmationMode(value) {
+  return safeString(value).toUpperCase() === 'EMBEDDED' ? 'EMBEDDED' : 'REDIRECT';
 }
 
 export function normalizePaymentConfig(config = {}) {
@@ -20,16 +27,29 @@ export function normalizePaymentConfig(config = {}) {
   const providerCode =
     safeString(config.providerCode).toUpperCase() ||
     FALLBACK_PAYMENT_CONFIG.providerCode;
-  const checkoutDescription =
-    safeString(config.checkoutDescription) ||
-    (providerName === FALLBACK_PAYMENT_CONFIG.providerName
-      ? FALLBACK_PAYMENT_CONFIG.checkoutDescription
-      : `Оплата на защищённой странице ${providerName}. Данные карты не хранятся в браузере магазина.`);
   const resumePaymentLabel =
     safeString(config.resumePaymentLabel) ||
-    (providerName === FALLBACK_PAYMENT_CONFIG.providerName
+    (normalizeConfirmationMode(config.confirmationMode) === 'EMBEDDED'
+      ? providerName === FALLBACK_PAYMENT_CONFIG.providerName
+        ? 'Открыть форму оплаты'
+        : `Открыть форму оплаты через ${providerName}`
+      : providerName === FALLBACK_PAYMENT_CONFIG.providerName
       ? FALLBACK_PAYMENT_CONFIG.resumePaymentLabel
       : `Продолжить оплату через ${providerName}`);
+  const confirmationMode = normalizeConfirmationMode(config.confirmationMode);
+  const supportsEmbedded =
+    config.supportsEmbedded === true || confirmationMode === 'EMBEDDED';
+  const widgetScriptUrl =
+    safeString(config.widgetScriptUrl) || FALLBACK_PAYMENT_CONFIG.widgetScriptUrl;
+  const checkoutDescription =
+    safeString(config.checkoutDescription) ||
+    (confirmationMode === 'EMBEDDED'
+      ? providerName === FALLBACK_PAYMENT_CONFIG.providerName
+        ? 'Оплата во встроенной защищённой форме платёжного партнёра. Данные карты не хранятся в браузере магазина.'
+        : `Оплата во встроенной защищённой форме ${providerName}. Данные карты не хранятся в браузере магазина.`
+      : providerName === FALLBACK_PAYMENT_CONFIG.providerName
+      ? FALLBACK_PAYMENT_CONFIG.checkoutDescription
+      : `Оплата на защищённой странице ${providerName}. Данные карты не хранятся в браузере магазина.`);
 
   return {
     enabled: config.enabled !== false,
@@ -37,8 +57,39 @@ export function normalizePaymentConfig(config = {}) {
     providerName,
     methodSummary,
     checkoutDescription,
-    resumePaymentLabel
+    resumePaymentLabel,
+    confirmationMode,
+    supportsEmbedded,
+    widgetScriptUrl
   };
+}
+
+export function normalizePaymentSession(session = {}, { returnUrl } = {}) {
+  return {
+    paymentId:
+      safeString(session.paymentId) ||
+      safeString(session.id),
+    confirmationUrl: safeString(session.confirmationUrl),
+    confirmationType: normalizeConfirmationMode(session.confirmationType),
+    confirmationToken: safeString(session.confirmationToken),
+    returnUrl: safeString(returnUrl) || safeString(session.returnUrl)
+  };
+}
+
+export function hasEmbeddedPaymentSession(session = {}) {
+  const normalizedSession = normalizePaymentSession(session);
+  return (
+    normalizedSession.confirmationType === 'EMBEDDED' &&
+    Boolean(normalizedSession.confirmationToken)
+  );
+}
+
+export function hasRedirectPaymentSession(session = {}) {
+  return Boolean(normalizePaymentSession(session).confirmationUrl);
+}
+
+export function isEmbeddedPaymentMode(config = FALLBACK_PAYMENT_CONFIG) {
+  return normalizePaymentConfig(config).confirmationMode === 'EMBEDDED';
 }
 
 export function getPaymentSummaryLabel(config = FALLBACK_PAYMENT_CONFIG) {
@@ -54,6 +105,11 @@ export function getCheckoutPaymentDescription(config = FALLBACK_PAYMENT_CONFIG) 
 
 export function getReviewPaymentHint(config = FALLBACK_PAYMENT_CONFIG) {
   const paymentConfig = normalizePaymentConfig(config);
+  if (paymentConfig.confirmationMode === 'EMBEDDED') {
+    return paymentConfig.providerName === FALLBACK_PAYMENT_CONFIG.providerName
+      ? 'После подтверждения заказа откроется встроенная защищённая форма оплаты.'
+      : `После подтверждения заказа откроется встроенная защищённая форма ${paymentConfig.providerName}.`;
+  }
   if (paymentConfig.providerName === FALLBACK_PAYMENT_CONFIG.providerName) {
     return 'Или оплатите картой на следующем шаге на защищённой странице оплаты.';
   }
@@ -79,8 +135,11 @@ export function getOrderPaymentNotice(config = FALLBACK_PAYMENT_CONFIG, orderSta
     type: 'info',
     title: 'Оплата ещё не подтверждена',
     message:
-      `Если страница ${paymentConfig.providerName} закрылась или соединение оборвалось, ` +
-      'можно безопасно вернуться к оплате и затем проверить статус заказа.',
+      paymentConfig.confirmationMode === 'EMBEDDED'
+        ? `Если встроенная форма ${paymentConfig.providerName} закрылась или соединение оборвалось, ` +
+          'можно безопасно открыть её снова и затем проверить статус заказа.'
+        : `Если страница ${paymentConfig.providerName} закрылась или соединение оборвалось, ` +
+          'можно безопасно вернуться к оплате и затем проверить статус заказа.',
     ctaLabel: resumeLabel
   };
 }

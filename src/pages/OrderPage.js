@@ -1,16 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import { Button, Card, Input } from '../components/ui';
 import { usePaymentConfig } from '../contexts/PaymentConfigContext';
+import EmbeddedPaymentPanel from '../features/payment/EmbeddedPaymentPanel';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 import { createNotification } from '../utils/notifications';
 import {
+  hasEmbeddedPaymentSession,
   getOrderPaymentNotice,
-  getPaymentSummaryLabel
+  getPaymentSummaryLabel,
+  normalizePaymentSession
 } from '../utils/payment';
 import { buildAbsoluteAppUrl } from '../utils/url';
 
@@ -40,9 +43,15 @@ function SuccessIcon() {
 }
 
 function OrderPage() {
+  const location = useLocation();
   const { token } = useParams();
   const { tokenParsed } = useAuth();
-  const { paymentConfig } = usePaymentConfig();
+  const { paymentConfig, isPaymentConfigLoaded } = usePaymentConfig();
+  const initialPaymentSessionRef = useRef(
+    normalizePaymentSession(location.state?.paymentSession, {
+      returnUrl: token ? buildAbsoluteAppUrl(`/order/${token}`) : ''
+    })
+  );
 
   const [order, setOrder] = useState(null);
   const [receiptEmail, setReceiptEmail] = useState('');
@@ -50,6 +59,11 @@ function OrderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [paymentSession, setPaymentSession] = useState(() =>
+    hasEmbeddedPaymentSession(initialPaymentSessionRef.current)
+      ? initialPaymentSessionRef.current
+      : null
+  );
 
   const refreshTimerRef = useRef(null);
   const purchaseTrackedRef = useRef(false);
@@ -151,6 +165,10 @@ function OrderPage() {
     if (!order) return 0;
     return moneyToNumber(order.totalAmount || order.total);
   }, [order]);
+  const orderReturnUrl = useMemo(
+    () => buildAbsoluteAppUrl(`/order/${token}`),
+    [token]
+  );
 
   useEffect(() => {
     if (!order || purchaseTrackedRef.current) return;
@@ -163,6 +181,16 @@ function OrderPage() {
       items: Array.isArray(order.items) ? order.items.length : 0,
     });
     purchaseTrackedRef.current = true;
+  }, [order]);
+
+  useEffect(() => {
+    if (!order) {
+      return;
+    }
+    const nextStatus = order.status || 'PENDING';
+    if (nextStatus !== 'PENDING' && nextStatus !== 'PROCESSING') {
+      setPaymentSession(null);
+    }
   }, [order]);
 
   const handlePay = async () => {
@@ -181,14 +209,25 @@ function OrderPage() {
       const response = await payPublicOrder({
         token,
         receiptEmail: receiptEmail.trim(),
-        returnUrl: buildAbsoluteAppUrl(`/order/${token}`),
+        returnUrl: orderReturnUrl,
+        confirmationMode: isPaymentConfigLoaded ? paymentConfig.confirmationMode : undefined,
       });
 
-      if (response?.confirmationUrl) {
-        window.location.href = response.confirmationUrl;
+      const nextPaymentSession = normalizePaymentSession(response, {
+        returnUrl: orderReturnUrl
+      });
+      if (hasEmbeddedPaymentSession(nextPaymentSession)) {
+        setPaymentSession(nextPaymentSession);
         return;
       }
 
+      if (nextPaymentSession.confirmationUrl) {
+        setPaymentSession(null);
+        window.location.href = nextPaymentSession.confirmationUrl;
+        return;
+      }
+
+      setPaymentSession(null);
       setStatus(createNotification({
         type: 'warning',
         title: 'Платёжная ссылка не получена',
@@ -200,6 +239,7 @@ function OrderPage() {
       }));
     } catch (err) {
       console.error('Payment creation failed:', err);
+      setPaymentSession(null);
       setStatus(createNotification({
         type: 'error',
         title: 'Не удалось открыть оплату',
@@ -236,10 +276,11 @@ function OrderPage() {
   const canPay = orderStatus === 'PENDING' || orderStatus === 'PROCESSING';
   const canRefresh = canPay;
   const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
+  const showEmbeddedPayment = canPay && hasEmbeddedPaymentSession(paymentSession);
   const paymentNotice = canPay
     ? getOrderPaymentNotice(paymentConfig, orderStatus)
     : null;
-  const paymentRecoveryNotice = canPay
+  const paymentRecoveryNotice = canPay && !showEmbeddedPayment
     ? createNotification({
         type: paymentNotice.type,
         title: paymentNotice.title,
@@ -438,24 +479,36 @@ function OrderPage() {
                     />
                   </label>
 
-                  <Button block onClick={handlePay} disabled={isPaying}>
-                    {isPaying
-                      ? `Открываем ${paymentConfig.providerName}…`
-                      : paymentNotice.ctaLabel}
-                  </Button>
-                  {canRefresh && (
-                    <Button
-                      type="button"
-                      block
-                      variant="secondary"
-                      onClick={() => refreshPaymentStatus()}
-                      disabled={isRefreshing}
-                    >
-                      {isRefreshing ? 'Проверяем оплату…' : 'Проверить статус оплаты'}
-                    </Button>
+                  {showEmbeddedPayment ? (
+                    <EmbeddedPaymentPanel
+                      paymentConfig={paymentConfig}
+                      paymentSession={paymentSession}
+                      isStarting={isPaying}
+                      onRequestNewSession={handlePay}
+                      onRefreshStatus={() => refreshPaymentStatus()}
+                    />
+                  ) : (
+                    <>
+                      <Button block onClick={handlePay} disabled={isPaying}>
+                        {isPaying
+                          ? `Открываем ${paymentConfig.providerName}…`
+                          : paymentNotice.ctaLabel}
+                      </Button>
+                      {canRefresh && (
+                        <Button
+                          type="button"
+                          block
+                          variant="secondary"
+                          onClick={() => refreshPaymentStatus()}
+                          disabled={isRefreshing}
+                        >
+                          {isRefreshing ? 'Проверяем оплату…' : 'Проверить статус оплаты'}
+                        </Button>
+                      )}
+                    </>
                   )}
                   <p className="text-xs text-muted">
-                    Пока заказ ожидает оплату, страница автоматически обновляет статус. После успешного банка подтверждение появится здесь.
+                    Пока заказ ожидает оплату, страница автоматически обновляет статус. После ответа банка подтверждение появится здесь.
                   </p>
                 </div>
               ) : (

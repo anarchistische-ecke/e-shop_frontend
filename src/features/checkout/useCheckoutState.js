@@ -1,6 +1,8 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CartContext } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePaymentConfig } from '../../contexts/PaymentConfigContext';
 import {
   checkoutCart,
   getYandexDeliveryOffers,
@@ -12,6 +14,11 @@ import { createNotification } from '../../utils/notifications';
 import { moneyToNumber } from '../../utils/product';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../../utils/metrika';
 import { getDeliveryClientConfig } from '../../utils/deliveryConfig';
+import {
+  hasEmbeddedPaymentSession,
+  isEmbeddedPaymentMode,
+  normalizePaymentSession
+} from '../../utils/payment';
 import { CHECKOUT_REQUEST_TIMEOUT_MS, CHECKOUT_STEPS } from './constants';
 import { clearCheckoutDraft, loadCheckoutDraft, saveCheckoutDraft } from './draftStorage';
 import {
@@ -48,8 +55,10 @@ import {
 } from './utils';
 
 export function useCheckoutState() {
+  const navigate = useNavigate();
   const { items: liveItems, cartId } = useContext(CartContext);
   const { tokenParsed, isAuthenticated, hasRole } = useAuth();
+  const { paymentConfig, isPaymentConfigLoaded } = usePaymentConfig();
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
   const deliveryClientConfig = useMemo(() => getDeliveryClientConfig(), []);
@@ -273,6 +282,9 @@ export function useCheckoutState() {
   const reviewDeliveryLabel = selectedOffer
     ? `${deliveryType === 'PICKUP' ? 'Самовывоз' : 'Курьер'}, ${formatInterval(selectedOffer)}`
     : 'Не выбрано';
+  const checkoutSubmitLabel = isEmbeddedPaymentMode(paymentConfig)
+    ? 'Создать заказ и открыть форму оплаты'
+    : 'Перейти к оплате';
 
   const processingNotice = isSubmitting
     ? createNotification({
@@ -280,7 +292,9 @@ export function useCheckoutState() {
         title: submitPhase === 'redirecting' ? 'Открываем оплату' : 'Оформляем заказ',
         message:
           submitPhase === 'redirecting'
-            ? 'Сейчас откроется защищённая страница оплаты.'
+            ? isEmbeddedPaymentMode(paymentConfig)
+              ? 'Сейчас откроется встроенная защищённая форма оплаты.'
+              : 'Сейчас откроется защищённая страница оплаты.'
             : 'Не закрывайте страницу. Если связь прервётся, можно безопасно повторить попытку с тем же заказом.'
       })
     : null;
@@ -766,9 +780,11 @@ export function useCheckoutState() {
 
   const handleExpressCheckout = useCallback((providerLabel) => {
     setExpressMessage(
-      `${providerLabel} будет доступен на защищённой платёжной странице, если поддерживается вашим устройством и банком.`
+      isEmbeddedPaymentMode(paymentConfig)
+        ? `${providerLabel} будет доступен во встроенной защищённой форме оплаты, если поддерживается вашим устройством и банком.`
+        : `${providerLabel} будет доступен на защищённой платёжной странице, если поддерживается вашим устройством и банком.`
     );
-  }, []);
+  }, [paymentConfig]);
 
   const handleContactNext = useCallback(() => {
     setStatus(null);
@@ -1110,6 +1126,7 @@ export function useCheckoutState() {
       receiptEmail: email.trim(),
       returnUrl: buildAbsoluteAppUrl('/order/{token}'),
       orderPageUrl: buildAbsoluteAppUrl('/order/{token}'),
+      confirmationMode: isPaymentConfigLoaded ? paymentConfig.confirmationMode : undefined,
       savePaymentMethod: isAuthenticated ? savePaymentMethod : false,
       delivery: {
         deliveryType,
@@ -1153,6 +1170,26 @@ export function useCheckoutState() {
       }
 
       const confirmationUrl = response?.payment?.confirmationUrl;
+      const paymentSession = normalizePaymentSession(response?.payment, {
+        returnUrl: orderToken ? buildAbsoluteAppUrl(`/order/${orderToken}`) : ''
+      });
+      if (hasEmbeddedPaymentSession(paymentSession) && orderToken) {
+        trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
+          outcome: 'success',
+          delivery_type: deliveryType,
+          cart_total: Math.round(payableTotal)
+        });
+        clearCheckoutDraft(payload.cartId);
+        setSubmitPhase('redirecting');
+        navigate(`/order/${orderToken}`, {
+          replace: true,
+          state: {
+            openEmbeddedPayment: true,
+            paymentSession
+          }
+        });
+        return;
+      }
       if (confirmationUrl) {
         trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
           outcome: 'success',
@@ -1253,8 +1290,11 @@ export function useCheckoutState() {
     effectiveCartId,
     fullDeliveryAddress,
     isAuthenticated,
+    isPaymentConfigLoaded,
     items.length,
+    navigate,
     payableTotal,
+    paymentConfig,
     recipientFirstName,
     recipientLastName,
     recipientPhone,
@@ -1301,7 +1341,7 @@ export function useCheckoutState() {
     : {
         label: isSubmitting
           ? 'Оформляем заказ…'
-          : safeRetryState?.retryLabel || 'Перейти к оплате',
+          : safeRetryState?.retryLabel || checkoutSubmitLabel,
         subtitle: safeRetryState
           ? 'Шаг 4 из 4 · Безопасная проверка'
           : 'Шаг 4 из 4 · Подтверждение',
@@ -1369,7 +1409,7 @@ export function useCheckoutState() {
     isPickupMapOpen,
     setIsPickupMapOpen,
     expressMessage,
-    submitLabel: isSubmitting ? 'Оформляем заказ…' : 'Перейти к оплате',
+    submitLabel: isSubmitting ? 'Оформляем заказ…' : checkoutSubmitLabel,
     mobileAction,
     processingNotice,
     safeRetryState,
