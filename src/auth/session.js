@@ -3,6 +3,14 @@ import { getAccessToken as getKeycloakAccessToken, isKeycloakConfigured } from '
 
 const TOKEN_KEY = 'authToken';
 const PROFILE_KEY = 'authProfile';
+const LEGACY_TOKEN_KEYS = ['adminToken', 'userToken'];
+
+const getStorage = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return window.localStorage || null;
+};
 
 const safeJsonParse = (value) => {
   if (!value) return null;
@@ -41,7 +49,10 @@ export const parseJwtPayload = (token) => {
   return safeJsonParse(decoded);
 };
 
-export const getStoredProfile = () => safeJsonParse(localStorage.getItem(PROFILE_KEY));
+export const getStoredProfile = () => {
+  const storage = getStorage();
+  return safeJsonParse(storage ? storage.getItem(PROFILE_KEY) : null);
+};
 
 const normalizeToken = (token) => {
   if (!token || typeof token !== 'string') return null;
@@ -61,28 +72,44 @@ const isTokenValid = (token) => {
 };
 
 export const getStoredToken = () => {
-  const token = normalizeToken(localStorage.getItem(TOKEN_KEY));
+  const storage = getStorage();
+  const token = normalizeToken(storage ? storage.getItem(TOKEN_KEY) : null);
   if (isTokenValid(token)) return token;
-  localStorage.removeItem(TOKEN_KEY);
+  if (storage) {
+    storage.removeItem(TOKEN_KEY);
+  }
   return null;
 };
 
 export const setSession = ({ token, profile } = {}) => {
+  const storage = getStorage();
   if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
+    storage?.setItem(TOKEN_KEY, token);
   }
   if (profile === null) {
-    localStorage.removeItem(PROFILE_KEY);
+    storage?.removeItem(PROFILE_KEY);
   } else if (profile) {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    storage?.setItem(PROFILE_KEY, JSON.stringify(profile));
   }
   notifyAuthChange({ type: 'session', action: 'login' });
 };
 
 export const clearSession = () => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(PROFILE_KEY);
+  const storage = getStorage();
+  storage?.removeItem(TOKEN_KEY);
+  storage?.removeItem(PROFILE_KEY);
   notifyAuthChange({ type: 'session', action: 'logout' });
+};
+
+export const clearLegacyAuthStorage = () => {
+  const storage = getStorage();
+  if (!storage) return;
+  LEGACY_TOKEN_KEYS.forEach((key) => storage.removeItem(key));
+};
+
+export const clearAllAuthStorage = () => {
+  clearLegacyAuthStorage();
+  clearSession();
 };
 
 export const getAccessToken = async () => {

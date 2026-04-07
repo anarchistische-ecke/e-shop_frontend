@@ -62,6 +62,13 @@ const products = [
         oldPrice: 5100,
         stock: 7,
       },
+      {
+        id: 'var-satin-sand-240',
+        name: '240×260',
+        price: 4700,
+        oldPrice: 5400,
+        stock: 0,
+      },
     ],
     images: [
       {
@@ -156,6 +163,9 @@ const paymentProvider = {
   checkoutDescription:
     'Оплата на защищённой странице ТестКасса. Данные карты не хранятся в браузере магазина.',
   resumePaymentLabel: 'Продолжить оплату через ТестКасса',
+  confirmationMode: 'REDIRECT',
+  supportsEmbedded: true,
+  widgetScriptUrl: 'https://yookassa.ru/checkout-widget/v1/checkout-widget.js',
 };
 
 module.exports = {

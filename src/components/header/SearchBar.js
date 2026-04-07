@@ -4,6 +4,7 @@ import { Button, FilterChip, Input } from '../ui';
 import { getPrimaryImageUrl, getProductPrice } from '../../utils/product';
 import { normalizeSearchText } from '../../utils/search';
 import { resolveCategoryToken } from '../../utils/header';
+import { buildProductPath } from '../../utils/url';
 import { SearchIcon } from './icons';
 
 function SearchPanelBody({
@@ -98,9 +99,9 @@ function SearchPanelBody({
                 return (
                   <Link
                     key={product.id}
-                    to={`/product/${product.id}`}
+                    to={buildProductPath(product)}
                     state={{
-                      fromPath: `/category/search?${buildSearchParams(
+                      fromPath: `/catalog?${buildSearchParams(
                         searchTerm.trim() || autocompleteData.correctedQuery || '',
                         searchScope
                       ).toString()}`,

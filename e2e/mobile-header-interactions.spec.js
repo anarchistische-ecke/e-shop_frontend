@@ -29,7 +29,7 @@ test('header search submit navigates to search results on mobile', async ({ page
   await searchInput.fill('Плед');
   await searchInput.press('Enter');
 
-  await expect(page).toHaveURL(/\/category\/search\?query=/);
+  await expect(page).toHaveURL(/\/catalog\?query=/);
   expect(new URL(page.url()).searchParams.get('query')).toBe('Плед');
-  await expect(page.getByRole('heading', { name: 'Результаты поиска' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Результаты поиска по всему каталогу' })).toBeVisible();
 });

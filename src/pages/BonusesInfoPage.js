@@ -1,8 +1,14 @@
 import React from 'react';
+import Seo from '../components/Seo';
 
 function BonusesInfoPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <Seo
+        title="Бонусы и лояльность"
+        description="Как начисляются бонусы за покупки, сколько они действуют и как использовать их при следующем заказе."
+        canonicalPath="/info/bonuses"
+      />
       <p className="text-xs uppercase tracking-[0.3em] text-muted">Лояльность</p>
       <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Бонусы за покупки</h1>
       <p className="text-muted mb-6">

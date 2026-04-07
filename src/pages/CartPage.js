@@ -3,6 +3,7 @@ import { CartContext } from '../contexts/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { createManagerOrderLink } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
+import Seo from '../components/Seo';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { usePaymentConfig } from '../contexts/PaymentConfigContext';
@@ -12,6 +13,7 @@ import {
   getCheckoutPaymentDescription,
   getPaymentSummaryLabel
 } from '../utils/payment';
+import { CART_SESSION_STRATEGY } from '../utils/account';
 import { Button, Card, Input } from '../components/ui';
 
 function CartPage() {
@@ -132,6 +134,12 @@ function CartPage() {
 
   return (
     <div className="cart-page py-8 md:py-10">
+      <Seo
+        title="Корзина"
+        description="Проверьте товары в корзине, итоговую стоимость и переходите к оформлению заказа."
+        canonicalPath="/cart"
+        robots="noindex,nofollow"
+      />
       <div className="container mx-auto px-4">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>
@@ -282,7 +290,7 @@ function CartPage() {
                     </Button>
                     {!isAuthenticated && (
                       <div className="mb-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-ink/90">
-                        Оформление без регистрации уже включено. Для постоянных клиентов доступен вход в аккаунт на шаге оформления.
+                        {CART_SESSION_STRATEGY.guestCheckoutMessage}
                       </div>
                     )}
                   </>

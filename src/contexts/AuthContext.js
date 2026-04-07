@@ -3,6 +3,7 @@ import { getCustomerProfile } from '../api';
 import { subscribeToAuthChanges } from '../utils/auth';
 import {
   buildTokenProfile,
+  clearAllAuthStorage,
   clearSession,
   getAccessToken,
   getStoredProfile,
@@ -119,6 +120,11 @@ export function AuthProvider({ children }) {
   }, [syncState]);
 
   const logout = useCallback(async () => {
+    clearAllAuthStorage();
+    setTokenPayload(null);
+    setProfile(null);
+    setIsReady(true);
+
     if (typeof window !== 'undefined' && isKeycloakConfigured()) {
       try {
         await keycloakLogout({ redirectUri: buildAbsoluteAppUrl('/') });
@@ -127,7 +133,6 @@ export function AuthProvider({ children }) {
         console.warn('Keycloak logout failed, falling back to local logout', err);
       }
     }
-    clearSession();
     await syncState();
   }, [syncState]);
 

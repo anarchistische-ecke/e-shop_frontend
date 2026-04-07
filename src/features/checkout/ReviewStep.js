@@ -29,6 +29,10 @@ function ReviewStep({
 }) {
   const { paymentConfig } = usePaymentConfig();
   const reviewPaymentHint = getReviewPaymentHint(paymentConfig);
+  const reviewDescription =
+    paymentConfig.confirmationMode === 'EMBEDDED'
+      ? 'Проверьте данные. После этого откроется встроенная защищённая форма оплаты.'
+      : 'Проверьте данные. После этого откроется защищённая страница оплаты.';
 
   return (
     <Card as="section" padding="lg">
@@ -37,7 +41,7 @@ function ReviewStep({
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">4</span>
           <div>
             <h2 className="text-2xl font-semibold">Проверка и оплата</h2>
-            <p className="text-sm text-muted">Проверьте данные. После этого откроется защищённая страница оплаты.</p>
+            <p className="text-sm text-muted">{reviewDescription}</p>
           </div>
         </div>
         {!active ? (
@@ -125,7 +129,9 @@ function ReviewStep({
           ) : null}
 
           <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-xs text-ink/90">
-            Нажимая «Перейти к оплате», вы подтверждаете заказ. Если банк запросит 3DS/SCA, вы увидите отдельный шаг подтверждения.
+            Нажимая «
+            {submitLabel}
+            », вы подтверждаете заказ. Если банк запросит 3DS/SCA, вы увидите отдельный шаг подтверждения.
           </div>
 
           <Button type="submit" block className="mt-5" disabled={isSubmitting}>

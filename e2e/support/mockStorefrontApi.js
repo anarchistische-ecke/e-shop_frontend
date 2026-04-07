@@ -44,8 +44,33 @@ function fulfillJson(route, payload, status = 200) {
   });
 }
 
-async function mockStorefrontApi(page) {
+async function mockStorefrontApi(page, overrides = {}) {
   const cartState = createCartState();
+  const stats = {
+    addItemRequests: 0,
+  };
+  const paymentProviderConfig = {
+    ...clone(paymentProvider),
+    ...(overrides.paymentProvider || {}),
+  };
+  const publicOrderPayload = clone(overrides.publicOrder || publicOrder);
+  const checkoutResponse =
+    overrides.checkoutResponse || {
+      order: publicOrderPayload,
+      payment: {
+        paymentId: 'payment-e2e-checkout',
+        confirmationType: 'REDIRECT',
+        confirmationUrl: 'https://payments.example.test/checkout',
+        confirmationToken: '',
+      },
+    };
+  const payResponse =
+    overrides.payResponse || {
+      paymentId: 'payment-e2e-retry',
+      confirmationType: 'REDIRECT',
+      confirmationUrl: 'https://payments.example.test/retry',
+      confirmationToken: '',
+    };
 
   await page.addInitScript(() => {
     window.localStorage.clear();
@@ -67,7 +92,33 @@ async function mockStorefrontApi(page) {
     }
 
     if (pathname === '/payments/public-config' && method === 'GET') {
-      return fulfillJson(route, clone(paymentProvider));
+      return fulfillJson(route, clone(paymentProviderConfig));
+    }
+
+    if (
+      pathname === '/checkout-widget/v1/checkout-widget.js' &&
+      url.hostname === 'yookassa.ru' &&
+      method === 'GET'
+    ) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/javascript',
+        body: `
+          window.YooMoneyCheckoutWidget = function YooMoneyCheckoutWidget(config) {
+            this.render = function render(containerId) {
+              var root = document.getElementById(containerId);
+              if (!root) {
+                throw new Error('Missing widget container');
+              }
+              root.innerHTML = '<div data-testid="mock-yookassa-widget" style="padding:16px;border:1px solid #d6cdc4;border-radius:16px;background:#fff;"><p style="margin:0 0 12px 0;font:600 14px sans-serif;">ТестКасса Secure Form</p><button type="button" data-testid="mock-yookassa-pay-button" style="min-height:44px;padding:10px 16px;border-radius:999px;background:#b65b4a;color:#fff;border:none;">Оплатить</button></div>';
+              root.querySelector('[data-testid="mock-yookassa-pay-button"]').addEventListener('click', function() {
+                window.location.assign(config.return_url);
+              });
+            };
+            this.destroy = function destroy() {};
+          };
+        `,
+      });
     }
 
     if (pathname === '/products' && method === 'GET') {
@@ -92,6 +143,10 @@ async function mockStorefrontApi(page) {
     }
 
     if (pathname === `/carts/${cartState.id}/items` && method === 'POST') {
+      stats.addItemRequests += 1;
+      if (overrides.addItemDelayMs) {
+        await new Promise((resolve) => setTimeout(resolve, overrides.addItemDelayMs));
+      }
       const body = request.postDataJSON();
       const quantity = Number(body.quantity) || 1;
       const variantId = body.variantId;
@@ -135,25 +190,19 @@ async function mockStorefrontApi(page) {
     }
 
     if (pathname === '/orders/checkout' && method === 'POST') {
-      return fulfillJson(route, {
-        orderId: publicOrder.id,
-        publicToken: publicOrder.publicToken,
-        confirmationUrl: 'https://payments.example.test/checkout',
-      });
+      return fulfillJson(route, clone(checkoutResponse));
     }
 
-    if (pathname === `/orders/public/${publicOrder.publicToken}` && method === 'GET') {
-      return fulfillJson(route, clone(publicOrder));
+    if (pathname === `/orders/public/${publicOrderPayload.publicToken}` && method === 'GET') {
+      return fulfillJson(route, clone(publicOrderPayload));
     }
 
-    if (pathname === `/orders/public/${publicOrder.publicToken}/pay` && method === 'POST') {
-      return fulfillJson(route, {
-        confirmationUrl: 'https://payments.example.test/retry',
-      });
+    if (pathname === `/orders/public/${publicOrderPayload.publicToken}/pay` && method === 'POST') {
+      return fulfillJson(route, clone(payResponse));
     }
 
-    if (pathname === `/orders/public/${publicOrder.publicToken}/refresh-payment` && method === 'POST') {
-      return fulfillJson(route, clone(publicOrder));
+    if (pathname === `/orders/public/${publicOrderPayload.publicToken}/refresh-payment` && method === 'POST') {
+      return fulfillJson(route, clone(publicOrderPayload));
     }
 
     if (pathname === '/deliveries/yandex/offers' && method === 'POST') {
@@ -188,7 +237,7 @@ async function mockStorefrontApi(page) {
     return route.continue();
   });
 
-  return { cartState };
+  return { cartState, stats };
 }
 
 module.exports = {

@@ -1,6 +1,12 @@
 const COUNTER_ID = Number(process.env.REACT_APP_YANDEX_METRIKA_ID || 0);
 const SCRIPT_ID = 'yandex-metrika-tag';
 const SCRIPT_SRC = 'https://mc.yandex.ru/metrika/tag.js';
+const DEFAULT_METRIKA_OPTIONS = {
+  clickmap: true,
+  trackLinks: true,
+  accurateTrackBounce: true,
+  webvisor: true
+};
 
 export const METRIKA_GOALS = {
   ADD_TO_CART: 'add_to_cart',
@@ -21,6 +27,28 @@ function canUseMetrika() {
   return typeof window !== 'undefined' && Number.isFinite(COUNTER_ID) && COUNTER_ID > 0;
 }
 
+function readBooleanEnv(name, fallback) {
+  const rawValue = process.env[name];
+  if (typeof rawValue !== 'string') return fallback;
+  const normalized = rawValue.trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
+function resolveMetrikaOptions() {
+  return {
+    clickmap: readBooleanEnv('REACT_APP_YANDEX_METRIKA_CLICKMAP', DEFAULT_METRIKA_OPTIONS.clickmap),
+    trackLinks: readBooleanEnv('REACT_APP_YANDEX_METRIKA_TRACK_LINKS', DEFAULT_METRIKA_OPTIONS.trackLinks),
+    accurateTrackBounce: readBooleanEnv(
+      'REACT_APP_YANDEX_METRIKA_ACCURATE_BOUNCE',
+      DEFAULT_METRIKA_OPTIONS.accurateTrackBounce
+    ),
+    webvisor: readBooleanEnv('REACT_APP_YANDEX_METRIKA_WEBVISOR', DEFAULT_METRIKA_OPTIONS.webvisor)
+  };
+}
+
 function sanitizeParams(params = {}) {
   return Object.entries(params).reduce((acc, [key, value]) => {
     if (value === undefined || value === null || value === '') return acc;
@@ -32,7 +60,17 @@ function sanitizeParams(params = {}) {
 }
 
 export function initYandexMetrika() {
-  if (!canUseMetrika()) return;
+  if (!canUseMetrika()) {
+    if (
+      typeof window !== 'undefined' &&
+      process.env.NODE_ENV !== 'production' &&
+      !window.__cozyhomeMetrikaWarningShown
+    ) {
+      console.info('Yandex.Metrica is disabled: REACT_APP_YANDEX_METRIKA_ID is not configured.');
+      window.__cozyhomeMetrikaWarningShown = true;
+    }
+    return;
+  }
   if (window.__cozyhomeMetrikaReady) return;
 
   if (!window.ym) {
@@ -52,12 +90,7 @@ export function initYandexMetrika() {
     document.head.appendChild(script);
   }
 
-  window.ym(COUNTER_ID, 'init', {
-    clickmap: true,
-    trackLinks: true,
-    accurateTrackBounce: true,
-    webvisor: true
-  });
+  window.ym(COUNTER_ID, 'init', resolveMetrikaOptions());
 
   window.__cozyhomeMetrikaReady = true;
 }

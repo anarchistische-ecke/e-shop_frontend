@@ -3,21 +3,13 @@ import { Link, useLocation } from 'react-router-dom';
 import NotificationBanner from './NotificationBanner';
 import { CartContext } from '../contexts/CartContext';
 import { Button, Card } from './ui';
-import { reviews } from '../data/reviews';
 import {
   getPrimaryVariant,
   getProductPrice,
   moneyToNumber,
   normalizeProductImages,
 } from '../utils/product';
-
-const reviewStats = reviews.reduce((acc, review) => {
-  const entry = acc[review.productId] || { total: 0, count: 0 };
-  entry.total += review.rating;
-  entry.count += 1;
-  acc[review.productId] = entry;
-  return acc;
-}, {});
+import { buildProductPath } from '../utils/url';
 
 function getStockCount(product) {
   if (!product) return 0;
@@ -74,21 +66,16 @@ function ProductCard({ product }) {
 
   const activeImage = images[activeImageIndex]?.url || images[0]?.url || '';
 
-  const rating = Number(product?.rating || 0);
-  const reviewCount =
-    product.reviewCount ??
-    product.reviewsCount ??
-    product.reviews_count ??
-    reviewStats[product.id]?.count ??
-    0;
-
-  const derivedRating = reviewStats[product.id]?.count
-    ? reviewStats[product.id].total / reviewStats[product.id].count
-    : rating;
-
-  const displayRating = derivedRating || rating;
   const stockCount = getStockCount(product);
   const isLowStock = stockCount > 0 && stockCount <= 3;
+  const stockLabel =
+    stockCount <= 0
+      ? 'Нет в наличии'
+      : isLowStock
+      ? `Осталось ${stockCount} шт.`
+      : 'В наличии';
+  const stockTone =
+    stockCount <= 0 ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700';
 
   const attributeLine =
     product?.material
@@ -101,8 +88,7 @@ function ProductCard({ product }) {
 
   const badges = [
     isLowStock ? `Мало на складе: ${stockCount}` : '',
-    displayRating >= 4.8 ? 'Хит продаж' : '',
-    !hasDiscount && displayRating >= 4.5 ? 'Новинка' : '',
+    product?.category === 'new' ? 'Новинка' : '',
   ].filter(Boolean);
 
   return (
@@ -115,7 +101,7 @@ function ProductCard({ product }) {
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link
-        to={`/product/${product.id}`}
+        to={buildProductPath(product)}
         state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
         className="block"
       >
@@ -177,22 +163,15 @@ function ProductCard({ product }) {
 
       <div className="mt-3 flex flex-1 flex-col gap-2">
         <Link
-          to={`/product/${product.id}`}
+          to={buildProductPath(product)}
           state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
           className="block"
         >
           <p className="min-h-[2.75rem] line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
         </Link>
 
-        <div className="min-h-[1.1rem] flex items-center gap-2 text-xs text-muted">
-          {displayRating > 0 ? (
-            <>
-              <span className="text-primary">★ {displayRating.toFixed(1)}</span>
-              <span>({reviewCount})</span>
-            </>
-          ) : (
-            <span>Нет отзывов</span>
-          )}
+        <div className={`min-h-[1.1rem] flex items-center gap-2 text-xs ${stockTone}`}>
+          <span>{stockLabel}</span>
         </div>
 
         <p className="min-h-[1.1rem] line-clamp-1 text-xs text-muted">{attributeLine}</p>
@@ -208,27 +187,41 @@ function ProductCard({ product }) {
               </span>
             )}
           </div>
-          <AddToCartButton product={product} variantId={primaryVariant?.id} />
+          <AddToCartButton
+            product={product}
+            variantId={primaryVariant?.id}
+            disabled={stockCount <= 0}
+          />
         </div>
       </div>
     </Card>
   );
 }
 
-function AddToCartButton({ product, variantId }) {
+function AddToCartButton({ product, variantId, disabled = false }) {
   const { addItem } = useContext(CartContext);
   const [status, setStatus] = useState(null);
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     setStatus(null);
+    setIsAdding(false);
   }, [product?.id, variantId]);
 
   const handleClick = async (event) => {
     event.preventDefault();
+    if (isAdding || disabled) {
+      return;
+    }
     setStatus(null);
-    const result = await addItem(product, variantId, 1);
-    if (result?.ok === false) {
-      setStatus(result.notification);
+    setIsAdding(true);
+    try {
+      const result = await addItem(product, variantId, 1);
+      if (result?.ok === false) {
+        setStatus(result.notification);
+      }
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -238,8 +231,11 @@ function AddToCartButton({ product, variantId }) {
         size="sm"
         className="w-full bg-accent px-3 py-2 text-xs shadow-[0_10px_20px_rgba(47,61,50,0.24)] hover:bg-accent/90 sm:w-auto"
         onClick={handleClick}
+        disabled={disabled || isAdding}
       >
-        <span>В корзину</span>
+        <span>
+          {disabled ? 'Нет в наличии' : isAdding ? 'Добавляем…' : 'В корзину'}
+        </span>
       </Button>
       {status ? <NotificationBanner notification={status} compact className="mt-2 sm:max-w-[240px]" /> : null}
     </div>

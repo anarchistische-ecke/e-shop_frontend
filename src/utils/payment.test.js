@@ -4,6 +4,9 @@ import {
   getOrderPaymentNotice,
   getPaymentSummaryLabel,
   getReviewPaymentHint,
+  hasEmbeddedPaymentSession,
+  hasRedirectPaymentSession,
+  normalizePaymentSession,
   normalizePaymentConfig
 } from './payment';
 
@@ -17,7 +20,10 @@ describe('payment utils', () => {
         providerName: 'YooKassa',
         methodSummary: 'карта / SberPay',
         checkoutDescription: '',
-        resumePaymentLabel: ''
+        resumePaymentLabel: '',
+        confirmationMode: 'embedded',
+        supportsEmbedded: true,
+        widgetScriptUrl: ''
       })
     ).toEqual({
       enabled: true,
@@ -25,8 +31,11 @@ describe('payment utils', () => {
       providerName: 'YooKassa',
       methodSummary: 'карта / SberPay',
       checkoutDescription:
-        'Оплата на защищённой странице YooKassa. Данные карты не хранятся в браузере магазина.',
-      resumePaymentLabel: 'Продолжить оплату через YooKassa'
+        'Оплата во встроенной защищённой форме YooKassa. Данные карты не хранятся в браузере магазина.',
+      resumePaymentLabel: 'Открыть форму оплаты через YooKassa',
+      confirmationMode: 'EMBEDDED',
+      supportsEmbedded: true,
+      widgetScriptUrl: 'https://yookassa.ru/checkout-widget/v1/checkout-widget.js'
     });
   });
 
@@ -48,6 +57,32 @@ describe('payment utils', () => {
     );
   });
 
+  it('normalizes payment sessions for embedded and redirect flows', () => {
+    const embeddedSession = normalizePaymentSession(
+      {
+        paymentId: 'payment-1',
+        confirmationType: 'embedded',
+        confirmationToken: 'ct-test'
+      },
+      { returnUrl: 'https://example.com/shop/order/token-1' }
+    );
+    const redirectSession = normalizePaymentSession({
+      paymentId: 'payment-2',
+      confirmationUrl: 'https://payments.example.test/checkout'
+    });
+
+    expect(embeddedSession).toEqual({
+      paymentId: 'payment-1',
+      confirmationUrl: '',
+      confirmationType: 'EMBEDDED',
+      confirmationToken: 'ct-test',
+      returnUrl: 'https://example.com/shop/order/token-1'
+    });
+    expect(hasEmbeddedPaymentSession(embeddedSession)).toBe(true);
+    expect(hasRedirectPaymentSession(embeddedSession)).toBe(false);
+    expect(hasRedirectPaymentSession(redirectSession)).toBe(true);
+  });
+
   it('returns different order recovery copy for pending and processing orders', () => {
     const pendingNotice = getOrderPaymentNotice(
       { providerName: 'YooKassa', resumePaymentLabel: 'Продолжить оплату через YooKassa' },
@@ -62,5 +97,15 @@ describe('payment utils', () => {
     expect(processingNotice.type).toBe('warning');
     expect(pendingNotice.ctaLabel).toBe('Продолжить оплату через YooKassa');
     expect(processingNotice.message).toContain('автоматически проверяем');
+    expect(
+      getOrderPaymentNotice(
+        {
+          providerName: 'YooKassa',
+          resumePaymentLabel: 'Продолжить оплату через YooKassa',
+          confirmationMode: 'EMBEDDED'
+        },
+        'PENDING'
+      ).message
+    ).toContain('встроенная форма');
   });
 });

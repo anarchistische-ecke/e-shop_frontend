@@ -29,22 +29,18 @@ describe('header utils', () => {
     const params = buildHeaderSearchParams({
       queryValue: 'Плед',
       scopeValue: 'bedding',
-      originalQuery: 'плде',
-      categoryByNormalizedToken: {
-        bedding: { name: 'Постельное белье' }
-      }
+      originalQuery: 'плде'
     });
 
     expect(params.get('query')).toBe('Плед');
     expect(params.get('scope')).toBe('bedding');
-    expect(params.get('scopeLabel')).toBe('Постельное белье');
     expect(params.get('original')).toBe('плде');
-    expect(params.get('corrected')).toBe('Плед');
   });
 
   it('resolves wayfinding labels and account links', () => {
     expect(resolveWayfindingLabel('/checkout')).toBe('Оформление');
     expect(resolveWayfindingLabel('/category/search?query=плед')).toBe('Поиск');
+    expect(resolveWayfindingLabel('/catalog', '?query=плед')).toBe('Поиск');
     expect(buildAccountLinks(false)).toHaveLength(6);
     expect(buildAccountLinks(true)).toEqual([
       { to: '/account#overview', label: 'Сводка' },

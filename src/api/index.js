@@ -1,4 +1,4 @@
-import { clearSession, getAccessToken } from '../auth/session';
+import { clearAllAuthStorage, getAccessToken } from '../auth/session';
 
 const inferBrowserApiBase = () =>
   (typeof window !== 'undefined' ? window.__API_BASE__ || window.location.origin : null);
@@ -25,9 +25,7 @@ export function isApiRequestError(error) {
 
 function broadcastLogout(reason = 'logout') {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('userToken');
-  clearSession();
+  clearAllAuthStorage();
 }
 
 async function request(url, options = {}) {
@@ -258,6 +256,7 @@ export async function checkoutCart({
   receiptEmail,
   returnUrl,
   orderPageUrl,
+  confirmationMode,
   savePaymentMethod,
   delivery,
   idempotencyKey,
@@ -270,7 +269,15 @@ export async function checkoutCart({
     method: 'POST',
     signal,
     headers: { 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify({ cartId, receiptEmail, returnUrl, orderPageUrl, savePaymentMethod, delivery })
+    body: JSON.stringify({
+      cartId,
+      receiptEmail,
+      returnUrl,
+      orderPageUrl,
+      confirmationMode,
+      savePaymentMethod,
+      delivery
+    })
   });
 }
 export async function getYandexDeliveryOffers(payload = {}) {
@@ -306,10 +313,10 @@ export async function getOrder(id) {
 export async function getPublicOrder(token) {
   return request(`/orders/public/${token}`);
 }
-export async function payPublicOrder({ token, receiptEmail, returnUrl } = {}) {
+export async function payPublicOrder({ token, receiptEmail, returnUrl, confirmationMode } = {}) {
   return request(`/orders/public/${token}/pay`, {
     method: 'POST',
-    body: JSON.stringify({ receiptEmail, returnUrl })
+    body: JSON.stringify({ receiptEmail, returnUrl, confirmationMode })
   });
 }
 export async function refreshPublicOrderPayment(token) {

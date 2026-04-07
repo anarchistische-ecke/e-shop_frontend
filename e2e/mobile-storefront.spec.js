@@ -11,6 +11,7 @@ test('customer can add a product to cart and open checkout on mobile', async ({ 
   await expect(page.getByRole('heading', { name: 'Бестселлеры недели' })).toBeVisible();
 
   await page.getByRole('link', { name: /Сатиновый комплект Sand/i }).first().click();
+  await expect(page).toHaveURL(/\/product\/prod-satin-sand\/satin-sand$/);
   await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
 
   await page.getByRole('button', { name: 'Добавить в корзину' }).click();
@@ -26,4 +27,5 @@ test('customer can add a product to cart and open checkout on mobile', async ({ 
   await page.getByRole('button', { name: 'Оформить заказ' }).click();
   await expect(page).toHaveURL(/\/checkout$/);
   await expect(page.getByRole('heading', { name: /Быстрое оформление без лишних шагов/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Безопасная оплата/i })).toBeVisible();
 });

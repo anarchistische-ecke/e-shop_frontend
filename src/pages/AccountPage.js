@@ -1,12 +1,22 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   getCustomerOrders,
   updateCustomerProfile
 } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
+import Seo from '../components/Seo';
 import { Button, Card, Input, Select, Tabs } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
+import { moneyToNumber } from '../utils/product';
+import {
+  ACCOUNT_DEFAULT_SECTION,
+  ACCOUNT_ORDERS_SECTION,
+  buildAccountOrderPath,
+  buildAccountSectionPath,
+  findAccountOrderById,
+  resolveAccountLocationState
+} from '../utils/account';
 import ManagerAccountPage from './ManagerAccountPage';
 
 const IconProfile = ({ className }) => (
@@ -180,6 +190,8 @@ const formatOrderStatus = (status) => {
 };
 
 function AccountPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { isAuthenticated, isReady, tokenParsed, logout, refreshProfile, hasRole, hasStrongAuth } = useAuth();
   const customerRole = process.env.REACT_APP_KEYCLOAK_CUSTOMER_ROLE || 'customer';
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
@@ -187,7 +199,6 @@ function AccountPage() {
   const isManager = hasManagerRole && hasStrongAuth();
   const isCustomer = isAuthenticated && hasRole(customerRole);
   const [orders, setOrders] = useState([]);
-  const [activeSection, setActiveSection] = useState('profile');
   const [profile, setProfile] = useState({
     firstName: '',
     lastName: '',
@@ -203,34 +214,47 @@ function AccountPage() {
   const [ordersError, setOrdersError] = useState(null);
   const [copyStatus, setCopyStatus] = useState(null);
 
-  useEffect(() => {
-    if (!isAuthenticated || isManager) return;
-    let mounted = true;
+  const routeState = useMemo(() => {
+    const nextState = resolveAccountLocationState({
+      hash: location.hash,
+      search: location.search
+    });
+
+    return {
+      section: SECTION_ID_SET.has(nextState.section)
+        ? nextState.section
+        : ACCOUNT_DEFAULT_SECTION,
+      orderId: nextState.orderId
+    };
+  }, [location.hash, location.search]);
+  const activeSection = routeState.section;
+  const selectedOrderId =
+    activeSection === ACCOUNT_ORDERS_SECTION ? routeState.orderId : '';
+
+  const loadOrders = useCallback(async () => {
     setIsOrdersLoading(true);
     setOrdersError(null);
-    getCustomerOrders()
-      .then((data) => {
-        if (!mounted) return;
-        const list = Array.isArray(data) ? data.slice() : [];
-        list.sort((a, b) => {
-          const timeA = new Date(a.createdAt || a.orderDate || 0).getTime();
-          const timeB = new Date(b.createdAt || b.orderDate || 0).getTime();
-          return timeB - timeA;
-        });
-        setOrders(list);
-      })
-      .catch((err) => {
-        if (!mounted) return;
-        console.error('Failed to fetch orders:', err);
-        setOrdersError('Не удалось загрузить заказы. Попробуйте позже.');
-      })
-      .finally(() => {
-        if (mounted) setIsOrdersLoading(false);
+    try {
+      const data = await getCustomerOrders();
+      const list = Array.isArray(data) ? data.slice() : [];
+      list.sort((a, b) => {
+        const timeA = new Date(a.createdAt || a.orderDate || 0).getTime();
+        const timeB = new Date(b.createdAt || b.orderDate || 0).getTime();
+        return timeB - timeA;
       });
-    return () => {
-      mounted = false;
-    };
-  }, [isAuthenticated]);
+      setOrders(list);
+    } catch (err) {
+      console.error('Failed to fetch orders:', err);
+      setOrdersError('Не удалось загрузить заказы. Попробуйте ещё раз.');
+    } finally {
+      setIsOrdersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || isManager) return;
+    loadOrders();
+  }, [isAuthenticated, isManager, loadOrders]);
 
   useEffect(() => {
     if (!isAuthenticated || isManager) return;
@@ -292,34 +316,6 @@ function AccountPage() {
     }));
   }, [derivedName, tokenParsed]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const hash = window.location.hash.replace('#', '');
-    if (!hash) {
-      setActiveSection('profile');
-      return;
-    }
-    if (SECTION_ID_SET.has(hash)) {
-      setActiveSection(hash);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (!hash) {
-        setActiveSection('profile');
-        return;
-      }
-      if (SECTION_ID_SET.has(hash)) {
-        setActiveSection(hash);
-      }
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
   if (!isReady) {
     return null;
   }
@@ -354,6 +350,17 @@ function AccountPage() {
     tokenParsed?.phoneNumber ||
     'Добавьте телефон';
   const activeLabel = SECTION_LABELS[activeSection] || 'Профиль';
+  const selectedOrder = useMemo(
+    () => findAccountOrderById(orders, selectedOrderId),
+    [orders, selectedOrderId]
+  );
+  const selectedOrderNotFound =
+    activeSection === ACCOUNT_ORDERS_SECTION &&
+    Boolean(selectedOrderId) &&
+    !isOrdersLoading &&
+    !ordersError &&
+    orders.length > 0 &&
+    !selectedOrder;
 
   const handleProfileChange = (field) => (event) => {
     setProfile((prev) => ({ ...prev, [field]: event.target.value }));
@@ -393,11 +400,8 @@ function AccountPage() {
     }
   };
 
-  const handleSectionChange = (section) => {
-    setActiveSection(section);
-    if (typeof window !== 'undefined' && window.history?.replaceState) {
-      window.history.replaceState(null, '', `#${section}`);
-    }
+  const handleSectionChange = (section, { orderId } = {}) => {
+    navigate(buildAccountSectionPath(section, { orderId }), { replace: true });
   };
 
   const handleLogout = () => {
@@ -431,6 +435,24 @@ function AccountPage() {
     }
     if (typeof totalValue === 'number') return totalValue;
     return 0;
+  };
+
+  const getOrderDateLabel = (order, { withTime = false } = {}) => {
+    const rawDate = order?.createdAt || order?.orderDate;
+    if (!rawDate) return 'Дата уточняется';
+    const date = new Date(rawDate);
+    if (Number.isNaN(date.getTime())) return 'Дата уточняется';
+    return withTime
+      ? date.toLocaleString('ru-RU')
+      : date.toLocaleDateString('ru-RU');
+  };
+
+  const getOrderDeliveryLabel = (order) => {
+    if (!order) return 'Уточним после подтверждения заказа';
+    if (order.deliveryPickupPointName) return order.deliveryPickupPointName;
+    if (order.deliveryAddress) return order.deliveryAddress;
+    if (order.deliveryMethod) return order.deliveryMethod;
+    return 'Уточним после подтверждения заказа';
   };
 
   const renderSection = () => {
@@ -655,20 +677,111 @@ function AccountPage() {
             {isOrdersLoading ? (
               <p className="text-sm text-muted">Загружаем историю заказов…</p>
             ) : ordersError ? (
-              <NotificationBanner notification={{ type: 'error', message: ordersError }} />
+              <div className="space-y-3">
+                <NotificationBanner notification={{ type: 'error', message: ordersError }} />
+                <Button type="button" variant="secondary" onClick={loadOrders}>
+                  Повторить загрузку
+                </Button>
+              </div>
             ) : orders.length === 0 ? (
               <p className="text-sm text-muted">
                 У вас ещё нет заказов. Самое время подобрать уютный комплект.
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {selectedOrder ? (
+                  <Card variant="quiet" padding="md" className="bg-sand/35">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-muted">Детали заказа</p>
+                        <h3 className="mt-1 text-lg font-semibold">
+                          Заказ {String(selectedOrder.id).slice(0, 8)}...
+                        </h3>
+                        <p className="mt-1 text-sm text-muted">
+                          {getOrderDateLabel(selectedOrder, { withTime: true })} · {formatOrderStatus(selectedOrder.status)}
+                        </p>
+                      </div>
+                      {selectedOrder.publicToken ? (
+                        <Button as={Link} to={buildAccountOrderPath(selectedOrder)} variant="secondary" size="sm">
+                          Открыть страницу заказа
+                        </Button>
+                      ) : (
+                        <span className="max-w-xs text-xs text-muted">
+                          Для этого заказа нет публичной ссылки, поэтому актуальные детали доступны здесь, в личном кабинете.
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <Card variant="tint" padding="sm" className="bg-white/90 shadow-none">
+                        <p className="text-xs uppercase tracking-[0.16em] text-muted">Оплата и контакт</p>
+                        <p className="mt-2 text-sm font-semibold">
+                          {getOrderTotal(selectedOrder).toLocaleString('ru-RU')} ₽
+                        </p>
+                        <p className="mt-1 text-xs text-muted">
+                          {selectedOrder.receiptEmail || 'Email для чека уточняется'}
+                        </p>
+                      </Card>
+                      <Card variant="tint" padding="sm" className="bg-white/90 shadow-none">
+                        <p className="text-xs uppercase tracking-[0.16em] text-muted">Доставка</p>
+                        <p className="mt-2 text-sm font-semibold">{getOrderDeliveryLabel(selectedOrder)}</p>
+                        <p className="mt-1 text-xs text-muted">
+                          {selectedOrder.deliveryProvider
+                            ? `${selectedOrder.deliveryProvider} · ${selectedOrder.deliveryMethod || 'способ уточняется'}`
+                            : 'Способ доставки уточняется'}
+                        </p>
+                      </Card>
+                    </div>
+
+                    {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
+                      <div className="mt-4 border-t border-ink/10 pt-4">
+                        <p className="text-xs uppercase tracking-[0.16em] text-muted">Состав заказа</p>
+                        <div className="mt-3 space-y-2">
+                          {selectedOrder.items.map((item, index) => {
+                            const itemUnitPrice = moneyToNumber(item.unitPrice);
+                            const itemTotal = itemUnitPrice * (item.quantity || 0);
+                            const itemKey = item.id || `${item.variantId || 'item'}-${index}`;
+
+                            return (
+                              <div
+                                key={itemKey}
+                                className="flex items-start justify-between gap-3 rounded-2xl border border-ink/10 bg-white/85 px-3 py-3 text-sm"
+                              >
+                                <div>
+                                  <p className="font-semibold">
+                                    {item.productName || item.variantName || item.sku || 'Товар'}
+                                  </p>
+                                  <p className="mt-1 text-xs text-muted">
+                                    {item.variantName || item.sku || 'Вариант уточняется'} · {item.quantity || 0} шт.
+                                  </p>
+                                </div>
+                                <div className="text-right font-semibold">
+                                  {itemTotal.toLocaleString('ru-RU')} ₽
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </Card>
+                ) : selectedOrderNotFound ? (
+                  <NotificationBanner
+                    notification={{
+                      type: 'warning',
+                      title: 'Заказ из ссылки не найден',
+                      message: 'Он уже может быть недоступен в вашем кабинете или был оформлен на другой аккаунт.'
+                    }}
+                  />
+                ) : (
+                  <Card variant="quiet" padding="sm" className="text-sm text-muted">
+                    Выберите заказ из списка, чтобы открыть детали здесь. Если у заказа есть публичная ссылка, его можно открыть на отдельной странице.
+                  </Card>
+                )}
+
+                <div className="space-y-3">
                 {orders.map((order) => {
-                  const date = order.createdAt
-                    ? new Date(order.createdAt)
-                    : order.orderDate
-                      ? new Date(order.orderDate)
-                      : new Date();
-                  const dateStr = date.toLocaleDateString('ru-RU');
+                  const dateStr = getOrderDateLabel(order);
                   const totalAmount = getOrderTotal(order);
                   return (
                     <div
@@ -682,19 +795,24 @@ function AccountPage() {
                       <div className="text-sm text-right">
                         <p className="font-semibold">{totalAmount.toLocaleString('ru-RU')} ₽</p>
                         <div className="mt-1 flex flex-col items-end gap-1">
-                          {order.publicToken && (
-                            <Button as={Link} to={`/order/${order.publicToken}`} variant="ghost" size="sm" className="!min-h-0 !px-0 !py-0 text-xs text-primary">
-                              Открыть заказ
-                            </Button>
-                          )}
-                          <Button type="button" variant="ghost" size="sm" className="!min-h-0 !px-0 !py-0 text-xs text-primary">
-                            Повторить заказ
+                          <Button
+                            as={Link}
+                            to={buildAccountOrderPath(order)}
+                            variant="ghost"
+                            size="sm"
+                            className="!min-h-0 !px-0 !py-0 text-xs text-primary"
+                          >
+                            {order.publicToken ? 'Открыть заказ' : 'Открыть детали'}
                           </Button>
+                          {!order.publicToken ? (
+                            <span className="text-[11px] text-muted">Детали доступны в кабинете</span>
+                          ) : null}
                         </div>
                       </div>
                     </div>
                   );
                 })}
+                </div>
               </div>
             )}
           </Card>
@@ -718,6 +836,16 @@ function AccountPage() {
 
   return (
     <div className="account-page py-10 sm:py-12">
+      <Seo
+        title="Личный кабинет"
+        description="Профиль покупателя, история заказов, бонусы и персональные данные для быстрого повторного оформления."
+        canonicalPath={
+          activeSection === ACCOUNT_DEFAULT_SECTION
+            ? '/account'
+            : buildAccountSectionPath(activeSection, { orderId: selectedOrderId })
+        }
+        robots="noindex,nofollow"
+      />
       <div className="container mx-auto px-4">
         <div className="relative mb-8">
           <div className="pointer-events-none absolute -top-10 right-0 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />

@@ -1,19 +1,19 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
-import { getCategories, getProduct, getProducts } from '../api';
+import { getProduct } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
+import Seo from '../components/Seo';
 import ProductCard from '../components/ProductCard';
-import { Button, Card, FieldError, Input, Modal, Tabs } from '../components/ui';
-import { reviews } from '../data/reviews';
+import { Button, Card, Modal, Tabs } from '../components/ui';
+import { useProductDirectoryData } from '../features/product-list/data';
 import {
   getPrimaryVariant,
   getProductPrice,
   moneyToNumber,
   normalizeProductImages,
 } from '../utils/product';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { buildProductPath } from '../utils/url';
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -40,6 +40,39 @@ function resolveProductCategoryToken(product) {
 
 function formatRub(value) {
   return `${Math.max(0, Number(value) || 0).toLocaleString('ru-RU')} ₽`;
+}
+
+function getStockValue(entity) {
+  return Number(entity?.stock ?? entity?.stockQuantity ?? 0);
+}
+
+function getAvailabilityMeta(stock, { selected = false } = {}) {
+  if (stock <= 0) {
+    return {
+      tone: 'text-red-700',
+      badgeClass: 'border-red-200 bg-red-50/80 text-red-700',
+      label: selected ? 'Нет в наличии для выбранного варианта' : 'Нет в наличии',
+      detail: selected
+        ? 'Выберите другой вариант или посмотрите похожие товары.'
+        : 'Сейчас недоступно'
+    };
+  }
+
+  if (stock <= 3) {
+    return {
+      tone: 'text-amber-700',
+      badgeClass: 'border-amber-200 bg-amber-50/80 text-amber-800',
+      label: selected ? `Осталось ${stock} шт. для выбранного варианта` : `Осталось ${stock} шт.`,
+      detail: 'Редкий остаток, лучше оформить заказ без задержки.'
+    };
+  }
+
+  return {
+    tone: 'text-emerald-700',
+    badgeClass: 'border-emerald-200 bg-emerald-50/80 text-emerald-800',
+    label: selected ? `В наличии ${stock} шт. для выбранного варианта` : `В наличии ${stock} шт.`,
+    detail: 'Можно добавить в корзину или перейти сразу к оформлению.'
+  };
 }
 
 function detectScaleImage(images = []) {
@@ -87,18 +120,43 @@ function TrustIcon({ type }) {
   );
 }
 
+function ProductInfoCard({ icon, title, summary, caption, onOpen }) {
+  return (
+    <Card
+      as="button"
+      type="button"
+      variant="quiet"
+      padding="sm"
+      interactive
+      className="w-full rounded-3xl text-left"
+      onClick={onOpen}
+    >
+      <div className="flex items-start gap-3">
+        <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-ink/10 bg-white/80 text-ink/85">
+          <TrustIcon type={icon} />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-ink">{title}</span>
+          <span className="mt-1 block text-sm text-ink/85">{summary}</span>
+          <span className="mt-2 block text-xs text-muted">{caption}</span>
+          <span className="mt-2 inline-flex text-xs font-medium text-primary">Подробнее</span>
+        </span>
+      </div>
+    </Card>
+  );
+}
+
 function ProductPage() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { addItem } = useContext(CartContext);
+  const { categories, products: directoryProducts } = useProductDirectoryData();
 
   const [product, setProduct] = useState(null);
-  const [categories, setCategories] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [activeTab, setActiveTab] = useState('about');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [relatedProducts, setRelatedProducts] = useState([]);
   const [bundleSelections, setBundleSelections] = useState({});
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -107,21 +165,11 @@ function ProductPage() {
   const [sheetType, setSheetType] = useState('shipping');
   const [isInfoSheetOpen, setIsInfoSheetOpen] = useState(false);
   const [isVariantTransitioning, setIsVariantTransitioning] = useState(false);
-  const [notifyEmail, setNotifyEmail] = useState('');
-  const [notifyState, setNotifyState] = useState({ type: '', message: '' });
+  const [pendingAction, setPendingAction] = useState('');
   const [cartStatus, setCartStatus] = useState(null);
 
   const transitionTimerRef = useRef(null);
   const cartInputRef = useRef({ quantity: 1, variantId: null });
-
-  useEffect(() => {
-    getCategories()
-      .then((data) => setCategories(Array.isArray(data) ? data : []))
-      .catch((err) => {
-        console.error('Failed to fetch categories:', err);
-        setCategories([]);
-      });
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -143,16 +191,14 @@ function ProductPage() {
     }
 
     cartInputRef.current = nextInputs;
-  }, [cartStatus, quantity, selectedVariant?.id]);
+    }, [cartStatus, quantity, selectedVariant?.id]);
 
   useEffect(() => {
     setActiveTab('about');
     setActiveImageIndex(0);
-    setRelatedProducts([]);
     setBundleSelections({});
     setQuantity(1);
-    setNotifyEmail('');
-    setNotifyState({ type: '', message: '' });
+    setPendingAction('');
     setCartStatus(null);
     setIsLoading(true);
 
@@ -165,8 +211,10 @@ function ProductPage() {
         }
 
         setProduct(data);
+        const variants = Array.isArray(data?.variants) ? data.variants : Array.from(data?.variants || []);
         const primaryVariant = getPrimaryVariant(data);
-        setSelectedVariant(primaryVariant || null);
+        const firstAvailableVariant = variants.find((variant) => getStockValue(variant) > 0);
+        setSelectedVariant(firstAvailableVariant || primaryVariant || null);
       })
       .catch((err) => {
         console.error('Failed to fetch product:', err);
@@ -176,28 +224,24 @@ function ProductPage() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
-  useEffect(() => {
-    let mounted = true;
-    if (!product) return undefined;
+  const relatedProducts = useMemo(() => {
+    if (!product) {
+      return [];
+    }
 
-    getProducts()
-      .then((data) => {
-        if (!mounted) return;
-        const list = Array.isArray(data) ? data : [];
-        const targetCategoryToken = resolveProductCategoryToken(product);
-        const related = list.filter((item) => {
-          if (!item || item.id === product.id || item?.isActive === false) return false;
-          if (!targetCategoryToken) return true;
-          return resolveProductCategoryToken(item) === targetCategoryToken;
-        });
-        setRelatedProducts(related.slice(0, 4));
+    const targetCategoryToken = resolveProductCategoryToken(product);
+    return directoryProducts
+      .filter((item) => {
+        if (!item || item.id === product.id || item?.isActive === false) {
+          return false;
+        }
+        if (!targetCategoryToken) {
+          return true;
+        }
+        return resolveProductCategoryToken(item) === targetCategoryToken;
       })
-      .catch((err) => console.error('Failed to fetch related products:', err));
-
-    return () => {
-      mounted = false;
-    };
-  }, [product]);
+      .slice(0, 4);
+  }, [directoryProducts, product]);
 
   useEffect(() => {
     if (!relatedProducts.length) return;
@@ -250,34 +294,19 @@ function ProductPage() {
 
   const hasScaleImage = useMemo(() => detectScaleImage(orderedImages), [orderedImages]);
   const hasDimensionsImage = useMemo(() => detectDimensionsImage(orderedImages), [orderedImages]);
-
-  const productReviews = useMemo(
-    () => reviews.filter((review) => String(review.productId) === String(id)),
-    [id]
+  const productVariants = useMemo(
+    () => (Array.isArray(product?.variants) ? product.variants : Array.from(product?.variants || [])),
+    [product]
   );
-
-  const ratingDistribution = useMemo(() => {
-    const distribution = [5, 4, 3, 2, 1].map((value) => ({
-      rating: value,
-      count: productReviews.filter((review) => Number(review.rating) === value).length,
-    }));
-
-    const maxCount = Math.max(1, ...distribution.map((entry) => entry.count));
-
-    return distribution.map((entry) => ({
-      ...entry,
-      width: `${Math.round((entry.count / maxCount) * 100)}%`,
-    }));
-  }, [productReviews]);
 
   const variantNameById = useMemo(() => {
     const map = {};
-    (product?.variants || []).forEach((variant) => {
+    productVariants.forEach((variant) => {
       if (!variant?.id) return;
       map[variant.id] = variant.name || variant.sku || variant.id;
     });
     return map;
-  }, [product]);
+  }, [productVariants]);
 
   const specificationSections = useMemo(() => {
     const raw = product?.specifications;
@@ -341,22 +370,30 @@ function ProductPage() {
   const discountPercent = hasDiscount ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
 
   const availableStock = selectedVariant
-    ? Number(selectedVariant.stock ?? selectedVariant.stockQuantity ?? 0)
-    : Number(product?.stock ?? product?.stockQuantity ?? 0);
-
-  const rating = Number(product?.rating || 0);
-  const reviewCount = Number(
-    product?.reviewCount || product?.reviewsCount || product?.reviews_count || productReviews.length
+    ? getStockValue(selectedVariant)
+    : getStockValue(product);
+  const availabilityMeta = getAvailabilityMeta(availableStock, { selected: true });
+  const availableVariants = useMemo(
+    () => productVariants.filter((variant) => getStockValue(variant) > 0),
+    [productVariants]
   );
-  const isLowStock = availableStock > 0 && availableStock <= 3;
+  const fallbackAvailableVariant = useMemo(
+    () =>
+      availableVariants.find((variant) => variant.id !== selectedVariant?.id) ||
+      availableVariants[0] ||
+      null,
+    [availableVariants, selectedVariant?.id]
+  );
+  const hasSelectableFallbackVariant = Boolean(
+    fallbackAvailableVariant && fallbackAvailableVariant.id !== selectedVariant?.id
+  );
 
   const productTabs = useMemo(
     () => [
       { value: 'about', label: 'О товаре' },
-      { value: 'reviews', label: `Отзывы (${reviewCount})` },
       { value: 'details', label: 'Характеристики' },
     ],
-    [reviewCount]
+    []
   );
 
   const bundleItems = relatedProducts.slice(0, 3);
@@ -375,6 +412,50 @@ function ProductPage() {
       month: 'short',
     });
   }, []);
+  const infoHighlights = useMemo(
+    () => [
+      {
+        key: 'shipping',
+        icon: 'delivery',
+        title: 'Доставка',
+        summary: `Ориентир: ${deliveryDate}`,
+        caption: 'Покажем стоимость и доступные интервалы до оплаты.'
+      },
+      {
+        key: 'returns',
+        icon: 'returns',
+        title: 'Возврат',
+        summary: '30 дней на возврат',
+        caption: 'Если товар не подошёл, поможем оформить возврат без лишних шагов.'
+      },
+      {
+        key: 'payment',
+        icon: 'secure',
+        title: 'Оплата',
+        summary: 'Безопасный checkout',
+        caption: 'Оплата подтверждается на защищённом шаге и не дублируется.'
+      }
+    ],
+    [deliveryDate]
+  );
+  const hasBundleSelection = bundleItems.some((item) => bundleSelections[item.id]);
+  const isCartActionPending = Boolean(pendingAction);
+  const canPurchaseSelectedVariant = availableStock > 0 && !isCartActionPending;
+  const canonicalProductPath = useMemo(() => buildProductPath(product), [product]);
+  const seoDescription = useMemo(() => {
+    if (!product) {
+      return 'Карточка товара интернет-магазина домашнего текстиля.';
+    }
+    const summary = product.description || highlights.filter(Boolean).join('. ');
+    return `${summary} ${availabilityMeta.label}.`;
+  }, [availabilityMeta.label, highlights, product]);
+  const seoImage = activeImage?.url || orderedImages[0]?.url || '';
+
+  useEffect(() => {
+    if (availableStock > 0) {
+      setQuantity((prev) => Math.max(1, Math.min(prev, availableStock)));
+    }
+  }, [availableStock]);
 
   const selectImageByIndex = (index) => {
     if (!orderedImages.length) return;
@@ -419,11 +500,15 @@ function ProductPage() {
     }, 200);
   };
 
-  const handleAddToCart = async () => {
-    if (!product || availableStock <= 0) return;
-    const variantId = selectedVariant?.id || product.id;
+  const openInfoSheet = (nextSheetType) => {
+    setSheetType(nextSheetType);
+    setIsInfoSheetOpen(true);
+  };
+
+  const addSelectedVariantToCart = async () => {
+    if (!product || availableStock <= 0) return false;
     setCartStatus(null);
-    const result = await addItem(product, variantId, quantity);
+    const result = await addItem(product, selectedVariant?.id || null, quantity);
     if (result?.ok === false) {
       setCartStatus(result.notification);
       return false;
@@ -431,50 +516,65 @@ function ProductPage() {
     return true;
   };
 
+  const handleAddToCart = async () => {
+    if (!product || availableStock <= 0 || isCartActionPending) return false;
+    setPendingAction('add');
+    try {
+      return await addSelectedVariantToCart();
+    } finally {
+      setPendingAction('');
+    }
+  };
+
   const handleBuyNow = async () => {
-    if (!product || availableStock <= 0) return;
-    const didAdd = await handleAddToCart();
-    if (!didAdd) return;
-    navigate('/checkout');
+    if (!product || availableStock <= 0 || isCartActionPending) return;
+    setPendingAction('buy');
+    try {
+      const didAdd = await addSelectedVariantToCart();
+      if (!didAdd) return;
+      navigate('/checkout');
+    } finally {
+      setPendingAction('');
+    }
   };
 
   const handleAddBundle = async () => {
-    const didAddPrimary = await handleAddToCart();
-    if (!didAddPrimary) return;
+    if (!product || availableStock <= 0 || isCartActionPending || !hasBundleSelection) return;
+    setPendingAction('bundle');
+    try {
+      const didAddPrimary = await addSelectedVariantToCart();
+      if (!didAddPrimary) return;
 
-    for (const item of bundleItems) {
-      if (!bundleSelections[item.id]) continue;
-      const variant = getPrimaryVariant(item);
-      if (!variant?.id) continue;
-      const result = await addItem(item, variant.id, 1);
-      if (result?.ok === false) {
-        setCartStatus(result.notification);
-        return;
+      for (const item of bundleItems) {
+        if (!bundleSelections[item.id]) continue;
+        const variant = getPrimaryVariant(item);
+        if (!variant?.id) continue;
+        const result = await addItem(item, variant.id, 1);
+        if (result?.ok === false) {
+          setCartStatus(result.notification);
+          return;
+        }
       }
+    } finally {
+      setPendingAction('');
     }
   };
 
-  const handleNotifyMe = () => {
-    const value = notifyEmail.trim();
-    if (!value) {
-      setNotifyState({ type: 'error', message: 'Введите email, чтобы получить уведомление.' });
+  const handleSelectAvailableVariant = () => {
+    if (!fallbackAvailableVariant) {
       return;
     }
-
-    if (!EMAIL_RE.test(value)) {
-      setNotifyState({ type: 'error', message: 'Проверьте формат email. Например, name@example.ru.' });
-      return;
-    }
-
-    setNotifyState({
-      type: 'success',
-      message: `Отправим письмо на ${value}, когда вариант снова появится в наличии.`,
-    });
+    handleVariantChange(fallbackAvailableVariant);
   };
 
   if (isLoading) {
     return (
       <div className="product-page py-8 sm:py-10">
+        <Seo
+          title="Карточка товара"
+          description="Загружаем карточку товара и доступные варианты."
+          canonicalPath={location.pathname}
+        />
         <div className="container mx-auto px-4">
           <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_420px]">
             <div className="rounded-[30px] border border-ink/10 bg-white/90 p-4">
@@ -504,6 +604,12 @@ function ProductPage() {
     return (
       <div className="py-10">
         <div className="container mx-auto px-4">
+          <Seo
+            title="Товар не найден"
+            description="Запрошенная карточка товара недоступна. Попробуйте вернуться в каталог."
+            canonicalPath={location.pathname}
+            robots="noindex,nofollow"
+          />
           <h1 className="text-2xl font-semibold mb-2">Товар не найден</h1>
           <p>К сожалению, продукта с указанным идентификатором не существует.</p>
           <Button as={Link} to="/category/popular" className="mt-4">Вернуться в каталог</Button>
@@ -514,6 +620,13 @@ function ProductPage() {
 
   return (
     <div className="product-page py-8 sm:py-10 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
+      <Seo
+        title={`Купить ${product.name}`}
+        description={seoDescription}
+        canonicalPath={canonicalProductPath}
+        image={seoImage}
+        type="product"
+      />
       <div className="container mx-auto px-4">
         <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Хлебные крошки">
           {location.state?.fromPath ? (
@@ -656,22 +769,14 @@ function ProductPage() {
               <p className="text-xs uppercase tracking-[0.25em] text-accent">Карточка товара</p>
               <h1 className="mt-2 text-xl sm:text-2xl font-semibold">{product.name}</h1>
 
-              <div className="mt-3 flex items-center gap-2 text-sm text-muted">
-                {rating > 0 ? (
-                  <>
-                    <span className="text-primary">★ {rating.toFixed(1)}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="!min-h-0 !px-0 !py-0 underline-offset-2 hover:text-primary hover:underline"
-                      onClick={() => setActiveTab('reviews')}
-                    >
-                      {reviewCount} отзывов
-                    </Button>
-                  </>
-                ) : (
-                  <span>Пока без отзывов</span>
-                )}
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
+                {activeCategory ? (
+                  <Link to={`/category/${resolveCategoryToken(activeCategory)}`} className="text-primary hover:text-accent">
+                    {activeCategory.name}
+                  </Link>
+                ) : null}
+                {product?.material ? <span>Материал: {product.material}</span> : null}
+                {selectedVariant?.name ? <span>Вариант: {selectedVariant.name}</span> : null}
               </div>
 
               <div className="mt-4 flex items-end gap-3">
@@ -686,45 +791,37 @@ function ProductPage() {
                 )}
               </div>
 
-              <div className="mt-3 rounded-2xl border border-ink/10 bg-secondary/45 px-3 py-2 text-sm">
-                <p>
-                  Доставим <span className="font-semibold">{deliveryDate}</span>
-                  {' '}при заказе до 14:00 (местное время).
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-1 !min-h-0 !px-0 !py-0 text-xs text-primary"
-                  onClick={() => {
-                    setSheetType('shipping');
-                    setIsInfoSheetOpen(true);
-                  }}
-                >
-                  Как рассчитывается дата и стоимость
-                </Button>
+              <div className={`mt-4 rounded-2xl border px-3 py-3 text-sm ${availabilityMeta.badgeClass}`}>
+                <p className={`font-semibold ${availabilityMeta.tone}`}>{availabilityMeta.label}</p>
+                <p className="mt-1 text-xs text-ink/70">{availabilityMeta.detail}</p>
               </div>
 
-              <div className="mt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="!min-h-0 !px-0 !py-0 text-sm text-primary"
-                  onClick={() => {
-                    setSheetType('returns');
-                    setIsInfoSheetOpen(true);
-                  }}
-                >
-                  Доставка и возврат
-                </Button>
+              <div className="mt-4 grid gap-2">
+                {infoHighlights.map((item) => (
+                  <ProductInfoCard
+                    key={item.key}
+                    icon={item.icon}
+                    title={item.title}
+                    summary={item.summary}
+                    caption={item.caption}
+                    onOpen={() => openInfoSheet(item.key)}
+                  />
+                ))}
               </div>
 
-              {product.variants && product.variants.length > 1 && (
+              {productVariants.length > 1 && (
                 <div className="mt-5">
                   <p className="text-xs uppercase tracking-[0.2em] text-muted">Выберите вариант</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {product.variants.map((variant) => {
+                    {productVariants.map((variant) => {
                       const isActive = selectedVariant?.id === variant.id;
-                      const variantStock = Number(variant?.stock ?? variant?.stockQuantity ?? 0);
+                      const variantStock = getStockValue(variant);
+                      const variantStatus =
+                        variantStock <= 0
+                          ? 'Нет в наличии'
+                          : variantStock <= 3
+                          ? `Осталось ${variantStock} шт.`
+                          : 'В наличии';
                       return (
                         <Button
                           key={variant.id}
@@ -733,14 +830,18 @@ function ProductPage() {
                           className={`h-auto min-h-[44px] px-3 py-1.5 text-sm ${
                             isActive
                               ? 'border-primary bg-primary/10 text-primary shadow-none'
+                              : variantStock <= 0
+                              ? 'border-red-200 bg-red-50/70 text-red-700 shadow-none hover:border-red-300 hover:text-red-800'
                               : 'border-ink/10 bg-white/90 hover:border-primary/40 hover:text-primary'
                           }`}
                           onClick={() => handleVariantChange(variant)}
+                          disabled={isCartActionPending}
+                          aria-pressed={isActive}
                         >
                           <span className="block font-medium">{variant.name || variant.sku || variant.id}</span>
-                          <span className="block text-[11px] text-muted">
+                          <span className={`block text-[11px] ${variantStock <= 0 ? 'text-red-700/90' : 'text-muted'}`}>
                             {formatRub(moneyToNumber(variant.price))}
-                            {variantStock > 0 ? ` · ${variantStock} шт.` : ' · нет в наличии'}
+                            {` · ${variantStatus}`}
                           </span>
                         </Button>
                       );
@@ -758,6 +859,7 @@ function ProductPage() {
                     className="rounded-xl border border-transparent text-lg text-ink/75 hover:text-primary"
                     onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
                     aria-label="Уменьшить количество"
+                    disabled={isCartActionPending || availableStock <= 0}
                   >
                     −
                   </Button>
@@ -766,8 +868,9 @@ function ProductPage() {
                     variant="ghost"
                     size="icon"
                     className="rounded-xl border border-transparent text-lg text-ink/75 hover:text-primary"
-                    onClick={() => setQuantity((prev) => Math.min(99, prev + 1))}
+                    onClick={() => setQuantity((prev) => Math.min(Math.max(1, availableStock || 99), 99, prev + 1))}
                     aria-label="Увеличить количество"
+                    disabled={isCartActionPending || availableStock <= 0}
                   >
                     +
                   </Button>
@@ -775,45 +878,30 @@ function ProductPage() {
               </div>
 
               <div className="mt-4 flex flex-col gap-1 text-sm">
-                {availableStock > 0 ? (
-                  <span className="text-emerald-700">В наличии: {availableStock} шт.</span>
-                ) : (
-                  <span className="text-red-700">Нет в наличии</span>
-                )}
-                {isLowStock && (
-                  <span className="text-xs text-amber-700">Осталось мало: {availableStock} шт.</span>
-                )}
+                <span className={availabilityMeta.tone}>{availabilityMeta.label}</span>
+                <span className="text-xs text-muted">
+                  {selectedVariant?.name
+                    ? `Покупка и остаток считаются для варианта «${selectedVariant.name}».`
+                    : 'Покупка и остаток рассчитываются по текущему товару.'}
+                </span>
               </div>
 
               <div className="mt-5 space-y-2">
                 <Button
                   block
                   onClick={handleAddToCart}
-                  disabled={availableStock <= 0}
+                  disabled={!canPurchaseSelectedVariant}
                 >
-                  Добавить в корзину
+                  {pendingAction === 'add' ? 'Добавляем…' : 'Добавить в корзину'}
                 </Button>
 
                 <Button
                   variant="secondary"
                   block
                   onClick={handleBuyNow}
-                  disabled={availableStock <= 0}
+                  disabled={!canPurchaseSelectedVariant}
                 >
-                  Купить сейчас
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  block
-                  size="sm"
-                  className="text-sm"
-                  onClick={() => {
-                    setSheetType('shipping');
-                    setIsInfoSheetOpen(true);
-                  }}
-                >
-                  Условия доставки и возврата
+                  {pendingAction === 'buy' ? 'Переходим к оформлению…' : 'Купить сейчас'}
                 </Button>
               </div>
 
@@ -821,29 +909,40 @@ function ProductPage() {
 
               {availableStock <= 0 && (
                 <Card variant="quiet" padding="sm" className="mt-4 text-sm">
-                  <p className="font-medium text-ink">Сообщить о поступлении</p>
-                  <p className="mt-1 text-xs text-muted">Ожидаем пополнение в течение 5–9 дней. Оставьте email, чтобы не пропустить.</p>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                    <Input
-                      type="email"
-                      value={notifyEmail}
-                      onChange={(event) => {
-                        setNotifyEmail(event.target.value);
-                        if (notifyState.type) setNotifyState({ type: '', message: '' });
-                      }}
-                      placeholder="name@example.ru"
-                      invalid={notifyState.type === 'error'}
-                      aria-label="Email для уведомления"
-                    />
-                    <Button variant="secondary" onClick={handleNotifyMe}>
-                      Уведомить
+                  <p className="font-medium text-ink">Этот вариант сейчас недоступен</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Не показываем форму «сообщить о поступлении», пока она не подключена к реальному сервису.
+                    Выберите доступный вариант или откройте похожие товары.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {hasSelectableFallbackVariant ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleSelectAvailableVariant}
+                        disabled={isCartActionPending}
+                      >
+                        Выбрать доступный вариант
+                      </Button>
+                    ) : null}
+                    {!hasSelectableFallbackVariant && fallbackAvailableVariant ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleSelectAvailableVariant}
+                        disabled={isCartActionPending}
+                      >
+                        Выбрать вариант в наличии
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openInfoSheet('shipping')}
+                    >
+                      Уточнить доставку
                     </Button>
                   </div>
-                  {notifyState.type === 'error' ? (
-                    <FieldError>{notifyState.message}</FieldError>
-                  ) : notifyState.message ? (
-                    <p className="mt-2 text-xs text-emerald-700">{notifyState.message}</p>
-                  ) : null}
                   <Button
                     as={Link}
                     to={`/category/${resolveCategoryToken(activeCategory) || 'popular'}`}
@@ -855,21 +954,6 @@ function ProductPage() {
                   </Button>
                 </Card>
               )}
-            </Card>
-
-            <Card padding="md" className="text-sm space-y-3">
-              <div className="flex items-center gap-2 text-ink/85">
-                <TrustIcon type="delivery" />
-                <span>Бесплатная доставка от 5000 ₽</span>
-              </div>
-              <div className="flex items-center gap-2 text-ink/85">
-                <TrustIcon type="returns" />
-                <span>Бесплатный возврат в течение 30 дней</span>
-              </div>
-              <div className="flex items-center gap-2 text-ink/85">
-                <TrustIcon type="secure" />
-                <span>Защищённая оплата и безопасный checkout</span>
-              </div>
             </Card>
 
             {bundleItems.length > 0 && (
@@ -911,8 +995,8 @@ function ProductPage() {
                   <span className="font-semibold">{formatRub(bundleTotal)}</span>
                 </div>
 
-                <Button block className="mt-3" onClick={handleAddBundle}>
-                  Добавить комплект
+                <Button block className="mt-3" onClick={handleAddBundle} disabled={!canPurchaseSelectedVariant || !hasBundleSelection}>
+                  {pendingAction === 'bundle' ? 'Добавляем комплект…' : 'Добавить комплект'}
                 </Button>
               </Card>
             )}
@@ -935,45 +1019,6 @@ function ProductPage() {
                 {product.description || 'Описание отсутствует.'}
               </p>
             </Card>
-          )}
-
-          {activeTab === 'reviews' && (
-            <div className="mt-4 grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-              <Card variant="quiet" padding="md" className="rounded-3xl">
-                <p className="text-sm font-semibold">Распределение оценок</p>
-                <div className="mt-2 flex items-end gap-2">
-                  <span className="text-2xl font-semibold text-primary">{rating > 0 ? rating.toFixed(1) : '—'}</span>
-                  <span className="text-xs text-muted">на основе {reviewCount} отзывов</span>
-                </div>
-                <div className="mt-3 space-y-2">
-                  {ratingDistribution.map((entry) => (
-                    <div key={entry.rating} className="grid grid-cols-[24px_minmax(0,1fr)_28px] items-center gap-2 text-xs text-muted">
-                      <span>{entry.rating}</span>
-                      <div className="h-2 rounded-full bg-secondary/70 overflow-hidden">
-                        <div className="h-full rounded-full bg-primary/65" style={{ width: entry.width }} />
-                      </div>
-                      <span className="text-right">{entry.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <div className="space-y-3">
-                {productReviews.length > 0 ? (
-                  productReviews.map((review, index) => (
-                    <Card key={index} variant="quiet" padding="md" className="rounded-3xl">
-                      <div className="text-primary text-sm">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
-                      <p className="mt-2 text-sm">{review.text}</p>
-                      <p className="text-xs text-muted italic">— {review.author}</p>
-                    </Card>
-                  ))
-                ) : (
-                  <Card variant="quiet" padding="md">
-                    <p className="text-sm text-muted">На этот товар пока нет отзывов.</p>
-                  </Card>
-                )}
-              </div>
-            </div>
           )}
 
           {activeTab === 'details' && (
@@ -1046,9 +1091,9 @@ function ProductPage() {
               block
               className="flex-1"
               onClick={handleAddToCart}
-              disabled={availableStock <= 0}
+              disabled={!canPurchaseSelectedVariant}
             >
-              В корзину
+              {pendingAction === 'add' ? 'Добавляем…' : 'В корзину'}
             </Button>
           </div>
         </div>
@@ -1114,14 +1159,38 @@ function ProductPage() {
         onClose={() => setIsInfoSheetOpen(false)}
         placement="sheet"
         size="sm"
-        title={sheetType === 'shipping' ? 'Доставка' : 'Условия возврата'}
-        description={sheetType === 'shipping' ? 'Доставка' : 'Возвраты'}
+        title={
+          sheetType === 'shipping'
+            ? 'Доставка'
+            : sheetType === 'payment'
+            ? 'Оплата'
+            : 'Условия возврата'
+        }
+        description={
+          sheetType === 'shipping'
+            ? 'Доставка'
+            : sheetType === 'payment'
+            ? 'Оплата'
+            : 'Возвраты'
+        }
       >
         {sheetType === 'shipping' ? (
           <div className="space-y-3 text-sm text-ink/85">
             <p>Ориентировочная дата доставки: {deliveryDate} (при заказе до 14:00 по местному времени).</p>
             <p>Стоимость и доступные интервалы показываются до оплаты на шаге оформления заказа.</p>
             <p>Бесплатная доставка от 5000 ₽. Для удалённых регионов срок может увеличиваться.</p>
+          </div>
+        ) : sheetType === 'payment' ? (
+          <div className="space-y-3 text-sm text-ink/85">
+            <p>Оплата подтверждается только на защищённом шаге оформления заказа или на странице заказа.</p>
+            <p>Если соединение нестабильно, магазин не дублирует покупку: можно безопасно вернуться к заказу и продолжить оплату.</p>
+            <p>
+              Подробнее о способах оплаты:
+              {' '}
+              <Link to="/info/payment" className="text-primary">
+                «Оплата»
+              </Link>.
+            </p>
           </div>
         ) : (
           <div className="space-y-3 text-sm text-ink/85">

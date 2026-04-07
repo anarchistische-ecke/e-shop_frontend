@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Seo from '../components/Seo';
 import { legalTokens } from '../data/legal/constants';
 
 const documents = [
@@ -38,6 +39,11 @@ const documents = [
 function LegalInfoPage() {
   return (
     <section className="legal-page">
+      <Seo
+        title="Юридическая информация"
+        description="Реквизиты продавца, оферта, политика персональных данных, cookies и другие обязательные документы."
+        canonicalPath="/info/legal"
+      />
       <div className="legal-layout">
         <header className="legal-hero">
           <p className="legal-kicker">Юридический раздел</p>

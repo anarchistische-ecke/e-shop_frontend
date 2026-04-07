@@ -66,4 +66,19 @@ describe('checkout attempt helpers', () => {
     expect(secondAttempt.key).not.toBe(firstAttempt.key);
     expect(secondAttempt.signature).toBe('same-signature');
   });
+
+  it('includes confirmation mode in the checkout attempt signature', () => {
+    const redirectSignature = buildCheckoutAttemptSignature({
+      cartId: 'cart-1',
+      receiptEmail: 'test@example.com',
+      confirmationMode: 'REDIRECT'
+    });
+    const embeddedSignature = buildCheckoutAttemptSignature({
+      cartId: 'cart-1',
+      receiptEmail: 'test@example.com',
+      confirmationMode: 'EMBEDDED'
+    });
+
+    expect(embeddedSignature).not.toBe(redirectSignature);
+  });
 });
