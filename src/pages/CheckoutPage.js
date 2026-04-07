@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import NotificationBanner from '../components/NotificationBanner';
 import PickupMapModal from '../components/PickupMapModal';
+import Seo from '../components/Seo';
 import CheckoutEmptyState from '../features/checkout/CheckoutEmptyState';
 import CheckoutFlow from '../features/checkout/CheckoutFlow';
 import CheckoutGuestPanel from '../features/checkout/CheckoutGuestPanel';
@@ -20,11 +21,31 @@ function CheckoutPage() {
   }, [checkout.isSubmitting, checkout.topNotification]);
 
   if (checkout.isManager) {
-    return <Navigate to="/cart" replace />;
+    return (
+      <>
+        <Seo
+          title="Оформление заказа"
+          description="Раздел оформления заказа недоступен для менеджерского режима."
+          canonicalPath="/checkout"
+          robots="noindex,nofollow"
+        />
+        <Navigate to="/cart" replace />
+      </>
+    );
   }
 
   if (!checkout.items.length) {
-    return <CheckoutEmptyState />;
+    return (
+      <>
+        <Seo
+          title="Оформление заказа"
+          description="Корзина пуста. Добавьте товары, чтобы перейти к оформлению."
+          canonicalPath="/checkout"
+          robots="noindex,nofollow"
+        />
+        <CheckoutEmptyState />
+      </>
+    );
   }
 
   const handleDisabledNavigation = (event) => {
@@ -48,6 +69,12 @@ function CheckoutPage() {
 
   return (
     <div className="checkout-page py-7 pb-28 md:py-10 lg:pb-10">
+      <Seo
+        title="Оформление заказа"
+        description="Быстрое оформление заказа с выбором доставки, итоговой суммой до оплаты и возможностью купить без регистрации."
+        canonicalPath="/checkout"
+        robots="noindex,nofollow"
+      />
       <div className="container mx-auto px-4">
         <CheckoutPageHeader
           isSubmitting={checkout.isSubmitting}

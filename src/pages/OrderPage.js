@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
+import Seo from '../components/Seo';
 import { Button, Card, Input } from '../components/ui';
 import { usePaymentConfig } from '../contexts/PaymentConfigContext';
 import EmbeddedPaymentPanel from '../features/payment/EmbeddedPaymentPanel';
@@ -257,6 +258,12 @@ function OrderPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center text-muted">
+        <Seo
+          title="Страница заказа"
+          description="Загружаем актуальный статус заказа и оплату."
+          canonicalPath={token ? `/order/${token}` : '/order'}
+          robots="noindex,nofollow"
+        />
         Загружаем заказ…
       </div>
     );
@@ -265,6 +272,12 @@ function OrderPage() {
   if (!order) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
+        <Seo
+          title="Заказ не найден"
+          description="Проверьте ссылку на страницу заказа и попробуйте открыть её ещё раз."
+          canonicalPath={token ? `/order/${token}` : '/order'}
+          robots="noindex,nofollow"
+        />
         <p className="text-muted mb-4">Заказ не найден.</p>
         <Button as={Link} to="/" variant="ghost">Вернуться на главную</Button>
       </div>
@@ -350,6 +363,12 @@ function OrderPage() {
 
   return (
     <div className="order-page py-10">
+      <Seo
+        title={`Заказ ${String(order.id).slice(0, 8)}...`}
+        description={`Статус заказа: ${statusLabel}. Здесь можно проверить оплату, доставку и состав заказа.`}
+        canonicalPath={token ? `/order/${token}` : '/order'}
+        robots="noindex,nofollow"
+      />
       <div className="container mx-auto px-4">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

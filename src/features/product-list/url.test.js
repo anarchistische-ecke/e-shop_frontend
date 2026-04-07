@@ -1,4 +1,5 @@
 import {
+  buildCategoryListingHref,
   buildCatalogSearchHref,
   buildProductListSearchParams,
   parseProductListSearchParams
@@ -39,5 +40,16 @@ describe('product list url helpers', () => {
         scope: 'throws'
       })
     ).toBe('/catalog?query=%D0%9F%D0%BB%D0%B5%D0%B4&scope=throws');
+  });
+
+  it('builds shareable category hrefs without correction-only params', () => {
+    expect(
+      buildCategoryListingHref('popular', {
+        query: 'Сатин',
+        original: 'стин',
+        page: 2,
+        sort: 'priceAsc'
+      })
+    ).toBe('/category/popular?query=%D0%A1%D0%B0%D1%82%D0%B8%D0%BD&sort=priceAsc&page=2');
   });
 });

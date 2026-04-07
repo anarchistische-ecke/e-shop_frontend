@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import Seo from '../components/Seo';
 import {
   Button,
   Card,
@@ -19,6 +20,7 @@ import {
   ProductFiltersTrigger
 } from '../features/product-list/ProductFilters';
 import ProductPagination from '../features/product-list/ProductPagination';
+import { buildCategoryListingHref } from '../features/product-list/url';
 import {
   getReviewCount,
   getStockCount,
@@ -28,6 +30,7 @@ import { useProductList } from '../features/product-list/useProductList';
 import { useProductListRouteState } from '../features/product-list/useProductListRouteState';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { normalizeSearchText } from '../utils/search';
+import { buildProductPath } from '../utils/url';
 
 function CategoryCard({ product, fromPath, fromLabel }) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -87,7 +90,7 @@ function CategoryCard({ product, fromPath, fromLabel }) {
   return (
     <Card
       as={Link}
-      to={`/product/${product.id}`}
+      to={buildProductPath(product)}
       state={{ fromPath, fromLabel }}
       variant="quiet"
       padding="sm"
@@ -210,6 +213,14 @@ function CategoryPage() {
     }
     return list.headingNote;
   }, [list.headingNote, slug]);
+  const canonicalPath = useMemo(
+    () => buildCategoryListingHref(slug, params),
+    [params, slug]
+  );
+  const seoDescription =
+    list.activeCategory?.description ||
+    headingNote ||
+    `${heading}. Подборка товаров для дома с удобной доставкой по России.`;
 
   const clearFilterByKey = (key) => {
     if (key === 'brand') {
@@ -255,6 +266,12 @@ function CategoryPage() {
 
   return (
     <div className="category-page relative overflow-hidden py-8 md:py-10">
+      <Seo
+        title={heading}
+        description={seoDescription}
+        canonicalPath={canonicalPath}
+        image={list.activeCategory?.imageUrl || ''}
+      />
       <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
 

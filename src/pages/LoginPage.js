@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import NotificationBanner from '../components/NotificationBanner';
+import Seo from '../components/Seo';
 import { Button, Card } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
@@ -48,6 +49,12 @@ function LoginPage() {
 
   return (
     <div className="login-page py-8 md:py-10">
+      <Seo
+        title="Вход в личный кабинет"
+        description="Войдите, чтобы сохранить данные для следующих покупок, видеть историю заказов и быстрее оформлять новые."
+        canonicalPath="/login"
+        robots="noindex,nofollow"
+      />
       <div className="container mx-auto px-4">
         <Card className="mx-auto max-w-4xl" padding="lg">
           <div className="mb-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">

@@ -1,8 +1,14 @@
 import React from 'react';
+import Seo from '../components/Seo';
 
 function PaymentInfoPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <Seo
+        title="Способы оплаты"
+        description="Безопасная оплата картой, СБП и при получении, а также правила чеков и возвратов."
+        canonicalPath="/info/payment"
+      />
       <p className="text-xs uppercase tracking-[0.3em] text-muted">Сервис</p>
       <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Удобная оплата</h1>
       <p className="text-muted mb-6">

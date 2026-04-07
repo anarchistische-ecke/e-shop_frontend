@@ -1,8 +1,14 @@
 import React from 'react';
+import Seo from '../components/Seo';
 
 function ProductionInfoPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <Seo
+        title="Собственное производство"
+        description="Материалы, пошив, контроль качества и упаковка домашнего текстиля собственного производства."
+        canonicalPath="/info/production"
+      />
       <p className="text-xs uppercase tracking-[0.3em] text-muted">Производство</p>
       <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Собственное производство</h1>
       <p className="text-muted mb-6">

@@ -104,3 +104,14 @@ export function buildCatalogSearchHref(values = {}) {
   const query = params.toString();
   return query ? `/catalog?${query}` : '/catalog';
 }
+
+export function buildCategoryListingHref(categorySlug = '', values = {}) {
+  const safeSlug = typeof categorySlug === 'string' ? categorySlug.trim() : '';
+  const basePath = safeSlug ? `/category/${safeSlug}` : '/catalog';
+  const params = buildProductListSearchParams(
+    { ...values, original: '' },
+    { source: 'category', categorySlug: safeSlug }
+  );
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}

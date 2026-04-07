@@ -3,6 +3,7 @@ import { CartContext } from '../contexts/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { createManagerOrderLink } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
+import Seo from '../components/Seo';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { usePaymentConfig } from '../contexts/PaymentConfigContext';
@@ -133,6 +134,12 @@ function CartPage() {
 
   return (
     <div className="cart-page py-8 md:py-10">
+      <Seo
+        title="Корзина"
+        description="Проверьте товары в корзине, итоговую стоимость и переходите к оформлению заказа."
+        canonicalPath="/cart"
+        robots="noindex,nofollow"
+      />
       <div className="container mx-auto px-4">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>

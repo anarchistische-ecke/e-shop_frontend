@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Seo from '../components/Seo';
 import ProductCard from '../components/ProductCard';
 import { Button, Card } from '../components/ui';
 import { getProducts, getCategories } from '../api';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
 import { getPrimaryImageUrl, getProductPrice, resolveImageUrl } from '../utils/product';
+import { buildProductPath } from '../utils/url';
 
 function Home() {
   const [products, setProducts] = useState([]);
@@ -133,6 +135,7 @@ function Home() {
   const featuredProduct =
     visibleProducts.find((p) => p.id === heroConfig.featuredProductId) || visibleProducts[0] || null;
   const heroImage = getPrimaryImageUrl(featuredProduct);
+  const heroShareImage = heroImage ? resolveImageUrl(heroImage) : '';
   const featuredPrice = featuredProduct ? getProductPrice(featuredProduct) : null;
   const topCategories = categories.filter((cat) => !cat.parentId);
 
@@ -149,7 +152,14 @@ function Home() {
   };
 
   return (
-    <div className="home">
+    <>
+      <Seo
+        title="Домашний текстиль для уютного дома"
+        description={`${heroSubtitle} Доставка по России, честные условия покупки и собственное производство.`}
+        canonicalPath="/"
+        image={heroShareImage}
+      />
+      <div className="home">
       {bannerText && bannerEnabled && (
         <div className="bg-ink text-white text-center py-2 px-4">
           <p className="text-sm">{bannerText}</p>
@@ -220,7 +230,7 @@ function Home() {
                   </div>
                   <Button
                     as={Link}
-                    to={featuredProduct ? `/product/${featuredProduct.id}` : '/category/popular'}
+                    to={featuredProduct ? buildProductPath(featuredProduct) : '/category/popular'}
                     variant="ghost"
                     size="sm"
                     className="text-primary"
@@ -439,7 +449,8 @@ function Home() {
           </Card>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 }
 

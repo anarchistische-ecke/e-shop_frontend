@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
 import { getCategories, getProduct, getProducts } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
+import Seo from '../components/Seo';
 import ProductCard from '../components/ProductCard';
 import { Button, Card, Modal, Tabs } from '../components/ui';
 import {
@@ -11,6 +12,7 @@ import {
   moneyToNumber,
   normalizeProductImages,
 } from '../utils/product';
+import { buildProductPath } from '../utils/url';
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -453,6 +455,15 @@ function ProductPage() {
   const hasBundleSelection = bundleItems.some((item) => bundleSelections[item.id]);
   const isCartActionPending = Boolean(pendingAction);
   const canPurchaseSelectedVariant = availableStock > 0 && !isCartActionPending;
+  const canonicalProductPath = useMemo(() => buildProductPath(product), [product]);
+  const seoDescription = useMemo(() => {
+    if (!product) {
+      return 'Карточка товара интернет-магазина домашнего текстиля.';
+    }
+    const summary = product.description || highlights.filter(Boolean).join('. ');
+    return `${summary} ${availabilityMeta.label}.`;
+  }, [availabilityMeta.label, highlights, product]);
+  const seoImage = activeImage?.url || orderedImages[0]?.url || '';
 
   useEffect(() => {
     if (availableStock > 0) {
@@ -573,6 +584,11 @@ function ProductPage() {
   if (isLoading) {
     return (
       <div className="product-page py-8 sm:py-10">
+        <Seo
+          title="Карточка товара"
+          description="Загружаем карточку товара и доступные варианты."
+          canonicalPath={location.pathname}
+        />
         <div className="container mx-auto px-4">
           <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_420px]">
             <div className="rounded-[30px] border border-ink/10 bg-white/90 p-4">
@@ -602,6 +618,12 @@ function ProductPage() {
     return (
       <div className="py-10">
         <div className="container mx-auto px-4">
+          <Seo
+            title="Товар не найден"
+            description="Запрошенная карточка товара недоступна. Попробуйте вернуться в каталог."
+            canonicalPath={location.pathname}
+            robots="noindex,nofollow"
+          />
           <h1 className="text-2xl font-semibold mb-2">Товар не найден</h1>
           <p>К сожалению, продукта с указанным идентификатором не существует.</p>
           <Button as={Link} to="/category/popular" className="mt-4">Вернуться в каталог</Button>
@@ -612,6 +634,13 @@ function ProductPage() {
 
   return (
     <div className="product-page py-8 sm:py-10 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
+      <Seo
+        title={`Купить ${product.name}`}
+        description={seoDescription}
+        canonicalPath={canonicalProductPath}
+        image={seoImage}
+        type="product"
+      />
       <div className="container mx-auto px-4">
         <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Хлебные крошки">
           {location.state?.fromPath ? (

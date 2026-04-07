@@ -1,6 +1,8 @@
 import React from 'react';
+import TrustLinksPanel from '../../components/TrustLinksPanel';
 import { moneyToNumber } from '../../utils/product';
 import { usePaymentConfig } from '../../contexts/PaymentConfigContext';
+import { CHECKOUT_TRUST_LINK_IDS } from '../../data/trustLinks';
 import { getCheckoutPaymentDescription } from '../../utils/payment';
 import { Button, Card } from '../../components/ui';
 
@@ -19,26 +21,34 @@ function CheckoutSummary({
   return (
     <>
       <div className="lg:hidden mb-6">
-        <Card as="details" padding="sm">
-          <summary className="cursor-pointer text-sm font-semibold">Сводка заказа · {formatRub(payableTotal)}</summary>
-          <div className="mt-3 space-y-2 text-sm">
-            {items.map((item) => (
-              <div key={item.id} className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{item.productInfo?.name || 'Товар'}</div>
-                  <div className="text-xs text-muted">{item.quantity} шт.</div>
+        <div className="space-y-3">
+          <Card as="details" padding="sm">
+            <summary className="cursor-pointer text-sm font-semibold">Сводка заказа · {formatRub(payableTotal)}</summary>
+            <div className="mt-3 space-y-2 text-sm">
+              {items.map((item) => (
+                <div key={item.id} className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{item.productInfo?.name || 'Товар'}</div>
+                    <div className="text-xs text-muted">{item.quantity} шт.</div>
+                  </div>
+                  <div className="whitespace-nowrap font-semibold">
+                    {formatRub((item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity)}
+                  </div>
                 </div>
-                <div className="whitespace-nowrap font-semibold">
-                  {formatRub((item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity)}
-                </div>
-              </div>
-            ))}
-            <hr className="my-2 border-ink/10" />
-            <div className="flex justify-between"><span>Товары</span><span>{formatRub(total)}</span></div>
-            <div className="flex justify-between"><span>Доставка</span><span>{deliveryLabel}</span></div>
-            <div className="flex justify-between font-semibold"><span>К оплате</span><span>{formatRub(payableTotal)}</span></div>
-          </div>
-        </Card>
+              ))}
+              <hr className="my-2 border-ink/10" />
+              <div className="flex justify-between"><span>Товары</span><span>{formatRub(total)}</span></div>
+              <div className="flex justify-between"><span>Доставка</span><span>{deliveryLabel}</span></div>
+              <div className="flex justify-between font-semibold"><span>К оплате</span><span>{formatRub(payableTotal)}</span></div>
+            </div>
+          </Card>
+
+          <TrustLinksPanel
+            title="Почему нам доверяют"
+            description={`${paymentDescription} Доставка рассчитывается до оплаты, а документы и правила возврата доступны сразу.`}
+            linkIds={CHECKOUT_TRUST_LINK_IDS}
+          />
+        </div>
       </div>
 
       <div className="sr-only" aria-live="polite">
@@ -80,11 +90,11 @@ function CheckoutSummary({
           </div>
         </Card>
 
-        <Card padding="sm" className="text-sm space-y-2">
-          <p className="font-semibold">Доверие и безопасность</p>
-          <p className="text-muted">{paymentDescription}</p>
-          <p className="text-muted">Доставка рассчитывается через интеграцию Яндекс и отображается до оплаты.</p>
-        </Card>
+        <TrustLinksPanel
+          title="Доверие и безопасность"
+          description={`${paymentDescription} Доставка рассчитывается через интеграцию Яндекс и отображается до оплаты.`}
+          linkIds={CHECKOUT_TRUST_LINK_IDS}
+        />
       </aside>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] lg:hidden">

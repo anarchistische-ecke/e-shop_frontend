@@ -1,4 +1,4 @@
-import { buildAbsoluteAppUrl, buildAppPath, resolveAppBasePath } from './url';
+import { buildAbsoluteAppUrl, buildAppPath, buildProductPath, resolveAppBasePath } from './url';
 
 describe('url helpers', () => {
   const originalBaseName = process.env.REACT_APP_BASENAME;
@@ -43,5 +43,11 @@ describe('url helpers', () => {
     expect(resolveAppBasePath()).toBe('');
     expect(buildAppPath('/order/test-token')).toBe('/order/test-token');
     expect(buildAbsoluteAppUrl('/order/test-token')).toBe('http://localhost/order/test-token');
+  });
+
+  it('builds stable storefront product paths with slug support', () => {
+    expect(buildProductPath({ id: 'prod-1', slug: 'linen-soft' })).toBe('/product/prod-1/linen-soft');
+    expect(buildProductPath({ id: 'prod-2' })).toBe('/product/prod-2');
+    expect(buildProductPath({})).toBe('/catalog');
   });
 });

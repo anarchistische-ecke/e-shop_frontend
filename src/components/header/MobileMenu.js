@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import TrustLinksPanel from '../TrustLinksPanel';
+import { MOBILE_TRUST_LINK_IDS } from '../../data/trustLinks';
 import { Input } from '../ui';
 import { resolveCategoryToken } from '../../utils/header';
 import { SearchIcon } from './icons';
@@ -89,6 +91,16 @@ function MobileMenu({
               Лучшее
             </Link>
           </div>
+        </div>
+
+        <div className="border-b border-ink/10 px-4 py-4">
+          <TrustLinksPanel
+            title="Почему нам доверяют"
+            description="Оплата, доставка, производство и документы доступны прямо из меню."
+            linkIds={MOBILE_TRUST_LINK_IDS}
+            compact
+            onNavigate={onClose}
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">

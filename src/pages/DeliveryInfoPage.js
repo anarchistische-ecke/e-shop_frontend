@@ -1,8 +1,14 @@
 import React from 'react';
+import Seo from '../components/Seo';
 
 function DeliveryInfoPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <Seo
+        title="Доставка и самовывоз"
+        description="Условия доставки по России, пункты выдачи, сроки, бесплатная доставка и правила возврата."
+        canonicalPath="/info/delivery"
+      />
       <p className="text-xs uppercase tracking-[0.3em] text-muted">Сервис</p>
       <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Бесплатная доставка при оформлении заказа от 5000 ₽</h1>
       <p className="text-muted mb-6">

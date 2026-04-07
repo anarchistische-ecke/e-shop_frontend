@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import Seo from '../../components/Seo';
 import { legalTokens } from '../../data/legal/constants';
 import { buildAbsoluteAppUrl } from '../../utils/url';
 
@@ -153,6 +154,11 @@ function LegalDocumentPage({ fileName, onContentReady, className }) {
 
   return (
     <section className={`legal-page ${className || ''}`}>
+      <Seo
+        title={documentMeta.title}
+        description={documentMeta.summary}
+        canonicalPath={documentMeta.path}
+      />
       <div className="legal-layout">
         <header className="legal-hero">
           <p className="legal-kicker">Юридическая информация</p>

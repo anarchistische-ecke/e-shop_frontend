@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Seo from '../components/Seo';
 import { Button, Card, FilterChip, Input, Select } from '../components/ui';
 import ProductCard from '../components/ProductCard';
 import { PRODUCT_LIST_SORT_OPTIONS } from '../features/product-list/constants';
@@ -9,6 +10,7 @@ import {
   ProductFiltersTrigger
 } from '../features/product-list/ProductFilters';
 import ProductPagination from '../features/product-list/ProductPagination';
+import { buildCatalogSearchHref } from '../features/product-list/url';
 import { resolveCategoryToken } from '../features/product-list/selectors';
 import { useProductList } from '../features/product-list/useProductList';
 import { useProductListRouteState } from '../features/product-list/useProductListRouteState';
@@ -63,6 +65,16 @@ function CataloguePage() {
     PRODUCT_LIST_SORT_OPTIONS.find((option) => option.value === params.sort)?.label ||
     'Лучшее совпадение';
   const hasQuery = Boolean(normalizeSearchText(params.query));
+  const canonicalPath = useMemo(
+    () => buildCatalogSearchHref({ ...params, original: '' }),
+    [params]
+  );
+  const seoTitle = hasQuery
+    ? `Поиск по каталогу: ${params.query || 'результаты'}`
+    : 'Каталог домашнего текстиля';
+  const seoDescription = hasQuery
+    ? `Результаты поиска по запросу «${params.query}». ${list.headingNote}`
+    : `${list.headingNote} Постельное белье, пледы, полотенца и другой текстиль с доставкой по России.`;
 
   const clearFilterByKey = (key) => {
     if (key === 'brand') {
@@ -115,6 +127,11 @@ function CataloguePage() {
 
   return (
     <div className="catalogue-page relative overflow-hidden py-8 md:py-10">
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        canonicalPath={canonicalPath}
+      />
       <div className="absolute -top-24 right-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
 

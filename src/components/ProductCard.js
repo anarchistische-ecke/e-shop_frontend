@@ -9,6 +9,7 @@ import {
   moneyToNumber,
   normalizeProductImages,
 } from '../utils/product';
+import { buildProductPath } from '../utils/url';
 
 function getStockCount(product) {
   if (!product) return 0;
@@ -100,7 +101,7 @@ function ProductCard({ product }) {
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link
-        to={`/product/${product.id}`}
+        to={buildProductPath(product)}
         state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
         className="block"
       >
@@ -162,7 +163,7 @@ function ProductCard({ product }) {
 
       <div className="mt-3 flex flex-1 flex-col gap-2">
         <Link
-          to={`/product/${product.id}`}
+          to={buildProductPath(product)}
           state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
           className="block"
         >

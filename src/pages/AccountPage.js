@@ -5,6 +5,7 @@ import {
   updateCustomerProfile
 } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
+import Seo from '../components/Seo';
 import { Button, Card, Input, Select, Tabs } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { moneyToNumber } from '../utils/product';
@@ -835,6 +836,16 @@ function AccountPage() {
 
   return (
     <div className="account-page py-10 sm:py-12">
+      <Seo
+        title="Личный кабинет"
+        description="Профиль покупателя, история заказов, бонусы и персональные данные для быстрого повторного оформления."
+        canonicalPath={
+          activeSection === ACCOUNT_DEFAULT_SECTION
+            ? '/account'
+            : buildAccountSectionPath(activeSection, { orderId: selectedOrderId })
+        }
+        robots="noindex,nofollow"
+      />
       <div className="container mx-auto px-4">
         <div className="relative mb-8">
           <div className="pointer-events-none absolute -top-10 right-0 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />

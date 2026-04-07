@@ -48,9 +48,12 @@ function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
 
   useEffect(() => {
+    if (isAdminRoute) {
+      return;
+    }
     const path = `${location.pathname}${location.search}${location.hash}`;
     trackMetrikaHit(path, typeof document !== 'undefined' ? document.title : undefined);
-  }, [location.pathname, location.search, location.hash]);
+  }, [isAdminRoute, location.pathname, location.search, location.hash]);
 
   return (
     <>
@@ -70,6 +73,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/category/search" element={<SearchRedirectPage />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
+          <Route path="/product/:id/:slug" element={<ProductPage />} />
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />

@@ -36,6 +36,17 @@ function normalizeAppPath(path = APP_ROOT_PATH) {
   return path.startsWith('/') ? path : `/${path}`;
 }
 
+function normalizePathSegment(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  const normalized = String(value).trim();
+  if (!normalized) {
+    return '';
+  }
+  return encodeURIComponent(normalized);
+}
+
 export function resolveAppBasePath() {
   return normalizeBasePath(process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '');
 }
@@ -57,4 +68,18 @@ export function buildAbsoluteAppUrl(path = APP_ROOT_PATH) {
   }
 
   return `${window.location.origin}${buildAppPath(path)}`;
+}
+
+export function buildProductPath(product) {
+  const productId = normalizePathSegment(product?.id);
+  if (!productId) {
+    return '/catalog';
+  }
+
+  const productSlug = normalizePathSegment(product?.slug);
+  if (!productSlug) {
+    return `/product/${productId}`;
+  }
+
+  return `/product/${productId}/${productSlug}`;
 }
