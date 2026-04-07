@@ -12,6 +12,7 @@ import {
   getCheckoutPaymentDescription,
   getPaymentSummaryLabel
 } from '../utils/payment';
+import { CART_SESSION_STRATEGY } from '../utils/account';
 import { Button, Card, Input } from '../components/ui';
 
 function CartPage() {
@@ -282,7 +283,7 @@ function CartPage() {
                     </Button>
                     {!isAuthenticated && (
                       <div className="mb-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-ink/90">
-                        Оформление без регистрации уже включено. Для постоянных клиентов доступен вход в аккаунт на шаге оформления.
+                        {CART_SESSION_STRATEGY.guestCheckoutMessage}
                       </div>
                     )}
                   </>

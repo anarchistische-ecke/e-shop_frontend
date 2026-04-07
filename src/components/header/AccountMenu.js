@@ -1,13 +1,18 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '../ui';
 import { UserIcon } from './icons';
+import { buildLoginRedirectPath } from '../../utils/account';
 
 function LoggedOutAccountButton() {
+  const location = useLocation();
+  const redirectTo = buildLoginRedirectPath(location);
+
   return (
     <Button
       as={Link}
       to="/login"
+      state={{ from: redirectTo }}
       aria-label="Войти"
       variant="secondary"
       size="sm"

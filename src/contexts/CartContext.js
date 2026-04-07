@@ -9,6 +9,8 @@ import {
 } from '../api';
 import { useNotifications } from './NotificationContext';
 import { normalizeCartQuantity } from '../utils/cart';
+import { subscribeToAuthChanges } from '../utils/auth';
+import { resolveCartSessionAfterAuthChange } from '../utils/account';
 import { createNotification } from '../utils/notifications';
 import { moneyToNumber, getPrimaryImageUrl, getPrimaryVariant } from '../utils/product';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
@@ -144,6 +146,32 @@ export function CartProvider({ children }) {
   useEffect(() => {
     if (!cartId) return;
     syncCart(cartId);
+  }, [cartId, syncCart]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthChanges(() => {
+      const nextSession = resolveCartSessionAfterAuthChange({
+        currentCartId: cartId,
+        storedCartId: typeof window !== 'undefined' ? localStorage.getItem('cartId') : null
+      });
+
+      if (!nextSession.cartId) {
+        return;
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('cartId', nextSession.cartId);
+      }
+
+      if (nextSession.cartId !== cartId) {
+        setCartId(nextSession.cartId);
+        return;
+      }
+
+      syncCart(nextSession.cartId);
+    });
+
+    return unsubscribe;
   }, [cartId, syncCart]);
 
   // Add item to cart (handles single or multiple variants per product)

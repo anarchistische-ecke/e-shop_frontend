@@ -1,4 +1,4 @@
-import { clearSession, getAccessToken } from '../auth/session';
+import { clearAllAuthStorage, getAccessToken } from '../auth/session';
 
 const inferBrowserApiBase = () =>
   (typeof window !== 'undefined' ? window.__API_BASE__ || window.location.origin : null);
@@ -25,9 +25,7 @@ export function isApiRequestError(error) {
 
 function broadcastLogout(reason = 'logout') {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('userToken');
-  clearSession();
+  clearAllAuthStorage();
 }
 
 async function request(url, options = {}) {
