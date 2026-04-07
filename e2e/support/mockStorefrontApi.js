@@ -46,6 +46,9 @@ function fulfillJson(route, payload, status = 200) {
 
 async function mockStorefrontApi(page, overrides = {}) {
   const cartState = createCartState();
+  const stats = {
+    addItemRequests: 0,
+  };
   const paymentProviderConfig = {
     ...clone(paymentProvider),
     ...(overrides.paymentProvider || {}),
@@ -140,6 +143,10 @@ async function mockStorefrontApi(page, overrides = {}) {
     }
 
     if (pathname === `/carts/${cartState.id}/items` && method === 'POST') {
+      stats.addItemRequests += 1;
+      if (overrides.addItemDelayMs) {
+        await new Promise((resolve) => setTimeout(resolve, overrides.addItemDelayMs));
+      }
       const body = request.postDataJSON();
       const quantity = Number(body.quantity) || 1;
       const variantId = body.variantId;
@@ -230,7 +237,7 @@ async function mockStorefrontApi(page, overrides = {}) {
     return route.continue();
   });
 
-  return { cartState };
+  return { cartState, stats };
 }
 
 module.exports = {

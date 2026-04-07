@@ -62,6 +62,13 @@ const products = [
         oldPrice: 5100,
         stock: 7,
       },
+      {
+        id: 'var-satin-sand-240',
+        name: '240×260',
+        price: 4700,
+        oldPrice: 5400,
+        stock: 0,
+      },
     ],
     images: [
       {
