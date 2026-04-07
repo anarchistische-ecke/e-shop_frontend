@@ -3,26 +3,19 @@ import { Link } from 'react-router-dom';
 import Seo from '../components/Seo';
 import ProductCard from '../components/ProductCard';
 import { Button, Card } from '../components/ui';
-import { getProducts, getCategories } from '../api';
+import { useProductDirectoryData } from '../features/product-list/data';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
 import { getPrimaryImageUrl, getProductPrice, resolveImageUrl } from '../utils/product';
 import { buildProductPath } from '../utils/url';
 
 function Home() {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const { products, categories } = useProductDirectoryData();
   const [bannerText, setBannerText] = useState('');
   const [bannerEnabled, setBannerEnabled] = useState(true);
   const [heroConfig, setHeroConfig] = useState(() => ({ ...homeHeroDefaults }));
   const categoryRowRef = useRef(null);
 
   useEffect(() => {
-    getProducts()
-      .then((data) => setProducts(Array.isArray(data) ? data : []))
-      .catch((err) => console.error('Failed to fetch products:', err));
-    getCategories()
-      .then((data) => setCategories(Array.isArray(data) ? data : []))
-      .catch((err) => console.error('Failed to fetch categories:', err));
     // Load banner from admin content (stored in localStorage)
     if (typeof window !== 'undefined') {
       const storedBanner = localStorage.getItem('adminBanner');

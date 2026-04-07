@@ -1,11 +1,10 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   createCart,
   getCart,
   addItemToCart,
   updateCartItem,
-  removeCartItem,
-  getProducts
+  removeCartItem
 } from '../api';
 import { useNotifications } from './NotificationContext';
 import { normalizeCartQuantity } from '../utils/cart';
@@ -14,6 +13,7 @@ import { resolveCartSessionAfterAuthChange } from '../utils/account';
 import { createNotification } from '../utils/notifications';
 import { moneyToNumber, getPrimaryImageUrl, getPrimaryVariant } from '../utils/product';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+import { useProductDirectoryData } from '../features/product-list/data';
 
 export const CartContext = createContext();
 
@@ -84,6 +84,7 @@ function buildAddToCartErrorNotification(err, { reason = 'request_failed' } = {}
 
 export function CartProvider({ children }) {
   const { notify } = useNotifications();
+  const { products } = useProductDirectoryData();
   // Persist cart ID in localStorage
   const [cartId, setCartId] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -91,36 +92,29 @@ export function CartProvider({ children }) {
     }
     return null;
   });
-  const [items, setItems] = useState([]);
-  const [variantMap, setVariantMap] = useState({});
+  const [rawItems, setRawItems] = useState([]);
   const [lastAddedItem, setLastAddedItem] = useState(null);
 
-  const refreshVariantMap = useCallback(async () => {
-    try {
-      const products = await getProducts();
-      const map = normalizeVariantsMap(Array.isArray(products) ? products : []);
-      setVariantMap(map);
-      return map;
-    } catch (err) {
-      console.error('Failed to fetch products for cart context:', err);
-      return variantMap;
-    }
-  }, [variantMap]);
+  const variantMap = useMemo(
+    () => normalizeVariantsMap(products),
+    [products]
+  );
+
+  const items = useMemo(
+    () => enrichCartItems(rawItems, variantMap),
+    [rawItems, variantMap]
+  );
 
   const syncCart = useCallback(
     async (id) => {
       try {
         const cart = await getCart(id);
-        const map =
-          Object.keys(variantMap).length > 0
-            ? variantMap
-            : await refreshVariantMap();
-        setItems(enrichCartItems(cart.items || [], map));
+        setRawItems(Array.isArray(cart?.items) ? cart.items : []);
       } catch (err) {
         console.error('Failed to load cart:', err);
       }
     },
-    [variantMap, refreshVariantMap]
+    []
   );
 
   // Initialize or fetch the cart on mount

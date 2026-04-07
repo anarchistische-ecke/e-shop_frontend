@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { PaymentConfigProvider } from './contexts/PaymentConfigContext';
+import { CatalogueDataProvider } from './features/product-list/data';
 import App from './pages/App';
 import { initYandexMetrika } from './utils/metrika';
 import { resolveAppBasePath } from './utils/url';
@@ -24,9 +25,11 @@ root.render(
       <NotificationProvider>
         <AuthProvider>
           <PaymentConfigProvider>
-            <CartProvider>
-              <App />
-            </CartProvider>
+            <CatalogueDataProvider>
+              <CartProvider>
+                <App />
+              </CartProvider>
+            </CatalogueDataProvider>
           </PaymentConfigProvider>
         </AuthProvider>
       </NotificationProvider>

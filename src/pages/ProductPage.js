@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
-import { getCategories, getProduct, getProducts } from '../api';
+import { getProduct } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
 import ProductCard from '../components/ProductCard';
 import { Button, Card, Modal, Tabs } from '../components/ui';
+import { useProductDirectoryData } from '../features/product-list/data';
 import {
   getPrimaryVariant,
   getProductPrice,
@@ -150,13 +151,12 @@ function ProductPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { addItem } = useContext(CartContext);
+  const { categories, products: directoryProducts } = useProductDirectoryData();
 
   const [product, setProduct] = useState(null);
-  const [categories, setCategories] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [activeTab, setActiveTab] = useState('about');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [relatedProducts, setRelatedProducts] = useState([]);
   const [bundleSelections, setBundleSelections] = useState({});
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -170,15 +170,6 @@ function ProductPage() {
 
   const transitionTimerRef = useRef(null);
   const cartInputRef = useRef({ quantity: 1, variantId: null });
-
-  useEffect(() => {
-    getCategories()
-      .then((data) => setCategories(Array.isArray(data) ? data : []))
-      .catch((err) => {
-        console.error('Failed to fetch categories:', err);
-        setCategories([]);
-      });
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -200,12 +191,11 @@ function ProductPage() {
     }
 
     cartInputRef.current = nextInputs;
-  }, [cartStatus, quantity, selectedVariant?.id]);
+    }, [cartStatus, quantity, selectedVariant?.id]);
 
   useEffect(() => {
     setActiveTab('about');
     setActiveImageIndex(0);
-    setRelatedProducts([]);
     setBundleSelections({});
     setQuantity(1);
     setPendingAction('');
@@ -234,28 +224,24 @@ function ProductPage() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
-  useEffect(() => {
-    let mounted = true;
-    if (!product) return undefined;
+  const relatedProducts = useMemo(() => {
+    if (!product) {
+      return [];
+    }
 
-    getProducts()
-      .then((data) => {
-        if (!mounted) return;
-        const list = Array.isArray(data) ? data : [];
-        const targetCategoryToken = resolveProductCategoryToken(product);
-        const related = list.filter((item) => {
-          if (!item || item.id === product.id || item?.isActive === false) return false;
-          if (!targetCategoryToken) return true;
-          return resolveProductCategoryToken(item) === targetCategoryToken;
-        });
-        setRelatedProducts(related.slice(0, 4));
+    const targetCategoryToken = resolveProductCategoryToken(product);
+    return directoryProducts
+      .filter((item) => {
+        if (!item || item.id === product.id || item?.isActive === false) {
+          return false;
+        }
+        if (!targetCategoryToken) {
+          return true;
+        }
+        return resolveProductCategoryToken(item) === targetCategoryToken;
       })
-      .catch((err) => console.error('Failed to fetch related products:', err));
-
-    return () => {
-      mounted = false;
-    };
-  }, [product]);
+      .slice(0, 4);
+  }, [directoryProducts, product]);
 
   useEffect(() => {
     if (!relatedProducts.length) return;
