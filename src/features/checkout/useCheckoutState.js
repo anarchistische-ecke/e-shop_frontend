@@ -10,6 +10,7 @@ import {
   isApiRequestError
 } from '../../api';
 import { buildAbsoluteAppUrl } from '../../utils/url';
+import { getCustomerSafeErrorMessage } from '../../utils/customerErrors';
 import { createNotification } from '../../utils/notifications';
 import { moneyToNumber } from '../../utils/product';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../../utils/metrika';
@@ -729,11 +730,12 @@ export function useCheckoutState() {
       return pointsCount;
     } catch (err) {
       console.error('Failed to load pickup points:', err);
-      if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
-        setDeliveryError(err.details.message.trim());
-      } else {
-        setDeliveryError(failureMessage);
-      }
+      setDeliveryError(
+        getCustomerSafeErrorMessage(err, {
+          context: 'checkoutDelivery',
+          fallbackMessage: failureMessage
+        })
+      );
       return 0;
     } finally {
       setPickupLoading(false);
@@ -765,11 +767,12 @@ export function useCheckoutState() {
       }
     } catch (err) {
       console.error('Failed to refresh pickup points for current map viewport:', err);
-      if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
-        setDeliveryError(err.details.message.trim());
-      } else {
-        setDeliveryError('Не удалось обновить пункты выдачи для текущей области карты.');
-      }
+      setDeliveryError(
+        getCustomerSafeErrorMessage(err, {
+          context: 'checkoutDelivery',
+          fallbackMessage: 'Не удалось обновить пункты выдачи для текущей области карты.'
+        })
+      );
     } finally {
       if (pickupViewportSyncRef.current.inFlight === token) {
         pickupViewportSyncRef.current.inFlight = '';
@@ -1006,11 +1009,12 @@ export function useCheckoutState() {
       }
     } catch (err) {
       console.error('Failed to load delivery offers:', err);
-      if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
-        setDeliveryError(err.details.message.trim());
-      } else {
-        setDeliveryError('Не удалось рассчитать доставку. Попробуйте ещё раз.');
-      }
+      setDeliveryError(
+        getCustomerSafeErrorMessage(err, {
+          context: 'checkoutDelivery',
+          fallbackMessage: 'Не удалось рассчитать доставку. Попробуйте ещё раз.'
+        })
+      );
       setDeliveryOffers([]);
       setSelectedOfferId('');
     } finally {
@@ -1235,9 +1239,10 @@ export function useCheckoutState() {
         setActiveStep(3);
         setSafeRetryState(createSafeRetryState('conflict', {
           orderToken: nextAttempt.orderToken || attempt.orderToken || '',
-          message: typeof err.details?.message === 'string' && err.details.message.trim()
-            ? err.details.message.trim()
-            : ''
+          message: getCustomerSafeErrorMessage(err, {
+            context: 'checkout',
+            fallbackMessage: 'Подождите немного и выполните безопасную проверку ещё раз.'
+          })
         }));
         setStatus(createNotification({
           type: 'warning',
@@ -1258,23 +1263,14 @@ export function useCheckoutState() {
           title: 'Связь нестабильна',
           message: 'Мы сохранили попытку оформления. Повторная проверка не создаст дубль заказа.'
         }));
-      } else if (isApiRequestError(err) && typeof err.details?.message === 'string' && err.details.message.trim()) {
-        setStatus(createNotification({
-          type: 'error',
-          title: 'Не удалось оформить заказ',
-          message: err.details.message.trim()
-        }));
-      } else if (typeof err?.message === 'string' && err.message.trim()) {
-        setStatus(createNotification({
-          type: 'error',
-          title: 'Не удалось оформить заказ',
-          message: err.message.trim()
-        }));
       } else {
         setStatus(createNotification({
           type: 'error',
           title: 'Не удалось оформить заказ',
-          message: 'Попробуйте ещё раз.'
+          message: getCustomerSafeErrorMessage(err, {
+            context: 'checkout',
+            fallbackMessage: 'Попробуйте ещё раз.'
+          })
         }));
       }
     } finally {

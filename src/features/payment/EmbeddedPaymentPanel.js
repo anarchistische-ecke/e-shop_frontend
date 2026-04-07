@@ -2,13 +2,14 @@ import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import NotificationBanner from '../../components/NotificationBanner';
 import { Button, Card } from '../../components/ui';
 import { createNotification } from '../../utils/notifications';
+import { getCustomerSafeErrorMessage } from '../../utils/customerErrors';
 import { loadPaymentWidgetScript } from './widget';
 
 function createWidgetNotification(error, providerName) {
-  const message =
-    typeof error?.message === 'string' && error.message.trim()
-      ? error.message.trim()
-      : 'Не удалось подготовить форму оплаты. Можно безопасно запросить её ещё раз.';
+  const message = getCustomerSafeErrorMessage(error, {
+    context: 'paymentWidget',
+    fallbackMessage: 'Не удалось подготовить форму оплаты. Можно безопасно запросить её ещё раз.'
+  });
 
   return createNotification({
     type: 'error',
