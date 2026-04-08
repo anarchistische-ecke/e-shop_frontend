@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import TrustLinksPanel from '../TrustLinksPanel';
 import { MOBILE_TRUST_LINK_IDS } from '../../data/trustLinks';
 import { Input } from '../ui';
+import CategoryGlyph from '../navigation/CategoryGlyph';
 import { resolveCategoryToken } from '../../utils/header';
 import { SearchIcon } from './icons';
 
@@ -19,6 +20,7 @@ function MobileMenu({
   onSearchFocus,
   onSearchSubmit,
   onStepBack,
+  onTrackCategoryClick,
   searchTerm
 }) {
   if (!isOpen) {
@@ -78,14 +80,20 @@ function MobileMenu({
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Link
               to="/catalog"
-              onClick={onClose}
+              onClick={() => {
+                onTrackCategoryClick('catalog', 'mobile_menu');
+                onClose();
+              }}
               className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-ink/10 bg-white text-sm font-medium text-ink"
             >
               Каталог
             </Link>
             <Link
               to="/category/popular"
-              onClick={onClose}
+              onClick={() => {
+                onTrackCategoryClick('popular', 'mobile_menu');
+                onClose();
+              }}
               className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-ink/10 bg-white text-sm font-medium text-ink"
             >
               Лучшее
@@ -107,7 +115,10 @@ function MobileMenu({
           {activeMobileParent ? (
             <Link
               to={`/category/${resolveCategoryToken(activeMobileParent)}`}
-              onClick={onClose}
+              onClick={() => {
+                onTrackCategoryClick(resolveCategoryToken(activeMobileParent), 'mobile_menu_parent');
+                onClose();
+              }}
               className="mb-3 inline-flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-primary/25 bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
             >
               <span>Смотреть всё: {activeMobileParent.name}</span>
@@ -126,10 +137,18 @@ function MobileMenu({
                   <li key={token}>
                     <button
                       type="button"
-                      className="grid min-h-[44px] w-full grid-cols-[minmax(0,1fr)_auto] items-center rounded-2xl border border-ink/10 bg-white px-3 py-2 text-left text-sm text-ink"
+                      className="grid min-h-[52px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-ink/10 bg-white px-3 py-2 text-left text-sm text-ink"
                       onClick={() => onOpenCategory(token)}
                     >
-                      <span>{category.name}</span>
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-sand/35 text-ink/80">
+                        <CategoryGlyph category={category} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">{category.name}</span>
+                        <span className="block truncate text-xs text-muted">
+                          {(childrenByParent[String(category.id)] || []).length} подкатегорий
+                        </span>
+                      </span>
                       <span className="text-ink/45" aria-hidden="true">
                         ›
                       </span>
@@ -142,10 +161,21 @@ function MobileMenu({
                 <li key={token}>
                   <Link
                     to={`/category/${token}`}
-                    className="grid min-h-[44px] w-full grid-cols-[minmax(0,1fr)_auto] items-center rounded-2xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
-                    onClick={onClose}
+                    className="grid min-h-[52px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                    onClick={() => {
+                      onTrackCategoryClick(token, 'mobile_menu_category');
+                      onClose();
+                    }}
                   >
-                    <span>{category.name}</span>
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-sand/35 text-ink/80">
+                      <CategoryGlyph category={category} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{category.name}</span>
+                      <span className="block truncate text-xs text-muted">
+                        {category.description || 'Открыть подборку товаров'}
+                      </span>
+                    </span>
                     <span className="text-ink/45" aria-hidden="true">
                       →
                     </span>

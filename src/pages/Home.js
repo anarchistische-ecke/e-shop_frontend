@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import HomeCategoryNavigation from '../components/home/HomeCategoryNavigation';
 import Seo from '../components/Seo';
 import ProductCard from '../components/ProductCard';
 import { Button, Card } from '../components/ui';
@@ -13,7 +14,6 @@ function Home() {
   const [bannerText, setBannerText] = useState('');
   const [bannerEnabled, setBannerEnabled] = useState(true);
   const [heroConfig, setHeroConfig] = useState(() => ({ ...homeHeroDefaults }));
-  const categoryRowRef = useRef(null);
 
   useEffect(() => {
     // Load banner from admin content (stored in localStorage)
@@ -89,60 +89,11 @@ function Home() {
     },
   ];
 
-  const categoryAccents = [
-    { gradient: 'from-[#f6f1ea] via-white to-[#efe4d7]', orb: 'bg-[#e2d2c1]' },
-    { gradient: 'from-[#f4f1ea] via-white to-[#e8efe8]', orb: 'bg-[#d7e6db]' },
-    { gradient: 'from-[#f7f2ec] via-white to-[#efe7de]', orb: 'bg-[#e6d5c4]' },
-    { gradient: 'from-[#f2efe7] via-white to-[#e6ece5]', orb: 'bg-[#d2dfd5]' },
-  ];
-
-  const resolveProductCategoryKey = (product) => {
-    const categoryValue =
-      product?.category ||
-      product?.categoryId ||
-      product?.category_id ||
-      product?.categorySlug ||
-      product?.category_slug ||
-      product?.category?.id ||
-      product?.category?.slug ||
-      product?.category?.name;
-    const categoryKey =
-      typeof categoryValue === 'string'
-        ? categoryValue
-        : categoryValue?.id || categoryValue?.slug || categoryValue?.name || '';
-    return categoryKey ? String(categoryKey) : '';
-  };
-
-  const categoryMeta = useMemo(() => {
-    const counts = {};
-    const heroMap = {};
-    visibleProducts.forEach((product) => {
-      const key = resolveProductCategoryKey(product);
-      if (!key) return;
-      counts[key] = (counts[key] || 0) + 1;
-      if (!heroMap[key]) heroMap[key] = product;
-    });
-    return { counts, heroMap };
-  }, [visibleProducts]);
-
   const featuredProduct =
     visibleProducts.find((p) => p.id === heroConfig.featuredProductId) || visibleProducts[0] || null;
   const heroImage = getPrimaryImageUrl(featuredProduct);
   const heroShareImage = heroImage ? resolveImageUrl(heroImage) : '';
   const featuredPrice = featuredProduct ? getProductPrice(featuredProduct) : null;
-  const topCategories = categories.filter((cat) => !cat.parentId);
-
-  const resolveCategoryKey = (category) => {
-    if (!category) return '';
-    return String(category.slug || category.id || category.name || '');
-  };
-
-  const scrollCategories = (direction) => {
-    const scroller = categoryRowRef.current;
-    if (!scroller) return;
-    const scrollAmount = Math.max(260, scroller.clientWidth * 0.75);
-    scroller.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
-  };
 
   return (
     <>
@@ -237,119 +188,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 pb-12">
-        <div className="ambient-panel relative overflow-hidden rounded-[28px] border border-white/70 bg-white/70 backdrop-blur-lg px-6 py-8 md:px-10 md:py-10 shadow-[0_24px_60px_rgba(43,39,34,0.12)]">
-          <div className="absolute -top-16 right-6 h-32 w-32 rounded-full bg-primary/20 blur-3xl float-slow pointer-events-none" />
-          <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-sky/60 blur-3xl float-slow pointer-events-none" />
-          <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs uppercase tracking-[0.32em] text-accent">Категории</p>
-              <h2 className="text-2xl md:text-3xl font-semibold">Тихие подборки для уютного дома</h2>
-              <p className="text-sm text-muted mt-2">
-                Быстрый доступ к текстилю для спальни, ванной и детской — без лишнего шума.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button as={Link} to="/catalog">В каталог</Button>
-              <Button as={Link} to="/category/new" variant="secondary">Новинки</Button>
-            </div>
-          </div>
-          <div className="relative z-10 mt-6">
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white/90 via-white/50 to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white/90 via-white/50 to-transparent" />
-              <div
-                id="category-carousel"
-                ref={categoryRowRef}
-                className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scroll-smooth scrollbar-hide cursor-grab active:cursor-grabbing"
-              >
-                {(topCategories || []).map((cat, idx) => {
-                  const accent = categoryAccents[idx % categoryAccents.length];
-                  const count = categoryMeta.counts[cat.id] || categoryMeta.counts[cat.slug] || 0;
-                  const countLabel = count ? `${count} товаров` : 'Подборка';
-                  const catKey = resolveCategoryKey(cat);
-                  const previewProduct = categoryMeta.heroMap[catKey];
-                  const categoryImage = resolveImageUrl(
-                    cat.imageUrl || cat.image || cat.image_url || cat.thumbnail || ''
-                  );
-                  const previewImage = getPrimaryImageUrl(previewProduct);
-                  const tileImage = categoryImage || previewImage;
-                  return (
-                    <Link
-                      key={cat.slug || cat.id}
-                      to={`/category/${cat.slug || cat.id}`}
-                      className={`group relative flex-shrink-0 w-[260px] sm:w-[300px] lg:w-[320px] snap-start overflow-hidden rounded-[24px] border border-white/70 bg-gradient-to-br ${accent.gradient} p-4 shadow-[0_16px_36px_rgba(43,39,34,0.1)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_45px_rgba(43,39,34,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 reveal-up`}
-                      style={{ animationDelay: `${idx * 70}ms` }}
-                    >
-                      <div
-                        className={`absolute -top-10 -right-10 h-24 w-24 rounded-full ${accent.orb} blur-2xl opacity-70 transition group-hover:opacity-90`}
-                      />
-                      <div className="relative z-10 flex h-full flex-col gap-3">
-                        <div className="flex items-center justify-between text-xs uppercase tracking-[0.18em] text-muted">
-                          <span>Раздел</span>
-                          <span className="tracking-normal normal-case">{countLabel}</span>
-                        </div>
-                        <div className="rounded-2xl overflow-hidden border border-white/70 bg-white/85">
-                          <div className="relative pt-[68%]">
-                            {tileImage ? (
-                              <img src={tileImage} alt={cat.name} className="absolute inset-0 h-full w-full object-cover" />
-                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">
-                                Фото появится позже
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-base font-semibold mb-1">{cat.name}</p>
-                          <p className="text-xs text-muted mb-0">
-                            {cat.description || 'Текстиль и детали для вашего пространства.'}
-                          </p>
-                        </div>
-                        <div className="mt-auto flex items-center justify-between text-sm font-medium text-primary">
-                          <span>Смотреть</span>
-                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-white/70 bg-white/85 shadow-sm transition-transform duration-300 group-hover:translate-x-1">
-                            →
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-                {topCategories.length === 0 && (
-                  <p className="text-sm text-muted">
-                    Категории появятся после добавления в админке.
-                  </p>
-                )}
-              </div>
-              {topCategories.length > 3 && (
-                <>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={() => scrollCategories(-1)}
-                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2"
-                    aria-label="Прокрутить категории влево"
-                    aria-controls="category-carousel"
-                  >
-                    ←
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={() => scrollCategories(1)}
-                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2"
-                    aria-label="Прокрутить категории вправо"
-                    aria-controls="category-carousel"
-                  >
-                    →
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
+      <HomeCategoryNavigation categories={categories} products={visibleProducts} />
 
       <section className="container mx-auto px-4 py-10">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">

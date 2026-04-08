@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from './ui';
 import AccountMenu from './header/AccountMenu';
 import CartButton from './header/CartButton';
@@ -32,6 +31,7 @@ function Header() {
               onClear={header.clearSearch}
               onClose={header.closeSearch}
               onFocus={header.handleSearchFocus}
+              onTrackSearchSuggestion={header.trackSearchSuggestionClick}
               onNavigateSearch={header.navigateSearch}
               onSetSearchScope={header.setSearchScope}
               onSubmit={header.handleSearchSubmit}
@@ -43,11 +43,13 @@ function Header() {
 
             <div className="flex items-center justify-end gap-2">
               <Button
-                as={Link}
-                to="/catalog"
+                type="button"
                 variant="secondary"
                 size="sm"
                 className="hidden lg:inline-flex"
+                aria-expanded={header.isCatalogMenuOpen}
+                aria-haspopup="dialog"
+                onClick={header.handleCatalogToggle}
               >
                 Каталог
               </Button>
@@ -74,11 +76,13 @@ function Header() {
         activeMegaCategory={header.activeMegaCategory}
         activeMegaCategoryData={header.activeMegaCategoryData}
         childrenByParent={header.childrenByParent}
+        isOpen={header.isCatalogMenuOpen}
         megaChildren={header.megaChildren}
         navCategories={header.navCategories}
         onCloseMega={header.closeMega}
         onCloseMegaWithDelay={header.closeMegaWithDelay}
         onOpenMega={header.openMega}
+        onTrackCategoryClick={header.trackCategoryNavigation}
         onToggleMega={(token) => {
           header.setActiveMegaCategory((current) => (current === token ? '' : token));
         }}
@@ -101,6 +105,7 @@ function Header() {
         onStepBack={() => {
           header.setMobilePath((current) => current.slice(0, -1));
         }}
+        onTrackCategoryClick={header.trackCategoryNavigation}
         searchTerm={header.searchTerm}
       />
 

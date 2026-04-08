@@ -242,6 +242,7 @@ export function buildAutocompleteData({
 
   if (!normalizedQuery) {
     return {
+      categorySuggestions: [],
       suggestedQueries: [],
       productSuggestions: [],
       correctedQuery: '',
@@ -298,7 +299,39 @@ export function buildAutocompleteData({
     })),
   ]).slice(0, queryLimit);
 
+  const categorySuggestions = categories
+    .map((category) => {
+      const rawToken = String(category?.slug || category?.id || category?.name || '');
+      const token = normalizeSearchText(rawToken);
+      const label = category?.name || '';
+      const description = category?.description || '';
+      const haystack = normalizeSearchText(`${label} ${description}`);
+      if (!token || !label) {
+        return null;
+      }
+      if (activeScope && token !== activeScope) {
+        return null;
+      }
+      const score = haystack.includes(normalizedQuery)
+        ? 100 + computeTokenMatchScore(tokenizeSearchText(normalizedQuery), haystack)
+        : computeTokenMatchScore(tokenizeSearchText(normalizedQuery), haystack);
+      if (!score) {
+        return null;
+      }
+      return {
+        id: category?.id || token,
+        token: rawToken,
+        label,
+        description,
+        score
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+
   return {
+    categorySuggestions,
     suggestedQueries,
     productSuggestions: matchedProducts.slice(0, productLimit),
     correctedQuery: correction.correctedQuery,
