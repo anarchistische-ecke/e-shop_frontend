@@ -14,11 +14,15 @@ function Header() {
 
   return (
     <header ref={header.headerRef} className="fixed inset-x-0 top-0 z-50">
-      <div className="relative z-[90] border-b border-ink/10 bg-white/92 shadow-[0_12px_28px_rgba(43,39,34,0.08)] backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-3 sm:py-4">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
+      <div
+        ref={header.headerBarRef}
+        className="relative z-[90] border-b border-ink/10 bg-[#fbf7f1]/96 shadow-[0_10px_24px_rgba(43,39,34,0.08)] backdrop-blur-xl lg:bg-white/92 lg:shadow-[0_12px_28px_rgba(43,39,34,0.08)]"
+      >
+        <div className="container mx-auto px-4 py-2.5 sm:py-4">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3">
             <HeaderBrand
               isMenuOpen={header.isMenuOpen}
+              menuTriggerRef={header.menuTriggerRef}
               onMenuToggle={header.handleMenuToggle}
               wayfindingLabel={header.wayfindingLabel}
             />

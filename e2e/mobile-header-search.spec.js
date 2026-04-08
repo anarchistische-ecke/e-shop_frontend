@@ -24,7 +24,7 @@ test('mobile menu exposes nested categories from the catalog navigation', async 
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Открыть меню' }).click();
-  const mobileMenu = page.locator('aside').filter({ hasText: 'Навигация' });
+  const mobileMenu = page.getByTestId('mobile-nav-panel');
   await expect(mobileMenu.getByRole('button', { name: /Популярное/i })).toBeVisible();
 
   await mobileMenu.getByRole('button', { name: /Популярное/i }).click();

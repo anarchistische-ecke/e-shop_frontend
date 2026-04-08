@@ -570,6 +570,7 @@ function AccountPage() {
                 <label className="text-sm text-muted block mb-2">Ваш пол</label>
                 <Tabs
                   ariaLabel="Выбор пола"
+                  kind="segmented"
                   value={profile.gender}
                   onChange={(value) => setProfile((prev) => ({ ...prev, gender: value }))}
                   items={[

@@ -209,6 +209,8 @@ function SearchBar({
   searchTerm,
   scopeOptions
 }) {
+  const mobileSuggestionsId = 'header-search-suggestions-mobile';
+
   return (
     <div
       ref={searchRef}
@@ -223,10 +225,14 @@ function SearchBar({
           value={searchTerm}
           onChange={onChange}
           onFocus={onFocus}
-          placeholder="Поиск по товарам, коллекциям и категориям"
-          className="bg-white pl-11 pr-12 shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+          placeholder="Поиск товаров и категорий"
+          className="bg-white pl-11 pr-12 shadow-[0_10px_24px_rgba(43,39,34,0.08)] lg:shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
           aria-label="Поиск товаров"
+          aria-expanded={isSearchPanelVisible}
+          aria-controls={isSearchPanelVisible ? mobileSuggestionsId : undefined}
+          aria-autocomplete="list"
           autoComplete="off"
+          enterKeyHint="search"
         />
         {searchTerm ? (
           <Button
@@ -252,9 +258,15 @@ function SearchBar({
           />
 
           <div
+            id={mobileSuggestionsId}
             data-testid="header-search-suggestions"
-            className="fixed left-3 right-3 z-[110] max-h-[70vh] overflow-y-auto rounded-[24px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.22)] lg:hidden"
-            style={{ top: 'calc(var(--site-header-height, 6.5rem) + 0.5rem)' }}
+            role="region"
+            aria-label="Подсказки поиска"
+            className="fixed inset-x-0 z-[115] overflow-y-auto border-t border-ink/10 bg-[#fbf7f1]/98 px-4 pb-6 pt-4 shadow-[0_24px_56px_rgba(43,39,34,0.16)] lg:hidden"
+            style={{
+              top: 'var(--site-header-height, 6.5rem)',
+              maxHeight: 'calc(100vh - var(--site-header-height, 6.5rem))'
+            }}
           >
             <SearchPanelBody
               autocompleteData={autocompleteData}

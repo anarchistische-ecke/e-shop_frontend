@@ -174,6 +174,8 @@ export function ProductFiltersTrigger({ activeFilterCount, isOpen = false, onOpe
       className="lg:hidden"
       onClick={onOpenFilters}
       aria-expanded={isOpen}
+      aria-controls="product-filters-sheet"
+      aria-haspopup="dialog"
     >
       Все фильтры{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
     </Button>
@@ -228,6 +230,7 @@ export function ProductFiltersSheet({
 }) {
   return (
     <Modal
+      panelId="product-filters-sheet"
       open={isFilterOpen}
       onClose={onCloseFilters}
       placement="sheet"

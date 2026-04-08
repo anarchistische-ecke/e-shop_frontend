@@ -110,22 +110,31 @@ function Home() {
         </div>
       )}
 
-      <section className="container mx-auto px-4 py-8 md:py-12">
-        <div className="catalog-hero relative overflow-hidden rounded-[32px] border border-white/70 p-6 md:p-10 shadow-[0_30px_70px_rgba(43,39,34,0.14)]">
+      <section className="container mx-auto px-4 py-4 md:py-12">
+        <div className="catalog-hero relative overflow-hidden rounded-[28px] border border-white/70 p-5 md:rounded-[32px] md:p-10 shadow-[0_24px_56px_rgba(43,39,34,0.14)]">
           <div className="absolute -top-20 right-10 h-48 w-48 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-20 left-6 h-40 w-40 rounded-full bg-sky/70 blur-3xl pointer-events-none" />
-          <div className="relative z-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-8 lg:gap-10 items-center">
-            <div className="space-y-6">
+          <div className="relative z-10 grid items-center gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
+            <div className="space-y-5 md:space-y-6">
               <p className="uppercase text-xs tracking-[0.4em] text-accent">{badgeText}</p>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight">
                 {heroTitle} <span className="text-primary">{heroAccent}</span>
               </h1>
               <p className="text-sm sm:text-base text-muted max-w-xl">{heroSubtitle}</p>
-              <div className="flex flex-wrap gap-3">
-                <Button as={Link} to={primaryCtaLink}>{primaryCtaLabel}</Button>
-                <Button as={Link} to={secondaryCtaLink} variant="secondary">{secondaryCtaLabel}</Button>
+              <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
+                <Button as={Link} to={primaryCtaLink} className="w-full sm:w-auto">
+                  {primaryCtaLabel}
+                </Button>
+                <Button
+                  as={Link}
+                  to={secondaryCtaLink}
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                >
+                  {secondaryCtaLabel}
+                </Button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-1 gap-2.5 pt-1 sm:grid-cols-2 sm:gap-3">
                 {heroHighlights.map((feat) => (
                   <Card
                     key={feat.title}
@@ -149,7 +158,7 @@ function Home() {
               <div className="absolute -bottom-10 left-6 h-32 w-32 rounded-full bg-sky/70 blur-3xl" />
               <div className="relative rounded-[30px] overflow-hidden border border-white/80 shadow-[0_30px_60px_rgba(43,39,34,0.2)]">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-white/60 pointer-events-none" />
-                <div className="relative pt-[108%] sm:pt-[120%]">
+                <div className="relative pt-[88%] sm:pt-[120%]">
                   {heroImage ? (
                     <img src={heroImage} alt={featuredProduct?.name || 'Товар'} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
@@ -159,7 +168,7 @@ function Home() {
                   )}
                 </div>
               </div>
-              <div className="mt-4 sm:mt-0 sm:absolute sm:-bottom-6 sm:left-6 sm:right-6 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-[0_18px_40px_rgba(43,39,34,0.16)] backdrop-blur">
+              <div className="mt-4 rounded-2xl border border-white/80 bg-white/92 p-4 shadow-[0_18px_40px_rgba(43,39,34,0.16)] backdrop-blur sm:absolute sm:-bottom-6 sm:left-6 sm:right-6 sm:mt-0">
                 <p className="text-xs uppercase tracking-[0.28em] text-muted">{featuredLabel}</p>
                 <div className="flex items-center justify-between gap-2">
                   <div>

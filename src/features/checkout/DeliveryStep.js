@@ -62,6 +62,7 @@ function DeliveryStep({
             ariaLabel="Тип доставки"
             value={deliveryType}
             onChange={onDeliveryTypeChange}
+            idBase="checkout-delivery-type"
             items={[
               { value: 'COURIER', label: 'Курьер' },
               { value: 'PICKUP', label: 'Пункт выдачи' }
@@ -70,7 +71,13 @@ function DeliveryStep({
           />
 
           {deliveryType === 'COURIER' ? (
-            <div className="mt-4">
+            <div
+              id="checkout-delivery-type-panel-COURIER"
+              role="tabpanel"
+              aria-labelledby="checkout-delivery-type-tab-COURIER"
+              tabIndex={0}
+              className="mt-4"
+            >
               <label className="block text-sm">
                 <span className="text-muted">Адрес доставки (обязательно)</span>
                 <Input
@@ -120,7 +127,13 @@ function DeliveryStep({
               ) : null}
             </div>
           ) : (
-            <div className="mt-4 space-y-3">
+            <div
+              id="checkout-delivery-type-panel-PICKUP"
+              role="tabpanel"
+              aria-labelledby="checkout-delivery-type-tab-PICKUP"
+              tabIndex={0}
+              className="mt-4 space-y-3"
+            >
               <label className="block text-sm">
                 <span className="text-muted">Город или адрес (обязательно)</span>
                 <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
