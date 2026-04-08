@@ -1009,12 +1009,21 @@ function ProductPage() {
             value={activeTab}
             onChange={setActiveTab}
             ariaLabel="Разделы товара"
+            idBase="product-tabs"
             fullWidth
             className="max-w-3xl"
           />
 
           {activeTab === 'about' && (
-            <Card padding="md" className="mt-4">
+            <Card
+              as="section"
+              id="product-tabs-panel-about"
+              role="tabpanel"
+              aria-labelledby="product-tabs-tab-about"
+              tabIndex={0}
+              padding="md"
+              className="mt-4"
+            >
               <p className="whitespace-pre-line text-sm leading-relaxed text-ink/80">
                 {product.description || 'Описание отсутствует.'}
               </p>
@@ -1022,7 +1031,13 @@ function ProductPage() {
           )}
 
           {activeTab === 'details' && (
-            <div className="mt-4">
+            <div
+              id="product-tabs-panel-details"
+              role="tabpanel"
+              aria-labelledby="product-tabs-tab-details"
+              tabIndex={0}
+              className="mt-4"
+            >
               {specificationSections.length > 0 ? (
                 <div className="space-y-8">
                   {specificationSections.map((section, index) => (

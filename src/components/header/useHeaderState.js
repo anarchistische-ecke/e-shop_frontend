@@ -34,6 +34,7 @@ export function useHeaderState() {
 
   const headerRef = useRef(null);
   const headerBarRef = useRef(null);
+  const menuTriggerRef = useRef(null);
   const searchRef = useRef(null);
   const accountMenuRef = useRef(null);
   const hoverCloseTimerRef = useRef(null);
@@ -208,15 +209,34 @@ export function useHeaderState() {
   }, [closeAllPanels, location.pathname, location.search]);
 
   useEffect(() => {
-    if (!isMenuOpen) {
+    if (typeof document === 'undefined') {
       return undefined;
     }
-    const previousOverflow = document.body.style.overflow;
+
+    const shouldLockViewport =
+      isMenuOpen ||
+      (isSearchPanelVisible &&
+        typeof window !== 'undefined' &&
+        window.innerWidth < 1024);
+
+    if (!shouldLockViewport) {
+      return undefined;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyTouchAction = document.body.style.touchAction;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+
     document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.documentElement.style.overflow = 'hidden';
+
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.touchAction = previousBodyTouchAction;
+      document.documentElement.style.overflow = previousDocumentOverflow;
     };
-  }, [isMenuOpen]);
+  }, [isMenuOpen, isSearchPanelVisible]);
 
   useEffect(() => {
     if ((!isSearchOpen && !isSearchFocused) || typeof document === 'undefined') {
@@ -522,6 +542,7 @@ export function useHeaderState() {
     isSearchPanelVisible,
     lastAddedItem,
     megaChildren,
+    menuTriggerRef,
     mobileCategories,
     mobilePath,
     mobileTitle,

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -43,6 +43,7 @@ function AdminRouteFallback() {
 function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const mainRef = useRef(null);
 
   useEffect(() => {
     if (isAdminRoute) {
@@ -55,9 +56,25 @@ function App() {
   return (
     <>
       <ScrollToTop />
+      {!isAdminRoute ? (
+        <a
+          href="#main-content"
+          className="sr-only fixed left-3 top-3 z-[210] rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink shadow-[0_14px_28px_rgba(43,39,34,0.16)] focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary/40"
+          onClick={() => {
+            window.requestAnimationFrame(() => {
+              mainRef.current?.focus();
+            });
+          }}
+        >
+          Перейти к содержимому
+        </a>
+      ) : null}
       <DeliveryConfigNotice />
       {!isAdminRoute && <Header />}
       <main
+        id="main-content"
+        ref={mainRef}
+        tabIndex={-1}
         className={isAdminRoute ? 'min-h-screen' : 'min-h-[80vh]'}
         style={
           isAdminRoute

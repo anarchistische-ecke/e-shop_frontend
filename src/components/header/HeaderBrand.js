@@ -2,17 +2,19 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui';
 
-function HeaderBrand({ isMenuOpen, onMenuToggle, wayfindingLabel }) {
+function HeaderBrand({ isMenuOpen, menuTriggerRef, onMenuToggle, wayfindingLabel }) {
   return (
     <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5">
       <Button
         type="button"
+        ref={menuTriggerRef}
         variant="secondary"
         size="icon"
         className="lg:hidden"
         onClick={onMenuToggle}
         aria-label={isMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
         aria-expanded={isMenuOpen}
+        aria-controls="mobile-nav-panel"
       >
         {isMenuOpen ? '✕' : '☰'}
       </Button>

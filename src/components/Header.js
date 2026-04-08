@@ -22,6 +22,7 @@ function Header() {
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3">
             <HeaderBrand
               isMenuOpen={header.isMenuOpen}
+              menuTriggerRef={header.menuTriggerRef}
               onMenuToggle={header.handleMenuToggle}
               wayfindingLabel={header.wayfindingLabel}
             />

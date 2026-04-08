@@ -5,6 +5,9 @@ import { Button, Card } from '../ui';
 function LastAddedCartNotice({ lastAddedItem, onDismiss }) {
   return (
     <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
       className={`fixed left-1/2 z-[95] w-[min(94vw,390px)] -translate-x-1/2 transition-all duration-200 sm:left-auto sm:right-4 sm:translate-x-0 ${
         lastAddedItem
           ? 'pointer-events-auto translate-y-0 opacity-100'

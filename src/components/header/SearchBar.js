@@ -209,6 +209,8 @@ function SearchBar({
   searchTerm,
   scopeOptions
 }) {
+  const mobileSuggestionsId = 'header-search-suggestions-mobile';
+
   return (
     <div
       ref={searchRef}
@@ -226,7 +228,11 @@ function SearchBar({
           placeholder="Поиск товаров и категорий"
           className="bg-white pl-11 pr-12 shadow-[0_10px_24px_rgba(43,39,34,0.08)] lg:shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
           aria-label="Поиск товаров"
+          aria-expanded={isSearchPanelVisible}
+          aria-controls={isSearchPanelVisible ? mobileSuggestionsId : undefined}
+          aria-autocomplete="list"
           autoComplete="off"
+          enterKeyHint="search"
         />
         {searchTerm ? (
           <Button
@@ -252,8 +258,9 @@ function SearchBar({
           />
 
           <div
+            id={mobileSuggestionsId}
             data-testid="header-search-suggestions"
-            role="dialog"
+            role="region"
             aria-label="Подсказки поиска"
             className="fixed inset-x-0 z-[115] overflow-y-auto border-t border-ink/10 bg-[#fbf7f1]/98 px-4 pb-6 pt-4 shadow-[0_24px_56px_rgba(43,39,34,0.16)] lg:hidden"
             style={{

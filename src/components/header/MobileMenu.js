@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import TrustLinksPanel from '../TrustLinksPanel';
 import { MOBILE_TRUST_LINK_IDS } from '../../data/trustLinks';
 import { Button, Input } from '../ui';
 import CategoryGlyph from '../navigation/CategoryGlyph';
 import { resolveCategoryToken } from '../../utils/header';
+import { focusFirstElement, trapFocusEvent } from '../../utils/a11y';
 import { SearchIcon } from './icons';
 
 function MobileMenu({
@@ -23,16 +24,57 @@ function MobileMenu({
   onTrackCategoryClick,
   searchTerm
 }) {
+  const panelRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const lastFocusedRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    lastFocusedRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const focusTimer = window.requestAnimationFrame(() => {
+      if (searchInputRef.current instanceof HTMLElement) {
+        searchInputRef.current.focus();
+        return;
+      }
+      focusFirstElement(panelRef.current, panelRef.current);
+    });
+
+    const handleKeyDown = (event) => {
+      trapFocusEvent(event, panelRef.current);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.cancelAnimationFrame(focusTimer);
+      document.removeEventListener('keydown', handleKeyDown);
+
+      if (lastFocusedRef.current instanceof HTMLElement && lastFocusedRef.current.isConnected) {
+        window.requestAnimationFrame(() => {
+          lastFocusedRef.current?.focus();
+        });
+      }
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) {
     return null;
   }
 
   return (
     <aside
+      id="mobile-nav-panel"
+      ref={panelRef}
       data-testid="mobile-nav-panel"
       role="dialog"
       aria-modal="true"
       aria-label="Меню каталога"
+      tabIndex={-1}
       className="fixed inset-0 z-[130] flex flex-col bg-[#fbf7f1]/98 backdrop-blur-xl lg:hidden"
     >
       <div className="flex-1 overflow-y-auto overscroll-contain">
@@ -79,6 +121,7 @@ function MobileMenu({
             <form onSubmit={onSearchSubmit} className="relative mt-4">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
               <Input
+                ref={searchInputRef}
                 type="text"
                 value={searchTerm}
                 onChange={onSearchChange}
@@ -86,6 +129,7 @@ function MobileMenu({
                 placeholder="Поиск в каталоге"
                 className="bg-white pl-10 pr-3"
                 aria-label="Поиск по каталогу"
+                enterKeyHint="search"
               />
             </form>
 
@@ -159,8 +203,9 @@ function MobileMenu({
               </div>
             </div>
 
-            <ul className="space-y-2">
-            {mobileCategories.map((category) => {
+            <nav aria-label="Разделы каталога">
+              <ul className="space-y-2">
+              {mobileCategories.map((category) => {
               const token = resolveCategoryToken(category);
               const nested = childrenByParent[String(category.id)] || [];
               const hasNested = nested.length > 0;
@@ -222,7 +267,8 @@ function MobileMenu({
                 Категории появятся после заполнения каталога.
               </li>
             ) : null}
-            </ul>
+              </ul>
+            </nav>
           </section>
 
           <section className="rounded-[28px] border border-ink/10 bg-white/90 p-4 shadow-[0_14px_30px_rgba(43,39,34,0.08)]">
