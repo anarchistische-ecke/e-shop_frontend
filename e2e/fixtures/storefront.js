@@ -34,6 +34,30 @@ const categories = [
     position: 3,
     imageUrl: svgDataUrl('Пледы', '#f3ebe1'),
   },
+  {
+    id: 'popular-satin',
+    slug: 'popular-satin',
+    parentId: 'popular',
+    name: 'Сатин',
+    description: 'Комплекты сатинового белья.',
+    position: 1,
+  },
+  {
+    id: 'popular-kids',
+    slug: 'popular-kids',
+    parentId: 'popular',
+    name: 'Детское',
+    description: 'Подборки для детской комнаты.',
+    position: 2,
+  },
+  {
+    id: 'throws-light',
+    slug: 'throws-light',
+    parentId: 'throws',
+    name: 'Лёгкие пледы',
+    description: 'Воздушные пледы на каждый день.',
+    position: 1,
+  },
 ];
 
 const brands = [

@@ -1,5 +1,6 @@
 import { FIELD_TO_STEP } from './constants';
 import { inferFieldByMessage, isEmailValid, mapBackendField } from './utils';
+import { sanitizeCustomerFieldMessage } from '../../utils/customerErrors';
 
 export const CHECKOUT_VALIDATION_SCHEMA = {
   email: {
@@ -93,7 +94,7 @@ export function mapCheckoutBackendErrors(error) {
     if (!field) return;
     const message =
       typeof fieldError?.message === 'string' && fieldError.message.trim()
-        ? fieldError.message.trim()
+        ? sanitizeCustomerFieldMessage(fieldError.message)
         : 'Проверьте это поле.';
     mappedErrors[field] = message;
   });
@@ -105,7 +106,7 @@ export function mapCheckoutBackendErrors(error) {
         : error?.message || '';
     const inferredField = inferFieldByMessage(fallbackMessage);
     if (inferredField) {
-      mappedErrors[inferredField] = fallbackMessage;
+      mappedErrors[inferredField] = sanitizeCustomerFieldMessage(fallbackMessage);
     }
   }
 

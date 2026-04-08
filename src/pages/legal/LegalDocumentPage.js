@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Seo from '../../components/Seo';
 import { legalTokens } from '../../data/legal/constants';
+import { getCustomerSafeErrorMessage } from '../../utils/customerErrors';
 import { buildAbsoluteAppUrl } from '../../utils/url';
 
 const LEGAL_DOCUMENTS = [
@@ -113,7 +114,12 @@ function LegalDocumentPage({ fileName, onContentReady, className }) {
       })
       .catch((err) => {
         if (!isMounted) return;
-        setError(err.message || 'Не удалось загрузить документ.');
+        setError(
+          getCustomerSafeErrorMessage(err, {
+            context: 'documentLoad',
+            fallbackMessage: 'Не удалось загрузить документ.'
+          })
+        );
         setIsLoading(false);
       });
 

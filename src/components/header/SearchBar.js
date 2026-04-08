@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, FilterChip, Input } from '../ui';
+import CategoryGlyph from '../navigation/CategoryGlyph';
 import { getPrimaryImageUrl, getProductPrice } from '../../utils/product';
 import { normalizeSearchText } from '../../utils/search';
 import { resolveCategoryToken } from '../../utils/header';
@@ -12,6 +13,7 @@ function SearchPanelBody({
   buildSearchParams,
   onNavigateSearch,
   onSetSearchScope,
+  onTrackSearchSuggestion,
   onSuggestionLinkClick,
   scopeOptions,
   searchScope,
@@ -59,9 +61,7 @@ function SearchPanelBody({
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <section>
-          <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">
-            Подсказки поиска
-          </p>
+          <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">Быстрые запросы</p>
           <div className="space-y-1">
             {autocompleteData.suggestedQueries.length > 0 ? (
               autocompleteData.suggestedQueries.map((suggestion) => (
@@ -70,6 +70,7 @@ function SearchPanelBody({
                   type="button"
                   onClick={() => {
                     const nextScope = suggestion.scopeToken || searchScope;
+                    onTrackSearchSuggestion('query', suggestion.label, nextScope);
                     onSetSearchScope(nextScope);
                     onNavigateSearch(suggestion.label, { scopeValue: nextScope });
                   }}
@@ -87,6 +88,40 @@ function SearchPanelBody({
         </section>
 
         <section>
+          <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">Категории</p>
+          <div className="space-y-1">
+            {autocompleteData.categorySuggestions.length > 0 ? (
+              autocompleteData.categorySuggestions.map((category) => (
+                <Link
+                  key={category.id}
+                  to={`/category/${category.token}`}
+                  onClick={() => {
+                    onTrackSearchSuggestion('category', category.token, category.token);
+                    onSuggestionLinkClick();
+                  }}
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
+                >
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-white/90 text-ink/80">
+                    <CategoryGlyph category={category} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-ink">{category.label}</span>
+                    <span className="block truncate text-xs text-muted">
+                      {category.description || 'Перейти в раздел каталога'}
+                    </span>
+                  </span>
+                  <span className="text-sm font-medium text-primary">→</span>
+                </Link>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-sm text-muted">
+                Категории появятся, когда запрос станет точнее.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section className="md:col-span-2">
           <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">
             Товары
           </p>
@@ -107,7 +142,10 @@ function SearchPanelBody({
                       ).toString()}`,
                       fromLabel: 'Результаты поиска'
                     }}
-                    onClick={onSuggestionLinkClick}
+                    onClick={() => {
+                      onTrackSearchSuggestion('product', String(product.id || ''), searchScope);
+                      onSuggestionLinkClick();
+                    }}
                     className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
                   >
                     <div className="h-11 w-11 overflow-hidden rounded-xl border border-ink/10 bg-sand/60">
@@ -165,6 +203,7 @@ function SearchBar({
   onNavigateSearch,
   onSetSearchScope,
   onSubmit,
+  onTrackSearchSuggestion,
   searchRef,
   searchScope,
   searchTerm,
@@ -213,6 +252,7 @@ function SearchBar({
           />
 
           <div
+            data-testid="header-search-suggestions"
             className="fixed left-3 right-3 z-[110] max-h-[70vh] overflow-y-auto rounded-[24px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.22)] lg:hidden"
             style={{ top: 'calc(var(--site-header-height, 6.5rem) + 0.5rem)' }}
           >
@@ -221,6 +261,7 @@ function SearchBar({
               buildSearchParams={buildSearchParams}
               onNavigateSearch={onNavigateSearch}
               onSetSearchScope={onSetSearchScope}
+              onTrackSearchSuggestion={onTrackSearchSuggestion}
               onSuggestionLinkClick={onClose}
               scopeOptions={scopeOptions}
               searchScope={searchScope}
@@ -229,12 +270,16 @@ function SearchBar({
           </div>
 
           <div className="relative hidden lg:block">
-            <div className="absolute left-0 right-0 top-[calc(100%+0.55rem)] z-[110] rounded-[24px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]">
+            <div
+              data-testid="header-search-suggestions"
+              className="absolute left-0 right-0 top-[calc(100%+0.55rem)] z-[110] rounded-[24px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]"
+            >
               <SearchPanelBody
                 autocompleteData={autocompleteData}
                 buildSearchParams={buildSearchParams}
                 onNavigateSearch={onNavigateSearch}
                 onSetSearchScope={onSetSearchScope}
+                onTrackSearchSuggestion={onTrackSearchSuggestion}
                 onSuggestionLinkClick={onClose}
                 scopeOptions={scopeOptions}
                 searchScope={searchScope}

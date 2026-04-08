@@ -54,6 +54,26 @@ describe('checkout validation', () => {
     });
   });
 
+  it('sanitizes sensitive backend field messages before showing them to customers', () => {
+    expect(
+      mapCheckoutBackendErrors({
+        details: {
+          fieldErrors: [
+            {
+              field: 'delivery.address',
+              message: 'org.springframework.dao.DataIntegrityViolationException: duplicate key value violates unique constraint'
+            }
+          ]
+        }
+      })
+    ).toEqual({
+      fieldErrors: {
+        deliveryAddress: 'Проверьте это поле.'
+      },
+      nextStep: 2
+    });
+  });
+
   it('infers a checkout field from a plain backend message', () => {
     expect(
       mapCheckoutBackendErrors({

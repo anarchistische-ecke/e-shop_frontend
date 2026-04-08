@@ -3,10 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CartContext } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProductDirectoryData } from '../../features/product-list/data';
+import { METRIKA_GOALS, trackMetrikaGoal } from '../../utils/metrika';
 import {
   buildAccountLinks,
   buildCategoryCollections,
   buildHeaderSearchParams,
+  resolveCategoryToken,
   resolveWayfindingLabel
 } from '../../utils/header';
 import { buildAutocompleteData, normalizeSearchText } from '../../utils/search';
@@ -90,6 +92,7 @@ export function useHeaderState() {
   );
 
   const hasSearchSuggestions =
+    autocompleteData.categorySuggestions.length > 0 ||
     autocompleteData.suggestedQueries.length > 0 ||
     autocompleteData.productSuggestions.length > 0 ||
     autocompleteData.hasCorrection;
@@ -247,6 +250,22 @@ export function useHeaderState() {
   }, [closeAccountMenu, isAccountMenuOpen]);
 
   useEffect(() => {
+    if (!activeMegaCategory || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (!headerRef.current || headerRef.current.contains(event.target)) {
+        return;
+      }
+      closeMega();
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [activeMegaCategory, closeMega]);
+
+  useEffect(() => {
     if (!lastAddedItem) {
       return undefined;
     }
@@ -336,6 +355,21 @@ export function useHeaderState() {
     [buildSearchParams, closeMega, closeMenu, closeSearch, navigate, searchScope]
   );
 
+  const trackCategoryNavigation = useCallback((token, source) => {
+    trackMetrikaGoal(METRIKA_GOALS.CATEGORY_NAV_CLICK, {
+      category: token,
+      source
+    });
+  }, []);
+
+  const trackSearchSuggestionClick = useCallback((kind, value, scopeToken = '') => {
+    trackMetrikaGoal(METRIKA_GOALS.SEARCH_SUGGESTION_CLICK, {
+      kind,
+      value,
+      scope: scopeToken
+    });
+  }, []);
+
   const handleSearchSubmit = useCallback(
     (event) => {
       event.preventDefault();
@@ -360,16 +394,18 @@ export function useHeaderState() {
     (event) => {
       setSearchTerm(event.target.value);
       closeMenu();
+      closeMega();
       setIsSearchOpen(true);
     },
-    [closeMenu]
+    [closeMega, closeMenu]
   );
 
   const handleSearchFocus = useCallback(() => {
     closeMenu();
+    closeMega();
     setIsSearchFocused(true);
     setIsSearchOpen(true);
-  }, [closeMenu]);
+  }, [closeMega, closeMenu]);
 
   const clearSearch = useCallback(() => {
     setSearchTerm('');
@@ -394,7 +430,20 @@ export function useHeaderState() {
   const handleMenuToggle = useCallback(() => {
     setIsMenuOpen((prev) => !prev);
     closeSearch();
-  }, [closeSearch]);
+    closeMega();
+  }, [closeMega, closeSearch]);
+
+  const handleCatalogToggle = useCallback(() => {
+    setIsMenuOpen(false);
+    closeAccountMenu();
+    closeSearch();
+    setActiveMegaCategory((current) => {
+      if (current) {
+        return '';
+      }
+      return resolveCategoryToken(navCategories[0]) || '';
+    });
+  }, [closeAccountMenu, closeSearch, navCategories]);
 
   const handleLogout = useCallback(() => {
     closeAccountMenu();
@@ -453,6 +502,7 @@ export function useHeaderState() {
     displayPhone,
     handleAccountNav,
     handleAccountTrigger,
+    handleCatalogToggle,
     handleLogout,
     handleMenuToggle,
     handleMobileDrawerSearchInput,
@@ -463,6 +513,7 @@ export function useHeaderState() {
     headerRef,
     isAccountMenuOpen,
     isAuthenticated,
+    isCatalogMenuOpen: Boolean(activeMegaCategory),
     isManager,
     isMenuOpen,
     isSearchPanelVisible,
@@ -481,6 +532,8 @@ export function useHeaderState() {
     setActiveMegaCategory,
     setMobilePath,
     setSearchScope,
+    trackCategoryNavigation,
+    trackSearchSuggestionClick,
     totalItems,
     wayfindingLabel
   };

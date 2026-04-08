@@ -11,6 +11,7 @@ import { normalizeCartQuantity } from '../utils/cart';
 import { subscribeToAuthChanges } from '../utils/auth';
 import { resolveCartSessionAfterAuthChange } from '../utils/account';
 import { createNotification } from '../utils/notifications';
+import { getCustomerSafeErrorMessage } from '../utils/customerErrors';
 import { moneyToNumber, getPrimaryImageUrl, getPrimaryVariant } from '../utils/product';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
 import { useProductDirectoryData } from '../features/product-list/data';
@@ -69,11 +70,10 @@ function buildAddToCartErrorNotification(err, { reason = 'request_failed' } = {}
     });
   }
 
-  const fallbackMessage = 'Возможно, товар закончился или недоступен.';
-  const message =
-    typeof err?.message === 'string' && err.message.trim()
-      ? err.message.trim()
-      : fallbackMessage;
+  const message = getCustomerSafeErrorMessage(err, {
+    context: 'addToCart',
+    fallbackMessage: 'Возможно, товар закончился или недоступен.'
+  });
 
   return createNotification({
     type: 'error',

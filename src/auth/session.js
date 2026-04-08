@@ -4,12 +4,89 @@ import { getAccessToken as getKeycloakAccessToken, isKeycloakConfigured } from '
 const TOKEN_KEY = 'authToken';
 const PROFILE_KEY = 'authProfile';
 const LEGACY_TOKEN_KEYS = ['adminToken', 'userToken'];
+const memorySession = new Map();
 
-const getStorage = () => {
+const getStorage = (kind) => {
   if (typeof window === 'undefined') {
     return null;
   }
-  return window.localStorage || null;
+
+  try {
+    return window[kind] || null;
+  } catch (err) {
+    return null;
+  }
+};
+
+const readStorageItem = (storage, key) => {
+  if (!storage) return null;
+  try {
+    return storage.getItem(key);
+  } catch (err) {
+    return null;
+  }
+};
+
+const writeStorageItem = (storage, key, value) => {
+  if (!storage) return false;
+  try {
+    storage.setItem(key, value);
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
+
+const removeStorageItem = (storage, key) => {
+  if (!storage) return;
+  try {
+    storage.removeItem(key);
+  } catch (err) {
+  }
+};
+
+const getSessionStorage = () => getStorage('sessionStorage');
+const getLegacyStorage = () => getStorage('localStorage');
+
+const readSessionValue = (key) => {
+  const sessionValue = readStorageItem(getSessionStorage(), key);
+  if (sessionValue !== null) {
+    return sessionValue;
+  }
+
+  return memorySession.has(key) ? memorySession.get(key) : null;
+};
+
+const persistSessionValue = (key, value) => {
+  const sessionStorage = getSessionStorage();
+  const didPersist = writeStorageItem(sessionStorage, key, value);
+  if (!didPersist) {
+    memorySession.set(key, value);
+  } else {
+    memorySession.delete(key);
+  }
+  removeStorageItem(getLegacyStorage(), key);
+};
+
+const removeStoredValue = (key) => {
+  removeStorageItem(getSessionStorage(), key);
+  removeStorageItem(getLegacyStorage(), key);
+  memorySession.delete(key);
+};
+
+const readStoredValue = (key) => {
+  const sessionValue = readSessionValue(key);
+  if (sessionValue !== null) {
+    return sessionValue;
+  }
+
+  const legacyValue = readStorageItem(getLegacyStorage(), key);
+  if (legacyValue === null) {
+    return null;
+  }
+
+  persistSessionValue(key, legacyValue);
+  return legacyValue;
 };
 
 const safeJsonParse = (value) => {
@@ -50,8 +127,7 @@ export const parseJwtPayload = (token) => {
 };
 
 export const getStoredProfile = () => {
-  const storage = getStorage();
-  return safeJsonParse(storage ? storage.getItem(PROFILE_KEY) : null);
+  return safeJsonParse(readStoredValue(PROFILE_KEY));
 };
 
 const normalizeToken = (token) => {
@@ -71,40 +147,48 @@ const isTokenValid = (token) => {
   return true;
 };
 
+const clearStoredToken = () => {
+  removeStoredValue(TOKEN_KEY);
+};
+
 export const getStoredToken = () => {
-  const storage = getStorage();
-  const token = normalizeToken(storage ? storage.getItem(TOKEN_KEY) : null);
+  const token = normalizeToken(readStoredValue(TOKEN_KEY));
   if (isTokenValid(token)) return token;
-  if (storage) {
-    storage.removeItem(TOKEN_KEY);
-  }
+  clearStoredToken();
   return null;
 };
 
 export const setSession = ({ token, profile } = {}) => {
-  const storage = getStorage();
-  if (token) {
-    storage?.setItem(TOKEN_KEY, token);
+  if (token && !isKeycloakConfigured()) {
+    persistSessionValue(TOKEN_KEY, token);
+  } else if (token !== undefined) {
+    clearStoredToken();
   }
+
   if (profile === null) {
-    storage?.removeItem(PROFILE_KEY);
+    removeStoredValue(PROFILE_KEY);
   } else if (profile) {
-    storage?.setItem(PROFILE_KEY, JSON.stringify(profile));
+    persistSessionValue(PROFILE_KEY, JSON.stringify(profile));
   }
+
   notifyAuthChange({ type: 'session', action: 'login' });
 };
 
 export const clearSession = () => {
-  const storage = getStorage();
-  storage?.removeItem(TOKEN_KEY);
-  storage?.removeItem(PROFILE_KEY);
+  clearStoredToken();
+  removeStoredValue(PROFILE_KEY);
   notifyAuthChange({ type: 'session', action: 'logout' });
 };
 
 export const clearLegacyAuthStorage = () => {
-  const storage = getStorage();
-  if (!storage) return;
-  LEGACY_TOKEN_KEYS.forEach((key) => storage.removeItem(key));
+  const sessionStorage = getSessionStorage();
+  const legacyStorage = getLegacyStorage();
+
+  LEGACY_TOKEN_KEYS.forEach((key) => {
+    removeStorageItem(sessionStorage, key);
+    removeStorageItem(legacyStorage, key);
+    memorySession.delete(key);
+  });
 };
 
 export const clearAllAuthStorage = () => {
@@ -114,14 +198,17 @@ export const clearAllAuthStorage = () => {
 
 export const getAccessToken = async () => {
   if (typeof window !== 'undefined' && isKeycloakConfigured()) {
+    clearStoredToken();
     try {
       const keycloakToken = await getKeycloakAccessToken();
       if (isTokenValid(keycloakToken)) return keycloakToken;
     } catch (err) {
       console.warn('Failed to read Keycloak token', err);
     }
+    return null;
   }
-  return null;
+
+  return getStoredToken();
 };
 
 export const buildTokenProfile = ({ profile, payload }) => {

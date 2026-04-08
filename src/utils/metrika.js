@@ -11,6 +11,8 @@ const DEFAULT_METRIKA_OPTIONS = {
 export const METRIKA_GOALS = {
   ADD_TO_CART: 'add_to_cart',
   REMOVE_FROM_CART: 'remove_from_cart',
+  CATEGORY_NAV_CLICK: 'category_nav_click',
+  SEARCH_SUGGESTION_CLICK: 'search_suggestion_click',
   CHECKOUT_CTA_CLICK: 'checkout_cta_click',
   BEGIN_CHECKOUT: 'begin_checkout',
   CHECKOUT_STEP_VIEW: 'checkout_step_view',
