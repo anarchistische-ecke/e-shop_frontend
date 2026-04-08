@@ -33,6 +33,7 @@ export function useHeaderState() {
   const isManager = isAuthenticated && hasRole(managerRole);
 
   const headerRef = useRef(null);
+  const headerBarRef = useRef(null);
   const searchRef = useRef(null);
   const accountMenuRef = useRef(null);
   const hoverCloseTimerRef = useRef(null);
@@ -154,7 +155,7 @@ export function useHeaderState() {
     if (typeof window === 'undefined') {
       return;
     }
-    const headerEl = headerRef.current;
+    const headerEl = headerBarRef.current;
     if (!headerEl) {
       return;
     }
@@ -167,7 +168,7 @@ export function useHeaderState() {
   }, [isMenuOpen, isSearchPanelVisible, navCategories.length, updateHeaderHeight]);
 
   useEffect(() => {
-    const headerEl = headerRef.current;
+    const headerEl = headerBarRef.current;
     if (!headerEl || typeof window === 'undefined') {
       return undefined;
     }
@@ -429,9 +430,10 @@ export function useHeaderState() {
 
   const handleMenuToggle = useCallback(() => {
     setIsMenuOpen((prev) => !prev);
+    closeAccountMenu();
     closeSearch();
     closeMega();
-  }, [closeMega, closeSearch]);
+  }, [closeAccountMenu, closeMega, closeSearch]);
 
   const handleCatalogToggle = useCallback(() => {
     setIsMenuOpen(false);
@@ -510,6 +512,7 @@ export function useHeaderState() {
     handleSearchFocus,
     handleSearchInputChange,
     handleSearchSubmit,
+    headerBarRef,
     headerRef,
     isAccountMenuOpen,
     isAuthenticated,

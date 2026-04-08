@@ -4,7 +4,7 @@ import { Button } from '../ui';
 
 function HeaderBrand({ isMenuOpen, onMenuToggle, wayfindingLabel }) {
   return (
-    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
+    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5">
       <Button
         type="button"
         variant="secondary"
@@ -20,7 +20,7 @@ function HeaderBrand({ isMenuOpen, onMenuToggle, wayfindingLabel }) {
       <div className="min-w-0">
         <Link
           to="/"
-          className="block truncate font-display text-xl font-semibold tracking-tight text-ink transition hover:text-primary sm:text-2xl lg:text-3xl"
+          className="block truncate font-display text-lg font-semibold leading-none tracking-tight text-ink transition hover:text-primary sm:text-2xl lg:text-3xl"
         >
           Постельное Белье-ЮГ
         </Link>
