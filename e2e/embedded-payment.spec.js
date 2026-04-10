@@ -31,7 +31,14 @@ test.beforeEach(async ({ page }) => {
 test('customer can open embedded payment inside the SPA and return to the order page', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('link', { name: /Сатиновый комплект Sand/i }).first().click();
+  const bestsellersSection = page.locator('section').filter({
+    has: page.getByRole('heading', { name: 'Бестселлеры недели' })
+  });
+  const featuredProductLink = bestsellersSection
+    .getByRole('link', { name: 'Сатиновый комплект Sand' })
+    .first();
+  await featuredProductLink.focus();
+  await page.keyboard.press('Enter');
   await page.getByRole('button', { name: 'Добавить в корзину' }).click();
   await page.getByRole('link', { name: 'Открыть корзину' }).click();
   await page.getByRole('button', { name: 'Оформить заказ' }).click();

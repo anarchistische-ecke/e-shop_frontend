@@ -9,10 +9,10 @@ test('home page shows categories as a visible mobile list instead of a hidden sl
   await page.goto('/');
 
   await expect(page.getByRole('heading', { name: /Разделы каталога без скрытых свайпов/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Популярное/i }).first()).toBeVisible();
-  await expect(page.getByRole('link', { name: /Новинки/i }).first()).toBeVisible();
+  await expect(page.locator('a[href="/category/popular"]').first()).toBeVisible();
+  await expect(page.locator('a[href="/category/new"]').first()).toBeVisible();
 
-  await page.getByRole('link', { name: /Популярное/i }).first().click();
+  await page.locator('a[href="/category/popular"]').first().click();
 
   await expect(page).toHaveURL(/\/category\/popular$/);
   await expect(page.getByRole('heading', { name: 'Популярное' })).toBeVisible();
