@@ -48,7 +48,7 @@ describe('Seo', () => {
 
     expect(document.title).toBe('Тестовая карточка | Постельное Белье-ЮГ');
     expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
-      'http://localhost/product/prod-1/linen-soft'
+      'http://localhost/home/product/prod-1/linen-soft'
     );
     expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
       'index,follow'
