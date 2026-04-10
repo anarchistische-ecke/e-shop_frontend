@@ -74,7 +74,7 @@ function SearchPanelBody({
                     onSetSearchScope(nextScope);
                     onNavigateSearch(suggestion.label, { scopeValue: nextScope });
                   }}
-                  className="w-full rounded-xl border border-transparent px-3 py-2 text-left text-sm text-ink hover:border-ink/10 hover:bg-secondary/45"
+                  className="focus-ring-soft min-h-[44px] w-full rounded-xl border border-transparent px-3 py-2 text-left text-sm text-ink hover:border-ink/10 hover:bg-secondary/45"
                 >
                   {suggestion.label}
                 </button>
@@ -99,7 +99,7 @@ function SearchPanelBody({
                     onTrackSearchSuggestion('category', category.token, category.token);
                     onSuggestionLinkClick();
                   }}
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
+                  className="focus-ring-soft grid min-h-[44px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
                 >
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-white/90 text-ink/80">
                     <CategoryGlyph category={category} />
@@ -146,7 +146,7 @@ function SearchPanelBody({
                       onTrackSearchSuggestion('product', String(product.id || ''), searchScope);
                       onSuggestionLinkClick();
                     }}
-                    className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
+                    className="focus-ring-soft grid min-h-[44px] grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
                   >
                     <div className="h-11 w-11 overflow-hidden rounded-xl border border-ink/10 bg-sand/60">
                       {previewImage ? (
@@ -205,6 +205,7 @@ function SearchBar({
   onSubmit,
   onTrackSearchSuggestion,
   searchRef,
+  searchInputRef,
   searchScope,
   searchTerm,
   scopeOptions
@@ -221,6 +222,7 @@ function SearchBar({
       <form onSubmit={onSubmit} className="relative">
         <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
         <Input
+          ref={searchInputRef}
           type="text"
           value={searchTerm}
           onChange={onChange}
@@ -262,23 +264,25 @@ function SearchBar({
             data-testid="header-search-suggestions"
             role="region"
             aria-label="Подсказки поиска"
-            className="fixed inset-x-0 z-[115] overflow-y-auto border-t border-ink/10 bg-[#fbf7f1]/98 px-4 pb-6 pt-4 shadow-[0_24px_56px_rgba(43,39,34,0.16)] lg:hidden"
+            className="fixed inset-x-0 z-[115] overflow-y-auto border-t border-ink/10 bg-[#fbf7f1]/98 pb-6 pt-4 shadow-[0_24px_56px_rgba(43,39,34,0.16)] lg:hidden"
             style={{
               top: 'var(--site-header-height, 6.5rem)',
               maxHeight: 'calc(100vh - var(--site-header-height, 6.5rem))'
             }}
           >
-            <SearchPanelBody
-              autocompleteData={autocompleteData}
-              buildSearchParams={buildSearchParams}
-              onNavigateSearch={onNavigateSearch}
-              onSetSearchScope={onSetSearchScope}
-              onTrackSearchSuggestion={onTrackSearchSuggestion}
-              onSuggestionLinkClick={onClose}
-              scopeOptions={scopeOptions}
-              searchScope={searchScope}
-              searchTerm={searchTerm}
-            />
+            <div className="page-shell">
+              <SearchPanelBody
+                autocompleteData={autocompleteData}
+                buildSearchParams={buildSearchParams}
+                onNavigateSearch={onNavigateSearch}
+                onSetSearchScope={onSetSearchScope}
+                onTrackSearchSuggestion={onTrackSearchSuggestion}
+                onSuggestionLinkClick={onClose}
+                scopeOptions={scopeOptions}
+                searchScope={searchScope}
+                searchTerm={searchTerm}
+              />
+            </div>
           </div>
 
           <div className="relative hidden lg:block">

@@ -1,5 +1,20 @@
 const APP_ROOT_PATH = '/';
 
+function isAbsoluteHttpUrl(value = '') {
+  return /^https?:\/\//i.test(String(value).trim());
+}
+
+function normalizeOrigin(rawOrigin = '') {
+  if (!rawOrigin) return '';
+
+  try {
+    const parsed = new URL(rawOrigin);
+    return parsed.origin;
+  } catch (err) {
+    return '';
+  }
+}
+
 function normalizeBasePath(rawPath = '') {
   if (!rawPath) return '';
 
@@ -68,6 +83,30 @@ export function buildAbsoluteAppUrl(path = APP_ROOT_PATH) {
   }
 
   return `${window.location.origin}${buildAppPath(path)}`;
+}
+
+export function getCanonicalUrl(path = APP_ROOT_PATH, options = {}) {
+  if (isAbsoluteHttpUrl(path)) {
+    return String(path).trim();
+  }
+
+  const runtimeUrl = buildAbsoluteAppUrl(path);
+  if (runtimeUrl) {
+    return runtimeUrl;
+  }
+
+  const fallbackOrigin = normalizeOrigin(
+    options.origin ||
+      process.env.REACT_APP_SITE_URL ||
+      process.env.REACT_APP_CANONICAL_ORIGIN ||
+      ''
+  );
+
+  if (!fallbackOrigin) {
+    return undefined;
+  }
+
+  return `${fallbackOrigin}${buildAppPath(path)}`;
 }
 
 export function buildProductPath(product) {

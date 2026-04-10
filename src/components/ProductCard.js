@@ -103,6 +103,8 @@ function ProductCard({ product }) {
       <Link
         to={buildProductPath(product)}
         state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
+        tabIndex={-1}
+        aria-hidden="true"
         className="block"
       >
         <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">

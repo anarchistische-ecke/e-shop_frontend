@@ -23,6 +23,36 @@ export function resolveWayfindingLabel(pathname = '', search = '') {
   return 'Раздел магазина';
 }
 
+export function shouldShowMobileBottomNav(pathname = '') {
+  if (!pathname) return false;
+  if (pathname.startsWith('/admin')) return false;
+  if (pathname === '/manager/login') return false;
+  if (pathname.startsWith('/product/')) return false;
+  if (pathname.startsWith('/checkout')) return false;
+  if (pathname.startsWith('/order/')) return false;
+  if (pathname === '/login') return false;
+  return true;
+}
+
+export function resolveMobileBottomNavKey({
+  pathname = '',
+  search = '',
+  isMenuOpen = false,
+  isSearchPanelVisible = false
+} = {}) {
+  if (isMenuOpen) return 'catalog';
+  if (isSearchPanelVisible) return 'search';
+  if (pathname === '/') return 'home';
+  if (pathname.startsWith('/catalog')) {
+    const params = new URLSearchParams(search || '');
+    return params.get('query') ? 'search' : 'catalog';
+  }
+  if (pathname.startsWith('/category/')) return 'catalog';
+  if (pathname.startsWith('/account') || pathname === '/login') return 'account';
+  if (pathname.startsWith('/cart')) return 'cart';
+  return '';
+}
+
 export function buildHeaderSearchParams({
   queryValue,
   scopeValue = '',

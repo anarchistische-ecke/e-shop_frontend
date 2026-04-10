@@ -204,8 +204,8 @@ function HomeCategoryNavigation({ categories = [], products = [] }) {
   );
 
   return (
-    <section className="container mx-auto px-4 pb-12">
-      <div className="ambient-panel relative overflow-hidden rounded-[28px] border border-white/70 bg-white/70 px-6 py-8 shadow-[0_24px_60px_rgba(43,39,34,0.12)] backdrop-blur-lg md:px-10 md:py-10">
+    <section className="page-shell page-section--tight">
+      <div className="ambient-panel relative overflow-hidden rounded-[28px] border border-white/70 bg-white/70 px-4 py-6 shadow-[0_24px_60px_rgba(43,39,34,0.12)] backdrop-blur-lg sm:px-6 md:px-10 md:py-10">
         <div className="absolute -top-16 right-6 h-32 w-32 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-sky/60 blur-3xl pointer-events-none" />
 

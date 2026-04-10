@@ -10,7 +10,15 @@ test('customer can add a product to cart and open checkout on mobile', async ({ 
 
   await expect(page.getByRole('heading', { name: 'Бестселлеры недели' })).toBeVisible();
 
-  await page.getByRole('link', { name: /Сатиновый комплект Sand/i }).first().click();
+  const bestsellersSection = page.locator('section').filter({
+    has: page.getByRole('heading', { name: 'Бестселлеры недели' })
+  });
+
+  const featuredProductLink = bestsellersSection
+    .getByRole('link', { name: 'Сатиновый комплект Sand' })
+    .first();
+  await featuredProductLink.focus();
+  await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/product\/prod-satin-sand\/satin-sand$/);
   await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
 

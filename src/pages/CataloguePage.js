@@ -126,16 +126,17 @@ function CataloguePage() {
   };
 
   return (
-    <div className="catalogue-page relative overflow-hidden py-8 md:py-10">
+    <div className="catalogue-page relative overflow-hidden page-section">
       <Seo
         title={seoTitle}
         description={seoDescription}
         canonicalPath={canonicalPath}
+        robots={hasQuery ? 'noindex,follow' : undefined}
       />
       <div className="absolute -top-24 right-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
 
-      <div className="container mx-auto px-4">
+      <div className="page-shell">
         <nav className="flex flex-wrap items-center gap-2 text-xs text-muted">
           <Link to="/" className="transition hover:text-primary">Главная</Link>
           <span className="text-ink/40">›</span>
@@ -324,7 +325,7 @@ function CataloguePage() {
           </div>
 
           {list.loading ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="page-grid--catalog">
               {Array.from({ length: list.pageSize }).map((_, index) => (
                 <div key={`catalog-skeleton-${index}`} className="ui-card ui-card--quiet p-3">
                   <div className="skeleton shimmer-safe h-[190px] w-full rounded-2xl" />
@@ -346,7 +347,7 @@ function CataloguePage() {
             </Card>
           ) : list.totalItems > 0 ? (
             <>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="page-grid--catalog">
                 {list.pagedProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

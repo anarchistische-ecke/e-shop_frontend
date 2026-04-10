@@ -2,6 +2,8 @@ import {
   buildAccountLinks,
   buildCategoryCollections,
   buildHeaderSearchParams,
+  resolveMobileBottomNavKey,
+  shouldShowMobileBottomNav,
   resolveWayfindingLabel
 } from './header';
 
@@ -47,5 +49,27 @@ describe('header utils', () => {
       { to: '/account#orders', label: 'Заказы' },
       { to: '/cart', label: 'Ссылка на оплату' }
     ]);
+  });
+
+  it('resolves mobile bottom-nav visibility and active item', () => {
+    expect(shouldShowMobileBottomNav('/')).toBe(true);
+    expect(shouldShowMobileBottomNav('/catalog')).toBe(true);
+    expect(shouldShowMobileBottomNav('/product/1/test')).toBe(false);
+    expect(shouldShowMobileBottomNav('/checkout')).toBe(false);
+    expect(shouldShowMobileBottomNav('/login')).toBe(false);
+
+    expect(resolveMobileBottomNavKey({ pathname: '/' })).toBe('home');
+    expect(resolveMobileBottomNavKey({ pathname: '/category/throws' })).toBe('catalog');
+    expect(resolveMobileBottomNavKey({ pathname: '/catalog', search: '?query=плед' })).toBe(
+      'search'
+    );
+    expect(resolveMobileBottomNavKey({ pathname: '/cart' })).toBe('cart');
+    expect(resolveMobileBottomNavKey({ pathname: '/account' })).toBe('account');
+    expect(
+      resolveMobileBottomNavKey({
+        pathname: '/catalog',
+        isMenuOpen: true
+      })
+    ).toBe('catalog');
   });
 });

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://yug-postel.ru/</loc>
+  </url>
+  <url>
+    <loc>https://yug-postel.ru/catalog</loc>
+  </url>
+  <url>
+    <loc>https://yug-postel.ru/category/popular</loc>
+  </url>
+  <url>
+    <loc>https://yug-postel.ru/category/new</loc>
+  </url>
+  <url>
+    <loc>https://yug-postel.ru/info/delivery</loc>
+  </url>
+  <url>
+    <loc>https://yug-postel.ru/info/payment</loc>
+  </url>
+  <url>
+    <loc>https://yug-postel.ru/info/bonuses</loc>
+  </url>
+  <url>
+    <loc>https://yug-postel.ru/info/production</loc>
+  </url>
+  <url>
+    <loc>https://yug-postel.ru/info/legal</loc>
+  </url>
+</urlset>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import TrustLinksPanel from '../TrustLinksPanel';
 import { MOBILE_TRUST_LINK_IDS } from '../../data/trustLinks';
@@ -27,6 +27,20 @@ function MobileMenu({
   const panelRef = useRef(null);
   const searchInputRef = useRef(null);
   const lastFocusedRef = useRef(null);
+  const [isMounted, setIsMounted] = useState(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsMounted(true);
+      return undefined;
+    }
+
+    const closeTimer = window.setTimeout(() => {
+      setIsMounted(false);
+    }, 220);
+
+    return () => window.clearTimeout(closeTimer);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || typeof document === 'undefined') {
@@ -62,7 +76,7 @@ function MobileMenu({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) {
+  if (!isMounted) {
     return null;
   }
 
@@ -74,12 +88,17 @@ function MobileMenu({
       role="dialog"
       aria-modal="true"
       aria-label="Меню каталога"
+      aria-hidden={!isOpen}
       tabIndex={-1}
-      className="fixed inset-0 z-[130] flex flex-col bg-[#fbf7f1]/98 backdrop-blur-xl lg:hidden"
+      className={`fixed inset-0 z-[130] flex flex-col bg-[#fbf7f1]/98 backdrop-blur-xl transition duration-200 lg:hidden ${
+        isOpen
+          ? 'translate-y-0 opacity-100'
+          : 'pointer-events-none translate-y-4 opacity-0'
+      }`}
     >
       <div className="flex-1 overflow-y-auto overscroll-contain">
-        <div className="sticky top-0 z-10 border-b border-ink/10 bg-[#fbf7f1]/96 px-4 pb-4 pt-5 shadow-[0_16px_32px_rgba(43,39,34,0.08)]">
-          <div>
+        <div className="sticky top-0 z-10 border-b border-ink/10 bg-[#fbf7f1]/96 pb-4 pt-5 shadow-[0_16px_32px_rgba(43,39,34,0.08)]">
+          <div className="page-shell">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Навигация</p>
@@ -140,7 +159,7 @@ function MobileMenu({
                   onTrackCategoryClick('catalog', 'mobile_menu');
                   onClose();
                 }}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
               >
                 Весь каталог
               </Link>
@@ -150,7 +169,7 @@ function MobileMenu({
                   onTrackCategoryClick('new', 'mobile_menu');
                   onClose();
                 }}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
               >
                 Новинки
               </Link>
@@ -163,14 +182,14 @@ function MobileMenu({
                   onTrackCategoryClick('popular', 'mobile_menu');
                   onClose();
                 }}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink"
+                className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink"
               >
                 Лучшее
               </Link>
               <Link
                 to="/info/delivery"
                 onClick={onClose}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink"
+                className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink"
               >
                 Доставка
               </Link>
@@ -178,7 +197,7 @@ function MobileMenu({
           </div>
         </div>
 
-        <div className="space-y-5 px-4 py-4">
+        <div className="page-shell space-y-5 py-4">
           {activeMobileParent ? (
             <Link
               to={`/category/${resolveCategoryToken(activeMobileParent)}`}
@@ -186,7 +205,7 @@ function MobileMenu({
                 onTrackCategoryClick(resolveCategoryToken(activeMobileParent), 'mobile_menu_parent');
                 onClose();
               }}
-              className="inline-flex min-h-[48px] w-full items-center justify-between rounded-[24px] border border-primary/25 bg-primary/10 px-4 py-3 text-sm font-medium text-primary"
+              className="focus-ring-soft inline-flex min-h-[48px] w-full items-center justify-between rounded-[24px] border border-primary/25 bg-primary/10 px-4 py-3 text-sm font-medium text-primary"
             >
               <span>Смотреть всё: {activeMobileParent.name}</span>
               <span aria-hidden="true">→</span>
@@ -215,7 +234,7 @@ function MobileMenu({
                   <li key={token}>
                     <button
                       type="button"
-                      className="grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-left text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                      className="focus-ring-soft grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-left text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
                       onClick={() => onOpenCategory(token)}
                     >
                       <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-sand/35 text-ink/80">
@@ -239,7 +258,7 @@ function MobileMenu({
                 <li key={token}>
                   <Link
                     to={`/category/${token}`}
-                    className="grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                    className="focus-ring-soft grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
                     onClick={() => {
                       onTrackCategoryClick(token, 'mobile_menu_category');
                       onClose();

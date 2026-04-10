@@ -35,7 +35,7 @@ function TrustLinksPanel({
             key={item.id}
             to={item.path}
             onClick={onNavigate}
-            className="grid min-h-[44px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-ink/10 bg-white/90 px-3 py-2 text-left transition hover:border-primary/30 hover:bg-primary/5"
+            className="focus-ring-soft grid min-h-[44px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-ink/10 bg-white/90 px-3 py-2 text-left transition hover:border-primary/30 hover:bg-primary/5"
           >
             <span className="min-w-0">
               <span className="block text-sm font-semibold text-ink">{item.title}</span>

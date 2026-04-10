@@ -56,95 +56,106 @@ function App() {
   return (
     <>
       <ScrollToTop />
-      {!isAdminRoute ? (
-        <a
-          href="#main-content"
-          className="sr-only fixed left-3 top-3 z-[210] rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink shadow-[0_14px_28px_rgba(43,39,34,0.16)] focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary/40"
-          onClick={() => {
-            window.requestAnimationFrame(() => {
-              mainRef.current?.focus();
-            });
-          }}
-        >
-          Перейти к содержимому
-        </a>
-      ) : null}
-      <DeliveryConfigNotice />
-      {!isAdminRoute && <Header />}
-      <main
-        id="main-content"
-        ref={mainRef}
-        tabIndex={-1}
-        className={isAdminRoute ? 'min-h-screen' : 'min-h-[80vh]'}
-        style={
+      <div
+        className={
           isAdminRoute
-            ? undefined
-            : { paddingTop: 'var(--site-header-height, 7rem)' }
+            ? 'site-content-layer site-content-layer--admin'
+            : 'site-content-layer site-content-layer--public'
         }
       >
-        <Routes>
-          {/* Public user-facing routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/category/search" element={<SearchRedirectPage />} />
-          <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/product/:id/:slug" element={<ProductPage />} />
-          <Route path="/product/:id" element={<ProductPage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/account" element={<AccountPage />} />
-          <Route path="/order/:token" element={<OrderPage />} />
-          <Route path="/info/payment" element={<PaymentInfoPage />} />
-          <Route path="/info/delivery" element={<DeliveryInfoPage />} />
-          <Route path="/info/bonuses" element={<BonusesInfoPage />} />
-          <Route path="/info/production" element={<ProductionInfoPage />} />
-          <Route path="/catalog" element={<CataloguePage />} />
-          <Route path="/info/legal" element={<LegalInfoPage />} />
-          <Route
-            path="/konfidentsialnost-i-zashchita-informatsii"
-            element={<PrivacyPolicyPage />}
-          />
-          <Route
-            path="/polzovatelskoe-soglashenie"
-            element={<UserAgreementPage />}
-          />
-          <Route
-            path="/soglasie-na-poluchenie-reklamy"
-            element={<AdsConsentPage />}
-          />
-          <Route path="/usloviya-prodazhi" element={<SalesTermsPage />} />
-          <Route path="/cookies" element={<CookiesPolicyPage />} />
-          <Route
-            path="/soglasie-na-obrabotku-pd"
-            element={<PersonalDataConsentPage />}
-          />
-          {/* Admin login (public) */}
-          <Route
-            path="/admin/login"
-            element={
-              <Suspense fallback={<AdminRouteFallback />}>
-                <AdminLoginPage />
-              </Suspense>
-            }
-          />
-          {/* Manager login (public) */}
-          <Route path="/manager/login" element={<Navigate to="/admin/login" replace />} />
-          {/* Protected admin routes (RequireAdmin enforces authentication) */}
-          <Route
-            path="/admin/*"
-            element={
-              <Suspense fallback={<AdminRouteFallback />}>
-                <RequireAdmin>
-                  <AdminApp />
-                </RequireAdmin>
-              </Suspense>
-            }
-          />
-          {/* Fallback for unknown URLs */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-      {!isAdminRoute && <Footer />}
+        {!isAdminRoute ? (
+          <a
+            href="#main-content"
+            className="sr-only fixed left-3 top-3 z-[210] rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink shadow-[0_14px_28px_rgba(43,39,34,0.16)] focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary/40"
+            onClick={() => {
+              window.requestAnimationFrame(() => {
+                mainRef.current?.focus();
+              });
+            }}
+          >
+            Перейти к содержимому
+          </a>
+        ) : null}
+        <DeliveryConfigNotice />
+        {!isAdminRoute && <Header />}
+        <main
+          id="main-content"
+          ref={mainRef}
+          tabIndex={-1}
+          className={isAdminRoute ? 'min-h-screen' : 'min-h-[80vh]'}
+          style={
+            isAdminRoute
+              ? undefined
+              : {
+                  paddingTop: 'var(--site-header-height, 7rem)',
+                  paddingBottom: 'var(--mobile-bottom-nav-offset, 0px)'
+                }
+          }
+        >
+          <Routes>
+            {/* Public user-facing routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/category/search" element={<SearchRedirectPage />} />
+            <Route path="/category/:slug" element={<CategoryPage />} />
+            <Route path="/product/:id/:slug" element={<ProductPage />} />
+            <Route path="/product/:id" element={<ProductPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/order/:token" element={<OrderPage />} />
+            <Route path="/info/payment" element={<PaymentInfoPage />} />
+            <Route path="/info/delivery" element={<DeliveryInfoPage />} />
+            <Route path="/info/bonuses" element={<BonusesInfoPage />} />
+            <Route path="/info/production" element={<ProductionInfoPage />} />
+            <Route path="/catalog" element={<CataloguePage />} />
+            <Route path="/info/legal" element={<LegalInfoPage />} />
+            <Route
+              path="/konfidentsialnost-i-zashchita-informatsii"
+              element={<PrivacyPolicyPage />}
+            />
+            <Route
+              path="/polzovatelskoe-soglashenie"
+              element={<UserAgreementPage />}
+            />
+            <Route
+              path="/soglasie-na-poluchenie-reklamy"
+              element={<AdsConsentPage />}
+            />
+            <Route path="/usloviya-prodazhi" element={<SalesTermsPage />} />
+            <Route path="/cookies" element={<CookiesPolicyPage />} />
+            <Route
+              path="/soglasie-na-obrabotku-pd"
+              element={<PersonalDataConsentPage />}
+            />
+            {/* Admin login (public) */}
+            <Route
+              path="/admin/login"
+              element={
+                <Suspense fallback={<AdminRouteFallback />}>
+                  <AdminLoginPage />
+                </Suspense>
+              }
+            />
+            {/* Manager login (public) */}
+            <Route path="/manager/login" element={<Navigate to="/admin/login" replace />} />
+            {/* Protected admin routes (RequireAdmin enforces authentication) */}
+            <Route
+              path="/admin/*"
+              element={
+                <Suspense fallback={<AdminRouteFallback />}>
+                  <RequireAdmin>
+                    <AdminApp />
+                  </RequireAdmin>
+                </Suspense>
+              }
+            />
+            {/* Fallback for unknown URLs */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+        {!isAdminRoute && <Footer />}
+      </div>
     </>
   );
 }

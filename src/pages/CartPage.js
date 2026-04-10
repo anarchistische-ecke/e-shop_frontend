@@ -133,15 +133,15 @@ function CartPage() {
   };
 
   return (
-    <div className="cart-page py-8 md:py-10">
+    <div className="cart-page page-section">
       <Seo
         title="Корзина"
         description="Проверьте товары в корзине, итоговую стоимость и переходите к оформлению заказа."
         canonicalPath="/cart"
         robots="noindex,nofollow"
       />
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
+      <div className="page-shell">
+        <div className="section-header mb-6">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-accent">Корзина</p>
             <h1 className="text-2xl sm:text-3xl font-semibold">Ваши товары для уюта</h1>
@@ -163,7 +163,7 @@ function CartPage() {
             </Button>
           </Card>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-8">
+          <div className="page-grid--sidebar gap-8">
             <div className="w-full lg:flex-1 space-y-4">
               {items.map((item) => (
                 <Card

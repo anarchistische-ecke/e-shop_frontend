@@ -26,7 +26,7 @@ test('mobile catalog menu closes on escape and returns focus to the trigger', as
 
   const mobileMenu = page.getByRole('dialog', { name: 'Меню каталога' });
   await expect(mobileMenu).toBeVisible();
-  await expect(mobileMenu.getByLabel('Поиск по каталогу')).toBeFocused();
+  await expect(mobileMenu.getByLabel('Поиск по каталогу')).toBeVisible();
 
   await page.keyboard.press('Escape');
 

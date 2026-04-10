@@ -1,6 +1,6 @@
 import { useLayoutEffect } from 'react';
 import { legalTokens } from '../data/legal/constants';
-import { buildAbsoluteAppUrl, buildAppPath } from '../utils/url';
+import { getCanonicalUrl } from '../utils/url';
 
 const DEFAULT_DESCRIPTION =
   'Постельное белье, пледы, полотенца и домашний текстиль с доставкой по России. Натуральные ткани, безопасная оплата и понятные условия покупки.';
@@ -16,10 +16,17 @@ function buildTitle(title) {
   return pageTitle ? `${pageTitle} | ${legalTokens.SITE_NAME}` : legalTokens.SITE_NAME;
 }
 
-function buildAbsoluteUrl(path = '/') {
-  const runtimeUrl = buildAbsoluteAppUrl(path);
-  if (runtimeUrl) return runtimeUrl;
-  return `${legalTokens.SITE_URL.replace(/\/$/, '')}${buildAppPath(path)}`;
+function escapeJsonLdString(value) {
+  return value
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function stringifyJsonLd(payload) {
+  return escapeJsonLdString(JSON.stringify(payload));
 }
 
 function upsertMeta({ name, property, content }) {
@@ -75,7 +82,7 @@ function upsertJsonLd(jsonLd) {
   const node = existing || document.createElement('script');
   node.id = JSON_LD_SCRIPT_ID;
   node.type = 'application/ld+json';
-  node.textContent = JSON.stringify(payload.length === 1 ? payload[0] : payload);
+  node.textContent = stringifyJsonLd(payload.length === 1 ? payload[0] : payload);
   if (!existing) {
     document.head.appendChild(node);
   }
@@ -97,11 +104,11 @@ function Seo({
 
     const pageTitle = buildTitle(title);
     const pageDescription = normalizeText(description, DEFAULT_DESCRIPTION);
-    const canonicalUrl = buildAbsoluteUrl(canonicalPath);
+    const canonicalUrl = getCanonicalUrl(canonicalPath, { origin: legalTokens.SITE_URL });
     const rawImageUrl = normalizeText(image);
     const imageUrl =
       rawImageUrl && !/^https?:\/\//i.test(rawImageUrl) && !rawImageUrl.startsWith('data:')
-        ? buildAbsoluteUrl(rawImageUrl)
+        ? getCanonicalUrl(rawImageUrl, { origin: legalTokens.SITE_URL })
         : rawImageUrl;
     const twitterCard = imageUrl ? 'summary_large_image' : 'summary';
 
@@ -123,6 +130,9 @@ function Seo({
     if (imageUrl) {
       upsertMeta({ property: 'og:image', content: imageUrl });
       upsertMeta({ name: 'twitter:image', content: imageUrl });
+    } else {
+      upsertMeta({ property: 'og:image', content: '' });
+      upsertMeta({ name: 'twitter:image', content: '' });
     }
 
     upsertLink('canonical', canonicalUrl);
