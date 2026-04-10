@@ -217,6 +217,18 @@ function CategoryPage() {
     () => buildCategoryListingHref(slug, params),
     [params, slug]
   );
+  const seoTitle = useMemo(() => {
+    if (list.activeCategory?.name) {
+      return `${list.activeCategory.name} — каталог домашнего текстиля`;
+    }
+    if (slug === 'popular') {
+      return 'Популярные товары для дома и спальни';
+    }
+    if (slug === 'new') {
+      return 'Новинки домашнего текстиля';
+    }
+    return `${heading} — каталог домашнего текстиля`;
+  }, [heading, list.activeCategory?.name, slug]);
   const seoDescription =
     list.activeCategory?.description ||
     headingNote ||
@@ -267,7 +279,7 @@ function CategoryPage() {
   return (
     <div className="category-page relative overflow-hidden py-8 md:py-10">
       <Seo
-        title={heading}
+        title={seoTitle}
         description={seoDescription}
         canonicalPath={canonicalPath}
         image={list.activeCategory?.imageUrl || ''}

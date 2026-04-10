@@ -74,7 +74,7 @@ function SearchPanelBody({
                     onSetSearchScope(nextScope);
                     onNavigateSearch(suggestion.label, { scopeValue: nextScope });
                   }}
-                  className="w-full rounded-xl border border-transparent px-3 py-2 text-left text-sm text-ink hover:border-ink/10 hover:bg-secondary/45"
+                  className="focus-ring-soft min-h-[44px] w-full rounded-xl border border-transparent px-3 py-2 text-left text-sm text-ink hover:border-ink/10 hover:bg-secondary/45"
                 >
                   {suggestion.label}
                 </button>
@@ -99,7 +99,7 @@ function SearchPanelBody({
                     onTrackSearchSuggestion('category', category.token, category.token);
                     onSuggestionLinkClick();
                   }}
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
+                  className="focus-ring-soft grid min-h-[44px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
                 >
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-white/90 text-ink/80">
                     <CategoryGlyph category={category} />
@@ -146,7 +146,7 @@ function SearchPanelBody({
                       onTrackSearchSuggestion('product', String(product.id || ''), searchScope);
                       onSuggestionLinkClick();
                     }}
-                    className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
+                    className="focus-ring-soft grid min-h-[44px] grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-transparent px-3 py-2 hover:border-ink/10 hover:bg-secondary/45"
                   >
                     <div className="h-11 w-11 overflow-hidden rounded-xl border border-ink/10 bg-sand/60">
                       {previewImage ? (

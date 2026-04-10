@@ -140,7 +140,7 @@ function MobileMenu({
                   onTrackCategoryClick('catalog', 'mobile_menu');
                   onClose();
                 }}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
               >
                 Весь каталог
               </Link>
@@ -150,7 +150,7 @@ function MobileMenu({
                   onTrackCategoryClick('new', 'mobile_menu');
                   onClose();
                 }}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
               >
                 Новинки
               </Link>
@@ -163,14 +163,14 @@ function MobileMenu({
                   onTrackCategoryClick('popular', 'mobile_menu');
                   onClose();
                 }}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink"
+                className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink"
               >
                 Лучшее
               </Link>
               <Link
                 to="/info/delivery"
                 onClick={onClose}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink"
+                className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink"
               >
                 Доставка
               </Link>
@@ -186,7 +186,7 @@ function MobileMenu({
                 onTrackCategoryClick(resolveCategoryToken(activeMobileParent), 'mobile_menu_parent');
                 onClose();
               }}
-              className="inline-flex min-h-[48px] w-full items-center justify-between rounded-[24px] border border-primary/25 bg-primary/10 px-4 py-3 text-sm font-medium text-primary"
+              className="focus-ring-soft inline-flex min-h-[48px] w-full items-center justify-between rounded-[24px] border border-primary/25 bg-primary/10 px-4 py-3 text-sm font-medium text-primary"
             >
               <span>Смотреть всё: {activeMobileParent.name}</span>
               <span aria-hidden="true">→</span>
@@ -215,7 +215,7 @@ function MobileMenu({
                   <li key={token}>
                     <button
                       type="button"
-                      className="grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-left text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                      className="focus-ring-soft grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-left text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
                       onClick={() => onOpenCategory(token)}
                     >
                       <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-sand/35 text-ink/80">
@@ -239,7 +239,7 @@ function MobileMenu({
                 <li key={token}>
                   <Link
                     to={`/category/${token}`}
-                    className="grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                    className="focus-ring-soft grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
                     onClick={() => {
                       onTrackCategoryClick(token, 'mobile_menu_category');
                       onClose();

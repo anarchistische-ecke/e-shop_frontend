@@ -6,6 +6,7 @@ import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
 import ProductCard from '../components/ProductCard';
 import { Button, Card, Modal, Tabs } from '../components/ui';
+import { legalTokens } from '../data/legal/constants';
 import { useProductDirectoryData } from '../features/product-list/data';
 import {
   getPrimaryVariant,
@@ -13,7 +14,7 @@ import {
   moneyToNumber,
   normalizeProductImages,
 } from '../utils/product';
-import { buildProductPath } from '../utils/url';
+import { buildProductPath, getCanonicalUrl } from '../utils/url';
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -442,6 +443,19 @@ function ProductPage() {
   const isCartActionPending = Boolean(pendingAction);
   const canPurchaseSelectedVariant = availableStock > 0 && !isCartActionPending;
   const canonicalProductPath = useMemo(() => buildProductPath(product), [product]);
+  const canonicalProductUrl = useMemo(
+    () => getCanonicalUrl(canonicalProductPath, { origin: legalTokens.SITE_URL }) || canonicalProductPath,
+    [canonicalProductPath]
+  );
+  const seoTitle = useMemo(() => {
+    if (!product?.name) {
+      return 'Карточка товара';
+    }
+
+    return activeCategory?.name
+      ? `Купить ${product.name} — ${activeCategory.name}`
+      : `Купить ${product.name}`;
+  }, [activeCategory?.name, product?.name]);
   const seoDescription = useMemo(() => {
     if (!product) {
       return 'Карточка товара интернет-магазина домашнего текстиля.';
@@ -450,6 +464,68 @@ function ProductPage() {
     return `${summary} ${availabilityMeta.label}.`;
   }, [availabilityMeta.label, highlights, product]);
   const seoImage = activeImage?.url || orderedImages[0]?.url || '';
+  const seoImageUrl = useMemo(() => {
+    if (!seoImage || seoImage.startsWith('data:')) {
+      return '';
+    }
+
+    return getCanonicalUrl(seoImage, { origin: legalTokens.SITE_URL }) || seoImage;
+  }, [seoImage]);
+  const productJsonLd = useMemo(() => {
+    if (!product?.name) {
+      return null;
+    }
+
+    const offer = {
+      '@type': 'Offer',
+      priceCurrency: 'RUB',
+      price: Number(price || 0).toFixed(2),
+      availability:
+        availableStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      url: canonicalProductUrl,
+    };
+    const brandName =
+      typeof product.brand === 'string' ? product.brand : product.brand?.name || '';
+    const aggregateRatingValue = Number(product.rating || 0);
+    const aggregateReviewCount = Number(product.reviewCount || product.reviewsCount || 0);
+
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: seoDescription,
+      url: canonicalProductUrl,
+      sku: selectedVariant?.sku || product.sku || selectedVariant?.id || product.id,
+      category: activeCategory?.name || undefined,
+      image: seoImageUrl ? [seoImageUrl] : undefined,
+      brand: brandName
+        ? {
+            '@type': 'Brand',
+            name: brandName,
+          }
+        : undefined,
+      aggregateRating:
+        aggregateRatingValue > 0 && aggregateReviewCount > 0
+          ? {
+              '@type': 'AggregateRating',
+              ratingValue: aggregateRatingValue.toFixed(1),
+              reviewCount: aggregateReviewCount,
+            }
+          : undefined,
+      offers: offer,
+    };
+  }, [
+    activeCategory?.name,
+    availableStock,
+    canonicalProductUrl,
+    price,
+    product,
+    seoDescription,
+    seoImageUrl,
+    selectedVariant?.id,
+    selectedVariant?.sku,
+  ]);
 
   useEffect(() => {
     if (availableStock > 0) {
@@ -621,11 +697,12 @@ function ProductPage() {
   return (
     <div className="product-page py-8 sm:py-10 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
       <Seo
-        title={`Купить ${product.name}`}
+        title={seoTitle}
         description={seoDescription}
         canonicalPath={canonicalProductPath}
         image={seoImage}
         type="product"
+        jsonLd={productJsonLd}
       />
       <div className="container mx-auto px-4">
         <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Хлебные крошки">

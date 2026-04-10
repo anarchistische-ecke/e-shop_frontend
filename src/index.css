@@ -276,16 +276,19 @@ body {
     @apply border-primary/20 bg-primary/5 shadow-[0_16px_32px_rgba(182,91,74,0.08)];
   }
   .ui-card--interactive {
-    @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_42px_rgba(43,39,34,0.16)];
+    @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_42px_rgba(43,39,34,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
   .control-inline {
     @apply border-0 bg-transparent p-0 shadow-none min-h-0 rounded-none focus:outline-none focus:ring-0;
+  }
+  .focus-ring-soft {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
   .ui-tabs__list {
     @apply inline-flex min-h-[48px] w-full flex-wrap gap-1 rounded-[22px] border border-ink/10 bg-secondary/55 p-1;
   }
   .ui-tabs__trigger {
-    @apply touch-target inline-flex min-w-[44px] items-center justify-center rounded-2xl px-4 py-2 text-sm text-ink/75 transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30;
+    @apply touch-target inline-flex min-w-[44px] items-center justify-center rounded-2xl px-4 py-2 text-sm text-ink/75 transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
   .ui-tabs__trigger--active {
     @apply bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.12)];

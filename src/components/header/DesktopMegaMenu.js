@@ -44,7 +44,7 @@ function DesktopMegaMenu({
                       onTrackCategoryClick('catalog', 'header_catalog_menu');
                       onCloseMega();
                     }}
-                    className="inline-flex min-h-[44px] items-center justify-between rounded-2xl border border-ink/10 bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-primary/35 hover:text-primary"
+                    className="focus-ring-soft inline-flex min-h-[44px] items-center justify-between rounded-2xl border border-ink/10 bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-primary/35 hover:text-primary"
                   >
                     <span>Весь каталог</span>
                     <span aria-hidden="true">→</span>
@@ -56,7 +56,7 @@ function DesktopMegaMenu({
                         onTrackCategoryClick('popular', 'header_catalog_menu');
                         onCloseMega();
                       }}
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink transition hover:border-primary/35 hover:text-primary"
+                      className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink transition hover:border-primary/35 hover:text-primary"
                     >
                       Лучшее
                     </Link>
@@ -66,7 +66,7 @@ function DesktopMegaMenu({
                         onTrackCategoryClick('new', 'header_catalog_menu');
                         onCloseMega();
                       }}
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink transition hover:border-primary/35 hover:text-primary"
+                      className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink transition hover:border-primary/35 hover:text-primary"
                     >
                       Новинки
                     </Link>
@@ -88,7 +88,7 @@ function DesktopMegaMenu({
                       <li key={token}>
                         <button
                           type="button"
-                          className={`grid min-h-[52px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl px-3 py-2 text-left transition ${
+                          className={`focus-ring-soft grid min-h-[52px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl px-3 py-2 text-left transition ${
                             isActive
                               ? 'bg-primary/10 text-primary'
                               : 'bg-white text-ink hover:bg-sand/45 hover:text-primary'
@@ -137,7 +137,7 @@ function DesktopMegaMenu({
                         );
                         onCloseMega();
                       }}
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary/15"
+                      className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary/15"
                     >
                       Смотреть весь раздел
                     </Link>
@@ -162,7 +162,7 @@ function DesktopMegaMenu({
                                     onTrackCategoryClick(token, 'header_catalog_subcategory');
                                     onCloseMega();
                                   }}
-                                  className="inline-flex items-center gap-2 text-base font-semibold text-ink transition hover:text-primary"
+                                  className="focus-ring-soft inline-flex items-center gap-2 rounded-xl text-base font-semibold text-ink transition hover:text-primary"
                                 >
                                   <CategoryGlyph category={subCategory} className="h-4 w-4" />
                                   <span className="truncate">{subCategory.name}</span>
@@ -186,7 +186,7 @@ function DesktopMegaMenu({
                                       );
                                       onCloseMega();
                                     }}
-                                    className="inline-flex min-h-[36px] items-center rounded-full border border-ink/10 bg-white px-3 py-1.5 text-sm text-ink transition hover:border-primary/35 hover:text-primary"
+                                    className="focus-ring-soft inline-flex min-h-[44px] items-center rounded-full border border-ink/10 bg-white px-3 py-1.5 text-sm text-ink transition hover:border-primary/35 hover:text-primary"
                                   >
                                     {nestedCategory.name}
                                   </Link>

@@ -131,6 +131,7 @@ function CataloguePage() {
         title={seoTitle}
         description={seoDescription}
         canonicalPath={canonicalPath}
+        robots={hasQuery ? 'noindex,follow' : undefined}
       />
       <div className="absolute -top-24 right-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />

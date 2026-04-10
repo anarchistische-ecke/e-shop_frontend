@@ -1,4 +1,10 @@
-import { buildAbsoluteAppUrl, buildAppPath, buildProductPath, resolveAppBasePath } from './url';
+import {
+  buildAbsoluteAppUrl,
+  buildAppPath,
+  buildProductPath,
+  getCanonicalUrl,
+  resolveAppBasePath,
+} from './url';
 
 describe('url helpers', () => {
   const originalBaseName = process.env.REACT_APP_BASENAME;
@@ -25,6 +31,7 @@ describe('url helpers', () => {
     expect(resolveAppBasePath()).toBe('/shop');
     expect(buildAppPath('/order/test-token')).toBe('/shop/order/test-token');
     expect(buildAbsoluteAppUrl('/order/test-token')).toBe('http://localhost/shop/order/test-token');
+    expect(getCanonicalUrl('/order/test-token')).toBe('http://localhost/shop/order/test-token');
     expect(buildAbsoluteAppUrl('/order/{token}')).toBe('http://localhost/shop/order/{token}');
   });
 
@@ -43,11 +50,18 @@ describe('url helpers', () => {
     expect(resolveAppBasePath()).toBe('');
     expect(buildAppPath('/order/test-token')).toBe('/order/test-token');
     expect(buildAbsoluteAppUrl('/order/test-token')).toBe('http://localhost/order/test-token');
+    expect(getCanonicalUrl('/order/test-token')).toBe('http://localhost/order/test-token');
   });
 
   it('builds stable storefront product paths with slug support', () => {
     expect(buildProductPath({ id: 'prod-1', slug: 'linen-soft' })).toBe('/product/prod-1/linen-soft');
     expect(buildProductPath({ id: 'prod-2' })).toBe('/product/prod-2');
     expect(buildProductPath({})).toBe('/catalog');
+  });
+
+  it('keeps absolute canonical URLs unchanged', () => {
+    expect(getCanonicalUrl('https://yug-postel.ru/product/prod-1/linen-soft')).toBe(
+      'https://yug-postel.ru/product/prod-1/linen-soft'
+    );
   });
 });
