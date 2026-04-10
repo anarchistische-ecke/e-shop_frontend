@@ -17,7 +17,7 @@ function CheckoutFlow({ checkout }) {
         disabled={checkout.isSubmitting}
       />
 
-      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_370px] lg:items-start">
+      <div className="page-grid--sidebar gap-7">
         <form
           id="checkout-form"
           onSubmit={checkout.handleSubmit}

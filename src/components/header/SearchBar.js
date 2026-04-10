@@ -262,23 +262,25 @@ function SearchBar({
             data-testid="header-search-suggestions"
             role="region"
             aria-label="Подсказки поиска"
-            className="fixed inset-x-0 z-[115] overflow-y-auto border-t border-ink/10 bg-[#fbf7f1]/98 px-4 pb-6 pt-4 shadow-[0_24px_56px_rgba(43,39,34,0.16)] lg:hidden"
+            className="fixed inset-x-0 z-[115] overflow-y-auto border-t border-ink/10 bg-[#fbf7f1]/98 pb-6 pt-4 shadow-[0_24px_56px_rgba(43,39,34,0.16)] lg:hidden"
             style={{
               top: 'var(--site-header-height, 6.5rem)',
               maxHeight: 'calc(100vh - var(--site-header-height, 6.5rem))'
             }}
           >
-            <SearchPanelBody
-              autocompleteData={autocompleteData}
-              buildSearchParams={buildSearchParams}
-              onNavigateSearch={onNavigateSearch}
-              onSetSearchScope={onSetSearchScope}
-              onTrackSearchSuggestion={onTrackSearchSuggestion}
-              onSuggestionLinkClick={onClose}
-              scopeOptions={scopeOptions}
-              searchScope={searchScope}
-              searchTerm={searchTerm}
-            />
+            <div className="page-shell">
+              <SearchPanelBody
+                autocompleteData={autocompleteData}
+                buildSearchParams={buildSearchParams}
+                onNavigateSearch={onNavigateSearch}
+                onSetSearchScope={onSetSearchScope}
+                onTrackSearchSuggestion={onTrackSearchSuggestion}
+                onSuggestionLinkClick={onClose}
+                scopeOptions={scopeOptions}
+                searchScope={searchScope}
+                searchTerm={searchTerm}
+              />
+            </div>
           </div>
 
           <div className="relative hidden lg:block">

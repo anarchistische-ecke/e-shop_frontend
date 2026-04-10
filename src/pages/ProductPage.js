@@ -645,13 +645,13 @@ function ProductPage() {
 
   if (isLoading) {
     return (
-      <div className="product-page py-8 sm:py-10">
+      <div className="product-page page-section">
         <Seo
           title="Карточка товара"
           description="Загружаем карточку товара и доступные варианты."
           canonicalPath={location.pathname}
         />
-        <div className="container mx-auto px-4">
+        <div className="page-shell">
           <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_420px]">
             <div className="rounded-[30px] border border-ink/10 bg-white/90 p-4">
               <div className="skeleton shimmer-safe h-[65vh] rounded-[24px]" />
@@ -678,8 +678,8 @@ function ProductPage() {
 
   if (!product) {
     return (
-      <div className="py-10">
-        <div className="container mx-auto px-4">
+      <div className="page-section">
+        <div className="page-shell">
           <Seo
             title="Товар не найден"
             description="Запрошенная карточка товара недоступна. Попробуйте вернуться в каталог."
@@ -695,7 +695,7 @@ function ProductPage() {
   }
 
   return (
-    <div className="product-page py-8 sm:py-10 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
+    <div className="product-page page-section pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -704,7 +704,7 @@ function ProductPage() {
         type="product"
         jsonLd={productJsonLd}
       />
-      <div className="container mx-auto px-4">
+      <div className="page-shell">
         <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Хлебные крошки">
           {location.state?.fromPath ? (
             <Link to={location.state.fromPath} className="text-primary hover:text-accent">
@@ -1172,7 +1172,7 @@ function ProductPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-ink/10 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden z-30">
-        <div className="container mx-auto px-4 py-3">
+        <div className="page-shell py-3">
           {cartStatus ? <NotificationBanner notification={cartStatus} compact className="mb-3" /> : null}
           <div className="flex items-center gap-3">
             <div className="flex-1">

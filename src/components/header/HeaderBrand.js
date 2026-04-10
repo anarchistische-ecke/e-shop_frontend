@@ -22,7 +22,7 @@ function HeaderBrand({ isMenuOpen, menuTriggerRef, onMenuToggle, wayfindingLabel
       <div className="min-w-0">
         <Link
           to="/"
-          className="focus-ring-soft block rounded-xl truncate font-display text-lg font-semibold leading-none tracking-tight text-ink transition hover:text-primary sm:text-2xl lg:text-3xl"
+          className="touch-link focus-ring-soft block rounded-xl truncate font-display text-lg font-semibold leading-none tracking-tight text-ink transition hover:text-primary sm:text-2xl lg:text-3xl"
         >
           Постельное Белье-ЮГ
         </Link>

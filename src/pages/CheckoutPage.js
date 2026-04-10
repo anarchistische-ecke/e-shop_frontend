@@ -68,14 +68,14 @@ function CheckoutPage() {
   };
 
   return (
-    <div className="checkout-page py-7 pb-28 md:py-10 lg:pb-10">
+    <div className="checkout-page page-section pb-28 lg:pb-10">
       <Seo
         title="Оформление заказа"
         description="Быстрое оформление заказа с выбором доставки, итоговой суммой до оплаты и возможностью купить без регистрации."
         canonicalPath="/checkout"
         robots="noindex,nofollow"
       />
-      <div className="container mx-auto px-4">
+      <div className="page-shell">
         <CheckoutPageHeader
           isSubmitting={checkout.isSubmitting}
           onDisabledNavigation={handleDisabledNavigation}

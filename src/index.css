@@ -9,6 +9,13 @@
 
 :root {
   --site-header-height: 6.5rem;
+  --page-inline: clamp(1rem, 4vw, 2rem);
+  --page-inline-wide: clamp(1rem, 5vw, 3rem);
+  --page-max: 100rem;
+  --page-narrow: 76rem;
+  --section-space: clamp(2rem, 5vw, 4rem);
+  --section-space-tight: clamp(1.25rem, 4vw, 2.5rem);
+  --section-gap: clamp(1rem, 2.4vw, 1.5rem);
   --catalog-cream: 249 244 236;
   --catalog-sand: 231 221 206;
   --catalog-rose: 198 115 92;
@@ -28,6 +35,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  min-height: 100%;
 }
 
 body {
@@ -39,14 +47,18 @@ body {
     linear-gradient(180deg, #fbf7f1 0%, #f5eee6 50%, #efe7de 100%);
   color: #2b2722;
   min-height: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
+#root {
+  min-height: 100%;
+}
+
 @layer base {
   body {
-    @apply text-[15px] md:text-[16px] leading-relaxed;
+    @apply text-[16px] leading-relaxed;
   }
 
   h1, h2, h3, h4 {
@@ -192,6 +204,14 @@ body {
   ::selection {
     background: rgba(182, 91, 74, 0.22);
   }
+
+  main {
+    @apply w-full;
+  }
+
+  [id] {
+    scroll-margin-top: calc(var(--site-header-height) + 1rem);
+  }
 }
 
 @media (max-width: 640px) {
@@ -208,6 +228,56 @@ body {
    `.button` class creates a consistent button style across the app with our
    custom colour palette. */
 @layer components {
+  .container {
+    width: 100%;
+    max-width: none !important;
+  }
+  .page-shell {
+    width: min(100%, var(--page-max));
+    margin-inline: auto;
+    padding-inline: var(--page-inline);
+  }
+  .page-shell--wide {
+    width: 100%;
+    padding-inline: var(--page-inline-wide);
+  }
+  .page-shell--narrow {
+    width: min(100%, var(--page-narrow));
+    margin-inline: auto;
+    padding-inline: var(--page-inline);
+  }
+  .page-section {
+    padding-block: var(--section-space);
+  }
+  .page-section--tight {
+    padding-block: var(--section-space-tight);
+  }
+  .page-stack {
+    display: grid;
+    gap: var(--section-gap);
+  }
+  .page-stack--lg {
+    display: grid;
+    gap: clamp(1.5rem, 3vw, 2rem);
+  }
+  .section-header {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between;
+  }
+  .section-header__copy {
+    max-width: 42rem;
+  }
+  .page-grid--sidebar {
+    @apply grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-start;
+  }
+  .page-grid--hero {
+    @apply grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center;
+  }
+  .page-grid--catalog {
+    @apply grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+  .touch-link {
+    @apply focus-ring-soft inline-flex min-h-[44px] items-center;
+  }
   .ui-button,
   .button,
   .button-gray,
@@ -215,13 +285,13 @@ body {
     @apply touch-target inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:pointer-events-none disabled:opacity-55 disabled:shadow-none;
   }
   .ui-button--sm {
-    @apply px-4 py-2 text-sm;
+    @apply min-h-[44px] px-4 py-2.5 text-sm;
   }
   .ui-button--md {
-    @apply px-5 py-3 text-sm;
+    @apply min-h-[48px] px-5 py-3 text-sm;
   }
   .ui-button--lg {
-    @apply px-6 py-3.5 text-base;
+    @apply min-h-[52px] px-6 py-3.5 text-base;
   }
   .ui-button--icon {
     @apply h-11 w-11 rounded-2xl p-0;
@@ -260,7 +330,7 @@ body {
     @apply mt-2 inline-flex items-start gap-1 text-xs text-red-700;
   }
   .ui-card {
-    @apply rounded-[28px] border;
+    @apply rounded-[24px] border md:rounded-[28px];
   }
   .ui-card--soft,
   .soft-card {
@@ -300,7 +370,7 @@ body {
     @apply fixed inset-0 z-[100] bg-black/45 backdrop-blur-[2px];
   }
   .ui-modal__overlay--center {
-    @apply p-4;
+    @apply p-3 sm:p-4;
   }
   .ui-modal__overlay--sheet {
     @apply p-0 md:p-4;
@@ -319,10 +389,10 @@ body {
     background-color: rgba(255, 255, 255, 0.96);
   }
   .ui-modal__panel--center {
-    @apply rounded-[28px] p-5 md:p-6;
+    @apply rounded-[24px] p-4 sm:p-5 md:rounded-[28px] md:p-6;
   }
   .ui-modal__panel--sheet {
-    @apply max-h-[86vh] overflow-y-auto rounded-t-3xl p-5 slide-up-panel md:h-full md:max-h-none md:max-w-md md:rounded-l-[26px] md:rounded-t-none md:p-6;
+    @apply max-h-[88vh] overflow-y-auto rounded-t-3xl p-4 slide-up-panel sm:p-5 md:h-full md:max-h-none md:max-w-md md:rounded-l-[26px] md:rounded-t-none md:p-6;
   }
   .ui-modal__panel--sm {
     @apply max-w-md;

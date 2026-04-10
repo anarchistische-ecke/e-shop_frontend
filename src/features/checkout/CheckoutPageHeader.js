@@ -6,8 +6,8 @@ function CheckoutPageHeader({ isSubmitting, onDisabledNavigation }) {
   const disabledLinkClass = isSubmitting ? ' pointer-events-none opacity-60' : '';
 
   return (
-    <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div>
+    <div className="section-header mb-5">
+      <div className="section-header__copy">
         <p className="text-xs uppercase tracking-[0.28em] text-accent">
           Оформление заказа
         </p>

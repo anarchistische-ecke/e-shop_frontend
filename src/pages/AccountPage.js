@@ -836,7 +836,7 @@ function AccountPage() {
   };
 
   return (
-    <div className="account-page py-10 sm:py-12">
+    <div className="account-page page-section">
       <Seo
         title="Личный кабинет"
         description="Профиль покупателя, история заказов, бонусы и персональные данные для быстрого повторного оформления."
@@ -847,7 +847,7 @@ function AccountPage() {
         }
         robots="noindex,nofollow"
       />
-      <div className="container mx-auto px-4">
+      <div className="page-shell">
         <div className="relative mb-8">
           <div className="pointer-events-none absolute -top-10 right-0 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />
           <div className="pointer-events-none absolute top-12 left-6 h-24 w-24 rounded-full bg-sky/40 blur-2xl" />

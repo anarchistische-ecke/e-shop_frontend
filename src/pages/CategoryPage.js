@@ -259,7 +259,7 @@ function CategoryPage() {
   const gridClassName =
     viewMode === 'compact'
       ? 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-      : 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+      : 'page-grid--catalog';
 
   const fromPath = `${location.pathname}${location.search}`;
   const filterProps = {
@@ -277,7 +277,7 @@ function CategoryPage() {
   };
 
   return (
-    <div className="category-page relative overflow-hidden py-8 md:py-10">
+    <div className="category-page relative overflow-hidden page-section">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -287,7 +287,7 @@ function CategoryPage() {
       <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
 
-      <div className="container mx-auto px-4">
+      <div className="page-shell">
         <nav className="text-xs text-muted flex flex-wrap items-center gap-2">
           {location.state?.fromPath ? (
             <Button
@@ -307,7 +307,7 @@ function CategoryPage() {
           <span className="text-ink">{heading}</span>
         </nav>
 
-        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="section-header mt-4">
           <div className="flex flex-wrap items-baseline gap-3">
             <h1 className="text-2xl sm:text-3xl font-semibold">{heading}</h1>
             <span className="text-sm text-muted">{list.itemsLabel}</span>

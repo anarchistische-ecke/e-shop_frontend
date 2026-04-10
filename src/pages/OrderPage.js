@@ -257,7 +257,7 @@ function OrderPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center text-muted">
+      <div className="page-shell page-section text-center text-muted">
         <Seo
           title="Страница заказа"
           description="Загружаем актуальный статус заказа и оплату."
@@ -271,7 +271,7 @@ function OrderPage() {
 
   if (!order) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
+      <div className="page-shell page-section text-center">
         <Seo
           title="Заказ не найден"
           description="Проверьте ссылку на страницу заказа и попробуйте открыть её ещё раз."
@@ -362,15 +362,15 @@ function OrderPage() {
   const activeStage = statusRank[orderStatus] ?? 0;
 
   return (
-    <div className="order-page py-10">
+    <div className="order-page page-section">
       <Seo
         title={`Заказ ${String(order.id).slice(0, 8)}...`}
         description={`Статус заказа: ${statusLabel}. Здесь можно проверить оплату, доставку и состав заказа.`}
         canonicalPath={token ? `/order/${token}` : '/order'}
         robots="noindex,nofollow"
       />
-      <div className="container mx-auto px-4">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="page-shell">
+        <div className="section-header mb-6">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-muted">Заказ</p>
             <h1 className="text-2xl sm:text-3xl font-semibold">
@@ -410,7 +410,7 @@ function OrderPage() {
 
         {status ? <NotificationBanner notification={status} className="mb-6" /> : null}
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="page-grid--sidebar gap-8">
           <div className="space-y-6">
             <Card as="section" padding="lg">
               <h2 className="text-xl font-semibold mb-4">Статус доставки</h2>

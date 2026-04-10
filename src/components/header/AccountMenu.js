@@ -92,7 +92,7 @@ function LoggedInAccountMenu({
                   key={entry.to}
                   to={entry.to}
                   onClick={onAccountNav}
-                  className="block px-4 py-2.5 text-sm text-ink transition hover:bg-sand/45"
+                  className="touch-link block px-4 py-2.5 text-sm text-ink transition hover:bg-sand/45"
                 >
                   {entry.label}
                 </Link>

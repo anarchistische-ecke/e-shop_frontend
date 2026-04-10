@@ -103,18 +103,18 @@ function Home() {
         canonicalPath="/"
         image={heroShareImage}
       />
-      <div className="home">
+      <div className="home page-stack--lg">
       {bannerText && bannerEnabled && (
         <div className="bg-ink text-white text-center py-2 px-4">
           <p className="text-sm">{bannerText}</p>
         </div>
       )}
 
-      <section className="container mx-auto px-4 py-4 md:py-12">
-        <div className="catalog-hero relative overflow-hidden rounded-[28px] border border-white/70 p-5 md:rounded-[32px] md:p-10 shadow-[0_24px_56px_rgba(43,39,34,0.14)]">
+      <section className="page-shell page-section--tight">
+        <div className="catalog-hero relative overflow-hidden rounded-[28px] border border-white/70 p-4 shadow-[0_24px_56px_rgba(43,39,34,0.14)] sm:p-5 md:rounded-[32px] md:p-10">
           <div className="absolute -top-20 right-10 h-48 w-48 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-20 left-6 h-40 w-40 rounded-full bg-sky/70 blur-3xl pointer-events-none" />
-          <div className="relative z-10 grid items-center gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
+          <div className="page-grid--hero relative z-10">
             <div className="space-y-5 md:space-y-6">
               <p className="uppercase text-xs tracking-[0.4em] text-accent">{badgeText}</p>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight">
@@ -199,14 +199,14 @@ function Home() {
 
       <HomeCategoryNavigation categories={categories} products={visibleProducts} />
 
-      <section className="container mx-auto px-4 py-10">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+      <section className="page-shell page-section">
+        <div className="section-header mb-4">
           <h2 className="text-2xl font-semibold">Бестселлеры недели</h2>
           <Button as={Link} to="/category/popular" variant="ghost" size="sm" className="self-start text-primary">
             Смотреть все
           </Button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="page-grid--catalog">
           {visibleProducts.slice(0, 8).map((prod) => (
             <ProductCard key={prod.id} product={prod} />
           ))}
@@ -216,7 +216,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 py-10">
+      <section className="page-shell page-section">
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <Card padding="lg">
             <p className="text-xs uppercase tracking-[0.3em] text-accent">Комплект недели</p>
@@ -254,15 +254,15 @@ function Home() {
         </div>
       </section>
 
-      <section className="bg-white/75 border-y border-ink/10 py-10">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+      <section className="bg-white/75 border-y border-ink/10">
+        <div className="page-shell page-section">
+          <div className="section-header mb-4">
             <h2 className="text-2xl font-semibold">Новинки с мягким характером</h2>
             <Button as={Link} to="/category/new" variant="ghost" size="sm" className="self-start text-primary">
               Смотреть все
             </Button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="page-grid--catalog">
             {visibleProducts.slice(0, 4).map((prod) => (
               <ProductCard key={prod.id} product={prod} />
             ))}
@@ -273,8 +273,8 @@ function Home() {
         </div>
       </section>
 
-      <section className="py-12">
-        <div className="container mx-auto px-4 max-w-4xl text-center">
+      <section className="page-shell--narrow page-section text-center">
+        <div className="mx-auto w-full max-w-4xl">
           <Card padding="lg" className="text-center">
             <h2 className="text-2xl md:text-3xl font-semibold">
               Постельное Белье‑ЮГ — пространство для отдыха и перезагрузки

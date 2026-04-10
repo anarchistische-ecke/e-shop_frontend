@@ -78,8 +78,8 @@ function MobileMenu({
       className="fixed inset-0 z-[130] flex flex-col bg-[#fbf7f1]/98 backdrop-blur-xl lg:hidden"
     >
       <div className="flex-1 overflow-y-auto overscroll-contain">
-        <div className="sticky top-0 z-10 border-b border-ink/10 bg-[#fbf7f1]/96 px-4 pb-4 pt-5 shadow-[0_16px_32px_rgba(43,39,34,0.08)]">
-          <div>
+        <div className="sticky top-0 z-10 border-b border-ink/10 bg-[#fbf7f1]/96 pb-4 pt-5 shadow-[0_16px_32px_rgba(43,39,34,0.08)]">
+          <div className="page-shell">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Навигация</p>
@@ -178,7 +178,7 @@ function MobileMenu({
           </div>
         </div>
 
-        <div className="space-y-5 px-4 py-4">
+        <div className="page-shell space-y-5 py-4">
           {activeMobileParent ? (
             <Link
               to={`/category/${resolveCategoryToken(activeMobileParent)}`}
