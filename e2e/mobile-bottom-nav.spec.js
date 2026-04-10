@@ -1,0 +1,45 @@
+const { test, expect } = require('@playwright/test');
+const { mockStorefrontApi } = require('./support/mockStorefrontApi');
+
+test.beforeEach(async ({ page }) => {
+  await mockStorefrontApi(page);
+});
+
+test('bottom navigation opens the full mobile catalog menu', async ({ page }) => {
+  await page.goto('/');
+
+  const bottomNav = page.getByRole('navigation', { name: 'Быстрая навигация' });
+  await expect(bottomNav).toBeVisible();
+
+  const catalogButton = bottomNav.getByRole('button', { name: 'Каталог' });
+  await catalogButton.focus();
+  await page.keyboard.press('Enter');
+
+  const mobileMenu = page.getByTestId('mobile-nav-panel');
+  await expect(mobileMenu).toBeVisible();
+  await expect(mobileMenu.getByRole('link', { name: 'Весь каталог' })).toBeVisible();
+  await expect(page.getByLabel('Поиск по каталогу')).toBeVisible();
+});
+
+test('bottom navigation can focus search and navigate to mobile search results', async ({ page }) => {
+  await page.goto('/category/throws');
+
+  const bottomNav = page.getByRole('navigation', { name: 'Быстрая навигация' });
+  await bottomNav.getByRole('button', { name: 'Поиск' }).tap();
+
+  const searchInput = page.getByLabel('Поиск товаров');
+  await expect(searchInput).toBeFocused();
+  await searchInput.fill('Плед');
+  await searchInput.press('Enter');
+
+  await expect(page).toHaveURL(/\/catalog\?query=/);
+  await expect(page.getByRole('heading', { name: 'Результаты поиска по всему каталогу' })).toBeVisible();
+});
+
+test('bottom navigation stays hidden on product and checkout routes', async ({ page }) => {
+  await page.goto('/product/prod-satin-sand/satin-sand');
+  await expect(page.getByRole('navigation', { name: 'Быстрая навигация' })).toHaveCount(0);
+
+  await page.goto('/checkout');
+  await expect(page.getByRole('navigation', { name: 'Быстрая навигация' })).toHaveCount(0);
+});

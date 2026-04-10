@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import TrustLinksPanel from '../TrustLinksPanel';
 import { MOBILE_TRUST_LINK_IDS } from '../../data/trustLinks';
@@ -27,6 +27,20 @@ function MobileMenu({
   const panelRef = useRef(null);
   const searchInputRef = useRef(null);
   const lastFocusedRef = useRef(null);
+  const [isMounted, setIsMounted] = useState(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsMounted(true);
+      return undefined;
+    }
+
+    const closeTimer = window.setTimeout(() => {
+      setIsMounted(false);
+    }, 220);
+
+    return () => window.clearTimeout(closeTimer);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || typeof document === 'undefined') {
@@ -62,7 +76,7 @@ function MobileMenu({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) {
+  if (!isMounted) {
     return null;
   }
 
@@ -74,8 +88,13 @@ function MobileMenu({
       role="dialog"
       aria-modal="true"
       aria-label="Меню каталога"
+      aria-hidden={!isOpen}
       tabIndex={-1}
-      className="fixed inset-0 z-[130] flex flex-col bg-[#fbf7f1]/98 backdrop-blur-xl lg:hidden"
+      className={`fixed inset-0 z-[130] flex flex-col bg-[#fbf7f1]/98 backdrop-blur-xl transition duration-200 lg:hidden ${
+        isOpen
+          ? 'translate-y-0 opacity-100'
+          : 'pointer-events-none translate-y-4 opacity-0'
+      }`}
     >
       <div className="flex-1 overflow-y-auto overscroll-contain">
         <div className="sticky top-0 z-10 border-b border-ink/10 bg-[#fbf7f1]/96 pb-4 pt-5 shadow-[0_16px_32px_rgba(43,39,34,0.08)]">

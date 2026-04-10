@@ -8,8 +8,10 @@ import {
   buildAccountLinks,
   buildCategoryCollections,
   buildHeaderSearchParams,
+  resolveMobileBottomNavKey,
   resolveCategoryToken,
-  resolveWayfindingLabel
+  resolveWayfindingLabel,
+  shouldShowMobileBottomNav
 } from '../../utils/header';
 import { buildAutocompleteData, normalizeSearchText } from '../../utils/search';
 
@@ -36,6 +38,7 @@ export function useHeaderState() {
   const headerBarRef = useRef(null);
   const menuTriggerRef = useRef(null);
   const searchRef = useRef(null);
+  const searchInputRef = useRef(null);
   const accountMenuRef = useRef(null);
   const hoverCloseTimerRef = useRef(null);
   const lastAddedDismissTimerRef = useRef(null);
@@ -49,6 +52,11 @@ export function useHeaderState() {
   const wayfindingLabel = useMemo(
     () => resolveWayfindingLabel(location.pathname, location.search),
     [location.pathname, location.search]
+  );
+
+  const isBottomNavEnabled = useMemo(
+    () => shouldShowMobileBottomNav(location.pathname),
+    [location.pathname]
   );
 
   const totalItems = useMemo(
@@ -101,6 +109,17 @@ export function useHeaderState() {
 
   const isSearchPanelVisible =
     (isSearchOpen || isSearchFocused) && (searchTerm || hasSearchSuggestions);
+
+  const activeBottomNavKey = useMemo(
+    () =>
+      resolveMobileBottomNavKey({
+        pathname: location.pathname,
+        search: location.search,
+        isMenuOpen,
+        isSearchPanelVisible
+      }),
+    [isMenuOpen, isSearchPanelVisible, location.pathname, location.search]
+  );
 
   const activeMegaCategoryData = activeMegaCategory
     ? categoryByToken[activeMegaCategory]
@@ -237,6 +256,30 @@ export function useHeaderState() {
       document.documentElement.style.overflow = previousDocumentOverflow;
     };
   }, [isMenuOpen, isSearchPanelVisible]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const updateBottomNavOffset = () => {
+      const isMobileViewport = window.innerWidth < 768;
+      document.documentElement.style.setProperty(
+        '--mobile-bottom-nav-offset',
+        isBottomNavEnabled && isMobileViewport
+          ? 'calc(5rem + env(safe-area-inset-bottom, 0px))'
+          : '0px'
+      );
+    };
+
+    updateBottomNavOffset();
+    window.addEventListener('resize', updateBottomNavOffset);
+
+    return () => {
+      window.removeEventListener('resize', updateBottomNavOffset);
+      document.documentElement.style.setProperty('--mobile-bottom-nav-offset', '0px');
+    };
+  }, [isBottomNavEnabled]);
 
   useEffect(() => {
     if ((!isSearchOpen && !isSearchFocused) || typeof document === 'undefined') {
@@ -414,24 +457,43 @@ export function useHeaderState() {
   const handleSearchInputChange = useCallback(
     (event) => {
       setSearchTerm(event.target.value);
+      closeAccountMenu();
       closeMenu();
       closeMega();
       setIsSearchOpen(true);
     },
-    [closeMega, closeMenu]
+    [closeAccountMenu, closeMega, closeMenu]
   );
 
   const handleSearchFocus = useCallback(() => {
+    closeAccountMenu();
     closeMenu();
     closeMega();
     setIsSearchFocused(true);
     setIsSearchOpen(true);
-  }, [closeMega, closeMenu]);
+  }, [closeAccountMenu, closeMega, closeMenu]);
 
   const clearSearch = useCallback(() => {
     setSearchTerm('');
     closeSearch();
   }, [closeSearch]);
+
+  const openSearchPanel = useCallback(() => {
+    closeMenu();
+    closeMega();
+    closeAccountMenu();
+    setIsSearchFocused(true);
+    setIsSearchOpen(true);
+
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        if (searchInputRef.current instanceof HTMLElement) {
+          searchInputRef.current.focus();
+          searchInputRef.current.select();
+        }
+      });
+    }
+  }, [closeAccountMenu, closeMega, closeMenu]);
 
   const openMega = useCallback(
     (categoryToken) => {
@@ -450,6 +512,14 @@ export function useHeaderState() {
 
   const handleMenuToggle = useCallback(() => {
     setIsMenuOpen((prev) => !prev);
+    closeAccountMenu();
+    closeSearch();
+    closeMega();
+  }, [closeAccountMenu, closeMega, closeSearch]);
+
+  const openMenu = useCallback(() => {
+    setMobilePath([]);
+    setIsMenuOpen(true);
     closeAccountMenu();
     closeSearch();
     closeMega();
@@ -509,6 +579,7 @@ export function useHeaderState() {
     accountLinks,
     accountMenuRef,
     activeMegaCategory,
+    activeBottomNavKey,
     activeMegaCategoryData,
     activeMobileParent,
     autocompleteData,
@@ -536,6 +607,7 @@ export function useHeaderState() {
     headerRef,
     isAccountMenuOpen,
     isAuthenticated,
+    isBottomNavEnabled,
     isCatalogMenuOpen: Boolean(activeMegaCategory),
     isManager,
     isMenuOpen,
@@ -548,9 +620,12 @@ export function useHeaderState() {
     mobileTitle,
     navCategories,
     navigateSearch,
+    openMenu,
     openMega,
+    openSearchPanel,
     scopeOptions,
     searchRef,
+    searchInputRef,
     searchScope,
     searchTerm,
     setActiveMegaCategory,

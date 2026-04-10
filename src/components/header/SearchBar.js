@@ -205,6 +205,7 @@ function SearchBar({
   onSubmit,
   onTrackSearchSuggestion,
   searchRef,
+  searchInputRef,
   searchScope,
   searchTerm,
   scopeOptions
@@ -221,6 +222,7 @@ function SearchBar({
       <form onSubmit={onSubmit} className="relative">
         <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
         <Input
+          ref={searchInputRef}
           type="text"
           value={searchTerm}
           onChange={onChange}

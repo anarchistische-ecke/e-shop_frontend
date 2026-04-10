@@ -86,7 +86,10 @@ function App() {
           style={
             isAdminRoute
               ? undefined
-              : { paddingTop: 'var(--site-header-height, 7rem)' }
+              : {
+                  paddingTop: 'var(--site-header-height, 7rem)',
+                  paddingBottom: 'var(--mobile-bottom-nav-offset, 0px)'
+                }
           }
         >
           <Routes>
