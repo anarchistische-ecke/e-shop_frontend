@@ -8,7 +8,8 @@ test.beforeEach(async ({ page }) => {
 test('mobile catalogue filters narrow results without layout regressions', async ({ page }) => {
   await page.goto('/catalog');
 
-  await expect(page.getByRole('heading', { name: 'Подбор текстиля без лишних кликов' })).toBeVisible();
+  await expect(page.getByTestId('catalogue-search-card')).toBeVisible();
+  await expect(page.getByTestId('catalogue-header-card')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Все фильтры' }).click();
   await expect(page.getByRole('heading', { name: 'Уточните выбор' })).toBeVisible();

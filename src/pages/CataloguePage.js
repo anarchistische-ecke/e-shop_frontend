@@ -150,31 +150,14 @@ function CataloguePage() {
           <span className="text-ink">{hasQuery ? 'Поиск' : 'Каталог'}</span>
         </nav>
 
-        <Card
-          className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end lg:mt-2.5 lg:p-5 xl:p-6"
-          padding="md"
-          data-testid="catalogue-header-card"
-        >
-          <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-accent">
-              {hasQuery ? 'Поиск по каталогу' : 'Каталог товаров'}
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold sm:text-3xl md:text-4xl">
-              {hasQuery ? 'Результаты поиска по всему каталогу' : 'Подбор текстиля без лишних кликов'}
-            </h1>
-            <p className="mt-2 text-sm text-muted">
-              {list.headingNote}
-            </p>
-          </div>
-          <Button as={Link} to="/category/popular" variant="secondary" block className="md:w-auto">
-            Бестселлеры
-          </Button>
-        </Card>
+        <h1 className="sr-only">
+          {hasQuery ? 'Результаты поиска по всему каталогу' : 'Каталог товаров'}
+        </h1>
 
         <Card
           as="section"
           variant="quiet"
-          className="mt-4 md:p-5 lg:mt-3"
+          className="mt-3 md:p-5 lg:mt-2.5"
           padding="sm"
           data-testid="catalogue-search-card"
         >

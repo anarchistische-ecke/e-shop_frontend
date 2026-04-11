@@ -152,6 +152,30 @@ test('home hero stays compact after mobile header simplification', async ({ page
   expect(heroBox.height).toBeLessThanOrEqual(Math.round(viewport.height * 0.8));
 });
 
+test('mobile footer keeps navigation in a compact multi-column layout', async ({ page }) => {
+  await page.goto('/');
+
+  const footerGrid = page.getByTestId('site-footer-link-grid');
+  await footerGrid.scrollIntoViewIfNeeded();
+  await expect(footerGrid).toBeVisible();
+
+  const metrics = await footerGrid.evaluate((node) => {
+    const style = window.getComputedStyle(node);
+    const columns = style.gridTemplateColumns
+      .split(' ')
+      .filter((value) => value && value !== '/').length;
+    const rect = node.getBoundingClientRect();
+    return {
+      columns,
+      width: rect.width,
+      height: rect.height
+    };
+  });
+
+  expect(metrics.columns).toBeGreaterThanOrEqual(2);
+  expect(metrics.height).toBeLessThanOrEqual(520);
+});
+
 test('core storefront routes fit the mobile viewport without horizontal overflow', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Обновите спальню/i })).toBeVisible();
@@ -169,7 +193,8 @@ test('core storefront routes fit the mobile viewport without horizontal overflow
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/catalog');
-  await expect(page.getByRole('heading', { name: 'Подбор текстиля без лишних кликов' })).toBeVisible();
+  await expect(page.getByTestId('catalogue-search-card')).toBeVisible();
+  await expect(page.getByTestId('catalogue-header-card')).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/search?query=%D0%9F%D0%BB%D0%B5%D0%B4');
