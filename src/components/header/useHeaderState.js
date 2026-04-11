@@ -37,7 +37,6 @@ export function useHeaderState() {
 
   const headerRef = useRef(null);
   const headerBarRef = useRef(null);
-  const menuTriggerRef = useRef(null);
   const searchRef = useRef(null);
   const searchInputRef = useRef(null);
   const accountMenuRef = useRef(null);
@@ -506,13 +505,6 @@ export function useHeaderState() {
     }, 120);
   }, [clearHoverCloseTimer]);
 
-  const handleMenuToggle = useCallback(() => {
-    setIsMenuOpen((prev) => !prev);
-    closeAccountMenu();
-    closeSearch();
-    closeMega();
-  }, [closeAccountMenu, closeMega, closeSearch]);
-
   const openMenu = useCallback(() => {
     setMobilePath([]);
     setIsMenuOpen(true);
@@ -577,7 +569,6 @@ export function useHeaderState() {
     handleAccountTrigger,
     handleCatalogToggle,
     handleLogout,
-    handleMenuToggle,
     handleSearchFocus,
     handleSearchInputChange,
     handleSearchSubmit,
@@ -592,7 +583,6 @@ export function useHeaderState() {
     isSearchPanelVisible,
     lastAddedItem,
     megaChildren,
-    menuTriggerRef,
     mobileCategories,
     mobilePath,
     mobileTitle,

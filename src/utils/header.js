@@ -31,7 +31,6 @@ export function shouldShowMobileBottomNav(pathname = '') {
   if (pathname.startsWith('/product/')) return false;
   if (pathname.startsWith('/checkout')) return false;
   if (pathname.startsWith('/order/')) return false;
-  if (pathname === '/login') return false;
   return true;
 }
 
