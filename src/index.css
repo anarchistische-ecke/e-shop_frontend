@@ -8,6 +8,8 @@
 /* Custom overrides and utility classes can be added here if needed. */
 
 :root {
+  --viewport-inline: 100vw;
+  --viewport-block: 100vh;
   --site-header-height: 6.5rem;
   --page-inline: clamp(1rem, 4vw, 2rem);
   --page-inline-wide: clamp(1rem, 5vw, 3rem);
@@ -35,10 +37,25 @@
   --field-ring: 182 91 74;
 }
 
+@supports (width: 100dvw) {
+  :root {
+    --viewport-inline: 100dvw;
+  }
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --viewport-block: 100dvh;
+  }
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -46,7 +63,9 @@ body {
   background: transparent;
   color: #2b2722;
   min-height: 100%;
-  overflow-x: clip;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   position: relative;
@@ -57,6 +76,9 @@ body {
   min-height: 100%;
   position: relative;
   z-index: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 #app-background {
@@ -64,6 +86,9 @@ body {
   inset: 0;
   z-index: -10;
   pointer-events: none;
+  inline-size: var(--viewport-inline);
+  max-inline-size: var(--viewport-inline);
+  block-size: var(--viewport-block);
   background-color: rgb(244, 239, 231);
   background-image:
     radial-gradient(circle at 12% 14%, rgba(var(--catalog-rose), 0.2), transparent 34%),
@@ -222,12 +247,21 @@ body {
     outline-offset: 2px;
   }
 
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+
   ::selection {
     background: rgba(182, 91, 74, 0.22);
   }
 
   main {
     @apply w-full;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   [id] {
@@ -251,6 +285,9 @@ body {
 @layer components {
   .site-content-layer {
     min-height: 100vh;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0)),
       linear-gradient(180deg, var(--content-layer-bg) 0%, rgba(245, 238, 230, 0.97) 52%, rgba(251, 247, 241, 0.95) 100%);
@@ -271,18 +308,23 @@ body {
     max-width: none !important;
   }
   .page-shell {
-    width: min(100%, var(--page-max));
+    width: 100%;
+    max-width: min(var(--page-max), var(--viewport-inline));
     margin-inline: auto;
     padding-inline: var(--page-inline);
+    min-width: 0;
   }
   .page-shell--wide {
     width: 100%;
+    max-width: var(--viewport-inline);
     padding-inline: var(--page-inline-wide);
   }
   .page-shell--narrow {
-    width: min(100%, var(--page-narrow));
+    width: 100%;
+    max-width: min(var(--page-narrow), var(--viewport-inline));
     margin-inline: auto;
     padding-inline: var(--page-inline);
+    min-width: 0;
   }
   .page-section {
     padding-block: var(--section-space);
@@ -297,6 +339,18 @@ body {
   .page-stack--lg {
     display: grid;
     gap: clamp(1.5rem, 3vw, 2rem);
+    min-width: 0;
+  }
+  .viewport-fixed-edge {
+    inline-size: var(--viewport-inline);
+    max-inline-size: 100%;
+    margin-inline: auto;
+  }
+  .viewport-fixed-screen {
+    inline-size: var(--viewport-inline);
+    max-inline-size: var(--viewport-inline);
+    block-size: var(--viewport-block);
+    max-block-size: var(--viewport-block);
   }
   .section-header {
     @apply flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between;
@@ -452,6 +506,11 @@ body {
   }
   .ui-toast {
     @apply shadow-[0_18px_44px_rgba(43,39,34,0.14)];
+  }
+  .overflow-x-auto {
+    max-width: 100%;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
   .catalog-hero {
     background:

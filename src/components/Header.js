@@ -15,7 +15,7 @@ function Header() {
 
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-50 pointer-events-none">
+      <div className="viewport-fixed-edge fixed inset-x-0 top-0 z-50 pointer-events-none">
         <header ref={header.headerRef} className="relative pointer-events-auto">
           <div
             ref={header.headerBarRef}

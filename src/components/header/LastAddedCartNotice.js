@@ -8,7 +8,7 @@ function LastAddedCartNotice({ lastAddedItem, onDismiss }) {
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      className={`fixed left-1/2 z-[95] w-[min(94vw,390px)] -translate-x-1/2 transition-all duration-200 sm:left-auto sm:right-4 sm:translate-x-0 ${
+      className={`fixed left-1/2 z-[95] w-[min(calc(var(--viewport-inline,100vw)-1.5rem),390px)] -translate-x-1/2 transition-all duration-200 sm:left-auto sm:right-4 sm:translate-x-0 ${
         lastAddedItem
           ? 'pointer-events-auto translate-y-0 opacity-100'
           : 'pointer-events-none -translate-y-4 opacity-0'

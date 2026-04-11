@@ -9,17 +9,21 @@ async function expectNoHorizontalOverflow(page) {
   const metrics = await page.evaluate(() => {
     const doc = document.documentElement;
     const body = document.body;
+    const viewportWidth =
+      Math.round(window.visualViewport?.width || 0) || doc?.clientWidth || window.innerWidth;
 
     return {
-      innerWidth: window.innerWidth,
+      viewportWidth,
       docScrollWidth: doc ? doc.scrollWidth : 0,
       bodyScrollWidth: body ? body.scrollWidth : 0,
+      scrollX: window.scrollX,
     };
   });
 
   expect(Math.max(metrics.docScrollWidth, metrics.bodyScrollWidth)).toBeLessThanOrEqual(
-    metrics.innerWidth + 1
+    metrics.viewportWidth + 1
   );
+  expect(Math.abs(metrics.scrollX)).toBeLessThanOrEqual(1);
 }
 
 test('mobile catalog menu takes over the viewport instead of clipping under the header', async ({ page }) => {
@@ -43,6 +47,17 @@ test('mobile catalog menu takes over the viewport instead of clipping under the 
 test('core storefront routes fit the mobile viewport without horizontal overflow', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Обновите спальню/i })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  const homeCarousel = page.locator('[data-carousel-item]').first();
+  await expect(homeCarousel).toBeVisible();
+  await homeCarousel.scrollIntoViewIfNeeded();
+  await page.evaluate(() => {
+    const scroller = document.querySelector('[data-carousel-item]')?.parentElement;
+    if (scroller) {
+      scroller.scrollLeft = 240;
+    }
+  });
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/catalog');

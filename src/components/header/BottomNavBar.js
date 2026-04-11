@@ -63,7 +63,7 @@ function BottomNavBar({
     <nav
       aria-label="Быстрая навигация"
       className={cn(
-        'fixed inset-x-0 bottom-0 z-[95] border-t border-ink/10 bg-[#fbf7f1]/95 shadow-[0_-18px_36px_rgba(43,39,34,0.14)] backdrop-blur-xl transition-transform duration-200 md:hidden',
+        'viewport-fixed-edge fixed inset-x-0 bottom-0 z-[95] border-t border-ink/10 bg-[#fbf7f1]/95 shadow-[0_-18px_36px_rgba(43,39,34,0.14)] backdrop-blur-xl transition-transform duration-200 md:hidden',
         isVisible
           ? 'translate-y-0'
           : 'pointer-events-none translate-y-full'
