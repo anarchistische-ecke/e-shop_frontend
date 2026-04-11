@@ -5,7 +5,7 @@ function BrandIntro({ eyebrow, title, description, values = [] }) {
   return (
     <section className="page-shell page-section">
       <Card padding="lg" className="rounded-[32px]">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.95fr)] lg:items-start">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.95fr)] lg:gap-7 lg:items-start">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-accent">{eyebrow}</p>
             <h2 className="mt-3 text-2xl font-semibold md:text-3xl">{title}</h2>

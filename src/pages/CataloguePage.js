@@ -77,6 +77,10 @@ function CataloguePage() {
     : `${list.headingNote} Постельное белье, пледы, полотенца и другой текстиль с доставкой по России.`;
 
   const clearFilterByKey = (key) => {
+    if (key === 'scope') {
+      updateParams({ scope: '' });
+      return;
+    }
     if (key === 'brand') {
       updateParams({ brand: '' });
       return;
@@ -222,7 +226,7 @@ function CataloguePage() {
 
           <div className="mt-3">
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</p>
-            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex-wrap lg:overflow-visible">
               <FilterChip
                 type="button"
                 onClick={() => updateParams({ scope: '' })}
@@ -341,6 +345,7 @@ function CataloguePage() {
           <div className="mb-3 text-sm text-muted">
             {list.loading ? 'Загружаем каталог…' : `${list.totalItems} товаров в выдаче`}
             {hasQuery ? ` · Запрос: “${params.query}”` : ''}
+            {!hasQuery && list.scopeCategoryLabel ? ` · Категория: ${list.scopeCategoryLabel}` : ''}
           </div>
 
           {list.loading ? (

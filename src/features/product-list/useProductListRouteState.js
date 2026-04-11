@@ -34,6 +34,7 @@ export function useProductListRouteState({ source = 'catalog', categorySlug = ''
 
   const clearFilters = useCallback(() => {
     updateParams({
+      scope: '',
       brand: '',
       minPrice: '',
       maxPrice: '',

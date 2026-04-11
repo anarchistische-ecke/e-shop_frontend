@@ -33,10 +33,13 @@ function Footer() {
   ];
   return (
     <footer className="bg-accent text-white border-t border-white/10">
-      <div className="page-shell page-section">
-        <div className="mx-auto w-full max-w-[88rem]">
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr_0.9fr] lg:items-start">
-            <div className="space-y-3">
+      <div className="page-shell page-section--tight py-8 lg:py-9 xl:py-10">
+        <div
+          data-testid="site-footer-content"
+          className="mx-auto w-full max-w-[78rem]"
+        >
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.45fr)] lg:gap-10 lg:items-start">
+            <div className="space-y-4">
               <Link to="/" className="touch-link font-display text-2xl font-semibold tracking-tight text-white">
                 Постельное Белье-ЮГ
               </Link>
@@ -44,7 +47,7 @@ function Footer() {
                 Спокойный дом начинается с мягких тканей. Мы подбираем натуральные материалы, чтобы
                 отдых был таким же уютным, как объятия любимого пледа.
               </p>
-              <div className="space-y-2 text-sm">
+              <div className="flex flex-wrap gap-2 text-sm">
                 <p className="m-0 inline-flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-1.5">
                   Телефон: +7 961 466‑88‑33
                 </p>
@@ -54,48 +57,47 @@ function Footer() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.24em] text-white/60">Юридическая информация</p>
-              <div className="text-xs text-white/75 space-y-1">
-                <p className="m-0">ИП Касьянова И.Л.</p>
-                <p className="m-0">ИНН 081407505907</p>
-                <p className="m-0">ОГРНИП 325080000035116</p>
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.24em] text-white/60">Юридическая информация</p>
+                <div className="text-xs text-white/75 space-y-1">
+                  <p className="m-0">ИП Касьянова И.Л.</p>
+                  <p className="m-0">ИНН 081407505907</p>
+                  <p className="m-0">ОГРНИП 325080000035116</p>
+                </div>
+                <ul className="text-xs text-white/70 space-y-1.5">
+                  <li>
+                    <Link to="/konfidentsialnost-i-zashchita-informatsii" className="touch-link hover:text-white">
+                      Политика обработки персональных данных
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/polzovatelskoe-soglashenie" className="touch-link hover:text-white">
+                      Пользовательское соглашение
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/soglasie-na-obrabotku-pd" className="touch-link hover:text-white">
+                      Согласие на обработку персональных данных
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/soglasie-na-poluchenie-reklamy" className="touch-link hover:text-white">
+                      Согласие на получение рекламы
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/cookies" className="touch-link hover:text-white">
+                      Политика файлов cookie
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/usloviya-prodazhi" className="touch-link hover:text-white">
+                      Условия продажи
+                    </Link>
+                  </li>
+                </ul>
               </div>
-              <ul className="text-xs text-white/70 space-y-1">
-                <li>
-                  <Link to="/konfidentsialnost-i-zashchita-informatsii" className="touch-link hover:text-white">
-                    Политика обработки персональных данных
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/polzovatelskoe-soglashenie" className="touch-link hover:text-white">
-                    Пользовательское соглашение
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/soglasie-na-obrabotku-pd" className="touch-link hover:text-white">
-                    Согласие на обработку персональных данных
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/soglasie-na-poluchenie-reklamy" className="touch-link hover:text-white">
-                    Согласие на получение рекламы
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/cookies" className="touch-link hover:text-white">
-                    Политика файлов cookie
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/usloviya-prodazhi" className="touch-link hover:text-white">
-                    Условия продажи
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {groups.map((grp) => (
                 <div key={grp.title} className="space-y-3">
                   <h4 className="font-semibold mt-0 text-white">{grp.title}</h4>
@@ -121,9 +123,9 @@ function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-4">
+      <div className="border-t border-white/10 py-3.5">
         <div className="page-shell">
-          <div className="mx-auto flex w-full max-w-[88rem] flex-wrap items-center justify-between gap-2 text-xs text-white/60">
+          <div className="mx-auto flex w-full max-w-[78rem] flex-wrap items-center justify-between gap-2 text-xs text-white/60">
             <p className="m-0">© Постельное Белье‑ЮГ, 2015–{currentYear}</p>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Mir</span>

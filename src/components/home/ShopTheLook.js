@@ -38,13 +38,13 @@ function ShopTheLook({ title, description, imageUrl, products = [] }) {
 
   return (
     <section className="page-shell page-section">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:items-center">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:gap-6 lg:items-center">
         <div>
           <p className="text-xs uppercase tracking-[0.28em] text-accent">Shop the look</p>
           <h2 className="mt-2 text-2xl font-semibold md:text-3xl">{title}</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted">{description}</p>
 
-          <div className="mt-5 overflow-hidden rounded-[30px] border border-white/80 bg-white/70 shadow-[0_24px_56px_rgba(43,39,34,0.12)]">
+          <div className="mt-4 overflow-hidden rounded-[30px] border border-white/80 bg-white/70 shadow-[0_24px_56px_rgba(43,39,34,0.12)] lg:mt-5">
             <div className="relative pt-[112%] sm:pt-[78%]">
               {fallbackImage ? (
                 <img
@@ -126,7 +126,7 @@ function ShopTheLook({ title, description, imageUrl, products = [] }) {
             </Button>
           </div>
 
-          <div className="mt-6 grid gap-2">
+          <div className="mt-5 grid gap-2">
             {hotspots.map((hotspot, index) => (
               <button
                 key={`${hotspot.id}-list`}

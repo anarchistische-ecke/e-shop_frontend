@@ -134,7 +134,7 @@ function FeaturedProducts({
         ) : null}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-5 lg:mt-4">
         {loading ? (
           <FeaturedProductsSkeleton />
         ) : slides.length > 0 ? (
