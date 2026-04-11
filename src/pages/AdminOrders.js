@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getOrders, updateOrderStatus, getCustomers, refreshOrderDelivery, cancelOrderDelivery } from '../api';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { moneyToNumber } from '../utils/product';
 
 function AdminOrders() {
@@ -13,6 +14,7 @@ function AdminOrders() {
   const [expandedId, setExpandedId] = useState(null);
   const [deliveryAction, setDeliveryAction] = useState({});
   const [deliveryError, setDeliveryError] = useState('');
+  const [deliveryCancelTarget, setDeliveryCancelTarget] = useState(null);
   const statusLabels = {
     PENDING: 'Ожидает оплаты',
     PAID: 'Оплачен',
@@ -114,8 +116,6 @@ function AdminOrders() {
 
   const handleCancelDelivery = async (orderId) => {
     setDeliveryError('');
-    const confirm = window.confirm('Отменить доставку для этого заказа?');
-    if (!confirm) return;
     setDeliveryAction((prev) => ({ ...prev, [orderId]: 'cancel' }));
     try {
       const updated = await cancelOrderDelivery(orderId);
@@ -127,6 +127,7 @@ function AdminOrders() {
       setDeliveryError('Не удалось отменить доставку.');
     } finally {
       setDeliveryAction((prev) => ({ ...prev, [orderId]: null }));
+      setDeliveryCancelTarget(null);
     }
   };
 
@@ -235,8 +236,11 @@ function AdminOrders() {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Заказы</h1>
       <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+        <label htmlFor="admin-order-status-filter" className="sr-only">
+          Фильтр по статусу заказа
+        </label>
         <select
-          id="filter"
+          id="admin-order-status-filter"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="p-2 border border-gray-300 rounded text-sm"
@@ -259,7 +263,11 @@ function AdminOrders() {
             </option>
           ))}
         </select>
+        <label htmlFor="admin-order-provider-filter" className="sr-only">
+          Фильтр по провайдеру доставки
+        </label>
         <select
+          id="admin-order-provider-filter"
           value={deliveryProviderFilter}
           onChange={(e) => setDeliveryProviderFilter(e.target.value)}
           className="p-2 border border-gray-300 rounded text-sm"
@@ -272,7 +280,11 @@ function AdminOrders() {
             </option>
           ))}
         </select>
+        <label htmlFor="admin-order-method-filter" className="sr-only">
+          Фильтр по методу доставки
+        </label>
         <select
+          id="admin-order-method-filter"
           value={deliveryMethodFilter}
           onChange={(e) => setDeliveryMethodFilter(e.target.value)}
           className="p-2 border border-gray-300 rounded text-sm"
@@ -285,7 +297,11 @@ function AdminOrders() {
             </option>
           ))}
         </select>
+        <label htmlFor="admin-order-delivery-status-filter" className="sr-only">
+          Фильтр по статусу доставки
+        </label>
         <select
+          id="admin-order-delivery-status-filter"
           value={deliveryStatusFilter}
           onChange={(e) => setDeliveryStatusFilter(e.target.value)}
           className="p-2 border border-gray-300 rounded text-sm"
@@ -298,7 +314,11 @@ function AdminOrders() {
             </option>
           ))}
         </select>
+        <label htmlFor="admin-order-search" className="sr-only">
+          Поиск заказов
+        </label>
         <input
+          id="admin-order-search"
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -395,6 +415,7 @@ function AdminOrders() {
               <select
                 value={order.status}
                 onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                aria-label={`Статус заказа ${order.id}`}
                 className="p-2 border border-gray-300 rounded text-xs"
               >
                 {['PENDING', 'PAID', 'PROCESSING', 'DELIVERED', 'CANCELLED', 'REFUNDED'].map((status) => (
@@ -470,7 +491,7 @@ function AdminOrders() {
                       <button
                         type="button"
                         className="text-xs text-red-600 underline"
-                        onClick={() => handleCancelDelivery(order.id)}
+                        onClick={() => setDeliveryCancelTarget(order)}
                         disabled={!order.deliveryRequestId || deliveryAction[order.id]}
                       >
                         {deliveryAction[order.id] === 'cancel' ? 'Отменяем…' : 'Отменить доставку'}
@@ -489,14 +510,17 @@ function AdminOrders() {
 
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm border border-gray-200 align-top">
+          <caption className="sr-only">
+            Список заказов с клиентом, суммой, данными доставки, статусом и действиями
+          </caption>
           <thead className="bg-secondary">
             <tr>
-              <th className="p-2 border-b">ID</th>
-              <th className="p-2 border-b">Клиент</th>
-              <th className="p-2 border-b">Сумма</th>
-              <th className="p-2 border-b">Доставка</th>
-              <th className="p-2 border-b">Статус</th>
-              <th className="p-2 border-b">Действия</th>
+              <th scope="col" className="p-2 border-b">ID</th>
+              <th scope="col" className="p-2 border-b">Клиент</th>
+              <th scope="col" className="p-2 border-b">Сумма</th>
+              <th scope="col" className="p-2 border-b">Доставка</th>
+              <th scope="col" className="p-2 border-b">Статус</th>
+              <th scope="col" className="p-2 border-b">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -543,6 +567,7 @@ function AdminOrders() {
                     <select
                       value={order.status}
                       onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                      aria-label={`Статус заказа ${order.id}`}
                       className="p-1 border border-gray-300 rounded text-xs"
                     >
                     {['PENDING', 'PAID', 'PROCESSING', 'DELIVERED', 'CANCELLED', 'REFUNDED'].map((status) => (
@@ -618,7 +643,7 @@ function AdminOrders() {
                             <button
                               type="button"
                               className="text-xs text-red-600 underline"
-                              onClick={() => handleCancelDelivery(order.id)}
+                              onClick={() => setDeliveryCancelTarget(order)}
                               disabled={!order.deliveryRequestId || deliveryAction[order.id]}
                             >
                               {deliveryAction[order.id] === 'cancel' ? 'Отменяем…' : 'Отменить доставку'}
@@ -634,6 +659,20 @@ function AdminOrders() {
           </tbody>
         </table>
       </div>
+      <ConfirmDialog
+        open={Boolean(deliveryCancelTarget)}
+        title="Отменить доставку?"
+        description={
+          deliveryCancelTarget
+            ? `Заказ ${deliveryCancelTarget.id} потеряет активную доставку. Продолжить?`
+            : ''
+        }
+        confirmLabel="Отменить доставку"
+        confirmTone="danger"
+        onCancel={() => setDeliveryCancelTarget(null)}
+        onConfirm={() => handleCancelDelivery(deliveryCancelTarget?.id)}
+        isBusy={Boolean(deliveryCancelTarget && deliveryAction[deliveryCancelTarget.id])}
+      />
     </div>
   );
 }

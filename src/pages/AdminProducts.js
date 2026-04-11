@@ -15,6 +15,7 @@ import {
   updateProductImage,
   adjustStock
 } from '../api';
+import NotificationBanner from '../components/NotificationBanner';
 import { getPrimaryVariant, moneyToNumber, decimalToMinorUnits, normalizeProductImages } from '../utils/product';
 
 const EMPTY_VARIANT_FORM = {
@@ -385,6 +386,7 @@ function AdminProducts() {
   const [refreshingProductId, setRefreshingProductId] = useState(null);
   const [visibilityUpdating, setVisibilityUpdating] = useState({});
   const [bulkVisibilityUpdating, setBulkVisibilityUpdating] = useState(false);
+  const [adminNotice, setAdminNotice] = useState(null);
   const initialEditSnapshotRef = useRef(null);
   const initialModalVariantRef = useRef(null);
   const bulkActionsRef = useRef(null);
@@ -411,6 +413,10 @@ function AdminProducts() {
       ...prev,
       [productId]: { state, message, count, updatedAt: Date.now() }
     }));
+  }, []);
+
+  const showAdminNotice = useCallback((message, type = 'error') => {
+    setAdminNotice({ type, message });
   }, []);
 
   const buildEditSnapshot = useCallback((product) => {
@@ -737,7 +743,7 @@ function AdminProducts() {
       );
     } catch (err) {
       console.error('Failed to update product visibility:', err);
-      alert('Не удалось изменить видимость товара. Попробуйте ещё раз.');
+      showAdminNotice('Не удалось изменить видимость товара. Попробуйте ещё раз.');
     } finally {
       setVisibilityUpdating((prev) => ({ ...prev, [product.id]: false }));
     }
@@ -750,7 +756,7 @@ function AdminProducts() {
     const sku = newItem.variantSku || `${slug}-default`;
     const amount = decimalToMinorUnits(newItem.variantPrice);
     if (amount === null) {
-      alert('Введите корректную цену варианта');
+      showAdminNotice('Введите корректную цену варианта');
       return;
     }
     try {
@@ -817,7 +823,7 @@ function AdminProducts() {
     if (!form.sku || !form.price) return;
     const amount = decimalToMinorUnits(form.price);
     if (amount === null) {
-      alert('Введите корректную цену варианта');
+      showAdminNotice('Введите корректную цену варианта');
       return;
     }
     try {
@@ -882,7 +888,7 @@ function AdminProducts() {
       await refreshProduct(productId, variantId); // ensure UI reflects latest stock from backend
     } catch (err) {
       console.error('Failed to adjust stock:', err);
-      alert('Не удалось изменить запас. Попробуйте ещё раз.');
+      showAdminNotice('Не удалось изменить запас. Попробуйте ещё раз.');
     }
   };
 
@@ -910,7 +916,7 @@ function AdminProducts() {
     if (!form || !form.price) return;
     const amount = decimalToMinorUnits(form.price);
     if (amount === null) {
-      alert('Введите корректную цену варианта');
+      showAdminNotice('Введите корректную цену варианта');
       return;
     }
     try {
@@ -951,7 +957,7 @@ function AdminProducts() {
       await refreshProduct(productId, variantId);
     } catch (err) {
       console.error('Failed to update variant:', err);
-      alert('Не удалось сохранить вариант. Попробуйте ещё раз.');
+      showAdminNotice('Не удалось сохранить вариант. Попробуйте ещё раз.');
     } finally {
       setSavingVariant((prev) => ({ ...prev, [variantId]: false }));
     }
@@ -966,7 +972,7 @@ function AdminProducts() {
     if (!modalVariantForm.sku || !modalVariantForm.price) return;
     const amount = decimalToMinorUnits(modalVariantForm.price);
     if (amount === null) {
-      alert('Введите корректную цену варианта');
+      showAdminNotice('Введите корректную цену варианта');
       return;
     }
     try {
@@ -1000,7 +1006,7 @@ function AdminProducts() {
       }
     } catch (err) {
       console.error('Failed to update product:', err);
-      alert('Не удалось сохранить товар. Попробуйте ещё раз.');
+      showAdminNotice('Не удалось сохранить товар. Попробуйте ещё раз.');
     } finally {
       setSavingProduct(false);
     }
@@ -1030,7 +1036,7 @@ function AdminProducts() {
         'error',
         `Файлы не загружены. ${reason || 'Проверьте формат и размер файла.'}`
       );
-      alert('Не удалось загрузить изображения. Проверьте формат и размер файлов.');
+      showAdminNotice('Не удалось загрузить изображения. Проверьте формат и размер файлов.');
       return;
     }
     const skippedNotes = [];
@@ -1059,7 +1065,7 @@ function AdminProducts() {
         'error',
         'Ошибка загрузки. Проверьте соединение и попробуйте снова.'
       );
-      alert('Не удалось загрузить изображения. Попробуйте ещё раз.');
+      showAdminNotice('Не удалось загрузить изображения. Попробуйте ещё раз.');
     } finally {
       setUploadingImages((prev) => ({ ...prev, [productId]: false }));
     }
@@ -1080,7 +1086,7 @@ function AdminProducts() {
       await refreshProduct(productId);
     } catch (err) {
       console.error('Failed to update image variant:', err);
-      alert('Не удалось обновить привязку изображения к варианту.');
+      showAdminNotice('Не удалось обновить привязку изображения к варианту.');
     }
   };
 
@@ -1115,7 +1121,7 @@ function AdminProducts() {
       await loadProducts();
     } catch (err) {
       console.error('Failed to bulk update visibility', err);
-      alert('Не удалось обновить видимость товаров. Попробуйте ещё раз.');
+      showAdminNotice('Не удалось обновить видимость товаров. Попробуйте ещё раз.');
     } finally {
       setBulkVisibilityUpdating(false);
     }
@@ -1153,7 +1159,7 @@ function AdminProducts() {
     if (!bulkPrice || selectedIds.length === 0) return;
     const amount = decimalToMinorUnits(bulkPrice);
     if (amount === null) {
-      alert('Введите корректную цену');
+      showAdminNotice('Введите корректную цену');
       return;
     }
     for (const id of selectedIds) {
@@ -1419,13 +1425,16 @@ function AdminProducts() {
             </div>
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm border border-gray-200 mb-4">
+                <caption className="sr-only">
+                  Варианты товара с ценой, остатком и корректировкой склада
+                </caption>
                 <thead className="bg-white">
                   <tr>
-                    <th className="p-2 border-b">SKU</th>
-                    <th className="p-2 border-b">Название</th>
-                    <th className="p-2 border-b">Цена</th>
-                    <th className="p-2 border-b">Остаток</th>
-                    <th className="p-2 border-b">Коррекция</th>
+                    <th scope="col" className="p-2 border-b">SKU</th>
+                    <th scope="col" className="p-2 border-b">Название</th>
+                    <th scope="col" className="p-2 border-b">Цена</th>
+                    <th scope="col" className="p-2 border-b">Остаток</th>
+                    <th scope="col" className="p-2 border-b">Коррекция</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1659,6 +1668,12 @@ function AdminProducts() {
           </div>
         )}
       </div>
+      {adminNotice ? (
+        <NotificationBanner
+          notification={adminNotice}
+          onDismiss={() => setAdminNotice(null)}
+        />
+      ) : null}
       <div className="border-y border-ink/10 py-4">
         <p className="text-[11px] uppercase tracking-[0.28em] text-muted mb-3">Массовые действия</p>
         <div ref={bulkActionsRef} className="flex flex-wrap items-center gap-2">
@@ -1972,16 +1987,20 @@ function AdminProducts() {
 
       <div className="hidden md:block">
         <table className="w-full text-left border border-gray-200 text-sm">
+          <caption className="sr-only">
+            Список товаров с выбором, категориями, брендом, вариантами и действиями
+          </caption>
           <thead className="bg-secondary">
             <tr>
-              <th className="p-2 border-b w-10">
+              <th scope="col" className="p-2 border-b w-10">
                 <input
                   type="checkbox"
+                  aria-label="Выбрать все товары"
                   checked={items.length > 0 && selectedIds.length === items.length}
                   onChange={(e) => toggleSelectAll(e.target.checked)}
                 />
               </th>
-              <th className="p-2 border-b">
+              <th scope="col" className="p-2 border-b">
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 hover:text-primary"
@@ -1991,7 +2010,7 @@ function AdminProducts() {
                   <span className="text-[10px]">{getSortMarker('product')}</span>
                 </button>
               </th>
-              <th className="p-2 border-b">
+              <th scope="col" className="p-2 border-b">
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 hover:text-primary"
@@ -2001,7 +2020,7 @@ function AdminProducts() {
                   <span className="text-[10px]">{getSortMarker('categories')}</span>
                 </button>
               </th>
-              <th className="p-2 border-b">
+              <th scope="col" className="p-2 border-b">
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 hover:text-primary"
@@ -2011,7 +2030,7 @@ function AdminProducts() {
                   <span className="text-[10px]">{getSortMarker('brand')}</span>
                 </button>
               </th>
-              <th className="p-2 border-b">
+              <th scope="col" className="p-2 border-b">
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 hover:text-primary"
@@ -2021,7 +2040,7 @@ function AdminProducts() {
                   <span className="text-[10px]">{getSortMarker('variants')}</span>
                 </button>
               </th>
-              <th className="p-2 border-b">Действия</th>
+              <th scope="col" className="p-2 border-b">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -2038,6 +2057,7 @@ function AdminProducts() {
                     <td className="p-2">
                       <input
                         type="checkbox"
+                        aria-label={`Выбрать товар ${item.name}`}
                         checked={selectedIds.includes(item.id)}
                         onChange={() => toggleSelect(item.id)}
                       />

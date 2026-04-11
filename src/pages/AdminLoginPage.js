@@ -49,11 +49,22 @@ function AdminLoginPage() {
   }
 
   return (
-    <section className="admin-auth-page">
+    <main className="admin-auth-page">
+      <a
+        href="#admin-login-card"
+        className="sr-only fixed left-3 top-3 z-[210] rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink shadow-[0_14px_28px_rgba(43,39,34,0.16)] focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary/40"
+        onClick={() => {
+          window.requestAnimationFrame(() => {
+            document.getElementById('admin-login-title')?.focus();
+          });
+        }}
+      >
+        Перейти к форме входа
+      </a>
       <div className="admin-auth-grid">
         <aside className="admin-auth-showcase" aria-hidden="true">
           <p className="admin-auth-showcase__eyebrow">Защищённая зона</p>
-          <h1 className="admin-auth-showcase__title">Панель управления Постельное Белье-ЮГ</h1>
+          <h2 className="admin-auth-showcase__title">Панель управления Постельное Белье-ЮГ</h2>
           <p className="admin-auth-showcase__text">
             Управляйте каталогом, заказами и контентом в одном защищенном интерфейсе.
           </p>
@@ -64,14 +75,21 @@ function AdminLoginPage() {
           </ul>
         </aside>
 
-        <div className="admin-auth-card">
+        <section
+          id="admin-login-card"
+          className="admin-auth-card"
+          aria-labelledby="admin-login-title"
+          aria-describedby="admin-login-description"
+        >
           <p className="admin-auth-card__eyebrow">Вход администратора</p>
-          <h2 className="admin-auth-card__title">Добро пожаловать</h2>
+          <h1 id="admin-login-title" tabIndex={-1} className="admin-auth-card__title">
+            Войти в админ-панель
+          </h1>
 
           {status ? <NotificationBanner notification={status} className="mb-4" /> : null}
 
           <div className="space-y-4">
-            <p className="text-sm text-muted">
+            <p id="admin-login-description" className="text-sm text-muted">
               Авторизация выполняется через Keycloak.
             </p>
             {!keycloakReady ? (
@@ -101,9 +119,9 @@ function AdminLoginPage() {
                 : 'У вашей учётной записи нет прав администратора или менеджера.'}
             </p>
           )}
-        </div>
+        </section>
       </div>
-    </section>
+    </main>
   );
 }
 

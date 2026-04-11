@@ -13,10 +13,16 @@ test('mobile menu exposes trust content within one tap', async ({ page }) => {
     .getByRole('button', { name: 'Каталог' })
     .click();
 
-  await expect(page.getByText('Почему нам доверяют')).toBeVisible();
-  await expect(page.getByRole('link', { name: /Реквизиты и документы/i })).toBeVisible();
+  const mobileMenu = page.getByRole('dialog', { name: 'Меню каталога' });
 
-  await page.getByRole('link', { name: /Реквизиты и документы/i }).click();
+  await expect(mobileMenu.getByText('Почему нам доверяют')).toBeVisible();
+
+  const legalLink = mobileMenu.getByRole('link', {
+    name: /Реквизиты и документы/i
+  });
+  await expect(legalLink).toBeVisible();
+
+  await legalLink.click();
 
   await expect(page).toHaveURL(/\/info\/legal$/);
   await expect(page.getByRole('heading', { name: /Документы и регламенты/i })).toBeVisible();
