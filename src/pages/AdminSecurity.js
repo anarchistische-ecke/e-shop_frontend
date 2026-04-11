@@ -1,5 +1,6 @@
 import React from 'react';
 import { getAdminActivityLogs } from '../api';
+import NotificationBanner from '../components/NotificationBanner';
 
 function AdminSecurity() {
   const [logs, setLogs] = React.useState([]);
@@ -9,6 +10,7 @@ function AdminSecurity() {
   const [twoFA, setTwoFA] = React.useState(false);
   const [sessionTimeout, setSessionTimeout] = React.useState(30);
   const [lastBackup, setLastBackup] = React.useState(null);
+  const [status, setStatus] = React.useState(null);
 
   const normalizeLogs = React.useCallback((items = []) => {
     return (items || []).map((item, idx) => ({
@@ -57,12 +59,17 @@ function AdminSecurity() {
     // In a real app trigger a server backup here
     const ts = new Date().toISOString();
     setLastBackup(ts);
-    alert('Резервная копия создана');
+    setStatus({
+      type: 'success',
+      title: 'Резервная копия создана',
+      message: 'Данные резервного копирования обновлены в текущем интерфейсе.'
+    });
   };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Безопасность</h1>
+      {status ? <NotificationBanner notification={status} onDismiss={() => setStatus(null)} /> : null}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
           <h2 className="text-xl font-semibold">Журнал активности</h2>
@@ -109,11 +116,14 @@ function AdminSecurity() {
 
         <div className="hidden md:block">
           <table className="w-full text-sm border border-gray-200 table-fixed">
+            <caption className="sr-only">
+              Журнал активности админ-панели с пользователем, действием и датой
+            </caption>
             <thead className="bg-secondary">
               <tr>
-                <th className="p-2 border-b text-left w-1/4">Пользователь</th>
-                <th className="p-2 border-b text-left w-1/2">Действие</th>
-                <th className="p-2 border-b text-left w-1/4">Дата</th>
+                <th scope="col" className="p-2 border-b text-left w-1/4">Пользователь</th>
+                <th scope="col" className="p-2 border-b text-left w-1/2">Действие</th>
+                <th scope="col" className="p-2 border-b text-left w-1/4">Дата</th>
               </tr>
             </thead>
             <tbody>

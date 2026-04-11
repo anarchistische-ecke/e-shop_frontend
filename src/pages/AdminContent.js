@@ -136,13 +136,16 @@ function AdminContent() {
 
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm border border-gray-200 align-top">
+            <caption className="sr-only">
+              Список статических страниц с названием, slug, содержимым, статусом публикации и действиями
+            </caption>
             <thead className="bg-secondary">
               <tr>
-                <th className="p-2 border-b">Название</th>
-                <th className="p-2 border-b">Slug</th>
-                <th className="p-2 border-b">Контент</th>
-                <th className="p-2 border-b">Статус</th>
-                <th className="p-2 border-b">Действия</th>
+                <th scope="col" className="p-2 border-b">Название</th>
+                <th scope="col" className="p-2 border-b">Slug</th>
+                <th scope="col" className="p-2 border-b">Контент</th>
+                <th scope="col" className="p-2 border-b">Статус</th>
+                <th scope="col" className="p-2 border-b">Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -216,6 +219,8 @@ function AdminContent() {
         </div>
         <h2 className="text-xl font-semibold mt-6 mb-2">Добавить страницу</h2>
         <form onSubmit={handleAdd} className="space-y-4 max-w-xl">
+          <label className="block">
+            <span className="sr-only">Название страницы</span>
           <input
             type="text"
             placeholder="Название"
@@ -223,6 +228,9 @@ function AdminContent() {
             onChange={(e) => setNewPage({ ...newPage, title: e.target.value })}
             className="w-full p-2 border border-gray-300 rounded"
           />
+          </label>
+          <label className="block">
+            <span className="sr-only">Slug страницы</span>
           <input
             type="text"
             placeholder="Slug (латиницей)"
@@ -230,6 +238,9 @@ function AdminContent() {
             onChange={(e) => setNewPage({ ...newPage, slug: e.target.value })}
             className="w-full p-2 border border-gray-300 rounded"
           />
+          </label>
+          <label className="block">
+            <span className="sr-only">Контент страницы</span>
           <textarea
             placeholder="Контент"
             value={newPage.content}
@@ -237,6 +248,7 @@ function AdminContent() {
             className="w-full p-2 border border-gray-300 rounded"
             rows={3}
           />
+          </label>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -252,6 +264,8 @@ function AdminContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
           <h2 className="text-lg font-semibold mb-2">Баннер на главной</h2>
+          <label className="block">
+            <span className="sr-only">Текст баннера на главной</span>
           <textarea
             value={banner}
             onChange={(e) => setBanner(e.target.value)}
@@ -259,6 +273,7 @@ function AdminContent() {
             rows={3}
             placeholder="Текст/ссылка для баннера"
           />
+          </label>
           <p className="text-xs text-muted mt-1">Сохранение происходит автоматически (локально).</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">

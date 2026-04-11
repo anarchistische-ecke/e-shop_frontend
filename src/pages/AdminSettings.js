@@ -1,4 +1,5 @@
 import React from 'react';
+import NotificationBanner from '../components/NotificationBanner';
 
 function AdminSettings() {
   const [settings, setSettings] = React.useState(() => {
@@ -17,6 +18,7 @@ function AdminSettings() {
       showBanner: storedBannerToggle !== null ? storedBannerToggle === 'true' : true
     };
   });
+  const [status, setStatus] = React.useState(null);
 
   const handleChange = (field, value) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
@@ -28,12 +30,17 @@ function AdminSettings() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('adminBannerEnabled', String(settings.showBanner));
     }
-    alert('Настройки сохранены');
+    setStatus({
+      type: 'success',
+      title: 'Настройки сохранены',
+      message: 'Изменения применены локально в текущем интерфейсе.'
+    });
   };
 
   return (
     <div className="space-y-6 max-w-xl">
       <h1 className="text-2xl font-semibold">Настройки магазина</h1>
+      {status ? <NotificationBanner notification={status} onDismiss={() => setStatus(null)} /> : null}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm mb-1">Название магазина</label>

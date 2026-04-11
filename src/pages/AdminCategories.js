@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getCategories, createCategory, updateCategory, deleteCategory, uploadCategoryImage } from '../api';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { resolveImageUrl } from '../utils/product';
 import { compressImageFile, formatBytes } from '../utils/imageCompression';
 
@@ -21,6 +22,7 @@ function AdminCategories() {
   const [newCategoryImageNotice, setNewCategoryImageNotice] = useState(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   const MAX_CATEGORY_IMAGE_MB = 20;
   const MAX_CATEGORY_IMAGE_BYTES = MAX_CATEGORY_IMAGE_MB * 1024 * 1024;
@@ -252,11 +254,12 @@ function AdminCategories() {
     try {
       const cat = categories.find((c) => c.id === id);
       if (!cat) return;
-      if (!window.confirm(`Удалить категорию "${cat.name}"?`)) return;
       await deleteCategory(cat.id);
       setCategories((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
       console.error('Failed to delete category:', err);
+    } finally {
+      setCategoryToDelete(null);
     }
   };
 
@@ -314,7 +317,11 @@ function AdminCategories() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Категории</h1>
       <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-wrap gap-3 items-center">
+        <label htmlFor="admin-category-search" className="sr-only">
+          Поиск категорий
+        </label>
         <input
+          id="admin-category-search"
           type="text"
           placeholder="Поиск по названию или slug"
           value={search}
@@ -453,7 +460,7 @@ function AdminCategories() {
                   <button onClick={() => setEditingId(cat.id)} className="button text-xs">
                     Редактировать
                   </button>
-                  <button onClick={() => handleDelete(cat.id)} className="button-gray text-xs">
+                  <button onClick={() => setCategoryToDelete(cat)} className="button-gray text-xs">
                     Удалить
                   </button>
                 </>
@@ -468,14 +475,17 @@ function AdminCategories() {
 
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm border border-gray-200 align-top">
+          <caption className="sr-only">
+            Список категорий с родительскими разделами, описанием, изображением и действиями
+          </caption>
           <thead className="bg-secondary">
             <tr>
-              <th className="p-2 border-b text-left">Название</th>
-              <th className="p-2 border-b text-left">Slug</th>
-              <th className="p-2 border-b text-left">Родитель</th>
-              <th className="p-2 border-b text-left">Описание</th>
-              <th className="p-2 border-b text-left">Фото</th>
-              <th className="p-2 border-b text-left">Действия</th>
+              <th scope="col" className="p-2 border-b text-left">Название</th>
+              <th scope="col" className="p-2 border-b text-left">Slug</th>
+              <th scope="col" className="p-2 border-b text-left">Родитель</th>
+              <th scope="col" className="p-2 border-b text-left">Описание</th>
+              <th scope="col" className="p-2 border-b text-left">Фото</th>
+              <th scope="col" className="p-2 border-b text-left">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -599,7 +609,7 @@ function AdminCategories() {
                     <button onClick={() => setEditingId(cat.id)} className="text-primary mr-2">
                       Редактировать
                     </button>
-                    <button onClick={() => handleDelete(cat.id)} className="text-red-600">
+                    <button onClick={() => setCategoryToDelete(cat)} className="text-red-600">
                       Удалить
                     </button>
                   </td>
@@ -613,6 +623,8 @@ function AdminCategories() {
 
       <h2 className="text-xl font-semibold">Добавить категорию</h2>
       <form onSubmit={handleAddNew} className="space-y-2 max-w-lg">
+        <label className="block">
+          <span className="sr-only">Название категории</span>
         <input 
           type="text" 
           placeholder="Название" 
@@ -628,6 +640,9 @@ function AdminCategories() {
           className="w-full p-2 border border-gray-300 rounded"
           required 
         />
+        </label>
+        <label className="block">
+          <span className="sr-only">Slug категории</span>
         <input 
           type="text" 
           placeholder="Slug (англ. буквы)" 
@@ -636,6 +651,9 @@ function AdminCategories() {
           className="w-full p-2 border border-gray-300 rounded"
           required 
         />
+        </label>
+        <label className="block">
+          <span className="sr-only">Описание категории</span>
         <input 
           type="text" 
           placeholder="Описание (необязательно)" 
@@ -643,6 +661,7 @@ function AdminCategories() {
           onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} 
           className="w-full p-2 border border-gray-300 rounded"
         />
+        </label>
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.28em] text-muted">Фото категории</p>
           <div className="flex flex-wrap items-center gap-2">
@@ -682,6 +701,7 @@ function AdminCategories() {
           </p>
         </div>
         <select
+          aria-label="Родительская категория"
           value={newCategory.parentId}
           onChange={(e) => setNewCategory({ ...newCategory, parentId: e.target.value })}
           className="w-full p-2 border border-gray-300 rounded"
@@ -701,6 +721,19 @@ function AdminCategories() {
               : 'Добавить'}
         </button>
       </form>
+      <ConfirmDialog
+        open={Boolean(categoryToDelete)}
+        title="Удалить категорию?"
+        description={
+          categoryToDelete
+            ? `Категория «${categoryToDelete.name}» будет удалена без возможности восстановления.`
+            : ''
+        }
+        confirmLabel="Удалить категорию"
+        confirmTone="danger"
+        onCancel={() => setCategoryToDelete(null)}
+        onConfirm={() => handleDelete(categoryToDelete?.id)}
+      />
     </div>
   );
 }

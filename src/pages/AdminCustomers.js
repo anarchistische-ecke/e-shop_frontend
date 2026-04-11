@@ -70,7 +70,11 @@ function AdminCustomers() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Клиенты</h1>
       <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-wrap gap-3 items-center">
+        <label htmlFor="admin-customer-search" className="sr-only">
+          Поиск клиентов
+        </label>
         <input
+          id="admin-customer-search"
           type="text"
           placeholder="Поиск по имени или email"
           value={search}
@@ -112,12 +116,15 @@ function AdminCustomers() {
 
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm border border-gray-200 align-top">
+          <caption className="sr-only">
+            Список клиентов с идентификатором, именем, фамилией и электронной почтой
+          </caption>
           <thead className="bg-secondary">
             <tr>
-              <th className="p-2 border-b">ID</th>
-              <th className="p-2 border-b">Имя</th>
-              <th className="p-2 border-b">Фамилия</th>
-              <th className="p-2 border-b">E‑mail</th>
+              <th scope="col" className="p-2 border-b">ID</th>
+              <th scope="col" className="p-2 border-b">Имя</th>
+              <th scope="col" className="p-2 border-b">Фамилия</th>
+              <th scope="col" className="p-2 border-b">E‑mail</th>
             </tr>
           </thead>
           <tbody>
@@ -142,6 +149,8 @@ function AdminCustomers() {
       <h2 className="text-xl font-semibold">Добавить клиента</h2>
       <form onSubmit={handleAdd} className="space-y-2 max-w-lg">
         <div className="flex flex-col sm:flex-row gap-2">
+          <label className="flex-1">
+            <span className="sr-only">Имя клиента</span>
           <input
             type="text"
             placeholder="Имя"
@@ -149,6 +158,9 @@ function AdminCustomers() {
             onChange={(e) => setNewCustomer({ ...newCustomer, firstName: e.target.value })}
             className="flex-1 p-2 border border-gray-300 rounded"
           />
+          </label>
+          <label className="flex-1">
+            <span className="sr-only">Фамилия клиента</span>
           <input
             type="text"
             placeholder="Фамилия"
@@ -156,7 +168,10 @@ function AdminCustomers() {
             onChange={(e) => setNewCustomer({ ...newCustomer, lastName: e.target.value })}
             className="flex-1 p-2 border border-gray-300 rounded"
           />
+          </label>
         </div>
+        <label className="block">
+          <span className="sr-only">Электронная почта клиента</span>
         <input
           type="email"
           placeholder="E‑mail"
@@ -164,6 +179,9 @@ function AdminCustomers() {
           onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
           className="w-full p-2 border border-gray-300 rounded"
         />
+        </label>
+        <label className="block">
+          <span className="sr-only">Улица</span>
         <input
           type="text"
           placeholder="Улица"
@@ -171,7 +189,10 @@ function AdminCustomers() {
           onChange={(e) => setNewCustomer({ ...newCustomer, street: e.target.value })}
           className="w-full p-2 border border-gray-300 rounded"
         />
+        </label>
         <div className="flex flex-col sm:flex-row gap-2">
+          <label className="flex-1">
+            <span className="sr-only">Город</span>
           <input
             type="text"
             placeholder="Город"
@@ -179,6 +200,9 @@ function AdminCustomers() {
             onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
             className="flex-1 p-2 border border-gray-300 rounded"
           />
+          </label>
+          <label className="flex-1">
+            <span className="sr-only">Штат или регион</span>
           <input
             type="text"
             placeholder="Штат / регион"
@@ -186,8 +210,11 @@ function AdminCustomers() {
             onChange={(e) => setNewCustomer({ ...newCustomer, state: e.target.value })}
             className="flex-1 p-2 border border-gray-300 rounded"
           />
+          </label>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          <label className="flex-1">
+            <span className="sr-only">Почтовый индекс</span>
           <input
             type="text"
             placeholder="Почтовый индекс"
@@ -195,6 +222,9 @@ function AdminCustomers() {
             onChange={(e) => setNewCustomer({ ...newCustomer, postalCode: e.target.value })}
             className="flex-1 p-2 border border-gray-300 rounded"
           />
+          </label>
+          <label className="flex-1">
+            <span className="sr-only">Страна</span>
           <input
             type="text"
             placeholder="Страна"
@@ -202,6 +232,7 @@ function AdminCustomers() {
             onChange={(e) => setNewCustomer({ ...newCustomer, country: e.target.value })}
             className="flex-1 p-2 border border-gray-300 rounded"
           />
+          </label>
         </div>
         <button type="submit" className="button">
           Добавить

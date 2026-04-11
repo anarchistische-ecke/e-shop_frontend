@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getBrands, createBrand, updateBrand, deleteBrand } from '../api';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 
 function AdminBrands() {
   const [brands, setBrands] = useState([]);
@@ -7,6 +8,7 @@ function AdminBrands() {
   const [newBrand, setNewBrand] = useState({ name: '', slug: '', description: '' });
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [brandToDelete, setBrandToDelete] = useState(null);
 
   const slugify = useCallback(
     (str) =>
@@ -57,11 +59,12 @@ function AdminBrands() {
     try {
       const brand = brands.find((b) => b.id === id);
       if (!brand) return;
-      if (!window.confirm(`Удалить бренд "${brand.name}"?`)) return;
       await deleteBrand(brand.id);
       setBrands((prev) => prev.filter((b) => b.id !== id));
     } catch (err) {
       console.error('Failed to delete brand:', err);
+    } finally {
+      setBrandToDelete(null);
     }
   };
 
@@ -91,7 +94,11 @@ function AdminBrands() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Бренды</h1>
       <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-wrap gap-3 items-center">
+        <label htmlFor="admin-brand-search" className="sr-only">
+          Поиск брендов
+        </label>
         <input
+          id="admin-brand-search"
           type="text"
           placeholder="Поиск по названию или slug"
           value={search}
@@ -162,7 +169,7 @@ function AdminBrands() {
                   <button onClick={() => setEditingId(brand.id)} className="button text-xs">
                     Редактировать
                   </button>
-                  <button onClick={() => handleDelete(brand.id)} className="button-gray text-xs">
+                  <button onClick={() => setBrandToDelete(brand)} className="button-gray text-xs">
                     Удалить
                   </button>
                 </>
@@ -177,12 +184,15 @@ function AdminBrands() {
 
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm border border-gray-200 align-top">
+          <caption className="sr-only">
+            Список брендов с названием, slug, описанием и действиями редактирования
+          </caption>
           <thead className="bg-secondary">
             <tr>
-              <th className="p-2 border-b text-left">Название</th>
-              <th className="p-2 border-b text-left">Slug</th>
-              <th className="p-2 border-b text-left">Описание</th>
-              <th className="p-2 border-b text-left">Действия</th>
+              <th scope="col" className="p-2 border-b text-left">Название</th>
+              <th scope="col" className="p-2 border-b text-left">Slug</th>
+              <th scope="col" className="p-2 border-b text-left">Описание</th>
+              <th scope="col" className="p-2 border-b text-left">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -232,7 +242,7 @@ function AdminBrands() {
                     <button onClick={() => setEditingId(brand.id)} className="text-primary mr-2">
                       Редактировать
                     </button>
-                    <button onClick={() => handleDelete(brand.id)} className="text-red-600">
+                    <button onClick={() => setBrandToDelete(brand)} className="text-red-600">
                       Удалить
                     </button>
                   </td>
@@ -246,6 +256,8 @@ function AdminBrands() {
 
       <h2 className="text-xl font-semibold">Добавить бренд</h2>
       <form onSubmit={handleAddNew} className="space-y-2 max-w-lg">
+        <label className="block">
+          <span className="sr-only">Название бренда</span>
         <input 
           type="text" 
           placeholder="Название бренда" 
@@ -261,6 +273,9 @@ function AdminBrands() {
           className="w-full p-2 border border-gray-300 rounded"
           required 
         />
+        </label>
+        <label className="block">
+          <span className="sr-only">Slug бренда</span>
         <input 
           type="text" 
           placeholder="Slug (англ. буквы)" 
@@ -269,6 +284,9 @@ function AdminBrands() {
           className="w-full p-2 border border-gray-300 rounded"
           required 
         />
+        </label>
+        <label className="block">
+          <span className="sr-only">Описание бренда</span>
         <input 
           type="text" 
           placeholder="Описание (необязательно)" 
@@ -276,8 +294,23 @@ function AdminBrands() {
           onChange={(e) => setNewBrand({ ...newBrand, description: e.target.value })} 
           className="w-full p-2 border border-gray-300 rounded"
         />
+        </label>
         <button type="submit" className="button">Добавить</button>
       </form>
+
+      <ConfirmDialog
+        open={Boolean(brandToDelete)}
+        title="Удалить бренд?"
+        description={
+          brandToDelete
+            ? `Бренд «${brandToDelete.name}» будет удалён без возможности восстановления.`
+            : ''
+        }
+        confirmLabel="Удалить бренд"
+        confirmTone="danger"
+        onCancel={() => setBrandToDelete(null)}
+        onConfirm={() => handleDelete(brandToDelete?.id)}
+      />
     </div>
   );
 }

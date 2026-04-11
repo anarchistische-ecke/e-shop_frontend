@@ -50,7 +50,11 @@ function AdminPromotions() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Купоны и скидки</h1>
       <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-wrap gap-3 items-center">
+        <label htmlFor="admin-promotion-search" className="sr-only">
+          Поиск купонов
+        </label>
         <input
+          id="admin-promotion-search"
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -106,16 +110,19 @@ function AdminPromotions() {
 
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm border border-gray-200 align-top">
+          <caption className="sr-only">
+            Список купонов с кодом, типом, значением, сроком действия и состоянием
+          </caption>
           <thead className="bg-secondary">
             <tr>
-              <th className="p-2 border-b">Код</th>
-              <th className="p-2 border-b">Тип</th>
-              <th className="p-2 border-b">Значение</th>
-              <th className="p-2 border-b">Мин. сумма</th>
-              <th className="p-2 border-b">Срок</th>
-              <th className="p-2 border-b">Активен</th>
-              <th className="p-2 border-b">Использовано</th>
-              <th className="p-2 border-b">Действия</th>
+              <th scope="col" className="p-2 border-b">Код</th>
+              <th scope="col" className="p-2 border-b">Тип</th>
+              <th scope="col" className="p-2 border-b">Значение</th>
+              <th scope="col" className="p-2 border-b">Мин. сумма</th>
+              <th scope="col" className="p-2 border-b">Срок</th>
+              <th scope="col" className="p-2 border-b">Активен</th>
+              <th scope="col" className="p-2 border-b">Использовано</th>
+              <th scope="col" className="p-2 border-b">Действия</th>
             </tr>
           </thead>
           <tbody>
