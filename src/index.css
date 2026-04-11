@@ -329,6 +329,9 @@ body {
   .page-section {
     padding-block: var(--section-space);
   }
+  .page-section--listing {
+    padding-block: var(--section-space);
+  }
   .page-section--tight {
     padding-block: var(--section-space-tight);
   }
@@ -517,6 +520,12 @@ body {
       radial-gradient(circle at 18% 18%, rgba(var(--catalog-rose), 0.26), transparent 55%),
       radial-gradient(circle at 85% 8%, rgba(var(--tone-sky), 0.36), transparent 50%),
       linear-gradient(140deg, rgba(var(--catalog-cream), 0.98), rgba(255, 255, 255, 0.9));
+  }
+  @media (min-width: 1024px) {
+    .page-section--listing {
+      padding-top: clamp(0.75rem, 1.2vw, 1rem);
+      padding-bottom: clamp(1.75rem, 2.8vw, 3rem);
+    }
   }
   .catalog-panel {
     background: rgba(255, 255, 255, 0.88);

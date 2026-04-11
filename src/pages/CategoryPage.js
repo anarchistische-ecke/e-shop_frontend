@@ -277,7 +277,7 @@ function CategoryPage() {
   };
 
   return (
-    <div className="category-page relative overflow-hidden page-section">
+    <div className="category-page relative overflow-hidden page-section page-section--listing">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -288,7 +288,10 @@ function CategoryPage() {
       <div className="absolute -bottom-32 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
 
       <div className="page-shell">
-        <nav className="text-xs text-muted flex flex-wrap items-center gap-2">
+        <nav
+          data-testid="category-breadcrumbs"
+          className="text-xs text-muted flex flex-wrap items-center gap-2"
+        >
           {location.state?.fromPath ? (
             <Button
               type="button"
@@ -307,7 +310,7 @@ function CategoryPage() {
           <span className="text-ink">{heading}</span>
         </nav>
 
-        <div className="section-header mt-4">
+        <div data-testid="category-header" className="section-header mt-3 lg:mt-2.5">
           <div className="flex flex-wrap items-baseline gap-3">
             <h1 className="text-2xl sm:text-3xl font-semibold">{heading}</h1>
             <span className="text-sm text-muted">{list.itemsLabel}</span>
@@ -365,10 +368,10 @@ function CategoryPage() {
           </div>
         </div>
 
-        {headingNote ? <p className="mt-2 text-sm text-muted">{headingNote}</p> : null}
+        {headingNote ? <p className="mt-1.5 text-sm text-muted lg:mt-1">{headingNote}</p> : null}
 
         {list.childCategories.length > 0 ? (
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2 lg:mt-3">
             {list.childCategories.map((category) => {
               const token = resolveCategoryToken(category);
               const count = list.childCategoryCounts[normalizeSearchText(token)] || 0;
@@ -386,12 +389,18 @@ function CategoryPage() {
           </div>
         ) : null}
 
-        <Card as="section" variant="quiet" className="mt-5" padding="sm">
+        <Card
+          as="section"
+          variant="quiet"
+          className="mt-4 lg:mt-3"
+          padding="sm"
+          data-testid="category-filters-card"
+        >
           <ProductFiltersDesktop
             {...filterProps}
             className="hidden gap-3 lg:grid xl:grid-cols-4"
           />
-          <div className="text-xs text-muted lg:mt-4">
+          <div className="text-xs text-muted lg:mt-3">
             Сортировка: <span className="font-semibold text-ink">{activeSortLabel}</span>
             {params.sort === 'bestMatch' ? (
               <span className="ml-2">
@@ -408,7 +417,7 @@ function CategoryPage() {
         />
 
         {list.activeFilters.length > 0 ? (
-          <Card className="mt-4 flex flex-wrap items-center gap-2" variant="quiet" padding="sm">
+          <Card className="mt-4 flex flex-wrap items-center gap-2 lg:mt-3" variant="quiet" padding="sm">
             <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Применено</span>
             <div className="flex flex-1 items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {list.activeFilters.map((filter) => (
@@ -435,7 +444,7 @@ function CategoryPage() {
           </Card>
         ) : null}
 
-        <div ref={resultsRef} className="mt-6">
+        <div ref={resultsRef} data-testid="category-results" className="mt-5 lg:mt-4">
           {list.loading ? (
             <div className={gridClassName}>
               {Array.from({ length: list.pageSize }).map((_, index) => (

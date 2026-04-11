@@ -138,6 +138,20 @@ test('mobile search page controls stay inside the card without overlap', async (
   await expectNoOverlaps(page.getByTestId('search-page-controls'));
 });
 
+test('home hero stays compact after mobile header simplification', async ({ page }) => {
+  await page.goto('/');
+
+  const hero = page.getByTestId('home-hero');
+  await expect(hero).toBeVisible();
+
+  const heroBox = await hero.boundingBox();
+  const viewport = page.viewportSize();
+
+  expect(heroBox).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(heroBox.height).toBeLessThanOrEqual(Math.round(viewport.height * 0.8));
+});
+
 test('core storefront routes fit the mobile viewport without horizontal overflow', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Обновите спальню/i })).toBeVisible();
