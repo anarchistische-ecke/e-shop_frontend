@@ -1,6 +1,4 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '../ui';
 import CategoryCard from './CategoryCard';
 import {
   buildCategoryCollections,
@@ -56,7 +54,7 @@ function CategoryGrid({ categories = [], products = [] }) {
   const cards = useMemo(() => buildCategoryCards(categories, products), [categories, products]);
 
   return (
-    <section className="page-shell page-section">
+    <section data-testid="home-category-grid" className="page-shell page-section">
       <div className="section-header">
         <div className="section-header__copy">
           <p className="text-xs uppercase tracking-[0.28em] text-accent">Каталог</p>
@@ -68,24 +66,6 @@ function CategoryGrid({ categories = [], products = [] }) {
             перейти к нужной подборке.
           </p>
         </div>
-        <Button as={Link} to="/catalog" variant="secondary" className="self-start">
-          Весь каталог
-        </Button>
-      </div>
-
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {cards.slice(0, 3).map((card) => (
-          <Button
-            key={`quick-${card.token}`}
-            as={Link}
-            to={card.href}
-            variant="secondary"
-            size="sm"
-            className="whitespace-nowrap"
-          >
-            {card.name || card.category?.name}
-          </Button>
-        ))}
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

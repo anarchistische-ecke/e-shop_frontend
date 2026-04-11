@@ -19,7 +19,7 @@ function BottomNavItem({
     <Component
       type={resolvedType}
       className={cn(
-        'focus-ring-soft relative flex min-h-[52px] min-w-[44px] flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 pb-1.5 pt-2 text-[11px] font-semibold leading-none transition duration-200',
+        'focus-ring-soft relative flex min-h-[56px] w-full min-w-[44px] max-w-none flex-col items-center justify-center gap-1 rounded-[20px] px-1 pb-1.5 pt-2 text-[11px] font-semibold leading-none transition duration-200',
         active
           ? 'bg-white text-primary shadow-[0_12px_24px_rgba(43,39,34,0.12)]'
           : 'text-ink/72 hover:bg-white/80 hover:text-ink',
@@ -35,7 +35,7 @@ function BottomNavItem({
           </span>
         ) : null}
       </span>
-      <span>{label}</span>
+      <span className="block w-full text-center">{label}</span>
     </Component>
   );
 }
@@ -68,13 +68,16 @@ function BottomNavBar({
           : 'pointer-events-none translate-y-full'
       )}
     >
-      <ul className="page-shell grid grid-cols-5 gap-1 px-0 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2">
-        <li>
+      <ul
+        data-testid="bottom-nav-list"
+        className="page-shell grid grid-cols-5 items-stretch gap-0.5 px-1 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2"
+      >
+        <li className="min-w-0">
           <BottomNavItem as={Link} to="/" label="Главная" active={activeKey === 'home'}>
             <HomeIcon className="h-5 w-5" />
           </BottomNavItem>
         </li>
-        <li>
+        <li className="min-w-0">
           <BottomNavItem
             type="button"
             label="Каталог"
@@ -86,7 +89,7 @@ function BottomNavBar({
             <CatalogIcon className="h-5 w-5" />
           </BottomNavItem>
         </li>
-        <li>
+        <li className="min-w-0">
           <BottomNavItem
             type="button"
             label="Поиск"
@@ -96,7 +99,7 @@ function BottomNavBar({
             <SearchIcon className="h-5 w-5" />
           </BottomNavItem>
         </li>
-        <li>
+        <li className="min-w-0">
           <BottomNavItem
             as={Link}
             to={isAuthenticated ? '/account' : '/login'}
@@ -107,7 +110,7 @@ function BottomNavBar({
             <UserIcon className="h-5 w-5" />
           </BottomNavItem>
         </li>
-        <li>
+        <li className="min-w-0">
           <BottomNavItem
             as={Link}
             to="/cart"
