@@ -90,7 +90,7 @@ function MobileMenu({
       aria-label="Меню каталога"
       aria-hidden={!isOpen}
       tabIndex={-1}
-      className={`fixed inset-0 z-[130] flex flex-col bg-[#fbf7f1]/98 backdrop-blur-xl transition duration-200 lg:hidden ${
+      className={`viewport-fixed-screen fixed inset-0 z-[130] flex flex-col bg-[#fbf7f1]/98 backdrop-blur-xl transition duration-200 lg:hidden ${
         isOpen
           ? 'translate-y-0 opacity-100'
           : 'pointer-events-none translate-y-4 opacity-0'

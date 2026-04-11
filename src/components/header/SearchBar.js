@@ -254,7 +254,7 @@ function SearchBar({
         <>
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/20 lg:hidden"
+            className="viewport-fixed-screen fixed inset-0 z-40 bg-black/20 lg:hidden"
             onClick={onClose}
             aria-label="Закрыть подсказки поиска"
           />
@@ -264,7 +264,7 @@ function SearchBar({
             data-testid="header-search-suggestions"
             role="region"
             aria-label="Подсказки поиска"
-            className="fixed inset-x-0 z-[115] overflow-y-auto border-t border-ink/10 bg-[#fbf7f1]/98 pb-6 pt-4 shadow-[0_24px_56px_rgba(43,39,34,0.16)] lg:hidden"
+            className="viewport-fixed-edge fixed inset-x-0 z-[115] overflow-y-auto border-t border-ink/10 bg-[#fbf7f1]/98 pb-6 pt-4 shadow-[0_24px_56px_rgba(43,39,34,0.16)] lg:hidden"
             style={{
               top: 'var(--site-header-height, 6.5rem)',
               maxHeight: 'calc(100vh - var(--site-header-height, 6.5rem))'
