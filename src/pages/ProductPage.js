@@ -705,7 +705,7 @@ function ProductPage() {
         jsonLd={productJsonLd}
       />
       <div className="page-shell">
-        <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Хлебные крошки">
+        <nav className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted sm:mb-5" aria-label="Хлебные крошки">
           {location.state?.fromPath ? (
             <Link to={location.state.fromPath} className="text-primary hover:text-accent">
               ← {location.state.fromLabel || 'Назад к результатам'}
@@ -726,14 +726,15 @@ function ProductPage() {
           <span className="text-ink/80" aria-current="page">{product.name}</span>
         </nav>
 
-        <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)]">
+        <div className="grid gap-5 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)]">
           <section>
             <div
+              data-testid="product-gallery-card"
               className={`group relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/80 shadow-[0_24px_60px_rgba(43,39,34,0.16)] bg-gradient-to-br from-sand/70 to-white transition-opacity duration-200 ${
                 isVariantTransitioning ? 'opacity-80' : 'opacity-100'
               }`}
             >
-              <div className="relative w-full pt-[112%] sm:pt-[95%]">
+              <div className="relative w-full pt-[96%] sm:pt-[95%]">
                 {mainImage ? (
                   <button
                     type="button"
@@ -764,7 +765,7 @@ function ProductPage() {
                   </p>
                 )}
 
-                <div className="absolute left-3 top-3 flex flex-wrap gap-2 text-[11px]">
+                <div className="absolute left-2 top-2 flex max-w-[calc(100%-5.5rem)] flex-wrap gap-1.5 text-[10px] sm:left-3 sm:top-3 sm:max-w-none sm:gap-2 sm:text-[11px]">
                   {hasScaleImage && (
                     <span className="rounded-full border border-ink/10 bg-white/90 px-2.5 py-1 text-ink/75">Есть фото в масштабе</span>
                   )}
@@ -774,7 +775,7 @@ function ProductPage() {
                 </div>
 
                 {activeImage?.variantId && (
-                  <div className="absolute top-3 right-14 rounded-2xl border border-ink/10 bg-white/88 px-3 py-1 text-xs">
+                  <div className="absolute right-12 top-2 max-w-[calc(100%-8rem)] truncate rounded-2xl border border-ink/10 bg-white/88 px-2.5 py-1 text-[11px] sm:top-3 sm:right-14 sm:max-w-none sm:px-3 sm:text-xs">
                     Вариант: {variantNameById[activeImage.variantId] || activeImage.variantId}
                   </div>
                 )}
@@ -804,20 +805,23 @@ function ProductPage() {
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted">
+            <div className="mt-4 hidden items-center justify-between gap-3 text-xs text-muted sm:flex">
               <p>Фото: {orderedImages.length || 1} · Масштаб и фактуру можно проверить через zoom</p>
               <Button variant="ghost" size="sm" className="!px-1 text-primary" onClick={openImageZoom}>
                 Открыть крупно
               </Button>
             </div>
 
-            <div className="mt-3 flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
+            <div
+              data-testid="product-gallery-rail"
+              className="mt-2 flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory sm:mt-3 sm:gap-3"
+            >
               {(orderedImages.length > 0 ? orderedImages : [null]).map((image, index) => (
                 <button
                   key={image ? image.id || index : index}
                   type="button"
                   onClick={() => selectImageByIndex(index)}
-                  className={`relative h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 overflow-hidden rounded-2xl border snap-center ${
+                  className={`relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl border snap-center sm:h-20 sm:w-20 ${
                     index === activeImageIndex
                       ? 'border-primary ring-2 ring-primary/30'
                       : 'border-ink/10'
@@ -832,7 +836,7 @@ function ProductPage() {
               ))}
             </div>
 
-            <div className="mt-6 grid gap-2 sm:grid-cols-3 sm:gap-3">
+            <div className="mt-6 hidden gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
               {highlights.map((entry) => (
                 <Card key={entry} variant="quiet" padding="sm" className="text-xs shadow-sm sm:text-sm">
                   {entry}
@@ -841,8 +845,12 @@ function ProductPage() {
             </div>
           </section>
 
-          <aside className="lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] h-fit space-y-4">
-            <Card padding="md" className={`sm:p-6 transition-opacity duration-200 ${isVariantTransitioning ? 'opacity-80' : 'opacity-100'}`}>
+          <aside className="h-fit space-y-4 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)]">
+            <Card
+              data-testid="product-purchase-card"
+              padding="md"
+              className={`sm:p-6 transition-opacity duration-200 ${isVariantTransitioning ? 'opacity-80' : 'opacity-100'}`}
+            >
               <p className="text-xs uppercase tracking-[0.25em] text-accent">Карточка товара</p>
               <h1 className="mt-2 text-xl sm:text-2xl font-semibold">{product.name}</h1>
 
@@ -1078,6 +1086,14 @@ function ProductPage() {
               </Card>
             )}
           </aside>
+
+          <div data-testid="product-mobile-highlights" className="grid gap-2 sm:hidden">
+            {highlights.map((entry) => (
+              <Card key={entry} variant="quiet" padding="sm" className="text-sm shadow-sm">
+                {entry}
+              </Card>
+            ))}
+          </div>
         </div>
 
         <section id="product-tabs" className="mt-10 sm:mt-12">
@@ -1171,8 +1187,11 @@ function ProductPage() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-ink/10 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden z-30">
-        <div className="page-shell py-3">
+      <div
+        data-testid="product-mobile-cart-bar"
+        className="fixed bottom-0 left-0 right-0 z-30 border-t border-ink/10 bg-white/90 backdrop-blur pb-[calc(0.625rem+env(safe-area-inset-bottom))] lg:hidden"
+      >
+        <div className="page-shell py-2.5">
           {cartStatus ? <NotificationBanner notification={cartStatus} compact className="mb-3" /> : null}
           <div className="flex items-center gap-3">
             <div className="flex-1">
