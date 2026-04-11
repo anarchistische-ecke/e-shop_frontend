@@ -31,7 +31,7 @@ function NewsletterForm() {
         padding="lg"
         className="rounded-[32px] border border-primary/20 bg-gradient-to-br from-white via-white to-blush/65"
       >
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-end">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:gap-6 lg:items-end">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-accent">Рассылка</p>
             <h2 className="mt-3 text-2xl font-semibold md:text-3xl">

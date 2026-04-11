@@ -196,7 +196,7 @@ function Home() {
         image={heroShareImage}
       />
 
-      <div className="home page-stack--lg">
+      <div className="home">
         {bannerText && bannerEnabled ? (
           <div className="bg-ink text-white text-center py-2 px-4">
             <p className="text-sm">{bannerText}</p>

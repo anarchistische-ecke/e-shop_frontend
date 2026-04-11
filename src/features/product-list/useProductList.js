@@ -90,6 +90,25 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
     [activeCategory, childrenByParent]
   );
 
+  const scopeCategory = useMemo(() => {
+    if (!normalizedScope) {
+      return null;
+    }
+    return categoryByNormalizedToken[normalizedScope] || null;
+  }, [categoryByNormalizedToken, normalizedScope]);
+
+  const categoryTokensForScope = useMemo(() => {
+    if (source !== 'catalog' || !normalizedScope) {
+      return new Set();
+    }
+
+    if (scopeCategory) {
+      return buildCategoryTokenSet(scopeCategory, childrenByParent);
+    }
+
+    return new Set([normalizedScope]);
+  }, [childrenByParent, normalizedScope, scopeCategory, source]);
+
   const categoryNameByToken = useMemo(() => {
     const map = {};
     categories.forEach((category) => {
@@ -161,6 +180,13 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
       });
     }
 
+    if (source === 'catalog' && normalizedScope && categoryTokensForScope.size > 0) {
+      scopedProducts = scopedProducts.filter((product) => {
+        const token = normalizeSearchText(resolveProductCategoryToken(product));
+        return categoryTokensForScope.has(token);
+      });
+    }
+
     if (!normalizedQuery) {
       return scopedProducts;
     }
@@ -175,7 +201,9 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
     return searchResults.list;
   }, [
     activeCategory,
+    categoryTokensForScope,
     categoryTokensForListing,
+    normalizedScope,
     normalizedQuery,
     products,
     searchResults.list,
@@ -357,6 +385,9 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
 
   if (deferredParams.brand) {
     activeFilters.push({ key: 'brand', label: `Бренд: ${activeBrand?.name || deferredParams.brand}` });
+  }
+  if (normalizedScope) {
+    activeFilters.push({ key: 'scope', label: `Категория: ${scopeCategoryLabel || normalizedScope}` });
   }
   if (priceFilter.min !== null || priceFilter.max !== null) {
     const parts = [];

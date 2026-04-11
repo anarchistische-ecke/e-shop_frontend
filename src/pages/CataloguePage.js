@@ -77,6 +77,10 @@ function CataloguePage() {
     : `${list.headingNote} Постельное белье, пледы, полотенца и другой текстиль с доставкой по России.`;
 
   const clearFilterByKey = (key) => {
+    if (key === 'scope') {
+      updateParams({ scope: '' });
+      return;
+    }
     if (key === 'brand') {
       updateParams({ brand: '' });
       return;
@@ -126,7 +130,7 @@ function CataloguePage() {
   };
 
   return (
-    <div className="catalogue-page relative overflow-hidden page-section">
+    <div className="catalogue-page relative overflow-hidden page-section page-section--listing">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -137,13 +141,20 @@ function CataloguePage() {
       <div className="absolute -bottom-24 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
 
       <div className="page-shell">
-        <nav className="flex flex-wrap items-center gap-2 text-xs text-muted">
+        <nav
+          data-testid="catalogue-breadcrumbs"
+          className="flex flex-wrap items-center gap-2 text-xs text-muted"
+        >
           <Link to="/" className="transition hover:text-primary">Главная</Link>
           <span className="text-ink/40">›</span>
           <span className="text-ink">{hasQuery ? 'Поиск' : 'Каталог'}</span>
         </nav>
 
-        <Card className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-6" padding="md">
+        <Card
+          className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end lg:mt-2.5 lg:p-5 xl:p-6"
+          padding="md"
+          data-testid="catalogue-header-card"
+        >
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">
               {hasQuery ? 'Поиск по каталогу' : 'Каталог товаров'}
@@ -160,7 +171,13 @@ function CataloguePage() {
           </Button>
         </Card>
 
-        <Card as="section" variant="quiet" className="mt-5 md:p-5" padding="sm">
+        <Card
+          as="section"
+          variant="quiet"
+          className="mt-4 md:p-5 lg:mt-3"
+          padding="sm"
+          data-testid="catalogue-search-card"
+        >
           <form onSubmit={handleSearchSubmit}>
             <label htmlFor="catalog-search" className="text-xs uppercase tracking-[0.2em] text-muted">
               Поиск по каталогу
@@ -209,7 +226,7 @@ function CataloguePage() {
 
           <div className="mt-3">
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</p>
-            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex-wrap lg:overflow-visible">
               <FilterChip
                 type="button"
                 onClick={() => updateParams({ scope: '' })}
@@ -237,7 +254,13 @@ function CataloguePage() {
           </div>
         </Card>
 
-        <Card as="section" variant="quiet" className="mt-5" padding="sm">
+        <Card
+          as="section"
+          variant="quiet"
+          className="mt-4 lg:mt-3"
+          padding="sm"
+          data-testid="catalogue-filters-card"
+        >
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
             <div className="inline-grid min-h-[44px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_8px_18px_rgba(43,39,34,0.06)]">
               <span className="text-ink/55">↕</span>
@@ -265,7 +288,7 @@ function CataloguePage() {
 
           <ProductFiltersDesktop
             {...filterProps}
-            className="mt-4 hidden gap-3 lg:grid xl:grid-cols-4"
+            className="mt-4 hidden gap-3 lg:mt-3 lg:grid xl:grid-cols-4"
           />
 
           <div className="mt-2 text-xs text-muted">
@@ -289,7 +312,7 @@ function CataloguePage() {
           <Card
             as="section"
             variant="quiet"
-            className="mt-4 grid gap-2 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+            className="mt-4 grid gap-2 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center lg:mt-3"
             padding="sm"
           >
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Применено</p>
@@ -318,10 +341,11 @@ function CataloguePage() {
           </Card>
         ) : null}
 
-        <section ref={resultsRef} className="mt-6">
+        <section ref={resultsRef} data-testid="catalogue-results" className="mt-5 lg:mt-4">
           <div className="mb-3 text-sm text-muted">
             {list.loading ? 'Загружаем каталог…' : `${list.totalItems} товаров в выдаче`}
             {hasQuery ? ` · Запрос: “${params.query}”` : ''}
+            {!hasQuery && list.scopeCategoryLabel ? ` · Категория: ${list.scopeCategoryLabel}` : ''}
           </div>
 
           {list.loading ? (
