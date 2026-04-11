@@ -169,7 +169,8 @@ test('core storefront routes fit the mobile viewport without horizontal overflow
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/catalog');
-  await expect(page.getByRole('heading', { name: 'Подбор текстиля без лишних кликов' })).toBeVisible();
+  await expect(page.getByTestId('catalogue-search-card')).toBeVisible();
+  await expect(page.getByTestId('catalogue-header-card')).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/search?query=%D0%9F%D0%BB%D0%B5%D0%B4');
