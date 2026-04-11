@@ -10,6 +10,7 @@ export { buildCategoryCollections, resolveCategoryToken, sortCategories };
 
 export function resolveWayfindingLabel(pathname = '', search = '') {
   if (pathname === '/') return 'Главная';
+  if (pathname.startsWith('/search')) return 'Поиск';
   if (pathname.startsWith('/catalog')) {
     const params = new URLSearchParams(search || '');
     return params.get('query') ? 'Поиск' : 'Каталог';
@@ -41,6 +42,7 @@ export function resolveMobileBottomNavKey({
   isSearchPanelVisible = false
 } = {}) {
   if (isMenuOpen) return 'catalog';
+  if (pathname.startsWith('/search')) return 'search';
   if (isSearchPanelVisible) return 'search';
   if (pathname === '/') return 'home';
   if (pathname.startsWith('/catalog')) {

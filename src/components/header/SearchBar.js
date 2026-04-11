@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, FilterChip, Input } from '../ui';
 import CategoryGlyph from '../navigation/CategoryGlyph';
+import { buildSearchHref } from '../../features/product-list/url';
 import { getPrimaryImageUrl, getProductPrice } from '../../utils/product';
 import { normalizeSearchText } from '../../utils/search';
 import { resolveCategoryToken } from '../../utils/header';
@@ -10,7 +11,6 @@ import { SearchIcon } from './icons';
 
 function SearchPanelBody({
   autocompleteData,
-  buildSearchParams,
   onNavigateSearch,
   onSetSearchScope,
   onTrackSearchSuggestion,
@@ -61,7 +61,9 @@ function SearchPanelBody({
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <section>
-          <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">Быстрые запросы</p>
+          <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">
+            Быстрые запросы
+          </p>
           <div className="space-y-1">
             {autocompleteData.suggestedQueries.length > 0 ? (
               autocompleteData.suggestedQueries.map((suggestion) => (
@@ -105,7 +107,9 @@ function SearchPanelBody({
                     <CategoryGlyph category={category} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-ink">{category.label}</span>
+                    <span className="block truncate text-sm font-semibold text-ink">
+                      {category.label}
+                    </span>
                     <span className="block truncate text-xs text-muted">
                       {category.description || 'Перейти в раздел каталога'}
                     </span>
@@ -136,10 +140,10 @@ function SearchPanelBody({
                     key={product.id}
                     to={buildProductPath(product)}
                     state={{
-                      fromPath: `/catalog?${buildSearchParams(
-                        searchTerm.trim() || autocompleteData.correctedQuery || '',
-                        searchScope
-                      ).toString()}`,
+                      fromPath: buildSearchHref({
+                        query: searchTerm.trim() || autocompleteData.correctedQuery || '',
+                        scope: searchScope
+                      }),
                       fromLabel: 'Результаты поиска'
                     }}
                     onClick={() => {
@@ -194,7 +198,6 @@ function SearchPanelBody({
 
 function SearchBar({
   autocompleteData,
-  buildSearchParams,
   isSearchPanelVisible,
   onChange,
   onClear,
@@ -210,102 +213,92 @@ function SearchBar({
   searchTerm,
   scopeOptions
 }) {
-  const mobileSuggestionsId = 'header-search-suggestions-mobile';
+  const searchSuggestionsId = 'header-search-suggestions';
+  const mobileSearchHref = buildSearchHref({
+    query: searchTerm.trim(),
+    scope: searchScope
+  });
+  const mobileSearchLabel = searchTerm.trim() || 'Поиск товаров и категорий';
 
   return (
-    <div
-      ref={searchRef}
-      className={`relative col-span-2 lg:col-span-1 lg:col-start-2 ${
-        isSearchPanelVisible ? 'z-[100]' : 'z-20'
-      }`}
-    >
-      <form onSubmit={onSubmit} className="relative">
-        <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
-        <Input
-          ref={searchInputRef}
-          type="text"
-          value={searchTerm}
-          onChange={onChange}
-          onFocus={onFocus}
-          placeholder="Поиск товаров и категорий"
-          className="bg-white pl-11 pr-12 shadow-[0_10px_24px_rgba(43,39,34,0.08)] lg:shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
-          aria-label="Поиск товаров"
-          aria-expanded={isSearchPanelVisible}
-          aria-controls={isSearchPanelVisible ? mobileSuggestionsId : undefined}
-          aria-autocomplete="list"
-          autoComplete="off"
-          enterKeyHint="search"
-        />
-        {searchTerm ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={onClear}
-            className="absolute right-1 top-1/2 -translate-y-1/2"
-            aria-label="Очистить поиск"
-          >
-            ×
-          </Button>
-        ) : null}
-      </form>
+    <>
+      <Link
+        to={mobileSearchHref}
+        className="focus-ring-soft flex min-h-[52px] items-center gap-3 rounded-[22px] border border-ink/15 bg-white px-4 py-3 text-left shadow-[0_10px_24px_rgba(43,39,34,0.08)] lg:hidden"
+        aria-label="Открыть страницу поиска"
+      >
+        <SearchIcon className="h-4 w-4 shrink-0 text-ink/55" />
+        <span className="min-w-0 truncate text-sm text-ink/72">{mobileSearchLabel}</span>
+      </Link>
 
-      {isSearchPanelVisible ? (
-        <>
-          <button
-            type="button"
-            className="viewport-fixed-screen fixed inset-0 z-40 bg-black/20 lg:hidden"
-            onClick={onClose}
-            aria-label="Закрыть подсказки поиска"
+      <div
+        ref={searchRef}
+        className={`relative hidden lg:col-span-1 lg:col-start-2 lg:block ${
+          isSearchPanelVisible ? 'z-[100]' : 'z-20'
+        }`}
+      >
+        <form onSubmit={onSubmit} className="relative">
+          <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
+          <Input
+            ref={searchInputRef}
+            type="text"
+            value={searchTerm}
+            onChange={onChange}
+            onFocus={onFocus}
+            placeholder="Поиск товаров и категорий"
+            className="bg-white pl-11 pr-12 shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+            aria-label="Поиск товаров"
+            aria-expanded={isSearchPanelVisible}
+            aria-controls={isSearchPanelVisible ? searchSuggestionsId : undefined}
+            aria-autocomplete="list"
+            autoComplete="off"
+            enterKeyHint="search"
           />
-
-          <div
-            id={mobileSuggestionsId}
-            data-testid="header-search-suggestions"
-            role="region"
-            aria-label="Подсказки поиска"
-            className="viewport-fixed-edge fixed inset-x-0 z-[115] overflow-y-auto border-t border-ink/10 bg-[#fbf7f1]/98 pb-6 pt-4 shadow-[0_24px_56px_rgba(43,39,34,0.16)] lg:hidden"
-            style={{
-              top: 'var(--site-header-height, 6.5rem)',
-              maxHeight: 'calc(100vh - var(--site-header-height, 6.5rem))'
-            }}
-          >
-            <div className="page-shell">
-              <SearchPanelBody
-                autocompleteData={autocompleteData}
-                buildSearchParams={buildSearchParams}
-                onNavigateSearch={onNavigateSearch}
-                onSetSearchScope={onSetSearchScope}
-                onTrackSearchSuggestion={onTrackSearchSuggestion}
-                onSuggestionLinkClick={onClose}
-                scopeOptions={scopeOptions}
-                searchScope={searchScope}
-                searchTerm={searchTerm}
-              />
-            </div>
-          </div>
-
-          <div className="relative hidden lg:block">
-            <div
-              data-testid="header-search-suggestions"
-              className="absolute left-0 right-0 top-[calc(100%+0.55rem)] z-[110] rounded-[24px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]"
+          {searchTerm ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onClear}
+              className="absolute right-1 top-1/2 -translate-y-1/2"
+              aria-label="Очистить поиск"
             >
-              <SearchPanelBody
-                autocompleteData={autocompleteData}
-                buildSearchParams={buildSearchParams}
-                onNavigateSearch={onNavigateSearch}
-                onSetSearchScope={onSetSearchScope}
-                onTrackSearchSuggestion={onTrackSearchSuggestion}
-                onSuggestionLinkClick={onClose}
-                scopeOptions={scopeOptions}
-                searchScope={searchScope}
-                searchTerm={searchTerm}
-              />
+              ×
+            </Button>
+          ) : null}
+        </form>
+
+        {isSearchPanelVisible ? (
+          <>
+            <button
+              type="button"
+              className="viewport-fixed-screen fixed inset-0 z-40 hidden bg-black/20 lg:block"
+              onClick={onClose}
+              aria-label="Закрыть подсказки поиска"
+            />
+
+            <div className="relative">
+              <div
+                id={searchSuggestionsId}
+                data-testid="header-search-suggestions"
+                className="absolute left-0 right-0 top-[calc(100%+0.55rem)] z-[110] rounded-[24px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]"
+              >
+                <SearchPanelBody
+                  autocompleteData={autocompleteData}
+                  onNavigateSearch={onNavigateSearch}
+                  onSetSearchScope={onSetSearchScope}
+                  onTrackSearchSuggestion={onTrackSearchSuggestion}
+                  onSuggestionLinkClick={onClose}
+                  scopeOptions={scopeOptions}
+                  searchScope={searchScope}
+                  searchTerm={searchTerm}
+                />
+              </div>
             </div>
-          </div>
-        </>
-      ) : null}
-    </div>
+          </>
+        ) : null}
+      </div>
+    </>
   );
 }
 

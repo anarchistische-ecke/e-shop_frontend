@@ -16,6 +16,7 @@ import DeliveryInfoPage from './DeliveryInfoPage';
 import BonusesInfoPage from './BonusesInfoPage';
 import ProductionInfoPage from './ProductionInfoPage';
 import CataloguePage from './CataloguePage';
+import SearchPage from './SearchPage';
 import SearchRedirectPage from './SearchRedirectPage';
 import LegalInfoPage from './LegalInfoPage';
 import PrivacyPolicyPage from './legal/PrivacyPolicyPage';
@@ -96,6 +97,7 @@ function App() {
             {/* Public user-facing routes */}
             <Route path="/" element={<Home />} />
             <Route path="/category/search" element={<SearchRedirectPage />} />
+            <Route path="/search" element={<SearchPage />} />
             <Route path="/category/:slug" element={<CategoryPage />} />
             <Route path="/product/:id/:slug" element={<ProductPage />} />
             <Route path="/product/:id" element={<ProductPage />} />

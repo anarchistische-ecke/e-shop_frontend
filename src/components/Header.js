@@ -22,7 +22,7 @@ function Header() {
             className="relative z-[90] border-b border-ink/10 bg-[#fbf7f1]/96 shadow-[0_10px_24px_rgba(43,39,34,0.08)] backdrop-blur-xl lg:bg-white/92 lg:shadow-[0_12px_28px_rgba(43,39,34,0.08)]"
           >
             <div className="page-shell page-section--tight py-2.5 sm:py-3 lg:py-4">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3.5">
+              <div className="grid grid-cols-1 gap-2.5 sm:gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3.5">
                 <HeaderBrand
                   isMenuOpen={header.isMenuOpen}
                   menuTriggerRef={header.menuTriggerRef}
@@ -32,7 +32,6 @@ function Header() {
 
                 <SearchBar
                   autocompleteData={header.autocompleteData}
-                  buildSearchParams={header.buildSearchParams}
                   isSearchPanelVisible={header.isSearchPanelVisible}
                   onChange={header.handleSearchInputChange}
                   onClear={header.clearSearch}
@@ -49,12 +48,11 @@ function Header() {
                   searchTerm={header.searchTerm}
                 />
 
-                <div className="flex items-center justify-end gap-2">
+                <div className="hidden items-center justify-end gap-2 lg:flex">
                   <Button
                     type="button"
                     variant="secondary"
                     size="sm"
-                    className="hidden lg:inline-flex"
                     aria-expanded={header.isCatalogMenuOpen}
                     aria-haspopup="dialog"
                     onClick={header.handleCatalogToggle}
@@ -107,9 +105,6 @@ function Header() {
         onOpenCategory={(token) => {
           header.setMobilePath((current) => [...current, token]);
         }}
-        onSearchChange={header.handleMobileDrawerSearchInput}
-        onSearchFocus={header.closeSearch}
-        onSearchSubmit={header.handleMobileDrawerSearchSubmit}
         onStepBack={() => {
           header.setMobilePath((current) => current.slice(0, -1));
         }}
@@ -122,7 +117,6 @@ function Header() {
         isAuthenticated={header.isAuthenticated}
         isEnabled={header.isBottomNavEnabled}
         isMenuOpen={header.isMenuOpen}
-        isSearchPanelVisible={header.isSearchPanelVisible}
         onOpenMenu={header.openMenu}
         onOpenSearch={header.openSearchPanel}
         totalItems={header.totalItems}

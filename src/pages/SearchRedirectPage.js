@@ -12,7 +12,7 @@ function SearchRedirectPage() {
     const params = parseProductListSearchParams(location.search, { source: 'catalog' });
     const normalized = buildProductListSearchParams(params, { source: 'catalog' }).toString();
     return {
-      pathname: '/catalog',
+      pathname: '/search',
       search: normalized ? `?${normalized}` : ''
     };
   }, [location.search]);

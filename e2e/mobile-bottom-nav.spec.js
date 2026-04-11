@@ -18,22 +18,24 @@ test('bottom navigation opens the full mobile catalog menu', async ({ page }) =>
   const mobileMenu = page.getByTestId('mobile-nav-panel');
   await expect(mobileMenu).toBeVisible();
   await expect(mobileMenu.getByRole('link', { name: 'Весь каталог' })).toBeVisible();
-  await expect(page.getByLabel('Поиск по каталогу')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Перейти к поиску товаров и категорий' })).toBeVisible();
 });
 
-test('bottom navigation can focus search and navigate to mobile search results', async ({ page }) => {
+test('bottom navigation opens the dedicated mobile search page', async ({ page }) => {
   await page.goto('/category/throws');
 
   const bottomNav = page.getByRole('navigation', { name: 'Быстрая навигация' });
   await bottomNav.getByRole('button', { name: 'Поиск' }).tap();
 
-  const searchInput = page.getByLabel('Поиск товаров');
+  await expect(page).toHaveURL(/\/search/);
+
+  const searchInput = page.getByLabel('Что ищем');
   await expect(searchInput).toBeFocused();
   await searchInput.fill('Плед');
   await searchInput.press('Enter');
 
-  await expect(page).toHaveURL(/\/catalog\?query=/);
-  await expect(page.getByRole('heading', { name: 'Результаты поиска по всему каталогу' })).toBeVisible();
+  await expect(page).toHaveURL(/\/search\?query=/);
+  await expect(page.getByRole('heading', { name: /Найдено/i })).toBeVisible();
 });
 
 test('bottom navigation stays hidden on product and checkout routes', async ({ page }) => {

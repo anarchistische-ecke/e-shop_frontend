@@ -5,47 +5,43 @@ test.beforeEach(async ({ page }) => {
   await mockStorefrontApi(page);
 });
 
-test('header search suggestions close on escape on mobile', async ({ page }) => {
+test('mobile header search entry opens the dedicated search page', async ({ page }) => {
   await page.goto('/');
 
-  await expect(
-    page.getByRole('heading', { name: 'Бестселлеры недели' })
-  ).toBeVisible();
+  const searchEntry = page.getByRole('link', { name: 'Открыть страницу поиска' });
+  await searchEntry.click();
 
-  const searchInput = page.getByLabel('Поиск товаров');
-  await searchInput.fill('Сатин');
-
-  const suggestionPanel = page.getByTestId('header-search-suggestions');
-  await expect(suggestionPanel.getByText('Быстрые запросы').first()).toBeVisible();
-  await expect(suggestionPanel.getByText('Категории').first()).toBeVisible();
-
-  await page.keyboard.press('Escape');
-
-  await expect(page.getByTestId('header-search-suggestions')).toHaveCount(0);
+  await expect(page).toHaveURL(/\/search$/);
+  await expect(page.getByLabel('Что ищем')).toBeFocused();
 });
 
-test('header search submit navigates to search results on mobile', async ({ page }) => {
+test('search page submit navigates to search results on mobile', async ({ page }) => {
   await page.goto('/');
 
-  const searchInput = page.getByLabel('Поиск товаров');
+  await page.getByRole('link', { name: 'Открыть страницу поиска' }).click();
+
+  const searchInput = page.getByLabel('Что ищем');
   await searchInput.fill('Плед');
   await searchInput.press('Enter');
 
-  await expect(page).toHaveURL(/\/catalog\?query=/);
+  await expect(page).toHaveURL(/\/search\?query=/);
   expect(new URL(page.url()).searchParams.get('query')).toBe('Плед');
-  await expect(page.getByRole('heading', { name: 'Результаты поиска по всему каталогу' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Найдено/i })).toBeVisible();
 });
 
-test('header autocomplete can navigate directly to a category on mobile', async ({ page }) => {
+test('search page can navigate directly to a category on mobile', async ({ page }) => {
   await page.goto('/');
 
-  const searchInput = page.getByLabel('Поиск товаров');
+  await page.getByRole('link', { name: 'Открыть страницу поиска' }).click();
+
+  const searchInput = page.getByLabel('Что ищем');
   await searchInput.fill('Плед');
+  await searchInput.press('Enter');
 
-  const suggestionPanel = page.getByTestId('header-search-suggestions');
-  await expect(suggestionPanel.getByText('Категории').first()).toBeVisible();
-  await suggestionPanel.getByRole('link', { name: /Пледы/i }).first().click();
+  const scopeChip = page.getByRole('button', { name: 'Пледы' }).first();
+  await expect(scopeChip).toBeVisible();
+  await scopeChip.click();
 
-  await expect(page).toHaveURL(/\/category\/throws$/);
-  await expect(page.getByRole('heading', { name: 'Пледы' })).toBeVisible();
+  await expect(page).toHaveURL(/\/search\?query=.*scope=throws/);
+  await expect(page.getByText('Запрос:')).toBeVisible();
 });
