@@ -50,6 +50,6 @@ test('desktop footer stays centered and compact on wide screens', async ({ page 
     };
   });
 
-  expect(metrics.width).toBeLessThanOrEqual(1260);
-  expect(metrics.width / metrics.viewportWidth).toBeLessThan(0.9);
+  expect(metrics.width).toBeLessThanOrEqual(1160);
+  expect(metrics.width / metrics.viewportWidth).toBeLessThan(0.82);
 });
