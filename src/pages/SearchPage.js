@@ -83,7 +83,7 @@ function SearchPage() {
           <span className="text-ink">Поиск</span>
         </nav>
 
-        <Card className="overflow-hidden rounded-[28px] p-4 sm:p-5">
+        <Card data-testid="search-page-card" className="overflow-hidden rounded-[28px] p-4 sm:p-5">
           <div className="space-y-4">
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-accent">Поиск</p>
@@ -136,7 +136,33 @@ function SearchPage() {
                 <p className="text-[11px] uppercase tracking-[0.2em] text-muted">
                   Область поиска
                 </p>
-                <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                <div className="mt-2 md:hidden">
+                  <label
+                    htmlFor="search-scope-select"
+                    className="sr-only"
+                  >
+                    Раздел каталога для поиска
+                  </label>
+                  <Select
+                    id="search-scope-select"
+                    data-testid="search-page-scope-select"
+                    value={params.scope}
+                    onChange={(event) => updateParams({ scope: event.target.value })}
+                    className="bg-white"
+                    aria-label="Раздел каталога для поиска"
+                  >
+                    <option value="">Весь каталог</option>
+                    {topCategories.map((category) => (
+                      <option
+                        key={resolveCategoryToken(category)}
+                        value={normalizeSearchText(resolveCategoryToken(category))}
+                      >
+                        {category.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="mt-2 hidden flex-wrap gap-2 md:flex">
                   <FilterChip
                     type="button"
                     onClick={() => updateParams({ scope: '' })}
@@ -163,7 +189,10 @@ function SearchPage() {
                 </div>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:items-center">
+              <div
+                data-testid="search-page-controls"
+                className="grid grid-cols-2 gap-2 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:items-center"
+              >
                 <FilterChip
                   type="button"
                   onClick={() => updateParams({ inStock: !params.inStock })}
@@ -188,7 +217,7 @@ function SearchPage() {
                 >
                   Сбросить
                 </Button>
-                <label className="inline-grid min-h-[44px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_8px_18px_rgba(43,39,34,0.06)]">
+                <label className="col-span-2 inline-grid min-h-[44px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_8px_18px_rgba(43,39,34,0.06)] sm:col-span-1">
                   <span className="text-ink/55">↕</span>
                   <Select
                     value={params.sort}
@@ -264,7 +293,7 @@ function SearchPage() {
             {autocompleteData.suggestedQueries.length > 0 ? (
               <div className="mt-4">
                 <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Подсказки</p>
-                <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {autocompleteData.suggestedQueries.slice(0, 6).map((suggestion) => (
                     <FilterChip
                       key={`${suggestion.label}-${suggestion.scopeToken}`}
