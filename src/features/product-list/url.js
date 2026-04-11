@@ -105,6 +105,12 @@ export function buildCatalogSearchHref(values = {}) {
   return query ? `/catalog?${query}` : '/catalog';
 }
 
+export function buildSearchHref(values = {}) {
+  const params = buildProductListSearchParams(values, { source: 'catalog' });
+  const query = params.toString();
+  return query ? `/search?${query}` : '/search';
+}
+
 export function buildCategoryListingHref(categorySlug = '', values = {}) {
   const safeSlug = typeof categorySlug === 'string' ? categorySlug.trim() : '';
   const basePath = safeSlug ? `/category/${safeSlug}` : '/catalog';

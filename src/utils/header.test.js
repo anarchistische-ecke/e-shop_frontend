@@ -41,6 +41,7 @@ describe('header utils', () => {
 
   it('resolves wayfinding labels and account links', () => {
     expect(resolveWayfindingLabel('/checkout')).toBe('Оформление');
+    expect(resolveWayfindingLabel('/search', '?query=плед')).toBe('Поиск');
     expect(resolveWayfindingLabel('/category/search?query=плед')).toBe('Поиск');
     expect(resolveWayfindingLabel('/catalog', '?query=плед')).toBe('Поиск');
     expect(buildAccountLinks(false)).toHaveLength(6);
@@ -54,11 +55,15 @@ describe('header utils', () => {
   it('resolves mobile bottom-nav visibility and active item', () => {
     expect(shouldShowMobileBottomNav('/')).toBe(true);
     expect(shouldShowMobileBottomNav('/catalog')).toBe(true);
+    expect(shouldShowMobileBottomNav('/account')).toBe(true);
     expect(shouldShowMobileBottomNav('/product/1/test')).toBe(false);
     expect(shouldShowMobileBottomNav('/checkout')).toBe(false);
     expect(shouldShowMobileBottomNav('/login')).toBe(false);
 
     expect(resolveMobileBottomNavKey({ pathname: '/' })).toBe('home');
+    expect(resolveMobileBottomNavKey({ pathname: '/search', search: '?query=плед' })).toBe(
+      'search'
+    );
     expect(resolveMobileBottomNavKey({ pathname: '/category/throws' })).toBe('catalog');
     expect(resolveMobileBottomNavKey({ pathname: '/catalog', search: '?query=плед' })).toBe(
       'search'

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CartContext } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProductDirectoryData } from '../../features/product-list/data';
+import { buildSearchHref } from '../../features/product-list/url';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../../utils/metrika';
 import {
   buildAccountLinks,
@@ -411,7 +412,8 @@ export function useHeaderState() {
         options.originalQuery || ''
       );
 
-      navigate(`/catalog?${params.toString()}`);
+      const targetSearch = params.toString();
+      navigate(targetSearch ? `/search?${targetSearch}` : '/search');
       closeSearch();
       closeMenu();
       closeMega();
@@ -482,18 +484,12 @@ export function useHeaderState() {
     closeMenu();
     closeMega();
     closeAccountMenu();
-    setIsSearchFocused(true);
-    setIsSearchOpen(true);
-
-    if (typeof window !== 'undefined') {
-      window.requestAnimationFrame(() => {
-        if (searchInputRef.current instanceof HTMLElement) {
-          searchInputRef.current.focus();
-          searchInputRef.current.select();
-        }
-      });
-    }
-  }, [closeAccountMenu, closeMega, closeMenu]);
+    const target = buildSearchHref({
+      query: searchTerm.trim(),
+      scope: searchScope
+    });
+    navigate(target);
+  }, [closeAccountMenu, closeMega, closeMenu, navigate, searchScope, searchTerm]);
 
   const openMega = useCallback(
     (categoryToken) => {
@@ -560,21 +556,6 @@ export function useHeaderState() {
     closeMenu();
   }, [closeAccountMenu, closeMenu]);
 
-  const handleMobileDrawerSearchInput = useCallback((event) => {
-    setSearchTerm(event.target.value);
-  }, []);
-
-  const handleMobileDrawerSearchSubmit = useCallback(
-    (event) => {
-      event.preventDefault();
-      if (!searchTerm.trim()) {
-        return;
-      }
-      navigateSearch(searchTerm);
-    },
-    [navigateSearch, searchTerm]
-  );
-
   return {
     accountLinks,
     accountMenuRef,
@@ -583,7 +564,6 @@ export function useHeaderState() {
     activeMegaCategoryData,
     activeMobileParent,
     autocompleteData,
-    buildSearchParams,
     childrenByParent,
     clearSearch,
     closeMenu,
@@ -598,8 +578,6 @@ export function useHeaderState() {
     handleCatalogToggle,
     handleLogout,
     handleMenuToggle,
-    handleMobileDrawerSearchInput,
-    handleMobileDrawerSearchSubmit,
     handleSearchFocus,
     handleSearchInputChange,
     handleSearchSubmit,

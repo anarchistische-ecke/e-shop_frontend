@@ -26,12 +26,29 @@ test('mobile catalog menu closes on escape and returns focus to the trigger', as
 
   const mobileMenu = page.getByRole('dialog', { name: 'Меню каталога' });
   await expect(mobileMenu).toBeVisible();
-  await expect(mobileMenu.getByLabel('Поиск по каталогу')).toBeVisible();
+  await expect(mobileMenu.getByRole('button', { name: 'Закрыть меню' })).toBeFocused();
 
   await page.keyboard.press('Escape');
 
   await expect(mobileMenu).toHaveCount(0);
   await expect(menuTrigger).toBeFocused();
+});
+
+test('mobile catalog menu traps keyboard focus inside the dialog', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Открыть меню' }).click();
+
+  const mobileMenu = page.getByRole('dialog', { name: 'Меню каталога' });
+  const closeButton = mobileMenu.getByRole('button', { name: 'Закрыть меню' });
+  const searchLink = mobileMenu.getByRole('link', { name: 'Перейти к поиску товаров и категорий' });
+
+  await expect(closeButton).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(searchLink).toBeFocused();
+
+  await page.keyboard.press('Shift+Tab');
+  await expect(closeButton).toBeFocused();
 });
 
 test('mobile filter sheet restores focus to its trigger when dismissed', async ({ page }) => {

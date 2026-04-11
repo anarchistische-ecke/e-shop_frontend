@@ -5,19 +5,21 @@ test.beforeEach(async ({ page }) => {
   await mockStorefrontApi(page);
 });
 
-test('mobile menu search opens search results with mocked data', async ({ page }) => {
+test('mobile menu search link opens search results with mocked data', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Открыть меню' }).click();
   await expect(page.getByText('Навигация')).toBeVisible();
 
-  const searchInput = page.getByLabel('Поиск по каталогу');
+  await page.getByRole('link', { name: 'Перейти к поиску товаров и категорий' }).click();
+
+  const searchInput = page.getByLabel('Что ищем');
   await searchInput.fill('Плед');
   await searchInput.press('Enter');
 
-  await expect(page).toHaveURL(/\/catalog\?query=/);
-  await expect(page.getByRole('heading', { name: 'Результаты поиска по всему каталогу' })).toBeVisible();
-  await expect(page.getByText('Плед Cloud')).toBeVisible();
+  await expect(page).toHaveURL(/\/search\?query=/);
+  await expect(page.getByRole('heading', { name: /Найдено/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Плед Cloud/i })).toBeVisible();
 });
 
 test('mobile menu exposes nested categories from the catalog navigation', async ({ page }) => {

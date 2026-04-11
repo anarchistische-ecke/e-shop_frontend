@@ -45,7 +45,6 @@ function BottomNavBar({
   isAuthenticated,
   isEnabled,
   isMenuOpen,
-  isSearchPanelVisible,
   onOpenMenu,
   onOpenSearch,
   totalItems
@@ -57,7 +56,7 @@ function BottomNavBar({
     return null;
   }
 
-  const isVisible = !isMenuOpen && !isSearchPanelVisible;
+  const isVisible = !isMenuOpen;
 
   return (
     <nav
@@ -91,10 +90,8 @@ function BottomNavBar({
           <BottomNavItem
             type="button"
             label="Поиск"
-            active={activeKey === 'search' || isSearchPanelVisible}
+            active={activeKey === 'search'}
             onClick={onOpenSearch}
-            aria-expanded={isSearchPanelVisible}
-            aria-controls="header-search-suggestions-mobile"
           >
             <SearchIcon className="h-5 w-5" />
           </BottomNavItem>
