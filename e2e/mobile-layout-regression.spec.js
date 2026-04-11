@@ -63,7 +63,10 @@ async function expectNoOverlaps(locator) {
 test('mobile catalog menu takes over the viewport instead of clipping under the header', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('button', { name: 'Открыть меню' }).click();
+  await page
+    .getByRole('navigation', { name: 'Быстрая навигация' })
+    .getByRole('button', { name: 'Каталог' })
+    .click();
 
   const mobileMenu = page.getByTestId('mobile-nav-panel');
   await expect(mobileMenu).toBeVisible();
@@ -115,6 +118,9 @@ test('mobile bottom nav items stay evenly distributed and header avoids redundan
   }
 
   const header = page.locator('header').first();
+  await expect(
+    header.getByRole('button', { name: /Каталог/i })
+  ).toHaveCount(0);
   await expect(header.getByLabel('Корзина')).toBeHidden();
   await expect(header.getByLabel('Войти')).toBeHidden();
   await expect(header.getByText('Весь каталог')).toBeHidden();

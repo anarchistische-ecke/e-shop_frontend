@@ -38,6 +38,14 @@ test('bottom navigation opens the dedicated mobile search page', async ({ page }
   await expect(page.getByRole('heading', { name: /Найдено/i })).toBeVisible();
 });
 
+test('bottom navigation remains visible on the customer login/account flow', async ({ page }) => {
+  await page.goto('/login');
+
+  const bottomNav = page.getByRole('navigation', { name: 'Быстрая навигация' });
+  await expect(bottomNav).toBeVisible();
+  await expect(bottomNav.getByRole('link', { name: 'Войти' })).toBeVisible();
+});
+
 test('bottom navigation stays hidden on product and checkout routes', async ({ page }) => {
   await page.goto('/product/prod-satin-sand/satin-sand');
   await expect(page.getByRole('navigation', { name: 'Быстрая навигация' })).toHaveCount(0);

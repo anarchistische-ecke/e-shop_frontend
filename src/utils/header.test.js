@@ -56,9 +56,9 @@ describe('header utils', () => {
     expect(shouldShowMobileBottomNav('/')).toBe(true);
     expect(shouldShowMobileBottomNav('/catalog')).toBe(true);
     expect(shouldShowMobileBottomNav('/account')).toBe(true);
+    expect(shouldShowMobileBottomNav('/login')).toBe(true);
     expect(shouldShowMobileBottomNav('/product/1/test')).toBe(false);
     expect(shouldShowMobileBottomNav('/checkout')).toBe(false);
-    expect(shouldShowMobileBottomNav('/login')).toBe(false);
 
     expect(resolveMobileBottomNavKey({ pathname: '/' })).toBe('home');
     expect(resolveMobileBottomNavKey({ pathname: '/search', search: '?query=плед' })).toBe(

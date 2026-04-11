@@ -8,7 +8,10 @@ test.beforeEach(async ({ page }) => {
 test('mobile menu exposes trust content within one tap', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('button', { name: 'Открыть меню' }).click();
+  await page
+    .getByRole('navigation', { name: 'Быстрая навигация' })
+    .getByRole('button', { name: 'Каталог' })
+    .click();
 
   await expect(page.getByText('Почему нам доверяют')).toBeVisible();
   await expect(page.getByRole('link', { name: /Реквизиты и документы/i })).toBeVisible();

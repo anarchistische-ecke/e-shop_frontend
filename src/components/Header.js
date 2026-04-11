@@ -23,12 +23,7 @@ function Header() {
           >
             <div className="page-shell page-section--tight py-2.5 sm:py-3 lg:py-4">
               <div className="grid grid-cols-1 gap-2.5 sm:gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3.5">
-                <HeaderBrand
-                  isMenuOpen={header.isMenuOpen}
-                  menuTriggerRef={header.menuTriggerRef}
-                  onMenuToggle={header.handleMenuToggle}
-                  wayfindingLabel={header.wayfindingLabel}
-                />
+                <HeaderBrand wayfindingLabel={header.wayfindingLabel} />
 
                 <SearchBar
                   autocompleteData={header.autocompleteData}
