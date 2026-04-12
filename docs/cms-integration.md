@@ -147,6 +147,7 @@ This is the local break-glass Directus login. Keep it separate from the Keycloak
 - Backend content governance: `eshop/docs/directus-content-governance.md`
 - Backend schema versioning workflow: `eshop/docs/directus-schema-versioning.md`
 - Backend content migration workflow: `eshop/docs/directus-content-migration.md`
+- Backend/frontend integration decision: `eshop/docs/directus-integration-pattern-decision.md`
 - CMS scope and content ownership: [directus-cms-scope.md](./directus-cms-scope.md)
 - Directus reference: [Create a Project](https://directus.io/docs/getting-started/create-a-project)
 - Directus auth reference: [Auth & SSO](https://directus.io/docs/configuration/auth-sso)
