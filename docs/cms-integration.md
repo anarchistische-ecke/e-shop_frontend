@@ -56,6 +56,7 @@ cd /path/to/eshop
 This script:
 
 - repairs the known legacy local database schema drift if you already have an older Postgres volume on this machine
+- sources `eshop/directus/.env` when present, so the local API can reuse `DIRECTUS_STATIC_TOKEN`
 - builds the API module and its dependencies
 - starts the packaged Spring Boot app on the `dev` profile
 
@@ -65,6 +66,7 @@ The dev profile uses:
 - Redis: `localhost:6379`
 - CORS allowed origin: `http://localhost:3000`
 - Default JWT issuer URI: `http://localhost:8081/realms/cozyhome`
+- Directus token from `eshop/directus/.env` when `DIRECTUS_STATIC_TOKEN` is set there
 
 For Directus SSO specifically, the local issuer URL is `http://keycloak.lvh.me:8081/realms/cozyhome/.well-known/openid-configuration`. That hostname is intentional: it resolves from both the browser and the Docker network.
 
@@ -85,12 +87,14 @@ For CMS work, check these values in `.env.local`:
 REACT_APP_API_BASE=http://localhost:8080
 REACT_APP_DIRECTUS_BASE_URL=http://localhost:8055
 REACT_APP_DIRECTUS_PUBLIC_TOKEN=
+REACT_APP_CMS_CACHE_TTL_MS=300000
 REACT_APP_KEYCLOAK_URL=http://localhost:8081
 REACT_APP_KEYCLOAK_REALM=cozyhome
 REACT_APP_KEYCLOAK_CLIENT_ID=cozyhome-web
 ```
 
 Leave `REACT_APP_DIRECTUS_PUBLIC_TOKEN` empty unless Directus public permissions are insufficient. Never use a server-side static token in the browser.
+The storefront CMS client keeps an in-memory cache keyed by `site-settings`, `navigation:<placement>`, and `page:<slug>`. The default TTL is `300000` ms (5 minutes) so SPA routing does not refetch CMS content more aggressively than the backend cache by default.
 
 ## Expected Local URLs
 

@@ -3,6 +3,7 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ScrollToTop from '../components/ScrollToTop';
+import AboutPage from './AboutPage';
 import Home from './Home';
 import CategoryPage from './CategoryPage';
 import ProductPage from './ProductPage';
@@ -105,6 +106,7 @@ function App() {
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/account" element={<AccountPage />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/order/:token" element={<OrderPage />} />
             <Route path="/info/payment" element={<PaymentInfoPage />} />
             <Route path="/info/delivery" element={<DeliveryInfoPage />} />

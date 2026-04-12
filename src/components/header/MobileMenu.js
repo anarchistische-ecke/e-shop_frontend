@@ -8,6 +8,39 @@ import CategoryGlyph from '../navigation/CategoryGlyph';
 import { buildSearchHref } from '../../features/product-list/url';
 import { resolveCategoryToken } from '../../utils/header';
 
+function isInternalUrl(url) {
+  return typeof url === 'string' && url.startsWith('/');
+}
+
+function MobileUtilityLink({ item, onClose }) {
+  if (!item?.label || !item?.url) {
+    return null;
+  }
+
+  const className =
+    'focus-ring-soft inline-flex min-h-[42px] items-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]';
+
+  if (isInternalUrl(item.url)) {
+    return (
+      <Link to={item.url} onClick={onClose} className={className}>
+        {item.label}
+      </Link>
+    );
+  }
+
+  return (
+    <a
+      href={item.url}
+      onClick={onClose}
+      className={className}
+      rel={item.openInNewTab ? 'noreferrer' : undefined}
+      target={item.openInNewTab ? '_blank' : undefined}
+    >
+      {item.label}
+    </a>
+  );
+}
+
 function MobileMenu({
   activeMobileParent,
   childrenByParent,
@@ -19,7 +52,9 @@ function MobileMenu({
   onOpenCategory,
   onStepBack,
   onTrackCategoryClick,
-  searchTerm
+  searchTerm,
+  siteName,
+  utilityNavigation = []
 }) {
   const panelRef = useRef(null);
   const backButtonRef = useRef(null);
@@ -81,7 +116,7 @@ function MobileMenu({
                     onClick={onClose}
                     className="mt-1 block truncate font-display text-xl font-semibold leading-none tracking-tight text-ink"
                   >
-                    Постельное Белье-ЮГ
+                    {siteName}
                   </Link>
                   <p className="mt-1 text-sm font-semibold text-ink">{mobileTitle}</p>
                 </div>
@@ -146,6 +181,29 @@ function MobileMenu({
                   Новинки
                 </Link>
               </div>
+
+              {utilityNavigation.length > 0 ? (
+                <section className="rounded-[24px] border border-ink/10 bg-white/90 p-3 shadow-[0_10px_24px_rgba(43,39,34,0.08)]">
+                  <div className="space-y-3">
+                    {utilityNavigation.map((group) => (
+                      <div key={group.key || group.title} className="space-y-2">
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-muted">
+                          {group.title}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {(group.items || []).map((item) => (
+                            <MobileUtilityLink
+                              key={`${group.key || group.title}:${item.label}:${item.url}`}
+                              item={item}
+                              onClose={onClose}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
             </div>
           </div>
 

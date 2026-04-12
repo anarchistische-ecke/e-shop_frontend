@@ -389,3 +389,27 @@ export async function getAdminActivityLogs(params = {}) {
   const qs = query.toString();
   return request(`${ACTIVITY_LOGS_PATH}${qs ? `?${qs}` : ''}`);
 }
+
+// CMS content façade
+export async function getCmsSiteSettings({ preview = false, signal } = {}) {
+  const path = preview ? '/content/preview/site-settings' : '/content/site-settings';
+  return request(path, { signal });
+}
+
+export async function getCmsNavigation({ placement, preview = false, signal } = {}) {
+  const path = preview ? '/content/preview/navigation' : '/content/navigation';
+  const query = new URLSearchParams();
+  if (placement) {
+    query.append('placement', placement);
+  }
+  const qs = query.toString();
+  return request(`${path}${qs ? `?${qs}` : ''}`, { signal });
+}
+
+export async function getCmsPage(slug, { preview = false, signal } = {}) {
+  if (!slug) {
+    throw new Error('CMS page slug is required');
+  }
+  const path = preview ? '/content/preview/pages' : '/content/pages';
+  return request(`${path}/${encodeURIComponent(slug)}`, { signal });
+}

@@ -1,7 +1,8 @@
 import React from 'react';
+import CmsManagedPage from '../components/cms/CmsManagedPage';
 import Seo from '../components/Seo';
 
-function BonusesInfoPage() {
+function BonusesInfoFallbackPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <Seo
@@ -39,6 +40,10 @@ function BonusesInfoPage() {
       </div>
     </div>
   );
+}
+
+function BonusesInfoPage() {
+  return <CmsManagedPage slug="bonuses" fallback={<BonusesInfoFallbackPage />} />;
 }
 
 export default BonusesInfoPage;

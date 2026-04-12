@@ -3,12 +3,14 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { CmsContentProvider } from './contexts/CmsContentContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { PaymentConfigProvider } from './contexts/PaymentConfigContext';
 import { CatalogueDataProvider } from './features/product-list/data';
 import App from './pages/App';
 import { initYandexMetrika } from './utils/metrika';
 import { resolveAppBasePath } from './utils/url';
+import './styles/cms.css';
 import './index.css';
 import './styles/legal.css';
 
@@ -24,13 +26,15 @@ root.render(
     <BrowserRouter basename={basename}>
       <NotificationProvider>
         <AuthProvider>
-          <PaymentConfigProvider>
-            <CatalogueDataProvider>
-              <CartProvider>
-                <App />
-              </CartProvider>
-            </CatalogueDataProvider>
-          </PaymentConfigProvider>
+          <CmsContentProvider>
+            <PaymentConfigProvider>
+              <CatalogueDataProvider>
+                <CartProvider>
+                  <App />
+                </CartProvider>
+              </CatalogueDataProvider>
+            </PaymentConfigProvider>
+          </CmsContentProvider>
         </AuthProvider>
       </NotificationProvider>
     </BrowserRouter>

@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import CmsManagedPage from '../components/cms/CmsManagedPage';
 import { Button, Card } from '../components/ui';
 
-function AboutPage() {
+function AboutFallbackPage() {
   if (typeof window !== 'undefined') {
     const savedPages = localStorage.getItem('adminPages');
     if (savedPages) {
@@ -137,6 +138,10 @@ function InfoBlock({ title, text, imageOnLeft = true, cta }) {
       </div>
     </section>
   );
+}
+
+function AboutPage() {
+  return <CmsManagedPage slug="about" fallback={<AboutFallbackPage />} />;
 }
 
 export default AboutPage;
