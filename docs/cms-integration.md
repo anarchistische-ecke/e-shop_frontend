@@ -66,6 +66,8 @@ The dev profile uses:
 - CORS allowed origin: `http://localhost:3000`
 - Default JWT issuer URI: `http://localhost:8081/realms/cozyhome`
 
+For Directus SSO specifically, the local issuer URL is `http://keycloak.lvh.me:8081/realms/cozyhome/.well-known/openid-configuration`. That hostname is intentional: it resolves from both the browser and the Docker network.
+
 ### 3. Start the storefront
 
 From the storefront repo root:
@@ -98,6 +100,7 @@ Leave `REACT_APP_DIRECTUS_PUBLIC_TOKEN` empty unless Directus public permissions
 | Backend API | `http://localhost:8080` | Spring Boot API |
 | Backend Redis health | `http://localhost:8080/health/redis` | Quick backend dependency check |
 | Keycloak realm | `http://localhost:8081/realms/cozyhome` | Local OIDC issuer used by the backend |
+| Keycloak realm for Directus SSO | `http://keycloak.lvh.me:8081/realms/cozyhome` | Shared browser/container hostname used by Directus login |
 | Keycloak admin console | `http://localhost:8081/admin/master/console/` | Bootstrap admin login |
 | Directus app/API | `http://localhost:8055` | Expected local Directus base URL |
 | MinIO S3 API | `http://localhost:9000` | Local S3-compatible object storage endpoint used by Directus |
@@ -120,10 +123,14 @@ Leave `REACT_APP_DIRECTUS_PUBLIC_TOKEN` empty unless Directus public permissions
 
 These users are imported into the `cozyhome` realm and include the claims needed by the frontend/backend local auth checks.
 
+For Directus SSO, `admin` maps to the Directus role `CMS Administrator`, `manager` maps to `CMS Editor`, and the bootstrap also seeds a `CMS Publisher` role for reviewer/publisher workflows.
+
 ### Directus first admin
 
-- Email: `admin@example.com`
+- Email: `directus-admin@example.com`
 - Password: `Admin123!`
+
+This is the local break-glass Directus login. Keep it separate from the Keycloak `admin@example.com` user so SSO admins can be provisioned as Directus users without an email collision.
 
 ### Local object storage
 
@@ -136,8 +143,13 @@ These users are imported into the `cozyhome` realm and include the claims needed
 - Frontend CMS placeholders: [`.env.example`](../.env.example)
 - Backend CMS env contract: `eshop/docs/directus-environment.md`
 - Backend DB isolation ADR: `eshop/docs/directus-db-isolation-decision.md`
+- Backend content model: `eshop/docs/directus-content-model.md`
+- Backend content governance: `eshop/docs/directus-content-governance.md`
+- Backend schema versioning workflow: `eshop/docs/directus-schema-versioning.md`
+- Backend content migration workflow: `eshop/docs/directus-content-migration.md`
 - CMS scope and content ownership: [directus-cms-scope.md](./directus-cms-scope.md)
 - Directus reference: [Create a Project](https://directus.io/docs/getting-started/create-a-project)
+- Directus auth reference: [Auth & SSO](https://directus.io/docs/configuration/auth-sso)
 
 ## Troubleshooting
 
@@ -216,6 +228,14 @@ Common causes:
 - `directus/.env` was not created from `.env.example`
 - Required Directus env variables in `directus/.env` are blank or malformed
 
+If auth-related variables changed, rerun `./scripts/directus-sso-bootstrap.sh` after the Directus and Keycloak containers are healthy.
+
+If the CMS schema drifts locally, rerun `./scripts/directus-schema-apply.sh`.
+
+If you intentionally changed the schema in Directus Studio, export the reviewed snapshot with `./scripts/directus-schema-snapshot.sh` and commit `eshop/directus/schema/schema.snapshot.json` in the same PR.
+
+If you need to reseed the initial editorial content, rerun `./scripts/directus-content-import.sh`. Use `--dry-run` first when you are validating a seed change.
+
 ### Directus uploads fail or assets do not load
 
 Run:
@@ -244,6 +264,17 @@ Check:
 - `REACT_APP_DIRECTUS_PUBLIC_TOKEN` is a valid read-only token
 
 Do not use backend-only Directus credentials in frontend env files.
+
+### Directus Keycloak login fails
+
+Check:
+
+- `directus/.env` still points `DIRECTUS_AUTH_KEYCLOAK_ISSUER_URL` at `http://keycloak.lvh.me:8081/realms/cozyhome/.well-known/openid-configuration`
+- the Keycloak `directus` client exists and allows redirect URI `http://localhost:8055/auth/login/keycloak/callback`
+- the Directus and Keycloak containers were restarted after env changes
+- `./scripts/directus-sso-bootstrap.sh` completed without error
+
+If the login screen shows only the email/password form and no `Keycloak` button, inspect `docker compose --env-file directus/.env -f directus/docker-compose.yml logs directus`.
 
 ### Browser CORS errors during CMS work
 
