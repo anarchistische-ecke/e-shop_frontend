@@ -53,7 +53,7 @@ function CmsImage({
             width={fallbackSource.width || undefined}
             height={fallbackSource.height || undefined}
             loading={priority ? 'eager' : 'lazy'}
-            fetchPriority={priority ? 'high' : 'auto'}
+            fetchpriority={priority ? 'high' : 'auto'}
             decoding="async"
             className={`absolute inset-0 h-full w-full ${imageClassName}`.trim()}
           />

@@ -2,7 +2,7 @@ name: frontend-ci
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, add-cms ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -33,6 +33,45 @@ jobs:
         run: |
           npm run build --if-present
           npm test --if-present -- --watch=false --passWithNoTests
+
+  cms-smoke:
+    needs: build
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && vars.FRONTEND_STAGING_BASE_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run CMS smoke tests against staging
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ vars.FRONTEND_STAGING_BASE_URL }}
+          PLAYWRIGHT_API_BASE_URL: ${{ vars.FRONTEND_STAGING_API_BASE_URL }}
+          PLAYWRIGHT_CMS_NAV_PLACEMENT: ${{ vars.CMS_SMOKE_NAV_PLACEMENT }}
+          PLAYWRIGHT_CMS_PAGE_SLUG: ${{ vars.CMS_SMOKE_PAGE_SLUG }}
+          PLAYWRIGHT_USE_WEBSERVER: "false"
+        run: npm run e2e -- e2e/cms-smoke.spec.js
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-cms-smoke-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
 
   deploy:
     needs: build
