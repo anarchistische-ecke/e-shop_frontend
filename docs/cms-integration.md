@@ -123,11 +123,12 @@ The storefront CMS client keeps an in-memory cache keyed by `site-settings`, `na
 
 - `admin@example.com` / `Admin123!` with realm role `admin`
 - `manager@example.com` / `Manager123!` with realm role `manager`
+- `publisher@example.com` / `Publisher123!` with realm role `publisher`
 - `customer@example.com` / `Customer123!` with realm role `customer`
 
 These users are imported into the `cozyhome` realm and include the claims needed by the frontend/backend local auth checks.
 
-For Directus SSO, `admin` maps to the Directus role `CMS Administrator`, `manager` maps to `CMS Editor`, and the bootstrap also seeds a `CMS Publisher` role for reviewer/publisher workflows.
+For Directus SSO, `admin` maps to `CMS Administrator`, `manager` maps to `CMS Editor`, and `publisher` maps to `CMS Publisher`.
 
 ### Directus first admin
 
@@ -149,6 +150,8 @@ This is the local break-glass Directus login. Keep it separate from the Keycloak
 - Backend DB isolation ADR: `eshop/docs/directus-db-isolation-decision.md`
 - Backend content model: `eshop/docs/directus-content-model.md`
 - Backend content governance: `eshop/docs/directus-content-governance.md`
+- Backend editor onboarding: `eshop/docs/directus-editor-onboarding.md`
+- Backend editorial workflow: `eshop/docs/directus-editorial-workflow.md`
 - Backend schema versioning workflow: `eshop/docs/directus-schema-versioning.md`
 - Backend content migration workflow: `eshop/docs/directus-content-migration.md`
 - Backend/frontend integration decision: `eshop/docs/directus-integration-pattern-decision.md`
