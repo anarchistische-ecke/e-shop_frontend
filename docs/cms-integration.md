@@ -42,6 +42,8 @@ This starts:
 - MinIO S3 API on `http://localhost:9000`
 - MinIO console on `http://localhost:9001`
 
+`./scripts/dev-infra-up.sh` also rebuilds the committed Directus operator runtime extensions before the Directus container starts, so local Directus loads the current `Storefront Ops` endpoint/module bundle without a separate packaging step.
+
 If `keycloak/.env` or `directus/.env` do not exist yet, the script creates them from the committed example files automatically.
 
 ### 2. Start the backend API
@@ -107,6 +109,7 @@ The storefront CMS client keeps an in-memory cache keyed by `site-settings`, `na
 | Keycloak realm for Directus SSO | `http://keycloak.lvh.me:8081/realms/cozyhome` | Shared browser/container hostname used by Directus login |
 | Keycloak admin console | `http://localhost:8081/admin/master/console/` | Bootstrap admin login |
 | Directus app/API | `http://localhost:8055` | Expected local Directus base URL |
+| Directus operator module | `http://localhost:8055/admin/content` | `Storefront Ops` is available inside Directus Studio for backend-owned catalogue operations |
 | MinIO S3 API | `http://localhost:9000` | Local S3-compatible object storage endpoint used by Directus |
 | MinIO console | `http://localhost:9001` | Inspect the local bucket and uploaded objects |
 | Postgres | `localhost:5433` | Docker-mapped dev DB port |
@@ -124,11 +127,13 @@ The storefront CMS client keeps an in-memory cache keyed by `site-settings`, `na
 - `admin@example.com` / `Admin123!` with realm role `admin`
 - `manager@example.com` / `Manager123!` with realm role `manager`
 - `publisher@example.com` / `Publisher123!` with realm role `publisher`
+- `catalogue@example.com` / `Catalogue123!` with realm role `catalogue_operator`
+- `inventory@example.com` / `Inventory123!` with realm role `inventory_operator`
 - `customer@example.com` / `Customer123!` with realm role `customer`
 
 These users are imported into the `cozyhome` realm and include the claims needed by the frontend/backend local auth checks.
 
-For Directus SSO, `admin` maps to `CMS Administrator`, `manager` maps to `CMS Editor`, and `publisher` maps to `CMS Publisher`.
+For Directus SSO, `admin` maps to `CMS Administrator`, `manager` maps to `CMS Editor`, `publisher` maps to `CMS Publisher`, `catalogue_operator` maps to `Catalogue Operator`, and `inventory_operator` maps to `Inventory Operator`.
 
 ### Directus first admin
 

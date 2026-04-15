@@ -1,4 +1,5 @@
 import {
+  getCmsCollection as getCmsCollectionRequest,
   getCmsNavigation as getCmsNavigationRequest,
   getCmsPage as getCmsPageRequest,
   getCmsSiteSettings as getCmsSiteSettingsRequest,
@@ -144,6 +145,20 @@ export const cmsClient = {
     return readCmsResource(
       cacheKey,
       () => getCmsPageRequest(normalizedSlug, { preview, signal }),
+      { cacheTtlMs, force, signal }
+    );
+  },
+
+  getCollection(key, { preview = false, signal, force = false, cacheTtlMs = CLIENT_CACHE_TTL_MS } = {}) {
+    const normalizedKey = String(key || '').trim();
+    if (!normalizedKey) {
+      return Promise.reject(new Error('CMS collection key is required'));
+    }
+
+    const cacheKey = preview ? null : `collection:${normalizedKey}`;
+    return readCmsResource(
+      cacheKey,
+      () => getCmsCollectionRequest(normalizedKey, { preview, signal }),
       { cacheTtlMs, force, signal }
     );
   },

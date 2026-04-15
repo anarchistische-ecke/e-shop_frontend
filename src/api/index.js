@@ -413,3 +413,11 @@ export async function getCmsPage(slug, { preview = false, signal } = {}) {
   const path = preview ? '/content/preview/pages' : '/content/pages';
   return request(`${path}/${encodeURIComponent(slug)}`, { signal });
 }
+
+export async function getCmsCollection(key, { preview = false, signal } = {}) {
+  if (!key) {
+    throw new Error('CMS collection key is required');
+  }
+  const path = preview ? '/content/preview/collections' : '/content/collections';
+  return request(`${path}/${encodeURIComponent(key)}`, { signal });
+}

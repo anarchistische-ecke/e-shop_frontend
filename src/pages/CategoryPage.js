@@ -2,6 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Seo from '../components/Seo';
 import {
+  CataloguePresentationBlocks,
+  CataloguePresentationHero,
+} from '../components/cms/CataloguePresentationSections';
+import CmsStorefrontCollectionRail from '../components/cms/CmsStorefrontCollectionRail';
+import {
   Button,
   Card,
   FilterChip,
@@ -192,6 +197,9 @@ function CategoryPage() {
     'Лучшее совпадение';
 
   const heading = useMemo(() => {
+    if (list.activeCategory?.presentation?.marketingTitle) {
+      return list.activeCategory.presentation.marketingTitle;
+    }
     if (list.activeCategory?.name) {
       return list.activeCategory.name;
     }
@@ -202,9 +210,12 @@ function CategoryPage() {
       return 'Новинки';
     }
     return 'Каталог';
-  }, [list.activeCategory?.name, slug]);
+  }, [list.activeCategory?.name, list.activeCategory?.presentation?.marketingTitle, slug]);
 
   const headingNote = useMemo(() => {
+    if (list.activeCategory?.presentation?.marketingSubtitle) {
+      return list.activeCategory.presentation.marketingSubtitle;
+    }
     if (slug === 'popular') {
       return 'Рекомендуем на основе популярности и разнообразия моделей.';
     }
@@ -212,12 +223,15 @@ function CategoryPage() {
       return 'Свежие поступления из последних коллекций.';
     }
     return list.headingNote;
-  }, [list.headingNote, slug]);
+  }, [list.activeCategory?.presentation?.marketingSubtitle, list.headingNote, slug]);
   const canonicalPath = useMemo(
     () => buildCategoryListingHref(slug, params),
     [params, slug]
   );
   const seoTitle = useMemo(() => {
+    if (list.activeCategory?.presentation?.seoTitle) {
+      return list.activeCategory.presentation.seoTitle;
+    }
     if (list.activeCategory?.name) {
       return `${list.activeCategory.name} — каталог домашнего текстиля`;
     }
@@ -228,11 +242,21 @@ function CategoryPage() {
       return 'Новинки домашнего текстиля';
     }
     return `${heading} — каталог домашнего текстиля`;
-  }, [heading, list.activeCategory?.name, slug]);
+  }, [heading, list.activeCategory?.name, list.activeCategory?.presentation?.seoTitle, slug]);
   const seoDescription =
+    list.activeCategory?.presentation?.seoDescription ||
     list.activeCategory?.description ||
     headingNote ||
     `${heading}. Подборка товаров для дома с удобной доставкой по России.`;
+  const categoryPresentation = list.activeCategory?.presentation || null;
+  const categoryPresentationPage = useMemo(
+    () => ({
+      title: heading,
+      navLabel: list.activeCategory?.name || heading,
+      path: canonicalPath,
+    }),
+    [canonicalPath, heading, list.activeCategory?.name]
+  );
 
   const clearFilterByKey = (key) => {
     if (key === 'brand') {
@@ -282,7 +306,7 @@ function CategoryPage() {
         title={seoTitle}
         description={seoDescription}
         canonicalPath={canonicalPath}
-        image={list.activeCategory?.imageUrl || ''}
+        image={categoryPresentation?.seoImage?.url || list.activeCategory?.imageUrl || ''}
       />
       <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
@@ -310,10 +334,26 @@ function CategoryPage() {
           <span className="text-ink">{heading}</span>
         </nav>
 
+        <CataloguePresentationHero
+          hero={categoryPresentation?.hero}
+          page={categoryPresentationPage}
+          className="mt-4"
+        />
+
         <div data-testid="category-header" className="section-header mt-3 lg:mt-2.5">
           <div className="flex flex-wrap items-baseline gap-3">
             <h1 className="text-2xl sm:text-3xl font-semibold">{heading}</h1>
             <span className="text-sm text-muted">{list.itemsLabel}</span>
+            {categoryPresentation?.badgeText ? (
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                {categoryPresentation.badgeText}
+              </span>
+            ) : null}
+            {categoryPresentation?.ribbonText ? (
+              <span className="rounded-full border border-ink/10 bg-white/90 px-2.5 py-1 text-xs text-ink/75">
+                {categoryPresentation.ribbonText}
+              </span>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
@@ -443,6 +483,16 @@ function CategoryPage() {
             </Button>
           </Card>
         ) : null}
+
+        <CataloguePresentationBlocks
+          blocks={categoryPresentation?.blocks}
+          page={categoryPresentationPage}
+          className="mt-6"
+        />
+        <CmsStorefrontCollectionRail
+          collectionKeys={categoryPresentation?.linkedCollectionKeys}
+          className="mt-6"
+        />
 
         <div ref={resultsRef} data-testid="category-results" className="mt-5 lg:mt-4">
           {list.loading ? (

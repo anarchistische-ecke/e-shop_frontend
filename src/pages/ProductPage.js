@@ -4,6 +4,12 @@ import { CartContext } from '../contexts/CartContext';
 import { getProduct } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
+import {
+  CataloguePresentationBlocks,
+  CataloguePresentationHero,
+} from '../components/cms/CataloguePresentationSections';
+import CmsStorefrontCollectionRail from '../components/cms/CmsStorefrontCollectionRail';
+import { CmsRichText } from '../components/cms/cmsBlockShared';
 import ProductCard from '../components/ProductCard';
 import { Button, Card, Modal, Tabs } from '../components/ui';
 import { legalTokens } from '../data/legal/constants';
@@ -345,6 +351,12 @@ function ProductPage() {
       }) || null
     );
   }, [categories, product]);
+  const productPresentation = product?.presentation || null;
+  const marketingTitle = productPresentation?.marketingTitle || product?.name || '';
+  const marketingSubtitle =
+    productPresentation?.marketingSubtitle ||
+    (activeCategory?.name ? `Категория: ${activeCategory.name}` : '');
+  const introBody = productPresentation?.introBody || product?.description || '';
 
   const fallbackSpecs = [
     product?.size ? `Размер: ${product.size}` : 'Размеры соответствуют стандартам категории',
@@ -447,7 +459,18 @@ function ProductPage() {
     () => getCanonicalUrl(canonicalProductPath, { origin: legalTokens.SITE_URL }) || canonicalProductPath,
     [canonicalProductPath]
   );
+  const presentationPage = useMemo(
+    () => ({
+      title: marketingTitle || product?.name || 'Товар',
+      navLabel: activeCategory?.name || marketingTitle || product?.name || 'Товар',
+      path: canonicalProductPath,
+    }),
+    [activeCategory?.name, canonicalProductPath, marketingTitle, product?.name]
+  );
   const seoTitle = useMemo(() => {
+    if (productPresentation?.seoTitle) {
+      return productPresentation.seoTitle;
+    }
     if (!product?.name) {
       return 'Карточка товара';
     }
@@ -455,15 +478,18 @@ function ProductPage() {
     return activeCategory?.name
       ? `Купить ${product.name} — ${activeCategory.name}`
       : `Купить ${product.name}`;
-  }, [activeCategory?.name, product?.name]);
+  }, [activeCategory?.name, product?.name, productPresentation?.seoTitle]);
   const seoDescription = useMemo(() => {
+    if (productPresentation?.seoDescription) {
+      return productPresentation.seoDescription;
+    }
     if (!product) {
       return 'Карточка товара интернет-магазина домашнего текстиля.';
     }
     const summary = product.description || highlights.filter(Boolean).join('. ');
     return `${summary} ${availabilityMeta.label}.`;
-  }, [availabilityMeta.label, highlights, product]);
-  const seoImage = activeImage?.url || orderedImages[0]?.url || '';
+  }, [availabilityMeta.label, highlights, product, productPresentation?.seoDescription]);
+  const seoImage = productPresentation?.seoImage?.url || activeImage?.url || orderedImages[0]?.url || '';
   const seoImageUrl = useMemo(() => {
     if (!seoImage || seoImage.startsWith('data:')) {
       return '';
@@ -493,7 +519,7 @@ function ProductPage() {
     return {
       '@context': 'https://schema.org',
       '@type': 'Product',
-      name: product.name,
+      name: marketingTitle || product.name,
       description: seoDescription,
       url: canonicalProductUrl,
       sku: selectedVariant?.sku || product.sku || selectedVariant?.id || product.id,
@@ -520,6 +546,7 @@ function ProductPage() {
     availableStock,
     canonicalProductUrl,
     price,
+    marketingTitle,
     product,
     seoDescription,
     seoImageUrl,
@@ -723,8 +750,14 @@ function ProductPage() {
             </>
           )}
           <span className="text-ink/40">›</span>
-          <span className="text-ink/80" aria-current="page">{product.name}</span>
+          <span className="text-ink/80" aria-current="page">{marketingTitle || product.name}</span>
         </nav>
+
+        <CataloguePresentationHero
+          hero={productPresentation?.hero}
+          page={presentationPage}
+          className="mb-6"
+        />
 
         <div className="grid gap-5 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)]">
           <section>
@@ -852,7 +885,8 @@ function ProductPage() {
               className={`sm:p-6 transition-opacity duration-200 ${isVariantTransitioning ? 'opacity-80' : 'opacity-100'}`}
             >
               <p className="text-xs uppercase tracking-[0.25em] text-accent">Карточка товара</p>
-              <h1 className="mt-2 text-xl sm:text-2xl font-semibold">{product.name}</h1>
+              <h1 className="mt-2 text-xl sm:text-2xl font-semibold">{marketingTitle || product.name}</h1>
+              {marketingSubtitle ? <p className="mt-2 text-sm text-muted">{marketingSubtitle}</p> : null}
 
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
                 {activeCategory ? (
@@ -862,6 +896,16 @@ function ProductPage() {
                 ) : null}
                 {product?.material ? <span>Материал: {product.material}</span> : null}
                 {selectedVariant?.name ? <span>Вариант: {selectedVariant.name}</span> : null}
+                {productPresentation?.badgeText ? (
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                    {productPresentation.badgeText}
+                  </span>
+                ) : null}
+                {productPresentation?.ribbonText ? (
+                  <span className="rounded-full border border-ink/10 bg-white/90 px-2.5 py-1 text-xs text-ink/75">
+                    {productPresentation.ribbonText}
+                  </span>
+                ) : null}
               </div>
 
               <div className="mt-4 flex items-end gap-3">
@@ -1117,9 +1161,13 @@ function ProductPage() {
               padding="md"
               className="mt-4"
             >
-              <p className="whitespace-pre-line text-sm leading-relaxed text-ink/80">
-                {product.description || 'Описание отсутствует.'}
-              </p>
+              {introBody ? (
+                <CmsRichText html={introBody} className="text-sm leading-relaxed text-ink/80" />
+              ) : (
+                <p className="whitespace-pre-line text-sm leading-relaxed text-ink/80">
+                  Описание отсутствует.
+                </p>
+              )}
             </Card>
           )}
 
@@ -1169,6 +1217,16 @@ function ProductPage() {
             </div>
           )}
         </section>
+
+        <CataloguePresentationBlocks
+          blocks={productPresentation?.blocks}
+          page={presentationPage}
+          className="mt-10 sm:mt-12"
+        />
+        <CmsStorefrontCollectionRail
+          collectionKeys={productPresentation?.linkedCollectionKeys}
+          className="mt-10 sm:mt-12"
+        />
 
         {relatedProducts.length > 0 && (
           <section className="mt-10 sm:mt-12">
