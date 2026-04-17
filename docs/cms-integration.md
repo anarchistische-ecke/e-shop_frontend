@@ -42,7 +42,7 @@ This starts:
 - MinIO S3 API on `http://localhost:9000`
 - MinIO console on `http://localhost:9001`
 
-`./scripts/dev-infra-up.sh` also rebuilds the committed Directus operator runtime extensions before the Directus container starts, so local Directus loads the current `Storefront Ops` endpoint/module bundle without a separate packaging step.
+`./scripts/dev-infra-up.sh` also rebuilds the committed Directus operator runtime extensions before the Directus container starts, so local Directus loads the current `Управление витриной` endpoint/module bundle without a separate packaging step.
 
 If `keycloak/.env` or `directus/.env` do not exist yet, the script creates them from the committed example files automatically.
 
@@ -59,6 +59,8 @@ This script:
 
 - repairs the known legacy local database schema drift if you already have an older Postgres volume on this machine
 - sources `eshop/directus/.env` when present, so the local API can reuse `DIRECTUS_STATIC_TOKEN`
+- defaults `DIRECTUS_BRIDGE_TOKEN` to the same local value the Directus compose stack uses when `directus/.env` does not define it explicitly
+- reuses the local Directus MinIO settings as `YANDEX_STORAGE_*`, so backend-owned catalogue media upload flows work without extra host-side storage setup
 - builds the API module and its dependencies
 - starts the packaged Spring Boot app on the `dev` profile
 
@@ -109,7 +111,8 @@ The storefront CMS client keeps an in-memory cache keyed by `site-settings`, `na
 | Keycloak realm for Directus SSO | `http://keycloak.lvh.me:8081/realms/cozyhome` | Shared browser/container hostname used by Directus login |
 | Keycloak admin console | `http://localhost:8081/admin/master/console/` | Bootstrap admin login |
 | Directus app/API | `http://localhost:8055` | Expected local Directus base URL |
-| Directus operator module | `http://localhost:8055/admin/content` | `Storefront Ops` is available inside Directus Studio for backend-owned catalogue operations |
+| Directus operator module | `http://localhost:8055/admin/storefront-ops` | Основное рабочее место `Управление витриной` для товаров, категорий, брендов и остатков |
+| Directus fallback entry | `Insights -> Оператор витрины -> Запуск рабочего места` | Резервная точка входа, если иконка custom module не отображается в боковой навигации Studio |
 | MinIO S3 API | `http://localhost:9000` | Local S3-compatible object storage endpoint used by Directus |
 | MinIO console | `http://localhost:9001` | Inspect the local bucket and uploaded objects |
 | Postgres | `localhost:5433` | Docker-mapped dev DB port |
@@ -287,7 +290,7 @@ Check:
 - the Directus and Keycloak containers were restarted after env changes
 - `./scripts/directus-sso-bootstrap.sh` completed without error
 
-If the login screen shows only the email/password form and no `Keycloak` button, inspect `docker compose --env-file directus/.env -f directus/docker-compose.yml logs directus`.
+If the login screen shows only the email/password form and no `Войти через Keycloak` button, inspect `docker compose --env-file directus/.env -f directus/docker-compose.yml logs directus`.
 
 ### Browser CORS errors during CMS work
 
