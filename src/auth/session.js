@@ -1,5 +1,5 @@
-import { notifyAuthChange } from '../utils/auth';
-import { getAccessToken as getKeycloakAccessToken, isKeycloakConfigured } from './keycloak';
+import { notifyAuthChange } from '../utils/auth.js';
+import { getAccessToken as getKeycloakAccessToken, isKeycloakConfigured } from './keycloak.js';
 
 const TOKEN_KEY = 'authToken';
 const PROFILE_KEY = 'authProfile';

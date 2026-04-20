@@ -54,13 +54,14 @@ import {
   resolveCheckoutAttempt,
   viewportToken
 } from './utils';
+import { readEnv } from '../../config/runtime';
 
 export function useCheckoutState() {
   const navigate = useNavigate();
   const { items: liveItems, cartId } = useContext(CartContext);
   const { tokenParsed, isAuthenticated, hasRole } = useAuth();
   const { paymentConfig, isPaymentConfigLoaded } = usePaymentConfig();
-  const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
+  const managerRole = readEnv('REACT_APP_KEYCLOAK_MANAGER_ROLE', 'manager') || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
   const deliveryClientConfig = useMemo(() => getDeliveryClientConfig(), []);
 

@@ -1,7 +1,8 @@
 import React from 'react';
+import CmsManagedPage from '../components/cms/CmsManagedPage';
 import Seo from '../components/Seo';
 
-function PaymentInfoPage() {
+function PaymentInfoFallbackPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <Seo
@@ -41,6 +42,10 @@ function PaymentInfoPage() {
       </div>
     </div>
   );
+}
+
+function PaymentInfoPage() {
+  return <CmsManagedPage slug="payment" fallback={<PaymentInfoFallbackPage />} />;
 }
 
 export default PaymentInfoPage;

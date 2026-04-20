@@ -18,6 +18,7 @@ import {
   resolveAccountLocationState
 } from '../utils/account';
 import ManagerAccountPage from './ManagerAccountPage';
+import { readEnv } from '../config/runtime';
 
 const IconProfile = ({ className }) => (
   <svg
@@ -193,8 +194,8 @@ function AccountPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isReady, tokenParsed, logout, refreshProfile, hasRole, hasStrongAuth } = useAuth();
-  const customerRole = process.env.REACT_APP_KEYCLOAK_CUSTOMER_ROLE || 'customer';
-  const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
+  const customerRole = readEnv('REACT_APP_KEYCLOAK_CUSTOMER_ROLE', 'customer') || 'customer';
+  const managerRole = readEnv('REACT_APP_KEYCLOAK_MANAGER_ROLE', 'manager') || 'manager';
   const hasManagerRole = isAuthenticated && hasRole(managerRole);
   const isManager = hasManagerRole && hasStrongAuth();
   const isCustomer = isAuthenticated && hasRole(customerRole);

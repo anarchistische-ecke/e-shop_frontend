@@ -1,50 +1,44 @@
-import React, { Suspense, lazy, useEffect, useRef } from 'react';
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ScrollToTop from '../components/ScrollToTop';
-import Home from './Home';
-import CategoryPage from './CategoryPage';
-import ProductPage from './ProductPage';
-import CartPage from './CartPage';
-import CheckoutPage from './CheckoutPage';
-import LoginPage from './LoginPage';
-import AccountPage from './AccountPage';
-import RequireAdmin from '../components/RequireAdmin';
-import PaymentInfoPage from './PaymentInfoPage';
-import DeliveryInfoPage from './DeliveryInfoPage';
-import BonusesInfoPage from './BonusesInfoPage';
-import ProductionInfoPage from './ProductionInfoPage';
-import CataloguePage from './CataloguePage';
-import SearchPage from './SearchPage';
-import SearchRedirectPage from './SearchRedirectPage';
-import LegalInfoPage from './LegalInfoPage';
-import PrivacyPolicyPage from './legal/PrivacyPolicyPage';
-import UserAgreementPage from './legal/UserAgreementPage';
-import AdsConsentPage from './legal/AdsConsentPage';
-import CookiesPolicyPage from './legal/CookiesPolicyPage';
-import PersonalDataConsentPage from './legal/PersonalDataConsentPage';
-import SalesTermsPage from './legal/SalesTermsPage';
-import OrderPage from './OrderPage';
-import NotFound from './NotFound';
 import { trackMetrikaHit } from '../utils/metrika';
 import DeliveryConfigNotice from '../components/DeliveryConfigNotice';
+import { useRenderContext } from '../ssr/RenderContext';
+import { getAllStorefrontRoutes } from '../ssr/routeManifest';
 
-const AdminLoginPage = lazy(() => import('./AdminLoginPage'));
-const AdminApp = lazy(() => import('./AdminApp'));
-
-function AdminRouteFallback() {
+function ClientRouteShell({ isAdminRoute = false }) {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10 text-sm text-muted">
-      Загружаем панель управления…
+    <div
+      className={
+        isAdminRoute
+          ? 'flex min-h-screen items-center justify-center px-4 py-10 text-sm text-muted'
+          : 'page-shell page-section text-center text-sm text-muted'
+      }
+    >
+      Загружаем страницу…
     </div>
   );
+}
+
+function RouteEntryRenderer({ route }) {
+  const renderContext = useRenderContext();
+  const isServerClientRoute =
+    renderContext.target === 'server' && route.renderMode === 'csr';
+
+  if (isServerClientRoute) {
+    return <ClientRouteShell isAdminRoute={route.path.startsWith('/admin')} />;
+  }
+
+  return route.renderElement();
 }
 
 function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const mainRef = useRef(null);
+  const routes = useMemo(() => getAllStorefrontRoutes(), []);
 
   useEffect(() => {
     if (isAdminRoute) {
@@ -94,66 +88,13 @@ function App() {
           }
         >
           <Routes>
-            {/* Public user-facing routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/category/search" element={<SearchRedirectPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/category/:slug" element={<CategoryPage />} />
-            <Route path="/product/:id/:slug" element={<ProductPage />} />
-            <Route path="/product/:id" element={<ProductPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/account" element={<AccountPage />} />
-            <Route path="/order/:token" element={<OrderPage />} />
-            <Route path="/info/payment" element={<PaymentInfoPage />} />
-            <Route path="/info/delivery" element={<DeliveryInfoPage />} />
-            <Route path="/info/bonuses" element={<BonusesInfoPage />} />
-            <Route path="/info/production" element={<ProductionInfoPage />} />
-            <Route path="/catalog" element={<CataloguePage />} />
-            <Route path="/info/legal" element={<LegalInfoPage />} />
-            <Route
-              path="/konfidentsialnost-i-zashchita-informatsii"
-              element={<PrivacyPolicyPage />}
-            />
-            <Route
-              path="/polzovatelskoe-soglashenie"
-              element={<UserAgreementPage />}
-            />
-            <Route
-              path="/soglasie-na-poluchenie-reklamy"
-              element={<AdsConsentPage />}
-            />
-            <Route path="/usloviya-prodazhi" element={<SalesTermsPage />} />
-            <Route path="/cookies" element={<CookiesPolicyPage />} />
-            <Route
-              path="/soglasie-na-obrabotku-pd"
-              element={<PersonalDataConsentPage />}
-            />
-            {/* Admin login (public) */}
-            <Route
-              path="/admin/login"
-              element={
-                <Suspense fallback={<AdminRouteFallback />}>
-                  <AdminLoginPage />
-                </Suspense>
-              }
-            />
-            {/* Manager login (public) */}
-            <Route path="/manager/login" element={<Navigate to="/admin/login" replace />} />
-            {/* Protected admin routes (RequireAdmin enforces authentication) */}
-            <Route
-              path="/admin/*"
-              element={
-                <Suspense fallback={<AdminRouteFallback />}>
-                  <RequireAdmin>
-                    <AdminApp />
-                  </RequireAdmin>
-                </Suspense>
-              }
-            />
-            {/* Fallback for unknown URLs */}
-            <Route path="*" element={<NotFound />} />
+            {routes.map((route) => (
+              <Route
+                key={`${route.id}:${route.path}`}
+                path={route.path}
+                element={<RouteEntryRenderer route={route} />}
+              />
+            ))}
           </Routes>
         </main>
         {!isAdminRoute && <Footer />}

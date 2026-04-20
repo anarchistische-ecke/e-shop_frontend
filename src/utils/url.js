@@ -1,3 +1,5 @@
+import { getRuntimeConfig, readEnv } from '../config/runtime.js';
+
 const APP_ROOT_PATH = '/';
 
 function isAbsoluteHttpUrl(value = '') {
@@ -63,7 +65,13 @@ function normalizePathSegment(value) {
 }
 
 export function resolveAppBasePath() {
-  return normalizeBasePath(process.env.REACT_APP_BASENAME || process.env.PUBLIC_URL || '');
+  const runtimeConfig = getRuntimeConfig();
+  return normalizeBasePath(
+    runtimeConfig.basePath ||
+      readEnv('REACT_APP_BASENAME') ||
+      readEnv('PUBLIC_URL') ||
+      ''
+  );
 }
 
 export function buildAppPath(path = APP_ROOT_PATH) {
@@ -79,7 +87,11 @@ export function buildAppPath(path = APP_ROOT_PATH) {
 
 export function buildAbsoluteAppUrl(path = APP_ROOT_PATH) {
   if (typeof window === 'undefined' || !window.location) {
-    return undefined;
+    const runtimeOrigin = normalizeOrigin(getRuntimeConfig().siteUrl);
+    if (!runtimeOrigin) {
+      return undefined;
+    }
+    return `${runtimeOrigin}${buildAppPath(path)}`;
   }
 
   return `${window.location.origin}${buildAppPath(path)}`;
@@ -97,8 +109,9 @@ export function getCanonicalUrl(path = APP_ROOT_PATH, options = {}) {
 
   const fallbackOrigin = normalizeOrigin(
     options.origin ||
-      process.env.REACT_APP_SITE_URL ||
-      process.env.REACT_APP_CANONICAL_ORIGIN ||
+      getRuntimeConfig().siteUrl ||
+      readEnv('REACT_APP_SITE_URL') ||
+      readEnv('REACT_APP_CANONICAL_ORIGIN') ||
       ''
   );
 

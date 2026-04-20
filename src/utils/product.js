@@ -1,19 +1,11 @@
 // Utility helpers for dealing with product and price data returned by the backend API.
 // Includes helpers for prices and media attached to products/variants.
 
-const inferImageBase = () => {
-  if (typeof window !== 'undefined' && window.__IMAGE_BASE__) {
-    return window.__IMAGE_BASE__;
-  }
-  return (
-    process.env.REACT_APP_IMAGE_BASE ||
-    process.env.REACT_APP_STORAGE_BASE_URL ||
-    process.env.REACT_APP_ASSET_BASE_URL ||
-    ''
-  );
-};
+import { getRuntimeConfig } from '../config/runtime';
 
-const IMAGE_BASE = inferImageBase().replace(/\/$/, '');
+const inferImageBase = () => {
+  return getRuntimeConfig().imageBase || '';
+};
 
 const normalizeAssetUrl = (value = '') => {
   const trimmed = String(value).trim();
@@ -39,8 +31,9 @@ export function resolveImageUrl(value = '') {
   if (/^(https?:)?\/\//i.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:')) {
     return normalizeAssetUrl(raw);
   }
-  if (!IMAGE_BASE) return normalizeAssetUrl(raw);
-  return normalizeAssetUrl(`${IMAGE_BASE}/${raw.replace(/^\//, '')}`);
+  const imageBase = inferImageBase().replace(/\/$/, '');
+  if (!imageBase) return normalizeAssetUrl(raw);
+  return normalizeAssetUrl(`${imageBase}/${raw.replace(/^\//, '')}`);
 }
 
 /**

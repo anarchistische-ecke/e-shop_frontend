@@ -30,9 +30,9 @@ describe('url helpers', () => {
 
     expect(resolveAppBasePath()).toBe('/shop');
     expect(buildAppPath('/order/test-token')).toBe('/shop/order/test-token');
-    expect(buildAbsoluteAppUrl('/order/test-token')).toBe('http://localhost/shop/order/test-token');
-    expect(getCanonicalUrl('/order/test-token')).toBe('http://localhost/shop/order/test-token');
-    expect(buildAbsoluteAppUrl('/order/{token}')).toBe('http://localhost/shop/order/{token}');
+    expect(buildAbsoluteAppUrl('/order/test-token')).toBe('http://localhost:3000/shop/order/test-token');
+    expect(getCanonicalUrl('/order/test-token')).toBe('http://localhost:3000/shop/order/test-token');
+    expect(buildAbsoluteAppUrl('/order/{token}')).toBe('http://localhost:3000/shop/order/{token}');
   });
 
   it('falls back to PUBLIC_URL pathname when basename is unset', () => {
@@ -49,8 +49,8 @@ describe('url helpers', () => {
 
     expect(resolveAppBasePath()).toBe('');
     expect(buildAppPath('/order/test-token')).toBe('/order/test-token');
-    expect(buildAbsoluteAppUrl('/order/test-token')).toBe('http://localhost/order/test-token');
-    expect(getCanonicalUrl('/order/test-token')).toBe('http://localhost/order/test-token');
+    expect(buildAbsoluteAppUrl('/order/test-token')).toBe('http://localhost:3000/order/test-token');
+    expect(getCanonicalUrl('/order/test-token')).toBe('http://localhost:3000/order/test-token');
   });
 
   it('builds stable storefront product paths with slug support', () => {

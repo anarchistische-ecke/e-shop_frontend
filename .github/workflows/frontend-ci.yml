@@ -2,17 +2,24 @@ name: frontend-ci
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, add-cms ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
 env:
-  DEPLOY_PREFIX: home
+  NODE_VERSION: 22
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/cozyhome-storefront
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,23 +27,21 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint and build
-        env:
-          PUBLIC_URL: /${{ env.DEPLOY_PREFIX }}
-          REACT_APP_BASENAME: /${{ env.DEPLOY_PREFIX }}
-        run: |
-          npm run build --if-present
-          npm test --if-present -- --watch=false --passWithNoTests
+      - name: Run tests
+        run: npm test
 
-  deploy:
+      - name: Build storefront
+        run: npm run build
+
+  cms-smoke:
     needs: build
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && vars.FRONTEND_STAGING_BASE_URL != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -45,62 +50,57 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        env:
-          PUBLIC_URL: /${{ env.DEPLOY_PREFIX }}
-          REACT_APP_BASENAME: /${{ env.DEPLOY_PREFIX }}
-        run: npm run build
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
 
-      - name: Upload to Object Storage
+      - name: Run CMS smoke tests against staging
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.YC_OS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_OS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ru-central1
-          AWS_EC2_METADATA_DISABLED: "true"
-        run: |
-          aws s3 sync build s3://${{ secrets.YC_OS_BUCKET }}/${DEPLOY_PREFIX}/ --endpoint-url https://storage.yandexcloud.net --delete
-          cat > /tmp/index.html <<EOF
-          <!doctype html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8" />
-              <title>Redirecting...</title>
-              <script>
-                (function () {
-                  var prefix = "/${DEPLOY_PREFIX}";
-                  var path = window.location.pathname || "/";
-                  if (path.indexOf(prefix) !== 0) {
-                    var target = prefix + path;
-                    if (target === prefix) target = prefix + "/";
-                    window.location.replace(target + window.location.search + window.location.hash);
-                    return;
-                  }
-                  var targetIndex = prefix + "/index.html";
-                  fetch(targetIndex, { cache: "no-store" })
-                    .then(function (res) {
-                      if (!res.ok) throw new Error("index fetch failed");
-                      return res.text();
-                    })
-                    .then(function (html) {
-                      document.open();
-                      document.write(html);
-                      document.close();
-                    })
-                    .catch(function () {
-                      window.location.replace(targetIndex);
-                    });
-                })();
-              </script>
-            </head>
-            <body>
-              Redirecting to <a href="/${DEPLOY_PREFIX}/">site</a>...
-            </body>
-          </html>
-          EOF
-          aws s3 cp /tmp/index.html s3://${{ secrets.YC_OS_BUCKET }}/index.html --endpoint-url https://storage.yandexcloud.net --content-type text/html --cache-control "no-cache"
+          PLAYWRIGHT_BASE_URL: ${{ vars.FRONTEND_STAGING_BASE_URL }}
+          PLAYWRIGHT_API_BASE_URL: ${{ vars.FRONTEND_STAGING_API_BASE_URL }}
+          PLAYWRIGHT_CMS_NAV_PLACEMENT: ${{ vars.CMS_SMOKE_NAV_PLACEMENT }}
+          PLAYWRIGHT_CMS_PAGE_SLUG: ${{ vars.CMS_SMOKE_PAGE_SLUG }}
+          PLAYWRIGHT_USE_WEBSERVER: "false"
+        run: npm run e2e -- e2e/cms-smoke.spec.js
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-cms-smoke-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+
+  publish-image:
+    needs: build
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push storefront image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:main

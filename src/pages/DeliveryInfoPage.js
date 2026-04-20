@@ -1,7 +1,8 @@
 import React from 'react';
+import CmsManagedPage from '../components/cms/CmsManagedPage';
 import Seo from '../components/Seo';
 
-function DeliveryInfoPage() {
+function DeliveryInfoFallbackPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <Seo
@@ -39,6 +40,10 @@ function DeliveryInfoPage() {
       </div>
     </div>
   );
+}
+
+function DeliveryInfoPage() {
+  return <CmsManagedPage slug="delivery" fallback={<DeliveryInfoFallbackPage />} />;
 }
 
 export default DeliveryInfoPage;

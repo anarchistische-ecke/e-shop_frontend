@@ -1,11 +1,22 @@
-import { clearAllAuthStorage, getAccessToken } from '../auth/session';
+import { clearAllAuthStorage, getAccessToken } from '../auth/session.js';
+import { getRuntimeConfig, readEnv } from '../config/runtime.js';
 
-const inferBrowserApiBase = () =>
-  (typeof window !== 'undefined' ? window.__API_BASE__ || window.location.origin : null);
-const DEFAULT_API_BASE = inferBrowserApiBase() || 'http://localhost:8080';
-const API_BASE = (process.env.REACT_APP_API_BASE || DEFAULT_API_BASE).replace(/\/$/, '');
+const inferBrowserApiBase = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return getRuntimeConfig().apiBase || window.location.origin;
+};
+
+const DEFAULT_API_BASE =
+  inferBrowserApiBase() ||
+  readEnv('SERVER_API_BASE') ||
+  readEnv('REACT_APP_API_BASE') ||
+  'http://localhost:8080';
+const API_BASE = DEFAULT_API_BASE.replace(/\/$/, '');
 const JSON_TYPE = 'application/json';
-const rawActivityPath = process.env.REACT_APP_ACTIVITY_LOGS_PATH || '/admin/activity';
+const rawActivityPath = readEnv('REACT_APP_ACTIVITY_LOGS_PATH', '/admin/activity') || '/admin/activity';
 const ACTIVITY_LOGS_PATH = (rawActivityPath.startsWith('/') ? rawActivityPath : `/${rawActivityPath}`).replace(/\/$/, '');
 
 export class ApiRequestError extends Error {
@@ -388,4 +399,36 @@ export async function getAdminActivityLogs(params = {}) {
   if (params.size !== undefined) query.append('size', params.size);
   const qs = query.toString();
   return request(`${ACTIVITY_LOGS_PATH}${qs ? `?${qs}` : ''}`);
+}
+
+// CMS content façade
+export async function getCmsSiteSettings({ preview = false, signal } = {}) {
+  const path = preview ? '/content/preview/site-settings' : '/content/site-settings';
+  return request(path, { signal });
+}
+
+export async function getCmsNavigation({ placement, preview = false, signal } = {}) {
+  const path = preview ? '/content/preview/navigation' : '/content/navigation';
+  const query = new URLSearchParams();
+  if (placement) {
+    query.append('placement', placement);
+  }
+  const qs = query.toString();
+  return request(`${path}${qs ? `?${qs}` : ''}`, { signal });
+}
+
+export async function getCmsPage(slug, { preview = false, signal } = {}) {
+  if (!slug) {
+    throw new Error('CMS page slug is required');
+  }
+  const path = preview ? '/content/preview/pages' : '/content/pages';
+  return request(`${path}/${encodeURIComponent(slug)}`, { signal });
+}
+
+export async function getCmsCollection(key, { preview = false, signal } = {}) {
+  if (!key) {
+    throw new Error('CMS collection key is required');
+  }
+  const path = preview ? '/content/preview/collections' : '/content/collections';
+  return request(`${path}/${encodeURIComponent(key)}`, { signal });
 }

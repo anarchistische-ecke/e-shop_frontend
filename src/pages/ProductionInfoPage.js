@@ -1,7 +1,8 @@
 import React from 'react';
+import CmsManagedPage from '../components/cms/CmsManagedPage';
 import Seo from '../components/Seo';
 
-function ProductionInfoPage() {
+function ProductionInfoFallbackPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <Seo
@@ -38,6 +39,10 @@ function ProductionInfoPage() {
       </div>
     </div>
   );
+}
+
+function ProductionInfoPage() {
+  return <CmsManagedPage slug="production" fallback={<ProductionInfoFallbackPage />} />;
 }
 
 export default ProductionInfoPage;
