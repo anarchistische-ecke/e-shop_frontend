@@ -21,6 +21,7 @@ import {
   normalizeProductImages,
 } from '../utils/product';
 import { buildProductPath, getCanonicalUrl } from '../utils/url';
+import { useSsrData } from '../ssr/SsrDataContext';
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -51,6 +52,20 @@ function formatRub(value) {
 
 function getStockValue(entity) {
   return Number(entity?.stock ?? entity?.stockQuantity ?? 0);
+}
+
+function resolveInitialSelectedVariant(product) {
+  if (!product) {
+    return null;
+  }
+
+  const variants = Array.isArray(product?.variants)
+    ? product.variants
+    : Array.from(product?.variants || []);
+  const primaryVariant = getPrimaryVariant(product);
+  const firstAvailableVariant = variants.find((variant) => getStockValue(variant) > 0);
+
+  return firstAvailableVariant || primaryVariant || null;
 }
 
 function getAvailabilityMeta(stock, { selected = false } = {}) {
@@ -158,15 +173,21 @@ function ProductPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { addItem } = useContext(CartContext);
+  const { routeData } = useSsrData();
   const { categories, products: directoryProducts } = useProductDirectoryData();
+  const hasInitialProductLoad =
+    routeData?.kind === 'product' && String(routeData.productId || '') === String(id);
+  const initialProduct = hasInitialProductLoad ? routeData.product || null : null;
 
-  const [product, setProduct] = useState(null);
-  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [product, setProduct] = useState(initialProduct);
+  const [selectedVariant, setSelectedVariant] = useState(() =>
+    resolveInitialSelectedVariant(initialProduct)
+  );
   const [activeTab, setActiveTab] = useState('about');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [bundleSelections, setBundleSelections] = useState({});
   const [quantity, setQuantity] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!hasInitialProductLoad);
   const [isImageZoomOpen, setIsImageZoomOpen] = useState(false);
   const [showZoomHint, setShowZoomHint] = useState(true);
   const [sheetType, setSheetType] = useState('shipping');
@@ -207,7 +228,13 @@ function ProductPage() {
     setQuantity(1);
     setPendingAction('');
     setCartStatus(null);
-    setIsLoading(true);
+    setProduct(initialProduct);
+    setSelectedVariant(resolveInitialSelectedVariant(initialProduct));
+    setIsLoading(!hasInitialProductLoad);
+
+    if (hasInitialProductLoad) {
+      return undefined;
+    }
 
     getProduct(id)
       .then((data) => {
@@ -229,7 +256,8 @@ function ProductPage() {
         setSelectedVariant(null);
       })
       .finally(() => setIsLoading(false));
-  }, [id]);
+    return undefined;
+  }, [hasInitialProductLoad, id, initialProduct]);
 
   const relatedProducts = useMemo(() => {
     if (!product) {

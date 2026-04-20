@@ -1,11 +1,22 @@
-import { clearAllAuthStorage, getAccessToken } from '../auth/session';
+import { clearAllAuthStorage, getAccessToken } from '../auth/session.js';
+import { getRuntimeConfig, readEnv } from '../config/runtime.js';
 
-const inferBrowserApiBase = () =>
-  (typeof window !== 'undefined' ? window.__API_BASE__ || window.location.origin : null);
-const DEFAULT_API_BASE = inferBrowserApiBase() || 'http://localhost:8080';
-const API_BASE = (process.env.REACT_APP_API_BASE || DEFAULT_API_BASE).replace(/\/$/, '');
+const inferBrowserApiBase = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return getRuntimeConfig().apiBase || window.location.origin;
+};
+
+const DEFAULT_API_BASE =
+  inferBrowserApiBase() ||
+  readEnv('SERVER_API_BASE') ||
+  readEnv('REACT_APP_API_BASE') ||
+  'http://localhost:8080';
+const API_BASE = DEFAULT_API_BASE.replace(/\/$/, '');
 const JSON_TYPE = 'application/json';
-const rawActivityPath = process.env.REACT_APP_ACTIVITY_LOGS_PATH || '/admin/activity';
+const rawActivityPath = readEnv('REACT_APP_ACTIVITY_LOGS_PATH', '/admin/activity') || '/admin/activity';
 const ACTIVITY_LOGS_PATH = (rawActivityPath.startsWith('/') ? rawActivityPath : `/${rawActivityPath}`).replace(/\/$/, '');
 
 export class ApiRequestError extends Error {

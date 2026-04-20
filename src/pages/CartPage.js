@@ -15,6 +15,7 @@ import {
 } from '../utils/payment';
 import { CART_SESSION_STRATEGY } from '../utils/account';
 import { Button, Card, Input } from '../components/ui';
+import { readEnv } from '../config/runtime';
 
 function CartPage() {
   const { items, removeItem, updateQuantity, clearCart } = useContext(CartContext);
@@ -26,7 +27,7 @@ function CartPage() {
   const [managerStatus, setManagerStatus] = useState(null);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [quantityDrafts, setQuantityDrafts] = useState({});
-  const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
+  const managerRole = readEnv('REACT_APP_KEYCLOAK_MANAGER_ROLE', 'manager') || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
 
   const total = items.reduce(

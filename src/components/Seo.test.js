@@ -1,38 +1,28 @@
+// @vitest-environment node
+
 import React from 'react';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
+import { HelmetProvider } from 'react-helmet-async';
 import Seo from './Seo';
 
 describe('Seo', () => {
-  let container;
-  let root;
-  let originalHeadHtml;
-  let originalTitle;
-  let originalActEnvironment;
-
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
-    root = createRoot(container);
-    originalHeadHtml = document.head.innerHTML;
-    originalTitle = document.title;
-    originalActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  });
+  const originalSiteUrl = process.env.REACT_APP_SITE_URL;
 
   afterEach(() => {
-    act(() => {
-      root.unmount();
-    });
-    container.remove();
-    document.head.innerHTML = originalHeadHtml;
-    document.title = originalTitle;
-    globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment;
+    if (typeof originalSiteUrl === 'undefined') {
+      delete process.env.REACT_APP_SITE_URL;
+      return;
+    }
+
+    process.env.REACT_APP_SITE_URL = originalSiteUrl;
   });
 
   it('writes canonical metadata and escapes JSON-LD payloads safely', () => {
-    act(() => {
-      root.render(
+    process.env.REACT_APP_SITE_URL = 'http://localhost';
+    const helmetContext = {};
+
+    renderToString(
+      <HelmetProvider context={helmetContext}>
         <Seo
           title="Тестовая карточка"
           description="Описание товара"
@@ -43,19 +33,18 @@ describe('Seo', () => {
             name: 'Комплект </script> Linen',
           }}
         />
-      );
-    });
+      </HelmetProvider>
+    );
 
-    expect(document.title).toBe('Тестовая карточка | Постельное Белье-ЮГ');
-    expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+    expect(helmetContext.helmet.title.toString()).toContain(
+      'Тестовая карточка | Постельное Белье-ЮГ'
+    );
+    expect(helmetContext.helmet.link.toString()).toContain(
       'http://localhost/product/prod-1/linen-soft'
     );
-    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
+    expect(helmetContext.helmet.meta.toString()).toContain(
       'index,follow'
     );
-
-    const jsonLd = document.getElementById('cozyhome-seo-jsonld');
-    expect(jsonLd).not.toBeNull();
-    expect(jsonLd.textContent).toContain('\\u003c/script\\u003e');
+    expect(helmetContext.helmet.script.toString()).toContain('\\u003c/script\\u003e');
   });
 });

@@ -2,24 +2,27 @@ import React from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
+import { vi } from 'vitest';
 import CmsPageRenderer from './CmsPageRenderer';
 import { useCmsSiteSettings } from '../../contexts/CmsContentContext';
 
-jest.mock('../../contexts/CmsContentContext', () => ({
-  useCmsSiteSettings: jest.fn(),
+vi.mock('../../contexts/CmsContentContext', () => ({
+  useCmsSiteSettings: vi.fn(),
 }));
 
-jest.mock('../Seo', () => function SeoMock(props) {
-  return (
-    <div
-      data-testid="seo"
-      data-title={props.title}
-      data-description={props.description}
-      data-canonical-path={props.canonicalPath}
-      data-image={props.image}
-    />
-  );
-});
+vi.mock('../Seo', () => ({
+  default: function SeoMock(props) {
+    return (
+      <div
+        data-testid="seo"
+        data-title={props.title}
+        data-description={props.description}
+        data-canonical-path={props.canonicalPath}
+        data-image={props.image}
+      />
+    );
+  }
+}));
 
 function renderWithRouter(ui) {
   const container = document.createElement('div');
@@ -60,7 +63,7 @@ describe('CmsPageRenderer', () => {
 
   afterEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment;
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders ordered blocks from page sections and falls back to the generic block for unknown types', () => {

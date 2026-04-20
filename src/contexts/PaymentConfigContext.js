@@ -13,6 +13,12 @@ const PaymentConfigContext = createContext({
 let cachedPaymentConfig = null;
 let paymentConfigRequest = null;
 
+function primePaymentConfig(config) {
+  const normalized = normalizePaymentConfig(config);
+  cachedPaymentConfig = normalized;
+  return normalized;
+}
+
 function loadPaymentConfig() {
   if (cachedPaymentConfig) {
     return Promise.resolve(cachedPaymentConfig);
@@ -29,15 +35,20 @@ function loadPaymentConfig() {
   return paymentConfigRequest;
 }
 
-export function PaymentConfigProvider({ children }) {
+export function PaymentConfigProvider({ children, initialConfig = null }) {
+  const seededConfig = initialConfig ? primePaymentConfig(initialConfig) : cachedPaymentConfig;
   const [paymentConfig, setPaymentConfig] = useState(
-    cachedPaymentConfig || normalizePaymentConfig(FALLBACK_PAYMENT_CONFIG)
+    seededConfig || normalizePaymentConfig(FALLBACK_PAYMENT_CONFIG)
   );
   const [isPaymentConfigLoaded, setIsPaymentConfigLoaded] = useState(
-    Boolean(cachedPaymentConfig)
+    Boolean(seededConfig)
   );
 
   useEffect(() => {
+    if (seededConfig) {
+      return undefined;
+    }
+
     let active = true;
     loadPaymentConfig()
       .then((config) => {
@@ -56,7 +67,7 @@ export function PaymentConfigProvider({ children }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [seededConfig]);
 
   const value = useMemo(
     () => ({

@@ -4,6 +4,7 @@ import NotificationBanner from '../components/NotificationBanner';
 import { useAuth } from '../contexts/AuthContext';
 import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
 import { buildAbsoluteAppUrl } from '../utils/url';
+import { readEnv } from '../config/runtime';
 
 function ManagerLoginPage() {
   const location = useLocation();
@@ -11,7 +12,7 @@ function ManagerLoginPage() {
   const { isAuthenticated, isReady, hasRole, hasStrongAuth } = useAuth();
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
+  const managerRole = readEnv('REACT_APP_KEYCLOAK_MANAGER_ROLE', 'manager') || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
   const hasStrongSession = isAuthenticated && hasStrongAuth();
   const useKeycloak = isKeycloakConfigured();

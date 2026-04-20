@@ -1,0 +1,12 @@
+node_modules
+build
+dist
+.git
+.github
+.idea
+coverage
+playwright-report
+test-results
+tmp
+temp
+*.log

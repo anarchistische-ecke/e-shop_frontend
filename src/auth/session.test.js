@@ -1,6 +1,8 @@
-jest.mock('./keycloak', () => ({
-  getAccessToken: jest.fn(),
-  isKeycloakConfigured: jest.fn()
+import { vi } from 'vitest';
+
+vi.mock('./keycloak', () => ({
+  getAccessToken: vi.fn(),
+  isKeycloakConfigured: vi.fn()
 }));
 
 import {
@@ -29,7 +31,7 @@ function createToken(payload = {}) {
 
 describe('auth session storage', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     clearAllAuthStorage();
     window.localStorage.clear();
     window.sessionStorage.clear();

@@ -1,4 +1,5 @@
-import { useLayoutEffect } from 'react';
+import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { legalTokens } from '../data/legal/constants';
 import { getCanonicalUrl } from '../utils/url';
 
@@ -29,63 +30,32 @@ function stringifyJsonLd(payload) {
   return escapeJsonLdString(JSON.stringify(payload));
 }
 
-function upsertMeta({ name, property, content }) {
-  if (typeof document === 'undefined') return;
-  const key = name ? 'name' : 'property';
-  const value = name || property;
-  if (!value) return;
+function normalizeImageUrl(image) {
+  const rawImageUrl = normalizeText(image);
+  if (!rawImageUrl) {
+    return '';
+  }
 
-  let node = document.head.querySelector(`meta[${key}="${value}"]`);
-  if (!content) {
-    if (node) {
-      node.remove();
-    }
-    return;
+  if (/^https?:\/\//i.test(rawImageUrl) || rawImageUrl.startsWith('data:')) {
+    return rawImageUrl;
   }
-  if (!node) {
-    node = document.createElement('meta');
-    node.setAttribute(key, value);
-    document.head.appendChild(node);
-  }
-  node.setAttribute('content', content);
+
+  return getCanonicalUrl(rawImageUrl, { origin: legalTokens.SITE_URL }) || rawImageUrl;
 }
 
-function upsertLink(rel, href) {
-  if (typeof document === 'undefined' || !rel) return;
-  let node = document.head.querySelector(`link[rel="${rel}"]`);
-  if (!href) {
-    if (node) {
-      node.remove();
-    }
-    return;
-  }
-  if (!node) {
-    node = document.createElement('link');
-    node.setAttribute('rel', rel);
-    document.head.appendChild(node);
-  }
-  node.setAttribute('href', href);
-}
-
-function upsertJsonLd(jsonLd) {
-  if (typeof document === 'undefined') return;
+function buildJsonLdNodes(jsonLd) {
   const payload = Array.isArray(jsonLd) ? jsonLd.filter(Boolean) : jsonLd ? [jsonLd] : [];
-  const existing = document.getElementById(JSON_LD_SCRIPT_ID);
-
   if (payload.length === 0) {
-    if (existing) {
-      existing.remove();
-    }
-    return;
+    return null;
   }
 
-  const node = existing || document.createElement('script');
-  node.id = JSON_LD_SCRIPT_ID;
-  node.type = 'application/ld+json';
-  node.textContent = stringifyJsonLd(payload.length === 1 ? payload[0] : payload);
-  if (!existing) {
-    document.head.appendChild(node);
-  }
+  const serializedPayload = stringifyJsonLd(payload.length === 1 ? payload[0] : payload);
+
+  return (
+    <script id={JSON_LD_SCRIPT_ID} type="application/ld+json">
+      {serializedPayload}
+    </script>
+  );
 }
 
 function Seo({
@@ -97,49 +67,32 @@ function Seo({
   robots = DEFAULT_ROBOTS,
   jsonLd = null
 }) {
-  useLayoutEffect(() => {
-    if (typeof document === 'undefined') {
-      return;
-    }
+  const pageTitle = buildTitle(title);
+  const pageDescription = normalizeText(description, DEFAULT_DESCRIPTION);
+  const canonicalUrl = getCanonicalUrl(canonicalPath, { origin: legalTokens.SITE_URL });
+  const imageUrl = normalizeImageUrl(image);
+  const twitterCard = imageUrl ? 'summary_large_image' : 'summary';
 
-    const pageTitle = buildTitle(title);
-    const pageDescription = normalizeText(description, DEFAULT_DESCRIPTION);
-    const canonicalUrl = getCanonicalUrl(canonicalPath, { origin: legalTokens.SITE_URL });
-    const rawImageUrl = normalizeText(image);
-    const imageUrl =
-      rawImageUrl && !/^https?:\/\//i.test(rawImageUrl) && !rawImageUrl.startsWith('data:')
-        ? getCanonicalUrl(rawImageUrl, { origin: legalTokens.SITE_URL })
-        : rawImageUrl;
-    const twitterCard = imageUrl ? 'summary_large_image' : 'summary';
-
-    document.title = pageTitle;
-    document.documentElement.lang = 'ru';
-
-    upsertMeta({ name: 'description', content: pageDescription });
-    upsertMeta({ name: 'robots', content: normalizeText(robots, DEFAULT_ROBOTS) });
-    upsertMeta({ property: 'og:site_name', content: legalTokens.SITE_NAME });
-    upsertMeta({ property: 'og:locale', content: 'ru_RU' });
-    upsertMeta({ property: 'og:title', content: pageTitle });
-    upsertMeta({ property: 'og:description', content: pageDescription });
-    upsertMeta({ property: 'og:url', content: canonicalUrl });
-    upsertMeta({ property: 'og:type', content: normalizeText(type, 'website') });
-    upsertMeta({ name: 'twitter:card', content: twitterCard });
-    upsertMeta({ name: 'twitter:title', content: pageTitle });
-    upsertMeta({ name: 'twitter:description', content: pageDescription });
-
-    if (imageUrl) {
-      upsertMeta({ property: 'og:image', content: imageUrl });
-      upsertMeta({ name: 'twitter:image', content: imageUrl });
-    } else {
-      upsertMeta({ property: 'og:image', content: '' });
-      upsertMeta({ name: 'twitter:image', content: '' });
-    }
-
-    upsertLink('canonical', canonicalUrl);
-    upsertJsonLd(jsonLd);
-  }, [canonicalPath, description, image, jsonLd, robots, title, type]);
-
-  return null;
+  return (
+    <Helmet htmlAttributes={{ lang: 'ru' }}>
+      <title>{pageTitle}</title>
+      <meta name="description" content={pageDescription} />
+      <meta name="robots" content={normalizeText(robots, DEFAULT_ROBOTS)} />
+      <meta property="og:site_name" content={legalTokens.SITE_NAME} />
+      <meta property="og:locale" content="ru_RU" />
+      <meta property="og:title" content={pageTitle} />
+      <meta property="og:description" content={pageDescription} />
+      {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
+      <meta property="og:type" content={normalizeText(type, 'website')} />
+      <meta name="twitter:card" content={twitterCard} />
+      <meta name="twitter:title" content={pageTitle} />
+      <meta name="twitter:description" content={pageDescription} />
+      {imageUrl ? <meta property="og:image" content={imageUrl} /> : null}
+      {imageUrl ? <meta name="twitter:image" content={imageUrl} /> : null}
+      {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
+      {buildJsonLdNodes(jsonLd)}
+    </Helmet>
+  );
 }
 
 export default Seo;
