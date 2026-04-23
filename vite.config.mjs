@@ -17,6 +17,9 @@ export default defineConfig({
     outDir: 'dist/client',
     emptyOutDir: true
   },
+  ssr: {
+    noExternal: ['react-helmet-async']
+  },
   optimizeDeps: {
     esbuildOptions: {
       loader: {
