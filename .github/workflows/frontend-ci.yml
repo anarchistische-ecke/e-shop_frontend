@@ -104,3 +104,28 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.IMAGE_NAME }}:main
+
+      - name: Dispatch production storefront deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          ESHOP_WORKFLOW_DISPATCH_TOKEN: ${{ secrets.ESHOP_WORKFLOW_DISPATCH_TOKEN }}
+          DEPLOY_REPOSITORY: anarchistische-ecke/e-shop
+          STOREFRONT_IMAGE_REPOSITORY: ${{ env.IMAGE_NAME }}
+          STOREFRONT_IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ESHOP_WORKFLOW_DISPATCH_TOKEN:-}" ]; then
+            echo "::error::Missing ESHOP_WORKFLOW_DISPATCH_TOKEN secret. Add a fine-grained token that can run workflows in ${DEPLOY_REPOSITORY}."
+            exit 1
+          fi
+
+          payload="$(printf '{"ref":"main","inputs":{"ref":"main","storefront_image_repository":"%s","storefront_image_tag":"%s"}}' \
+            "$STOREFRONT_IMAGE_REPOSITORY" \
+            "$STOREFRONT_IMAGE_TAG")"
+
+          curl --fail-with-body --request POST \
+            --header "Authorization: Bearer ${ESHOP_WORKFLOW_DISPATCH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" \
+            "https://api.github.com/repos/${DEPLOY_REPOSITORY}/actions/workflows/deploy-production-storefront.yml/dispatches"
