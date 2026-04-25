@@ -20,12 +20,6 @@ export const TRUST_LINKS = [
     path: '/info/production'
   },
   {
-    id: 'bonuses',
-    title: 'Бонусы и лояльность',
-    description: 'Как начисляются и списываются бонусы.',
-    path: '/info/bonuses'
-  },
-  {
     id: 'legal',
     title: 'Реквизиты и документы',
     description: `Оферта, политика данных и реквизиты ${legalTokens.LEGAL_ENTITY_SHORT}.`,

@@ -229,6 +229,20 @@ export async function getCart(cartId) {
 export async function getCartTotal(cartId) {
   return request(`/carts/${cartId}/total`);
 }
+export async function getCartPricing(cartId) {
+  return request(`/carts/${cartId}/pricing`);
+}
+export async function applyCartPromoCode(cartId, code) {
+  return request(`/carts/${cartId}/promo-code`, {
+    method: 'PUT',
+    body: JSON.stringify({ code })
+  });
+}
+export async function removeCartPromoCode(cartId) {
+  return request(`/carts/${cartId}/promo-code`, {
+    method: 'DELETE'
+  });
+}
 export async function addItemToCart(cartId, variantId, quantity = 1) {
   return request(`/carts/${cartId}/items`, {
     method: 'POST',

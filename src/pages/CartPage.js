@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { CartContext } from '../contexts/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { createManagerOrderLink } from '../api';
+import { createManagerOrderLink, isApiRequestError } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
 import { moneyToNumber } from '../utils/product';
@@ -17,7 +17,15 @@ import { CART_SESSION_STRATEGY } from '../utils/account';
 import { Button, Card, Input } from '../components/ui';
 
 function CartPage() {
-  const { items, removeItem, updateQuantity, clearCart } = useContext(CartContext);
+  const {
+    items,
+    pricing,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    applyPromoCode,
+    removePromoCode
+  } = useContext(CartContext);
   const navigate = useNavigate();
   const { isAuthenticated, hasRole } = useAuth();
   const { paymentConfig } = usePaymentConfig();
@@ -26,13 +34,31 @@ function CartPage() {
   const [managerStatus, setManagerStatus] = useState(null);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [quantityDrafts, setQuantityDrafts] = useState({});
+  const [promoDraft, setPromoDraft] = useState('');
+  const [promoStatus, setPromoStatus] = useState(null);
+  const [isPromoSubmitting, setIsPromoSubmitting] = useState(false);
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
 
-  const total = items.reduce(
+  const fallbackTotal = items.reduce(
     (sum, item) => sum + (item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity,
     0
   );
+  const originalSubtotal = pricing ? moneyToNumber(pricing.originalSubtotal) : fallbackTotal;
+  const saleSubtotal = pricing ? moneyToNumber(pricing.saleSubtotal) : fallbackTotal;
+  const productSaleDiscount = pricing ? moneyToNumber(pricing.productSaleDiscount) : 0;
+  const cartDiscount = pricing ? moneyToNumber(pricing.cartDiscount) : 0;
+  const promoCodeDiscount = pricing ? moneyToNumber(pricing.promoCodeDiscount) : 0;
+  const thresholdDiscount = pricing ? moneyToNumber(pricing.thresholdDiscount) : 0;
+  const total = pricing ? moneyToNumber(pricing.finalTotal) : fallbackTotal;
+  const activePromoCode = pricing?.promoCode || '';
+  const isPromoCodeApplied = Boolean(pricing?.promoCodeApplied);
+  const promoWasValidButNotChosen =
+    activePromoCode &&
+    pricing?.promoCodeStatus === 'VALID' &&
+    pricing?.appliedCartDiscountType !== 'PROMO_CODE' &&
+    promoCodeDiscount > 0 &&
+    thresholdDiscount >= promoCodeDiscount;
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
   const paymentDescription = getCheckoutPaymentDescription(paymentConfig);
@@ -51,6 +77,10 @@ function CartPage() {
       return next;
     });
   }, [items]);
+
+  useEffect(() => {
+    setPromoDraft(activePromoCode);
+  }, [activePromoCode]);
 
   const setQuantityDraft = (itemId, value) => {
     setQuantityDrafts((prev) => ({ ...prev, [itemId]: value }));
@@ -75,6 +105,41 @@ function CartPage() {
       cart_total: Math.round(total)
     });
     navigate('/checkout');
+  };
+
+  const handleApplyPromoCode = async (event) => {
+    event.preventDefault();
+    const code = promoDraft.trim();
+    if (!code) {
+      setPromoStatus({ type: 'error', message: 'Введите промокод.' });
+      return;
+    }
+    setIsPromoSubmitting(true);
+    setPromoStatus(null);
+    const result = await applyPromoCode(code);
+    setIsPromoSubmitting(false);
+    if (result?.ok) {
+      setPromoStatus({ type: 'success', message: 'Промокод проверен и учтён в расчёте.' });
+      return;
+    }
+    const error = result?.error;
+    const message = isApiRequestError(error)
+      ? error.message
+      : 'Промокод не применён. Проверьте условия акции.';
+    setPromoStatus({ type: 'error', message });
+  };
+
+  const handleRemovePromoCode = async () => {
+    setIsPromoSubmitting(true);
+    setPromoStatus(null);
+    const result = await removePromoCode();
+    setIsPromoSubmitting(false);
+    if (result?.ok) {
+      setPromoDraft('');
+      setPromoStatus({ type: 'success', message: 'Промокод удалён из корзины.' });
+      return;
+    }
+    setPromoStatus({ type: 'error', message: 'Не удалось удалить промокод.' });
   };
 
   const handleCreateManagerLink = async ({ sendEmail, copyAfter = false } = {}) => {
@@ -188,6 +253,11 @@ function CartPage() {
                     </p>
                     <div className="text-accent font-semibold mt-2">
                       {(item.unitPriceValue || moneyToNumber(item.unitPrice)).toLocaleString('ru-RU')} ₽
+                      {item.oldUnitPriceValue && item.oldUnitPriceValue > item.unitPriceValue ? (
+                        <span className="ml-2 text-xs font-normal text-muted line-through">
+                          {item.oldUnitPriceValue.toLocaleString('ru-RU')} ₽
+                        </span>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
                       <div className="flex items-center gap-1 rounded-2xl border border-ink/10 bg-white/85 p-1">
@@ -267,9 +337,75 @@ function CartPage() {
               <Card padding="md">
                 <h3 className="text-xl font-semibold mb-4">Сводка заказа</h3>
                 <div className="flex justify-between mb-2 text-sm">
-                  <span>Товары ({itemCount})</span>
-                  <span>{total.toLocaleString('ru-RU')} ₽</span>
+                  <span>Товары без скидок ({itemCount})</span>
+                  <span>{originalSubtotal.toLocaleString('ru-RU')} ₽</span>
                 </div>
+                {productSaleDiscount > 0 ? (
+                  <div className="flex justify-between mb-2 text-sm text-primary">
+                    <span>Скидки на товары</span>
+                    <span>−{productSaleDiscount.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                ) : null}
+                {saleSubtotal !== originalSubtotal ? (
+                  <div className="flex justify-between mb-2 text-sm">
+                    <span>Товары по акциям</span>
+                    <span>{saleSubtotal.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                ) : null}
+                <form onSubmit={handleApplyPromoCode} className="my-4 rounded-2xl border border-ink/10 bg-sand/40 p-3">
+                  <label className="text-sm font-semibold" htmlFor="cart-promo-code">
+                    Акции и промокоды
+                  </label>
+                  <div className="mt-2 flex gap-2">
+                    <Input
+                      id="cart-promo-code"
+                      value={promoDraft}
+                      onChange={(event) => setPromoDraft(event.target.value.toUpperCase())}
+                      placeholder="PROMO"
+                      autoComplete="off"
+                      disabled={isPromoSubmitting}
+                    />
+                    <Button type="submit" disabled={isPromoSubmitting}>
+                      {isPromoSubmitting ? 'Проверяем…' : 'Применить'}
+                    </Button>
+                  </div>
+                  {activePromoCode ? (
+                    <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
+                      <span>
+                        {isPromoCodeApplied
+                          ? `Применён промокод ${activePromoCode}`
+                          : `Промокод ${activePromoCode} сохранён, но не выбран как лучшая скидка`}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="!px-1 text-xs"
+                        onClick={handleRemovePromoCode}
+                        disabled={isPromoSubmitting}
+                      >
+                        Удалить
+                      </Button>
+                    </div>
+                  ) : null}
+                  {promoWasValidButNotChosen ? (
+                    <p className="mt-2 text-xs text-muted">
+                      Скидка по сумме корзины сейчас выгоднее промокода.
+                    </p>
+                  ) : null}
+                  {promoStatus ? <NotificationBanner notification={promoStatus} compact className="mt-3" /> : null}
+                </form>
+                {cartDiscount > 0 ? (
+                  <div className="flex justify-between mb-2 text-sm text-primary">
+                    <span>{pricing?.appliedCartDiscountLabel || 'Скидка по корзине'}</span>
+                    <span>−{cartDiscount.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                ) : thresholdDiscount > 0 ? (
+                  <div className="flex justify-between mb-2 text-sm text-muted">
+                    <span>Доступна скидка по сумме корзины</span>
+                    <span>до −{thresholdDiscount.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between mb-2 text-sm">
                   <span>Доставка</span>
                   <span>Рассчитаем на следующем шаге</span>

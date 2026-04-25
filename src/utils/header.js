@@ -83,9 +83,7 @@ export function buildAccountLinks(isManager) {
 
   return [
     { to: '/account#profile', label: 'Профиль' },
-    { to: '/account#bonuses', label: 'Уютные бонусы' },
-    { to: '/account#promocodes', label: 'Мои промокоды' },
-    { to: '/account#referral', label: 'Приведи друга' },
+    { to: '/account#promocodes', label: 'Акции и промокоды' },
     { to: '/account#orders', label: 'Мои заказы' },
     { to: '/account#purchases', label: 'Купленные товары' }
   ];

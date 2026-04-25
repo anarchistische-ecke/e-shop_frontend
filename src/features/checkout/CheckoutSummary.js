@@ -9,6 +9,7 @@ import { Button, Card } from '../../components/ui';
 function CheckoutSummary({
   items,
   itemsCount,
+  pricing,
   total,
   deliveryLabel,
   payableTotal,
@@ -17,6 +18,11 @@ function CheckoutSummary({
 }) {
   const { paymentConfig } = usePaymentConfig();
   const paymentDescription = getCheckoutPaymentDescription(paymentConfig);
+  const originalSubtotal = pricing ? moneyToNumber(pricing.originalSubtotal) : total;
+  const saleSubtotal = pricing ? moneyToNumber(pricing.saleSubtotal) : total;
+  const productSaleDiscount = pricing ? moneyToNumber(pricing.productSaleDiscount) : 0;
+  const cartDiscount = pricing ? moneyToNumber(pricing.cartDiscount) : 0;
+  const cartDiscountLabel = pricing?.appliedCartDiscountLabel || 'Скидка по корзине';
 
   return (
     <>
@@ -37,7 +43,16 @@ function CheckoutSummary({
                 </div>
               ))}
               <hr className="my-2 border-ink/10" />
-              <div className="flex justify-between"><span>Товары</span><span>{formatRub(total)}</span></div>
+              <div className="flex justify-between"><span>Товары</span><span>{formatRub(originalSubtotal)}</span></div>
+              {productSaleDiscount > 0 ? (
+                <div className="flex justify-between text-primary"><span>Скидки на товары</span><span>−{formatRub(productSaleDiscount)}</span></div>
+              ) : null}
+              {saleSubtotal !== originalSubtotal ? (
+                <div className="flex justify-between"><span>Цена с акциями</span><span>{formatRub(saleSubtotal)}</span></div>
+              ) : null}
+              {cartDiscount > 0 ? (
+                <div className="flex justify-between text-primary"><span>{cartDiscountLabel}</span><span>−{formatRub(cartDiscount)}</span></div>
+              ) : null}
               <div className="flex justify-between"><span>Доставка</span><span>{deliveryLabel}</span></div>
               <div className="flex justify-between font-semibold"><span>К оплате</span><span>{formatRub(payableTotal)}</span></div>
             </div>
@@ -76,8 +91,26 @@ function CheckoutSummary({
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt>Товары ({itemsCount})</dt>
-              <dd>{formatRub(total)}</dd>
+              <dd>{formatRub(originalSubtotal)}</dd>
             </div>
+            {productSaleDiscount > 0 ? (
+              <div className="flex justify-between text-primary">
+                <dt>Скидки на товары</dt>
+                <dd>−{formatRub(productSaleDiscount)}</dd>
+              </div>
+            ) : null}
+            {saleSubtotal !== originalSubtotal ? (
+              <div className="flex justify-between">
+                <dt>Цена с акциями</dt>
+                <dd>{formatRub(saleSubtotal)}</dd>
+              </div>
+            ) : null}
+            {cartDiscount > 0 ? (
+              <div className="flex justify-between text-primary">
+                <dt>{cartDiscountLabel}</dt>
+                <dd>−{formatRub(cartDiscount)}</dd>
+              </div>
+            ) : null}
             <div className="flex justify-between">
               <dt>Доставка</dt>
               <dd>{deliveryLabel}</dd>

@@ -44,7 +44,12 @@ describe('header utils', () => {
     expect(resolveWayfindingLabel('/search', '?query=плед')).toBe('Поиск');
     expect(resolveWayfindingLabel('/category/search?query=плед')).toBe('Поиск');
     expect(resolveWayfindingLabel('/catalog', '?query=плед')).toBe('Поиск');
-    expect(buildAccountLinks(false)).toHaveLength(6);
+    expect(buildAccountLinks(false)).toEqual([
+      { to: '/account#profile', label: 'Профиль' },
+      { to: '/account#promocodes', label: 'Акции и промокоды' },
+      { to: '/account#orders', label: 'Мои заказы' },
+      { to: '/account#purchases', label: 'Купленные товары' }
+    ]);
     expect(buildAccountLinks(true)).toEqual([
       { to: '/account#overview', label: 'Сводка' },
       { to: '/account#orders', label: 'Заказы' },

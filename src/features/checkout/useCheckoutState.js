@@ -57,7 +57,7 @@ import {
 
 export function useCheckoutState() {
   const navigate = useNavigate();
-  const { items: liveItems, cartId } = useContext(CartContext);
+  const { items: liveItems, cartId, pricing } = useContext(CartContext);
   const { tokenParsed, isAuthenticated, hasRole } = useAuth();
   const { paymentConfig, isPaymentConfigLoaded } = usePaymentConfig();
   const managerRole = process.env.REACT_APP_KEYCLOAK_MANAGER_ROLE || 'manager';
@@ -243,11 +243,11 @@ export function useCheckoutState() {
   );
 
   const total = useMemo(
-    () => items.reduce(
+    () => pricing ? moneyToNumber(pricing.finalTotal) : items.reduce(
       (sum, item) => sum + (item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity,
       0
     ),
-    [items]
+    [items, pricing]
   );
 
   const selectedOffer = useMemo(
@@ -1412,6 +1412,7 @@ export function useCheckoutState() {
     handleSafeRetry,
     items,
     itemsCount,
+    pricing,
     total,
     deliveryLabel,
     payableTotal,

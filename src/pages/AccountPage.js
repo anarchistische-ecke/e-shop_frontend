@@ -35,22 +35,6 @@ const IconProfile = ({ className }) => (
   </svg>
 );
 
-const IconBonus = ({ className }) => (
-  <svg
-    viewBox="0 0 24 24"
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <circle cx="12" cy="8" r="4" />
-    <path d="M8 14l-1 7 5-3 5 3-1-7" />
-  </svg>
-);
-
 const IconTicket = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
@@ -65,24 +49,6 @@ const IconTicket = ({ className }) => (
     <path d="M5 7h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4V9a2 2 0 0 1 2-2z" />
     <path d="M10 7v10" />
     <path d="M14 10h2" />
-  </svg>
-);
-
-const IconUsers = ({ className }) => (
-  <svg
-    viewBox="0 0 24 24"
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <circle cx="9" cy="8" r="3" />
-    <circle cx="17" cy="9" r="2.5" />
-    <path d="M3 20a6 6 0 0 1 12 0" />
-    <path d="M14 20a4 4 0 0 1 7 0" />
   </svg>
 );
 
@@ -144,9 +110,7 @@ const PROFILE_SUBMENU = [
 ];
 
 const ACCOUNT_MENU = [
-  { id: 'bonuses', label: 'Уютные бонусы', icon: IconBonus },
-  { id: 'promocodes', label: 'Мои промокоды', icon: IconTicket },
-  { id: 'referral', label: 'Приведи друга', icon: IconUsers },
+  { id: 'promocodes', label: 'Акции и промокоды', icon: IconTicket },
   { id: 'orders', label: 'Мои заказы', icon: IconBag },
   { id: 'purchases', label: 'Купленные товары', icon: IconBox }
 ];
@@ -169,9 +133,7 @@ const SECTION_LABELS = {
   profile: 'Профиль',
   addresses: 'Мои адреса',
   events: 'Уютные события',
-  bonuses: 'Уютные бонусы',
-  promocodes: 'Мои промокоды',
-  referral: 'Приведи друга',
+  promocodes: 'Акции и промокоды',
   orders: 'Мои заказы',
   purchases: 'Купленные товары'
 };
@@ -212,7 +174,6 @@ function AccountPage() {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
-  const [copyStatus, setCopyStatus] = useState(null);
 
   const routeState = useMemo(() => {
     const nextState = resolveAccountLocationState({
@@ -293,13 +254,6 @@ function AccountPage() {
       lastName: tokenParsed?.family_name || parts.slice(1).join(' ') || ''
     };
   }, [tokenParsed]);
-  const referralCode = useMemo(() => {
-    const seed = tokenParsed?.preferred_username || tokenParsed?.email || '';
-    if (!seed) return 'COZY-LOVE';
-    const base = seed.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    return `COZY-${base.slice(0, 6) || 'LOVE'}`;
-  }, [tokenParsed]);
-
   useEffect(() => {
     if (!tokenParsed) return;
     setProfile((prev) => ({
@@ -336,7 +290,6 @@ function AccountPage() {
     return <Navigate to="/" replace />;
   }
 
-  const loyaltyPoints = orders.length * 120;
   const isProfileActive = PROFILE_SECTIONS.includes(activeSection);
   const displayName =
     [profile.firstName, profile.lastName].filter(Boolean).join(' ') ||
@@ -410,19 +363,6 @@ function AccountPage() {
       return;
     }
     logout();
-  };
-
-  const handleCopyCode = async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
-    try {
-      await navigator.clipboard.writeText(referralCode);
-      setCopyStatus('copied');
-      window.setTimeout(() => setCopyStatus(null), 2000);
-    } catch (err) {
-      console.warn('Failed to copy referral code', err);
-      setCopyStatus('error');
-      window.setTimeout(() => setCopyStatus(null), 2000);
-    }
   };
 
   const getOrderTotal = (order) => {
@@ -618,53 +558,15 @@ function AccountPage() {
             </Card>
           </Card>
         );
-      case 'bonuses':
-        return (
-          <Card className="reveal-up" padding="lg">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h2 className="text-xl sm:text-2xl font-semibold">Уютные бонусы</h2>
-              <span className="text-xs uppercase tracking-[0.25em] text-primary">Баланс</span>
-            </div>
-            <p className="text-sm text-muted mb-3">Ваши бонусы доступны для списания на следующую покупку.</p>
-            <div className="text-3xl font-semibold text-primary">{loyaltyPoints} баллов</div>
-            <p className="text-xs text-muted mt-2">1 балл = 1 ₽. Бонусы действуют 365 дней.</p>
-            <Button as={Link} to="/info/bonuses" variant="secondary" className="mt-5">
-              Подробнее о программе
-            </Button>
-          </Card>
-        );
       case 'promocodes':
         return (
           <Card className="reveal-up" padding="lg">
-            <h2 className="text-xl sm:text-2xl font-semibold mb-3">Мои промокоды</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold mb-3">Акции и промокоды</h2>
             <p className="text-sm text-muted">
-              Здесь появятся все активные промокоды и персональные скидки.
+              Здесь появятся активные промокоды и условия акций, доступные для ваших заказов.
             </p>
             <Card variant="quiet" padding="sm" className="mt-5 text-sm text-muted">
-              Пока нет активных промокодов. Первый бонус появится здесь автоматически.
-            </Card>
-          </Card>
-        );
-      case 'referral':
-        return (
-          <Card className="reveal-up" padding="lg">
-            <h2 className="text-xl sm:text-2xl font-semibold mb-3">Приведи друга</h2>
-            <p className="text-sm text-muted">
-              Делитесь кодом с друзьями и получайте бонусы за их покупки.
-            </p>
-            <Card variant="quiet" padding="sm" className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl">
-              <span className="text-sm font-semibold tracking-[0.2em] text-ink">{referralCode}</span>
-              <Button
-                type="button"
-                onClick={handleCopyCode}
-                variant="ghost"
-                size="sm"
-              >
-                {copyStatus === 'copied' ? 'Скопировано' : 'Скопировать'}
-              </Button>
-              {copyStatus === 'error' && (
-                <span className="text-xs text-red-500">Не удалось скопировать</span>
-              )}
+              Пока нет активных промокодов. Общие скидки по сумме корзины рассчитываются автоматически.
             </Card>
           </Card>
         );
@@ -839,7 +741,7 @@ function AccountPage() {
     <div className="account-page page-section">
       <Seo
         title="Личный кабинет"
-        description="Профиль покупателя, история заказов, бонусы и персональные данные для быстрого повторного оформления."
+        description="Профиль покупателя, история заказов, акции и персональные данные для быстрого повторного оформления."
         canonicalPath={
           activeSection === ACCOUNT_DEFAULT_SECTION
             ? '/account'
@@ -873,16 +775,22 @@ function AccountPage() {
               <p className="text-sm text-muted mt-1">{displayPhone}</p>
             </Card>
 
-            <div className="rounded-3xl p-5 text-white relative overflow-hidden reveal-up bg-gradient-to-br from-[#c99b7b] via-[#b07c63] to-[#a5684d]">
+            <div className="rounded-3xl p-5 text-white relative overflow-hidden reveal-up bg-gradient-to-br from-[#55746a] via-[#49665e] to-[#384e49]">
               <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_top,#ffffff,transparent_65%)]" />
               <div className="relative space-y-3">
-                <p className="text-sm uppercase tracking-[0.25em] text-white/80">Лояльность</p>
+                <p className="text-sm uppercase tracking-[0.25em] text-white/80">Акции</p>
                 <p className="text-base font-semibold leading-snug">
-                  Присоединяйтесь к программе лояльности и получайте кешбэк до 50% уютными бонусами.
+                  Промокоды и скидки по сумме корзины применяются автоматически по правилам акции.
                 </p>
-                <Link to="/info/bonuses" className="inline-flex items-center justify-center rounded-full border border-white/60 px-4 py-2 text-xs uppercase tracking-[0.25em]">
-                  Подробнее
-                </Link>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="border border-white/60 text-white hover:bg-white/10"
+                  onClick={() => handleSectionChange('promocodes')}
+                >
+                  Акции и промокоды
+                </Button>
               </div>
             </div>
 

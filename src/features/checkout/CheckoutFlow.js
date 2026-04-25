@@ -169,6 +169,7 @@ function CheckoutFlow({ checkout }) {
         <CheckoutSummary
           items={checkout.items}
           itemsCount={checkout.itemsCount}
+          pricing={checkout.pricing}
           total={checkout.total}
           deliveryLabel={checkout.deliveryLabel}
           payableTotal={checkout.payableTotal}

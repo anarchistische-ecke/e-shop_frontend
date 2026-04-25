@@ -14,7 +14,6 @@ import AccountPage from './AccountPage';
 import RequireAdmin from '../components/RequireAdmin';
 import PaymentInfoPage from './PaymentInfoPage';
 import DeliveryInfoPage from './DeliveryInfoPage';
-import BonusesInfoPage from './BonusesInfoPage';
 import ProductionInfoPage from './ProductionInfoPage';
 import CataloguePage from './CataloguePage';
 import SearchPage from './SearchPage';
@@ -110,7 +109,6 @@ function App() {
             <Route path="/order/:token" element={<OrderPage />} />
             <Route path="/info/payment" element={<PaymentInfoPage />} />
             <Route path="/info/delivery" element={<DeliveryInfoPage />} />
-            <Route path="/info/bonuses" element={<BonusesInfoPage />} />
             <Route path="/info/production" element={<ProductionInfoPage />} />
             <Route path="/catalog" element={<CataloguePage />} />
             <Route path="/info/legal" element={<LegalInfoPage />} />
