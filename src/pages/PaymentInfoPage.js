@@ -7,13 +7,13 @@ function PaymentInfoFallbackPage() {
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <Seo
         title="Способы оплаты"
-        description="Безопасная оплата картой, СБП и при получении, а также правила чеков и возвратов."
+        description="Безопасная полная предоплата картой и через СБП, онлайн-чеки 54-ФЗ и возвраты тем же способом."
         canonicalPath="/info/payment"
       />
       <p className="text-xs uppercase tracking-[0.3em] text-muted">Сервис</p>
       <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Удобная оплата</h1>
       <p className="text-muted mb-6">
-        Мы поддерживаем безопасные способы оплаты. В онлайн-заказе оплачиваются товары, а доставку менеджер согласует отдельно после оформления.
+        На первом этапе заказ оплачивается полной предоплатой товаров через YooKassa. Доставку менеджер согласует отдельно после оформления.
       </p>
       <div className="grid md:grid-cols-2 gap-4 mb-6">
         <div className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm">
@@ -23,9 +23,9 @@ function PaymentInfoFallbackPage() {
           </p>
         </div>
         <div className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">СБП и рассрочка</h2>
+          <h2 className="text-lg font-semibold mb-2">СБП</h2>
           <p className="text-sm text-muted">
-            Оплачивайте через СБП без комиссии или выбирайте оплату частями у партнёров‑банков. Условия рассрочки показываем перед подтверждением.
+            Оплачивайте через Систему быстрых платежей в защищённой форме YooKassa. На сайте доступны только карта и СБП.
           </p>
         </div>
       </div>
@@ -35,7 +35,7 @@ function PaymentInfoFallbackPage() {
           Финальную стоимость и варианты доставки согласует менеджер. После оплаты заказа он свяжется с вами, уточнит адрес и предложит доступные способы получения.
         </p>
         <ul className="list-disc list-inside text-sm text-muted space-y-1">
-          <li>Чеки отправляем на e‑mail и в личный кабинет.</li>
+          <li>Онлайн-чеки 54-ФЗ формирует YooKassa и отправляет на e‑mail.</li>
           <li>При отмене заказа возврат оформляется тем же способом оплаты.</li>
           <li>Вопросы по оплате: postel-yug@yandex.ru или +7 961 466‑88‑33.</li>
         </ul>

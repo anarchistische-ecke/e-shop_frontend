@@ -289,6 +289,9 @@ function OrderPage() {
   const canPay = orderStatus === 'PENDING' || orderStatus === 'PROCESSING';
   const canRefresh = canPay;
   const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
+  const paymentSummary = order.paymentSummary || null;
+  const receiptUrl = paymentSummary?.receiptUrl || '';
+  const refundedAmount = moneyToNumber(paymentSummary?.refundedAmount);
   const showEmbeddedPayment = canPay && hasEmbeddedPaymentSession(paymentSession);
   const paymentNotice = canPay
     ? getOrderPaymentNotice(paymentConfig, orderStatus)
@@ -445,6 +448,28 @@ function OrderPage() {
                 <span>Оплата</span>
                 <span>{paymentSummaryLabel}</span>
               </div>
+              {paymentSummary ? (
+                <div className="rounded-2xl border border-ink/10 bg-white/80 px-3 py-3 text-xs text-muted space-y-1">
+                  <div className="flex justify-between gap-3">
+                    <span>Статус платежа</span>
+                    <span className="font-semibold text-ink">{paymentSummary.status}</span>
+                  </div>
+                  {receiptUrl ? (
+                    <div className="flex justify-between gap-3">
+                      <span>Чек 54-ФЗ</span>
+                      <a className="font-semibold text-primary" href={receiptUrl} target="_blank" rel="noreferrer">
+                        Открыть
+                      </a>
+                    </div>
+                  ) : null}
+                  {refundedAmount > 0 ? (
+                    <div className="flex justify-between gap-3">
+                      <span>Возвращено</span>
+                      <span className="font-semibold text-ink">{refundedAmount.toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <hr className="my-3 border-ink/10" />
               <div className="flex justify-between font-semibold text-base mb-4">
                 <span>Итого</span>

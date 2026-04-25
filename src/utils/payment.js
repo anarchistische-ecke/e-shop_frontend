@@ -8,7 +8,12 @@ export const FALLBACK_PAYMENT_CONFIG = {
   resumePaymentLabel: 'Продолжить оплату',
   confirmationMode: 'REDIRECT',
   supportsEmbedded: false,
-  widgetScriptUrl: 'https://yookassa.ru/checkout-widget/v1/checkout-widget.js'
+  widgetScriptUrl: 'https://yookassa.ru/checkout-widget/v1/checkout-widget.js',
+  methods: ['CARD', 'SBP'],
+  fullPrepayment: true,
+  splitPaymentsEnabled: false,
+  cashOnDeliveryEnabled: false,
+  fiscalConfig: null
 };
 
 function safeString(value) {
@@ -41,6 +46,9 @@ export function normalizePaymentConfig(config = {}) {
     config.supportsEmbedded === true || confirmationMode === 'EMBEDDED';
   const widgetScriptUrl =
     safeString(config.widgetScriptUrl) || FALLBACK_PAYMENT_CONFIG.widgetScriptUrl;
+  const methods = Array.isArray(config.methods) && config.methods.length
+    ? config.methods.map((method) => safeString(method).toUpperCase()).filter(Boolean)
+    : FALLBACK_PAYMENT_CONFIG.methods;
   const checkoutDescription =
     safeString(config.checkoutDescription) ||
     (confirmationMode === 'EMBEDDED'
@@ -60,7 +68,12 @@ export function normalizePaymentConfig(config = {}) {
     resumePaymentLabel,
     confirmationMode,
     supportsEmbedded,
-    widgetScriptUrl
+    widgetScriptUrl,
+    methods,
+    fullPrepayment: config.fullPrepayment !== false,
+    splitPaymentsEnabled: config.splitPaymentsEnabled === true,
+    cashOnDeliveryEnabled: config.cashOnDeliveryEnabled === true,
+    fiscalConfig: config.fiscalConfig || null
   };
 }
 

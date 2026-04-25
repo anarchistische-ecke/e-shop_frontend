@@ -87,14 +87,12 @@ function CheckoutFlow({ checkout }) {
             reviewDeliveryLabel={checkout.reviewDeliveryLabel}
             homeAddress={checkout.homeAddress}
             deliveryNotice={checkout.deliveryNotice}
-            expressMessage={checkout.expressMessage}
             safeRetryState={checkout.safeRetryState}
             isSubmitting={checkout.isSubmitting}
             submitLabel={checkout.submitLabel}
             onEditContact={() => checkout.setActiveStep(0)}
             onEditAddress={() => checkout.setActiveStep(1)}
             onOpen={() => checkout.setActiveStep(2)}
-            onExpressCheckout={checkout.handleExpressCheckout}
             onSubmit={checkout.handleSubmit}
             onSafeRetry={checkout.handleSafeRetry}
           />

@@ -11,14 +11,12 @@ function ReviewStep({
   phone,
   homeAddress,
   deliveryNotice,
-  expressMessage,
   safeRetryState,
   isSubmitting,
   submitLabel,
   onEditContact,
   onEditAddress,
   onOpen,
-  onExpressCheckout,
   onSafeRetry
 }) {
   const { paymentConfig } = usePaymentConfig();
@@ -72,23 +70,9 @@ function ReviewStep({
           </div>
 
           <div className="mt-4 rounded-lg border border-ink/10 bg-white/90 p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted">Быстрая оплата</p>
-            <div className="mt-2 grid gap-2">
-              {['Apple Pay', 'Google Pay', 'PayPal'].map((provider) => (
-                <Button
-                  key={provider}
-                  variant="secondary"
-                  block
-                  className="justify-center border-ink/15 bg-white text-sm shadow-none"
-                  onClick={() => onExpressCheckout(provider)}
-                  disabled={isSubmitting}
-                >
-                  {provider}
-                </Button>
-              ))}
-            </div>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted">Онлайн-оплата</p>
+            <p className="mt-2 text-sm font-semibold">Карта или СБП через YooKassa</p>
             <p className="mt-2 text-xs text-muted">{reviewPaymentHint}</p>
-            {expressMessage ? <p className="mt-2 text-xs text-primary">{expressMessage}</p> : null}
           </div>
 
           {safeRetryState ? (
@@ -111,7 +95,7 @@ function ReviewStep({
           <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-xs text-ink/90">
             Нажимая «
             {submitLabel}
-            », вы подтверждаете заказ. Доставка оплачивается отдельно после согласования с менеджером.
+            », вы подтверждаете полную предоплату товаров. Доставка оплачивается отдельно после согласования с менеджером.
           </div>
 
           <Button type="submit" block className="mt-5" disabled={isSubmitting}>
