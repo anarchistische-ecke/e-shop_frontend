@@ -29,9 +29,9 @@ const statusLabels = {
 
 const timelineSteps = [
   { key: 'PENDING', title: 'Заказ создан' },
-  { key: 'PROCESSING', title: 'Передан в обработку' },
   { key: 'PAID', title: 'Оплата подтверждена' },
-  { key: 'DELIVERED', title: 'Доставлен' },
+  { key: 'MANAGER', title: 'Менеджер свяжется с вами' },
+  { key: 'DELIVERY', title: 'Доставка будет согласована' },
 ];
 
 function SuccessIcon() {
@@ -303,56 +303,24 @@ function OrderPage() {
 
   const isConfirmed = orderStatus === 'PAID' || orderStatus === 'DELIVERED';
   const shipping = order.delivery || {};
-
-  const deliveryType =
-    shipping.deliveryType === 'PICKUP'
-      ? 'Самовывоз'
-      : shipping.deliveryType === 'COURIER'
-      ? 'Курьер'
-      : 'Уточняется';
+  const contactName = order.contactName || order.customerName || '';
+  const contactPhone = order.contactPhone || order.phone || '';
+  const contactEmail = order.receiptEmail || receiptEmail || '';
 
   const deliveryAddress =
+    order.homeAddress ||
     shipping.address ||
     shipping.pickupPointName ||
     order.deliveryAddress ||
     order.address ||
     'Адрес уточняется';
 
-  const deliveryEstimateDate = (() => {
-    const candidate =
-      shipping.intervalTo ||
-      shipping.expectedAt ||
-      order.estimatedDeliveryAt ||
-      order.expectedDeliveryAt ||
-      '';
-
-    if (!candidate) return 'Дата уточняется';
-    const parsed = new Date(candidate);
-    if (Number.isNaN(parsed.getTime())) return 'Дата уточняется';
-    return parsed.toLocaleDateString('ru-RU', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'long',
-    });
-  })();
-
-  const trackingNumber =
-    shipping.trackingNumber ||
-    shipping.tracking_number ||
-    order.trackingNumber ||
-    order.tracking_number ||
-    '';
-
-  const carrierName =
-    shipping.carrierName ||
-    shipping.carrier ||
-    order.carrierName ||
-    order.carrier ||
-    'Перевозчик назначается';
+  const managerDeliveryNotice = 'Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.';
+  const paidManagerMessage = 'Наш менеджер свяжется с вами в ближайшее время.';
 
   const statusRank = {
     PENDING: 0,
-    PROCESSING: 1,
+    PROCESSING: 0,
     PAID: 2,
     DELIVERED: 3,
     CANCELLED: 0,
@@ -390,13 +358,13 @@ function OrderPage() {
             </span>
             <div>
               <p className="text-lg font-semibold">
-                {isConfirmed ? 'Заказ подтверждён' : 'Заказ принят в обработку'}
+                {isConfirmed ? 'Оплата получена' : 'Заказ принят в обработку'}
               </p>
               <p className="text-sm text-muted mt-1">
                 Номер заказа: <span className="font-semibold text-ink">{String(order.id).slice(0, 12)}</span>
               </p>
               <p className="text-sm text-muted mt-1">
-                Ожидаемая дата доставки: <span className="text-ink">{deliveryEstimateDate}</span>
+                {isConfirmed ? paidManagerMessage : managerDeliveryNotice}
               </p>
             </div>
           </div>
@@ -413,7 +381,7 @@ function OrderPage() {
         <div className="page-grid--sidebar gap-8">
           <div className="space-y-6">
             <Card as="section" padding="lg">
-              <h2 className="text-xl font-semibold mb-4">Статус доставки</h2>
+              <h2 className="text-xl font-semibold mb-4">Доставка и связь</h2>
               <ol className="space-y-3">
                 {timelineSteps.map((step, index) => {
                   const isDone = index <= activeStage;
@@ -429,10 +397,11 @@ function OrderPage() {
               </ol>
 
               <Card variant="quiet" padding="sm" className="mt-5 text-sm space-y-1">
-                <p><span className="text-muted">Способ:</span> {deliveryType}</p>
-                <p><span className="text-muted">Адрес/пункт:</span> {deliveryAddress}</p>
-                <p><span className="text-muted">Перевозчик:</span> {carrierName}</p>
-                <p><span className="text-muted">Трек-номер:</span> {trackingNumber || 'Появится после отгрузки'}</p>
+                {contactName ? <p><span className="text-muted">Имя:</span> {contactName}</p> : null}
+                {contactPhone ? <p><span className="text-muted">Телефон:</span> {contactPhone}</p> : null}
+                {contactEmail ? <p><span className="text-muted">Email:</span> {contactEmail}</p> : null}
+                <p><span className="text-muted">Адрес:</span> {deliveryAddress}</p>
+                <p><span className="text-muted">Доставка:</span> {managerDeliveryNotice}</p>
               </Card>
             </Card>
 
@@ -470,7 +439,7 @@ function OrderPage() {
               </div>
               <div className="flex justify-between mb-2 text-sm">
                 <span>Доставка</span>
-                <span>{moneyToNumber(shipping.pricingTotal || shipping.pricing || 0).toLocaleString('ru-RU')} ₽</span>
+                <span>Согласует менеджер</span>
               </div>
               <div className="flex justify-between mb-2 text-sm text-muted">
                 <span>Оплата</span>
@@ -532,14 +501,14 @@ function OrderPage() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                  Оплата получена. Спасибо за заказ!
+                  Оплата получена. {paidManagerMessage}
                 </div>
               )}
             </Card>
 
             <Card padding="sm" className="text-sm space-y-2">
-              <p className="font-semibold">Спокойная доставка</p>
-              <p className="text-muted">Следите за заказом на этой странице: статус, интервал и обновления по доставке собраны в одном месте.</p>
+              <p className="font-semibold">Доставка после оплаты</p>
+              <p className="text-muted">{managerDeliveryNotice}</p>
             </Card>
           </aside>
         </div>

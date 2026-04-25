@@ -23,6 +23,9 @@ function CartPage() {
   const { isAuthenticated, hasRole } = useAuth();
   const { paymentConfig } = usePaymentConfig();
   const [managerEmail, setManagerEmail] = useState('');
+  const [managerName, setManagerName] = useState('');
+  const [managerPhone, setManagerPhone] = useState('');
+  const [managerAddress, setManagerAddress] = useState('');
   const [managerLink, setManagerLink] = useState('');
   const [managerStatus, setManagerStatus] = useState(null);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
@@ -80,10 +83,13 @@ function CartPage() {
 
   const handleCreateManagerLink = async ({ sendEmail, copyAfter = false } = {}) => {
     const email = managerEmail.trim();
-    if (sendEmail && !email) {
+    const customerName = managerName.trim();
+    const phone = managerPhone.trim();
+    const homeAddress = managerAddress.trim();
+    if (!email || !customerName || !phone || !homeAddress) {
       setManagerStatus({
         type: 'error',
-        message: 'Укажите email клиента для отправки ссылки.'
+        message: 'Укажите имя, телефон, адрес и email клиента.'
       });
       return;
     }
@@ -93,7 +99,10 @@ function CartPage() {
       const cartId = localStorage.getItem('cartId');
       const response = await createManagerOrderLink({
         cartId,
-        receiptEmail: email || null,
+        receiptEmail: email,
+        customerName,
+        phone,
+        homeAddress,
         orderPageUrl: buildAbsoluteAppUrl('/order/{token}'),
         sendEmail: Boolean(sendEmail)
       });
@@ -273,7 +282,7 @@ function CartPage() {
                 </div>
                 <div className="flex justify-between mb-2 text-sm">
                   <span>Доставка</span>
-                  <span>Рассчитаем на следующем шаге</span>
+                  <span>Согласует менеджер</span>
                 </div>
                 <div className="flex justify-between mb-2 text-sm text-muted">
                   <span>Оплата</span>
@@ -306,11 +315,41 @@ function CartPage() {
                     <p className="text-xs uppercase tracking-[0.3em] text-accent">Инструменты менеджера</p>
                     <h3 className="text-lg font-semibold mt-2">Ссылка на оплату для клиента</h3>
                     <p className="text-sm text-muted mt-1">
-                      Сформируйте заказ и отправьте клиенту ссылку на оплату и страницу заказа.
+                      Сформируйте заказ и отправьте клиенту ссылку на оплату. Стоимость доставки менеджер согласует отдельно.
                     </p>
                   </div>
                   <label className="text-sm">
-                    <span className="text-muted">Email клиента (для отправки)</span>
+                    <span className="text-muted">Имя клиента</span>
+                    <Input
+                      type="text"
+                      className="mt-2 w-full"
+                      placeholder="Иван Иванов"
+                      value={managerName}
+                      onChange={(event) => setManagerName(event.target.value)}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <span className="text-muted">Телефон клиента</span>
+                    <Input
+                      type="tel"
+                      className="mt-2 w-full"
+                      placeholder="+7 900 000-00-00"
+                      value={managerPhone}
+                      onChange={(event) => setManagerPhone(event.target.value)}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <span className="text-muted">Домашний адрес</span>
+                    <Input
+                      type="text"
+                      className="mt-2 w-full"
+                      placeholder="Город, улица, дом, квартира"
+                      value={managerAddress}
+                      onChange={(event) => setManagerAddress(event.target.value)}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <span className="text-muted">Email клиента</span>
                     <Input
                       type="email"
                       className="mt-2 w-full"
@@ -350,7 +389,7 @@ function CartPage() {
               )}
               <Card padding="sm" className="text-sm space-y-2">
                 <p className="font-semibold">Почему с нами спокойно</p>
-                <p className="text-muted">Доставка Яндекс и пункты выдачи: сначала видите стоимость и интервал, потом оплачиваете.</p>
+                <p className="text-muted">После оплаты менеджер согласует варианты доставки и финальную стоимость.</p>
                 <p className="text-muted">{paymentDescription} Поддержка ежедневно с 9:00 до 21:00.</p>
               </Card>
             </div>

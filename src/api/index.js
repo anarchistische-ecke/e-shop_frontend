@@ -265,11 +265,13 @@ export async function createOrder(cartId) {
 export async function checkoutCart({
   cartId,
   receiptEmail,
+  customerName,
+  phone,
+  homeAddress,
   returnUrl,
   orderPageUrl,
   confirmationMode,
   savePaymentMethod,
-  delivery,
   idempotencyKey,
   signal
 } = {}) {
@@ -283,36 +285,26 @@ export async function checkoutCart({
     body: JSON.stringify({
       cartId,
       receiptEmail,
+      customerName,
+      phone,
+      homeAddress,
       returnUrl,
       orderPageUrl,
       confirmationMode,
-      savePaymentMethod,
-      delivery
+      savePaymentMethod
     })
   });
 }
-export async function getYandexDeliveryOffers(payload = {}) {
-  return request('/deliveries/yandex/offers', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-export async function getYandexPickupPoints(payload = {}) {
-  return request('/deliveries/yandex/pickup-points', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-export async function createAdminOrderLink({ cartId, receiptEmail, orderPageUrl } = {}) {
+export async function createAdminOrderLink({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl } = {}) {
   return request('/orders/admin-link', {
     method: 'POST',
-    body: JSON.stringify({ cartId, receiptEmail, orderPageUrl })
+    body: JSON.stringify({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl })
   });
 }
-export async function createManagerOrderLink({ cartId, receiptEmail, orderPageUrl, sendEmail } = {}) {
+export async function createManagerOrderLink({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl, sendEmail } = {}) {
   return request('/orders/manager-link', {
     method: 'POST',
-    body: JSON.stringify({ cartId, receiptEmail, orderPageUrl, sendEmail })
+    body: JSON.stringify({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl, sendEmail })
   });
 }
 export async function getOrders() {
@@ -345,16 +337,6 @@ export async function updateOrderStatus(id, status) {
       method: 'PUT'
     }
   );
-}
-export async function refreshOrderDelivery(id) {
-  return request(`/orders/${id}/delivery/refresh`, {
-    method: 'POST'
-  });
-}
-export async function cancelOrderDelivery(id) {
-  return request(`/orders/${id}/delivery/cancel`, {
-    method: 'POST'
-  });
 }
 
 // Customers and Authentication

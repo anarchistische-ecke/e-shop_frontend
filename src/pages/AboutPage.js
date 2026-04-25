@@ -79,9 +79,9 @@ function AboutFallbackPage() {
 
       <section className="py-10">
         <div className="container mx-auto px-4 max-w-2xl text-center">
-          <h2 className="text-xl font-semibold">Бесплатная доставка</h2>
+          <h2 className="text-xl font-semibold">Доставка по согласованию</h2>
           <p className="text-base text-muted mb-4">
-            Мы осуществляем бесплатную доставку по всей России при заказе от 5 000 ₽.
+            После оплаты заказа менеджер согласует с вами удобный вариант доставки и финальную стоимость.
           </p>
         </div>
       </section>
@@ -100,8 +100,8 @@ function AboutFallbackPage() {
                 процентов и переплат.
               </li>
               <li>
-                Выберите удобный способ получения: пункты выдачи, курьерская доставка, доставка
-                из магазина день в день или самовывоз.
+                Оставьте имя, телефон, e-mail и адрес: менеджер предложит доступные варианты доставки
+                после оформления заказа.
               </li>
             </ol>
             <div className="mt-6 flex justify-center">

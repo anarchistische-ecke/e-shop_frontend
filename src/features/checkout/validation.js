@@ -16,48 +16,28 @@ export const CHECKOUT_VALIDATION_SCHEMA = {
       return '';
     }
   },
-  recipientFirstName: {
-    step: 'recipient',
-    validate: ({ recipientFirstName }) =>
-      String(recipientFirstName || '').trim() ? '' : 'Укажите имя получателя.'
+  customerName: {
+    step: 'contact',
+    validate: ({ customerName }) =>
+      String(customerName || '').trim() ? '' : 'Укажите имя получателя.'
   },
-  recipientPhone: {
-    step: 'recipient',
-    validate: ({ recipientPhone }) =>
-      String(recipientPhone || '').trim() ? '' : 'Укажите телефон для связи по доставке.'
+  phone: {
+    step: 'contact',
+    validate: ({ phone }) =>
+      String(phone || '').trim() ? '' : 'Укажите телефон для связи.'
   },
-  deliveryAddress: {
-    step: 'delivery',
-    validate: ({ deliveryType, fullDeliveryAddress }) =>
-      deliveryType === 'COURIER' && !String(fullDeliveryAddress || '').trim()
-        ? 'Укажите адрес доставки для расчёта интервалов.'
-        : ''
-  },
-  pickupLocation: {
-    step: 'delivery',
-    validate: ({ deliveryType, pickupLocation, selectedPickupPointId }) =>
-      deliveryType === 'PICKUP' && !String(pickupLocation || '').trim() && !String(selectedPickupPointId || '').trim()
-        ? 'Укажите город или адрес, чтобы найти пункты выдачи.'
-        : ''
-  },
-  selectedPickupPointId: {
-    step: 'delivery',
-    validate: ({ deliveryType, selectedPickupPointId }) =>
-      deliveryType === 'PICKUP' && !String(selectedPickupPointId || '').trim()
-        ? 'Выберите пункт выдачи из списка или на карте.'
-        : ''
-  },
-  selectedOfferId: {
-    step: 'delivery',
-    validate: ({ selectedOfferId }) =>
-      String(selectedOfferId || '').trim() ? '' : 'Рассчитайте и выберите подходящий интервал доставки.'
+  homeAddress: {
+    step: 'address',
+    validate: ({ homeAddress }) =>
+      String(homeAddress || '').trim()
+        ? ''
+        : 'Укажите домашний адрес. Варианты и стоимость доставки согласует менеджер.'
   }
 };
 
 export const STEP_FIELD_ORDER = {
-  contact: ['email'],
-  recipient: ['recipientFirstName', 'recipientPhone'],
-  delivery: ['deliveryAddress', 'pickupLocation', 'selectedPickupPointId', 'selectedOfferId']
+  contact: ['email', 'customerName', 'phone'],
+  address: ['homeAddress']
 };
 
 export function validateCheckoutStep(stepKey, draft) {
@@ -71,17 +51,6 @@ export function validateCheckoutStep(stepKey, draft) {
     }
     return acc;
   }, {});
-}
-
-export function validateCheckoutForOfferFetch(draft) {
-  const errors = {};
-  if (draft.deliveryType === 'COURIER' && !String(draft.fullDeliveryAddress || '').trim()) {
-    errors.deliveryAddress = 'Укажите адрес доставки.';
-  }
-  if (draft.deliveryType === 'PICKUP' && !String(draft.selectedPickupPointId || '').trim()) {
-    errors.selectedPickupPointId = 'Сначала выберите пункт выдачи.';
-  }
-  return errors;
 }
 
 export function mapCheckoutBackendErrors(error) {

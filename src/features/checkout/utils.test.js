@@ -8,17 +8,12 @@ describe('checkout attempt helpers', () => {
     const signature = buildCheckoutAttemptSignature({
       cartId: 'cart-1',
       receiptEmail: 'test@example.com',
+      customerName: 'Иван Петров',
+      phone: '+79990000000',
+      homeAddress: 'Москва, Тестовая улица, 1',
       returnUrl: 'https://example.com/order/{token}',
       orderPageUrl: 'https://example.com/order/{token}',
-      savePaymentMethod: false,
-      delivery: {
-        deliveryType: 'COURIER',
-        offerId: 'offer-1',
-        address: 'ул. Пушкина, дом Колотушкина',
-        firstName: 'Иван',
-        phone: '+79990000000',
-        email: 'test@example.com'
-      }
+      savePaymentMethod: false
     });
 
     const firstAttempt = resolveCheckoutAttempt({
@@ -80,5 +75,24 @@ describe('checkout attempt helpers', () => {
     });
 
     expect(embeddedSignature).not.toBe(redirectSignature);
+  });
+
+  it('includes manual delivery contact fields in the checkout attempt signature', () => {
+    const firstSignature = buildCheckoutAttemptSignature({
+      cartId: 'cart-1',
+      receiptEmail: 'test@example.com',
+      customerName: 'Иван Петров',
+      phone: '+79990000000',
+      homeAddress: 'Москва, Тестовая улица, 1'
+    });
+    const secondSignature = buildCheckoutAttemptSignature({
+      cartId: 'cart-1',
+      receiptEmail: 'test@example.com',
+      customerName: 'Иван Петров',
+      phone: '+79990000000',
+      homeAddress: 'Сочи, Курортный проспект, 2'
+    });
+
+    expect(secondSignature).not.toBe(firstSignature);
   });
 });
