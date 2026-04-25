@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import NotificationBanner from '../components/NotificationBanner';
-import PickupMapModal from '../components/PickupMapModal';
 import Seo from '../components/Seo';
 import CheckoutEmptyState from '../features/checkout/CheckoutEmptyState';
 import CheckoutFlow from '../features/checkout/CheckoutFlow';
@@ -71,7 +70,7 @@ function CheckoutPage() {
     <div className="checkout-page page-section pb-28 lg:pb-10">
       <Seo
         title="Оформление заказа"
-        description="Быстрое оформление заказа с выбором доставки, итоговой суммой до оплаты и возможностью купить без регистрации."
+        description="Быстрое оформление заказа с контактами, адресом, оплатой товаров и возможностью купить без регистрации."
         canonicalPath="/checkout"
         robots="noindex,nofollow"
       />
@@ -99,26 +98,6 @@ function CheckoutPage() {
 
         <CheckoutFlow checkout={checkout} />
       </div>
-
-      <PickupMapModal
-        open={checkout.isPickupMapOpen}
-        points={checkout.enrichedPickupPoints}
-        selectedPointId={checkout.selectedPickupPointId}
-        searchLabel={checkout.pickupLocation}
-        errorMessage={checkout.deliveryError}
-        isLoading={checkout.pickupLoading || checkout.pickupAutoDetecting}
-        onRetry={() =>
-          (checkout.pickupLocation.trim()
-            ? checkout.handlePickupSearch()
-            : checkout.handleOpenPickupMap())
-        }
-        onMapViewportChange={checkout.handleMapViewportChange}
-        onClose={() => checkout.setIsPickupMapOpen(false)}
-        onSelect={(point) => {
-          checkout.handlePickupPointSelect(point);
-          checkout.setIsPickupMapOpen(false);
-        }}
-      />
     </div>
   );
 }

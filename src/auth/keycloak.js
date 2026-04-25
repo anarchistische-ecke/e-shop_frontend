@@ -1,13 +1,15 @@
 import Keycloak from 'keycloak-js';
-import { notifyAuthChange } from '../utils/auth';
-import { buildAbsoluteAppUrl } from '../utils/url';
+import { notifyAuthChange } from '../utils/auth.js';
+import { buildAbsoluteAppUrl } from '../utils/url.js';
+import { getRuntimeConfig, readEnv } from '../config/runtime.js';
 
+const runtimeConfig = getRuntimeConfig();
 const keycloakConfig = {
-  url: process.env.REACT_APP_KEYCLOAK_URL,
-  realm: process.env.REACT_APP_KEYCLOAK_REALM,
-  clientId: process.env.REACT_APP_KEYCLOAK_CLIENT_ID
+  url: runtimeConfig.keycloakUrl || readEnv('REACT_APP_KEYCLOAK_URL'),
+  realm: runtimeConfig.keycloakRealm || readEnv('REACT_APP_KEYCLOAK_REALM'),
+  clientId: runtimeConfig.keycloakClientId || readEnv('REACT_APP_KEYCLOAK_CLIENT_ID')
 };
-const keycloakLocale = (process.env.REACT_APP_KEYCLOAK_LOCALE || 'ru').trim() || 'ru';
+const keycloakLocale = (readEnv('REACT_APP_KEYCLOAK_LOCALE', 'ru') || 'ru').trim() || 'ru';
 
 const isConfigValid = () =>
   Boolean(keycloakConfig.url && keycloakConfig.realm && keycloakConfig.clientId);

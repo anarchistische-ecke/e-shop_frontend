@@ -1,11 +1,22 @@
-import { clearAllAuthStorage, getAccessToken } from '../auth/session';
+import { clearAllAuthStorage, getAccessToken } from '../auth/session.js';
+import { getRuntimeConfig, readEnv } from '../config/runtime.js';
 
-const inferBrowserApiBase = () =>
-  (typeof window !== 'undefined' ? window.__API_BASE__ || window.location.origin : null);
-const DEFAULT_API_BASE = inferBrowserApiBase() || 'http://localhost:8080';
-const API_BASE = (process.env.REACT_APP_API_BASE || DEFAULT_API_BASE).replace(/\/$/, '');
+const inferBrowserApiBase = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return getRuntimeConfig().apiBase || window.location.origin;
+};
+
+const DEFAULT_API_BASE =
+  inferBrowserApiBase() ||
+  readEnv('SERVER_API_BASE') ||
+  readEnv('REACT_APP_API_BASE') ||
+  'http://localhost:8080';
+const API_BASE = DEFAULT_API_BASE.replace(/\/$/, '');
 const JSON_TYPE = 'application/json';
-const rawActivityPath = process.env.REACT_APP_ACTIVITY_LOGS_PATH || '/admin/activity';
+const rawActivityPath = readEnv('REACT_APP_ACTIVITY_LOGS_PATH', '/admin/activity') || '/admin/activity';
 const ACTIVITY_LOGS_PATH = (rawActivityPath.startsWith('/') ? rawActivityPath : `/${rawActivityPath}`).replace(/\/$/, '');
 
 export class ApiRequestError extends Error {
@@ -268,11 +279,13 @@ export async function createOrder(cartId) {
 export async function checkoutCart({
   cartId,
   receiptEmail,
+  customerName,
+  phone,
+  homeAddress,
   returnUrl,
   orderPageUrl,
   confirmationMode,
   savePaymentMethod,
-  delivery,
   idempotencyKey,
   signal
 } = {}) {
@@ -286,36 +299,26 @@ export async function checkoutCart({
     body: JSON.stringify({
       cartId,
       receiptEmail,
+      customerName,
+      phone,
+      homeAddress,
       returnUrl,
       orderPageUrl,
       confirmationMode,
-      savePaymentMethod,
-      delivery
+      savePaymentMethod
     })
   });
 }
-export async function getYandexDeliveryOffers(payload = {}) {
-  return request('/deliveries/yandex/offers', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-export async function getYandexPickupPoints(payload = {}) {
-  return request('/deliveries/yandex/pickup-points', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-export async function createAdminOrderLink({ cartId, receiptEmail, orderPageUrl } = {}) {
+export async function createAdminOrderLink({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl } = {}) {
   return request('/orders/admin-link', {
     method: 'POST',
-    body: JSON.stringify({ cartId, receiptEmail, orderPageUrl })
+    body: JSON.stringify({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl })
   });
 }
-export async function createManagerOrderLink({ cartId, receiptEmail, orderPageUrl, sendEmail } = {}) {
+export async function createManagerOrderLink({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl, sendEmail } = {}) {
   return request('/orders/manager-link', {
     method: 'POST',
-    body: JSON.stringify({ cartId, receiptEmail, orderPageUrl, sendEmail })
+    body: JSON.stringify({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl, sendEmail })
   });
 }
 export async function getOrders() {
@@ -348,16 +351,6 @@ export async function updateOrderStatus(id, status) {
       method: 'PUT'
     }
   );
-}
-export async function refreshOrderDelivery(id) {
-  return request(`/orders/${id}/delivery/refresh`, {
-    method: 'POST'
-  });
-}
-export async function cancelOrderDelivery(id) {
-  return request(`/orders/${id}/delivery/cancel`, {
-    method: 'POST'
-  });
 }
 
 // Customers and Authentication

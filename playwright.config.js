@@ -1,11 +1,11 @@
-const { defineConfig, devices } = require('@playwright/test');
+import { defineConfig, devices } from '@playwright/test';
 
 const host = process.env.PLAYWRIGHT_HOST || '127.0.0.1';
 const port = process.env.PLAYWRIGHT_PORT || '3000';
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://${host}:${port}`;
 const useWebServer = process.env.PLAYWRIGHT_USE_WEBSERVER !== 'false';
 
-module.exports = defineConfig({
+export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
   expect: {
@@ -37,7 +37,10 @@ module.exports = defineConfig({
           PORT: port,
           BROWSER: 'none',
           CI: 'true',
-          REACT_APP_DELIVERY_INTEGRATION_ENABLED: 'false',
+          REACT_APP_SITE_URL: baseURL,
+          REACT_APP_KEYCLOAK_URL: '',
+          REACT_APP_KEYCLOAK_REALM: '',
+          REACT_APP_KEYCLOAK_CLIENT_ID: '',
         },
         url: baseURL,
         reuseExistingServer: false,

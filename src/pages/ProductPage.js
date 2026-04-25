@@ -21,6 +21,7 @@ import {
   normalizeProductImages,
 } from '../utils/product';
 import { buildProductPath, getCanonicalUrl } from '../utils/url';
+import { useSsrData } from '../ssr/SsrDataContext';
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -51,6 +52,20 @@ function formatRub(value) {
 
 function getStockValue(entity) {
   return Number(entity?.stock ?? entity?.stockQuantity ?? 0);
+}
+
+function resolveInitialSelectedVariant(product) {
+  if (!product) {
+    return null;
+  }
+
+  const variants = Array.isArray(product?.variants)
+    ? product.variants
+    : Array.from(product?.variants || []);
+  const primaryVariant = getPrimaryVariant(product);
+  const firstAvailableVariant = variants.find((variant) => getStockValue(variant) > 0);
+
+  return firstAvailableVariant || primaryVariant || null;
 }
 
 function getAvailabilityMeta(stock, { selected = false } = {}) {
@@ -158,15 +173,21 @@ function ProductPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { addItem } = useContext(CartContext);
+  const { routeData } = useSsrData();
   const { categories, products: directoryProducts } = useProductDirectoryData();
+  const hasInitialProductLoad =
+    routeData?.kind === 'product' && String(routeData.productId || '') === String(id);
+  const initialProduct = hasInitialProductLoad ? routeData.product || null : null;
 
-  const [product, setProduct] = useState(null);
-  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [product, setProduct] = useState(initialProduct);
+  const [selectedVariant, setSelectedVariant] = useState(() =>
+    resolveInitialSelectedVariant(initialProduct)
+  );
   const [activeTab, setActiveTab] = useState('about');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [bundleSelections, setBundleSelections] = useState({});
   const [quantity, setQuantity] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!hasInitialProductLoad);
   const [isImageZoomOpen, setIsImageZoomOpen] = useState(false);
   const [showZoomHint, setShowZoomHint] = useState(true);
   const [sheetType, setSheetType] = useState('shipping');
@@ -207,7 +228,13 @@ function ProductPage() {
     setQuantity(1);
     setPendingAction('');
     setCartStatus(null);
-    setIsLoading(true);
+    setProduct(initialProduct);
+    setSelectedVariant(resolveInitialSelectedVariant(initialProduct));
+    setIsLoading(!hasInitialProductLoad);
+
+    if (hasInitialProductLoad) {
+      return undefined;
+    }
 
     getProduct(id)
       .then((data) => {
@@ -229,7 +256,8 @@ function ProductPage() {
         setSelectedVariant(null);
       })
       .finally(() => setIsLoading(false));
-  }, [id]);
+    return undefined;
+  }, [hasInitialProductLoad, id, initialProduct]);
 
   const relatedProducts = useMemo(() => {
     if (!product) {
@@ -418,23 +446,14 @@ function ProductPage() {
   }, 0);
   const bundleTotal = price * quantity + bundleAddOnTotal;
 
-  const deliveryDate = useMemo(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 3);
-    return date.toLocaleDateString('ru-RU', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
-  }, []);
   const infoHighlights = useMemo(
     () => [
       {
         key: 'shipping',
         icon: 'delivery',
         title: 'Доставка',
-        summary: `Ориентир: ${deliveryDate}`,
-        caption: 'Покажем стоимость и доступные интервалы до оплаты.'
+        summary: 'Согласует менеджер',
+        caption: 'После оплаты менеджер уточнит варианты и финальную стоимость.'
       },
       {
         key: 'returns',
@@ -451,7 +470,7 @@ function ProductPage() {
         caption: 'Оплата подтверждается на защищённом шаге и не дублируется.'
       }
     ],
-    [deliveryDate]
+    []
   );
   const hasBundleSelection = bundleItems.some((item) => bundleSelections[item.id]);
   const isCartActionPending = Boolean(pendingAction);
@@ -1347,9 +1366,9 @@ function ProductPage() {
       >
         {sheetType === 'shipping' ? (
           <div className="space-y-3 text-sm text-ink/85">
-            <p>Ориентировочная дата доставки: {deliveryDate} (при заказе до 14:00 по местному времени).</p>
-            <p>Стоимость и доступные интервалы показываются до оплаты на шаге оформления заказа.</p>
-            <p>Бесплатная доставка от 5000 ₽. Для удалённых регионов срок может увеличиваться.</p>
+            <p>Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.</p>
+            <p>При онлайн-оплате вы оплачиваете только товары. Доставка оплачивается отдельно после согласования.</p>
+            <p>Наш менеджер свяжется с вами в ближайшее время после оплаты.</p>
           </div>
         ) : sheetType === 'payment' ? (
           <div className="space-y-3 text-sm text-ink/85">

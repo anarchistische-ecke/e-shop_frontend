@@ -44,16 +44,15 @@ test('customer can open embedded payment inside the SPA and return to the order 
   await page.getByRole('button', { name: 'Оформить заказ' }).click();
 
   await page.getByLabel(/Электронная почта/i).fill('buyer@example.com');
-  await page.locator('#checkout-form').getByRole('button', { name: /^Продолжить$/ }).click();
-
-  await page.getByLabel(/^Имя/i).fill('Иван');
+  await page.getByLabel(/^Имя/i).fill('Иван Петров');
   await page.getByLabel(/^Телефон/i).fill('+79990000000');
-  await page.locator('#checkout-form').getByRole('button', { name: /^Продолжить$/ }).click();
+  await page.locator('#checkout-form').getByRole('button', { name: 'К адресу' }).click();
 
-  await page.getByLabel(/Адрес доставки/i).fill('Москва, Тестовая улица, 1');
-  await page.locator('#checkout-form').getByRole('button', { name: 'Рассчитать' }).click();
-  await expect(page.getByText(/Курьер/i).first()).toBeVisible();
-  await page.locator('#checkout-form').getByRole('button', { name: /^Продолжить$/ }).click();
+  await page.getByLabel(/Домашний адрес/i).fill('Москва, Тестовая улица, 1');
+  await expect(
+    page.locator('#checkout-form').getByText(/Финальную стоимость и варианты доставки согласует менеджер/i)
+  ).toBeVisible();
+  await page.locator('#checkout-form').getByRole('button', { name: 'К подтверждению' }).click();
 
   await page.locator('#checkout-form').getByRole('button', { name: 'Создать заказ и открыть форму оплаты' }).click();
 

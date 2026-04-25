@@ -85,28 +85,3 @@ export function createInitialSafeRetryState(
       'Оформление было уже отправлено. Выполните безопасную проверку, чтобы продолжить без дубля заказа или платежа.'
   });
 }
-
-export function createPickupLocationSuggestion(city, source = 'timezone') {
-  const normalizedCity = String(city || '').trim();
-  if (!normalizedCity) {
-    return null;
-  }
-
-  if (source === 'geocoder') {
-    return {
-      city: normalizedCity,
-      source,
-      title: `Подтвердите город: ${normalizedCity}`,
-      message:
-        'Мы определили город по геопозиции устройства. Подтвердите его перед загрузкой пунктов выдачи и интервалов доставки.'
-    };
-  }
-
-  return {
-    city: normalizedCity,
-    source,
-    title: `Похоже, ваш город — ${normalizedCity}`,
-    message:
-      'Это предположение по часовому поясу. Подтвердите город или введите его вручную, прежде чем загружать пункты выдачи.'
-  };
-}

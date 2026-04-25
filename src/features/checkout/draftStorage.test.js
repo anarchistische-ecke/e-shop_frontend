@@ -29,7 +29,7 @@ describe('checkout draft storage', () => {
 
     expect(loadCheckoutDraft('cart-1')).toMatchObject(draft);
     expect(window.sessionStorage.getItem(buildCheckoutDraftKey('cart-1'))).toContain(
-      '"version":1'
+      '"version":2'
     );
   });
 

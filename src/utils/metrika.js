@@ -1,4 +1,10 @@
-const COUNTER_ID = Number(process.env.REACT_APP_YANDEX_METRIKA_ID || 0);
+import {
+  isProductionEnvironment,
+  readBooleanEnv,
+  readEnv
+} from '../config/runtime';
+
+const COUNTER_ID = Number(readEnv('REACT_APP_YANDEX_METRIKA_ID', '0') || 0);
 const SCRIPT_ID = 'yandex-metrika-tag';
 const SCRIPT_SRC = 'https://mc.yandex.ru/metrika/tag.js';
 const DEFAULT_METRIKA_OPTIONS = {
@@ -29,16 +35,6 @@ function canUseMetrika() {
   return typeof window !== 'undefined' && Number.isFinite(COUNTER_ID) && COUNTER_ID > 0;
 }
 
-function readBooleanEnv(name, fallback) {
-  const rawValue = process.env[name];
-  if (typeof rawValue !== 'string') return fallback;
-  const normalized = rawValue.trim().toLowerCase();
-  if (!normalized) return fallback;
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
-  return fallback;
-}
-
 function resolveMetrikaOptions() {
   return {
     clickmap: readBooleanEnv('REACT_APP_YANDEX_METRIKA_CLICKMAP', DEFAULT_METRIKA_OPTIONS.clickmap),
@@ -65,7 +61,7 @@ export function initYandexMetrika() {
   if (!canUseMetrika()) {
     if (
       typeof window !== 'undefined' &&
-      process.env.NODE_ENV !== 'production' &&
+      !isProductionEnvironment() &&
       !window.__cozyhomeMetrikaWarningShown
     ) {
       console.info('Yandex.Metrica is disabled: REACT_APP_YANDEX_METRIKA_ID is not configured.');

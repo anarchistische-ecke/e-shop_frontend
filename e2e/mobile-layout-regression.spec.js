@@ -221,7 +221,7 @@ test('core storefront routes fit the mobile viewport without horizontal overflow
 
   await page.goto('/info/delivery');
   await expect(
-    page.getByRole('heading', { name: /Бесплатная доставка при оформлении заказа/i })
+    page.getByRole('heading', { name: /Доставку согласует менеджер/i })
   ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });

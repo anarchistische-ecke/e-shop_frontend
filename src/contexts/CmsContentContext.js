@@ -1,9 +1,18 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState
+} from 'react';
 import cmsClient from '../api/cmsClient';
 import {
   DEFAULT_CMS_SITE_SETTINGS,
   DEFAULT_FOOTER_NAVIGATION,
 } from '../data/cms/defaults';
+
+const EMPTY_NAVIGATION = [];
 
 const CmsContentContext = createContext({
   siteSettings: DEFAULT_CMS_SITE_SETTINGS,
@@ -14,9 +23,10 @@ const CmsContentContext = createContext({
   footerNavigationError: null,
   isSiteSettingsFallbackActive: true,
   isFooterNavigationFallbackActive: true,
+  pagesBySlug: {},
+  missingPageSlugs: new Set(),
+  cachePage: () => {}
 });
-
-const EMPTY_NAVIGATION = [];
 
 function normalizeSiteSettings(payload) {
   if (!payload || typeof payload !== 'object') {
@@ -86,93 +96,201 @@ function normalizePage(payload) {
   };
 }
 
-export function CmsContentProvider({ children }) {
-  const [siteSettings, setSiteSettings] = useState(DEFAULT_CMS_SITE_SETTINGS);
-  const [footerNavigation, setFooterNavigation] = useState(DEFAULT_FOOTER_NAVIGATION);
-  const [isSiteSettingsLoaded, setIsSiteSettingsLoaded] = useState(false);
-  const [isFooterNavigationLoaded, setIsFooterNavigationLoaded] = useState(false);
+function normalizePagesBySlug(pages = {}) {
+  return Object.entries(pages || {}).reduce((acc, [slug, payload]) => {
+    const normalizedPage = normalizePage(payload);
+    if (!normalizedPage) {
+      return acc;
+    }
+
+    acc[String(slug || '').trim()] = normalizedPage;
+    return acc;
+  }, {});
+}
+
+export function CmsContentProvider({ children, initialData = null }) {
+  const seededSiteSettings = initialData?.siteSettings
+    ? normalizeSiteSettings(initialData.siteSettings)
+    : null;
+  const seededFooterNavigation = initialData?.footerNavigation
+    ? normalizeNavigationGroups(initialData.footerNavigation, DEFAULT_FOOTER_NAVIGATION)
+    : null;
+  const seededPages = useMemo(
+    () => normalizePagesBySlug(initialData?.pages),
+    [initialData?.pages]
+  );
+  const seededMissingPageSlugs = useMemo(() => {
+    return new Set(
+      Array.isArray(initialData?.missingPageSlugs)
+        ? initialData.missingPageSlugs
+            .map((slug) => String(slug || '').trim())
+            .filter(Boolean)
+        : []
+    );
+  }, [initialData?.missingPageSlugs]);
+
+  const [siteSettings, setSiteSettings] = useState(
+    seededSiteSettings || DEFAULT_CMS_SITE_SETTINGS
+  );
+  const [footerNavigation, setFooterNavigation] = useState(
+    seededFooterNavigation || DEFAULT_FOOTER_NAVIGATION
+  );
+  const [isSiteSettingsLoaded, setIsSiteSettingsLoaded] = useState(Boolean(seededSiteSettings));
+  const [isFooterNavigationLoaded, setIsFooterNavigationLoaded] = useState(Boolean(seededFooterNavigation));
   const [siteSettingsError, setSiteSettingsError] = useState(null);
   const [footerNavigationError, setFooterNavigationError] = useState(null);
-  const [isSiteSettingsFallbackActive, setIsSiteSettingsFallbackActive] = useState(true);
-  const [isFooterNavigationFallbackActive, setIsFooterNavigationFallbackActive] = useState(true);
+  const [isSiteSettingsFallbackActive, setIsSiteSettingsFallbackActive] = useState(!seededSiteSettings);
+  const [isFooterNavigationFallbackActive, setIsFooterNavigationFallbackActive] = useState(!seededFooterNavigation);
+  const [pagesBySlug, setPagesBySlug] = useState(seededPages);
+  const [missingPageSlugs, setMissingPageSlugs] = useState(seededMissingPageSlugs);
+
+  const cachePage = useCallback((slug, payload) => {
+    const normalizedSlug = String(slug || '').trim();
+    const normalizedPage = normalizePage(payload);
+
+    if (!normalizedSlug) {
+      return;
+    }
+
+    if (!normalizedPage) {
+      setMissingPageSlugs((current) => {
+        const next = new Set(current);
+        next.add(normalizedSlug);
+        return next;
+      });
+      setPagesBySlug((current) => {
+        if (!Object.prototype.hasOwnProperty.call(current, normalizedSlug)) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[normalizedSlug];
+        return next;
+      });
+      return;
+    }
+
+    setMissingPageSlugs((current) => {
+      if (!current.has(normalizedSlug)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.delete(normalizedSlug);
+      return next;
+    });
+    setPagesBySlug((current) => ({
+      ...current,
+      [normalizedSlug]: normalizedPage
+    }));
+  }, []);
 
   useEffect(() => {
+    const shouldLoadSiteSettings = !seededSiteSettings;
+    const shouldLoadFooterNavigation = !seededFooterNavigation;
+
+    if (!shouldLoadSiteSettings && !shouldLoadFooterNavigation) {
+      return undefined;
+    }
+
     const siteSettingsController = new AbortController();
     const navigationController = new AbortController();
     let active = true;
 
-    cmsClient
-      .getSiteSettings({ signal: siteSettingsController.signal })
-      .then((payload) => {
-        if (!active) {
-          return;
-        }
-        setSiteSettings(normalizeSiteSettings(payload));
-        setSiteSettingsError(null);
-        setIsSiteSettingsFallbackActive(false);
-      })
-      .catch((error) => {
-        if (!active || siteSettingsController.signal.aborted) {
-          return;
-        }
-        console.warn('Failed to load CMS site settings, using defaults.', error);
-        setSiteSettings(DEFAULT_CMS_SITE_SETTINGS);
-        setSiteSettingsError(error);
-        setIsSiteSettingsFallbackActive(true);
-      })
-      .finally(() => {
-        if (!active) {
-          return;
-        }
-        setIsSiteSettingsLoaded(true);
-      });
+    if (shouldLoadSiteSettings) {
+      cmsClient
+        .getSiteSettings({ signal: siteSettingsController.signal })
+        .then((payload) => {
+          if (!active) {
+            return;
+          }
+          setSiteSettings(normalizeSiteSettings(payload));
+          setSiteSettingsError(null);
+          setIsSiteSettingsFallbackActive(false);
+        })
+        .catch((error) => {
+          if (!active || siteSettingsController.signal.aborted) {
+            return;
+          }
+          console.warn('Failed to load CMS site settings, using defaults.', error);
+          setSiteSettings(DEFAULT_CMS_SITE_SETTINGS);
+          setSiteSettingsError(error);
+          setIsSiteSettingsFallbackActive(true);
+        })
+        .finally(() => {
+          if (!active) {
+            return;
+          }
+          setIsSiteSettingsLoaded(true);
+        });
+    }
 
-    cmsClient
-      .getNavigation({ placement: 'footer', signal: navigationController.signal })
-      .then((payload) => {
-        if (!active) {
-          return;
-        }
-        setFooterNavigation(normalizeNavigationGroups(payload, DEFAULT_FOOTER_NAVIGATION));
-        setFooterNavigationError(null);
-        setIsFooterNavigationFallbackActive(false);
-      })
-      .catch((error) => {
-        if (!active || navigationController.signal.aborted) {
-          return;
-        }
-        console.warn('Failed to load CMS footer navigation, using defaults.', error);
-        setFooterNavigation(DEFAULT_FOOTER_NAVIGATION);
-        setFooterNavigationError(error);
-        setIsFooterNavigationFallbackActive(true);
-      })
-      .finally(() => {
-        if (!active) {
-          return;
-        }
-        setIsFooterNavigationLoaded(true);
-      });
+    if (shouldLoadFooterNavigation) {
+      cmsClient
+        .getNavigation({ placement: 'footer', signal: navigationController.signal })
+        .then((payload) => {
+          if (!active) {
+            return;
+          }
+          setFooterNavigation(normalizeNavigationGroups(payload, DEFAULT_FOOTER_NAVIGATION));
+          setFooterNavigationError(null);
+          setIsFooterNavigationFallbackActive(false);
+        })
+        .catch((error) => {
+          if (!active || navigationController.signal.aborted) {
+            return;
+          }
+          console.warn('Failed to load CMS footer navigation, using defaults.', error);
+          setFooterNavigation(DEFAULT_FOOTER_NAVIGATION);
+          setFooterNavigationError(error);
+          setIsFooterNavigationFallbackActive(true);
+        })
+        .finally(() => {
+          if (!active) {
+            return;
+          }
+          setIsFooterNavigationLoaded(true);
+        });
+    }
 
     return () => {
       active = false;
       siteSettingsController.abort();
       navigationController.abort();
     };
-  }, []);
+  }, [seededFooterNavigation, seededSiteSettings]);
+
+  const value = useMemo(
+    () => ({
+      siteSettings,
+      footerNavigation,
+      isSiteSettingsLoaded,
+      isFooterNavigationLoaded,
+      siteSettingsError,
+      footerNavigationError,
+      isSiteSettingsFallbackActive,
+      isFooterNavigationFallbackActive,
+      pagesBySlug,
+      missingPageSlugs,
+      cachePage
+    }),
+    [
+      cachePage,
+      footerNavigation,
+      footerNavigationError,
+      isFooterNavigationFallbackActive,
+      isFooterNavigationLoaded,
+      isSiteSettingsFallbackActive,
+      isSiteSettingsLoaded,
+      missingPageSlugs,
+      pagesBySlug,
+      siteSettings,
+      siteSettingsError
+    ]
+  );
 
   return (
-    <CmsContentContext.Provider
-      value={{
-        siteSettings,
-        footerNavigation,
-        isSiteSettingsLoaded,
-        isFooterNavigationLoaded,
-        siteSettingsError,
-        footerNavigationError,
-        isSiteSettingsFallbackActive,
-        isFooterNavigationFallbackActive,
-      }}
-    >
+    <CmsContentContext.Provider value={value}>
       {children}
     </CmsContentContext.Provider>
   );
@@ -276,15 +394,38 @@ export function useCmsNavigation({ placement = 'footer', fallbackNavigation = EM
 }
 
 export function useCmsPage(slug, { preview = false, enabled = true } = {}) {
+  const context = useContext(CmsContentContext);
   const normalizedSlug = String(slug || '').trim();
-  const [page, setPage] = useState(null);
-  const [isPageLoading, setIsPageLoading] = useState(Boolean(enabled && normalizedSlug));
+  const cachedPage = normalizedSlug ? context.pagesBySlug[normalizedSlug] || null : null;
+  const isKnownMissingPage = normalizedSlug
+    ? context.missingPageSlugs?.has(normalizedSlug)
+    : false;
+  const [page, setPage] = useState(cachedPage);
+  const [isPageLoading, setIsPageLoading] = useState(
+    Boolean(enabled && normalizedSlug && !cachedPage && !isKnownMissingPage)
+  );
   const [pageError, setPageError] = useState(null);
-  const [isFallbackActive, setIsFallbackActive] = useState(false);
+  const [isFallbackActive, setIsFallbackActive] = useState(isKnownMissingPage);
 
   useEffect(() => {
     if (!enabled || !normalizedSlug) {
       setPage(null);
+      setIsPageLoading(false);
+      setPageError(null);
+      setIsFallbackActive(false);
+      return undefined;
+    }
+
+    if (isKnownMissingPage) {
+      setPage(null);
+      setIsPageLoading(false);
+      setPageError(null);
+      setIsFallbackActive(true);
+      return undefined;
+    }
+
+    if (cachedPage) {
+      setPage(cachedPage);
       setIsPageLoading(false);
       setPageError(null);
       setIsFallbackActive(false);
@@ -307,6 +448,7 @@ export function useCmsPage(slug, { preview = false, enabled = true } = {}) {
 
         const normalizedPage = normalizePage(payload);
         setPage(normalizedPage);
+        context.cachePage(normalizedSlug, normalizedPage);
         setPageError(null);
         setIsFallbackActive(!normalizedPage);
       })
@@ -317,6 +459,11 @@ export function useCmsPage(slug, { preview = false, enabled = true } = {}) {
         console.warn(`Failed to load CMS page "${normalizedSlug}".`, error);
         setPage(null);
         setPageError(error);
+        if (error?.status === 404) {
+          context.cachePage(normalizedSlug, null);
+          setIsFallbackActive(true);
+          return;
+        }
         setIsFallbackActive(true);
       })
       .finally(() => {
@@ -330,7 +477,7 @@ export function useCmsPage(slug, { preview = false, enabled = true } = {}) {
       active = false;
       controller.abort();
     };
-  }, [enabled, normalizedSlug, preview]);
+  }, [cachedPage, context.cachePage, enabled, isKnownMissingPage, normalizedSlug, preview]);
 
   return {
     page,

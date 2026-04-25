@@ -175,6 +175,9 @@ function ManagerAccountPage() {
                     const orderDate = order.orderDate || order.createdAt;
                     const dateLabel = orderDate ? new Date(orderDate).toLocaleDateString('ru-RU') : 'Без даты';
                     const total = moneyToNumber(order.totalAmount || order.total);
+                    const contactLine = [order.contactName, order.contactPhone, order.receiptEmail]
+                      .filter(Boolean)
+                      .join(' · ');
                     return (
                       <div
                         key={order.id}
@@ -183,6 +186,12 @@ function ManagerAccountPage() {
                         <div>
                           <p className="text-sm font-semibold">Заказ {String(order.id).slice(0, 8)}...</p>
                           <p className="text-xs text-muted">{dateLabel} · {formatStatus(order.status)}</p>
+                          {contactLine ? (
+                            <p className="mt-1 text-xs text-muted">{contactLine}</p>
+                          ) : null}
+                          {order.homeAddress ? (
+                            <p className="mt-1 text-xs text-muted">Адрес: {order.homeAddress}</p>
+                          ) : null}
                         </div>
                       <div className="text-sm text-right">
                         <p className="font-semibold">{total.toLocaleString('ru-RU')} ₽</p>

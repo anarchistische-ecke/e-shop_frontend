@@ -15,7 +15,7 @@ function CheckoutPageHeader({ isSubmitting, onDisabledNavigation }) {
           Быстрое оформление без лишних шагов
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Вы выбираете доставку и полную стоимость до оплаты. Регистрация не обязательна.
+          Укажите контакты и домашний адрес. Товары оплачиваются онлайн, а доставку после заказа согласует менеджер.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -28,7 +28,7 @@ function CheckoutPageHeader({ isSubmitting, onDisabledNavigation }) {
           aria-disabled={isSubmitting}
           onClick={onDisabledNavigation}
         >
-          Поддержка и доставка
+          Условия доставки
         </Button>
         <Button
           as={Link}

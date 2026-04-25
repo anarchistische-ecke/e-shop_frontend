@@ -1,7 +1,9 @@
-jest.mock('../../api', () => ({
-  getBrands: jest.fn(),
-  getCategories: jest.fn(),
-  getProducts: jest.fn()
+import { vi } from 'vitest';
+
+vi.mock('../../api', () => ({
+  getBrands: vi.fn(),
+  getCategories: vi.fn(),
+  getProducts: vi.fn()
 }));
 
 import { getBrands, getCategories, getProducts } from '../../api';
@@ -13,7 +15,7 @@ import {
 describe('product directory data', () => {
   beforeEach(() => {
     __resetProductDirectoryCacheForTests();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('reuses the shared directory request and cache across calls', async () => {

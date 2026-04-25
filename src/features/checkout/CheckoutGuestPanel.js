@@ -20,7 +20,7 @@ function CheckoutGuestPanel({
     >
       <p className="text-sm font-semibold text-ink">Оформление как гость</p>
       <p className="mt-1 text-xs text-muted leading-relaxed">
-        Достаточно email и контакта получателя. Аккаунт нужен только если вы хотите сохранить данные для следующего заказа и видеть историю покупок.
+        Достаточно имени, телефона, домашнего адреса и email. Аккаунт нужен только если вы хотите сохранить данные для следующего заказа и видеть историю покупок.
       </p>
       <p className="mt-2 text-xs font-medium text-ink/80">
         {CART_SESSION_STRATEGY.title}. {CART_SESSION_STRATEGY.summary}

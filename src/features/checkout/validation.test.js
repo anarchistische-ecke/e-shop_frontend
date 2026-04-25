@@ -1,22 +1,26 @@
 import {
   mapCheckoutBackendErrors,
-  validateCheckoutForOfferFetch,
   validateCheckoutStep
 } from './validation';
 
 describe('checkout validation', () => {
-  it('validates delivery fields from the schema', () => {
+  it('validates manual checkout contact fields', () => {
     expect(
-      validateCheckoutStep('delivery', {
-        deliveryType: 'COURIER',
-        fullDeliveryAddress: '',
-        pickupLocation: '',
-        selectedPickupPointId: '',
-        selectedOfferId: ''
+      validateCheckoutStep('contact', {
+        email: '',
+        customerName: '',
+        phone: ''
       })
     ).toEqual({
-      deliveryAddress: 'Укажите адрес доставки для расчёта интервалов.',
-      selectedOfferId: 'Рассчитайте и выберите подходящий интервал доставки.'
+      email: 'Укажите email для чека и подтверждения заказа.',
+      customerName: 'Укажите имя получателя.',
+      phone: 'Укажите телефон для связи.'
+    });
+  });
+
+  it('validates the manual home address step', () => {
+    expect(validateCheckoutStep('address', { homeAddress: '' })).toEqual({
+      homeAddress: 'Укажите домашний адрес. Варианты и стоимость доставки согласует менеджер.'
     });
   });
 
@@ -25,24 +29,26 @@ describe('checkout validation', () => {
       mapCheckoutBackendErrors({
         details: {
           fieldErrors: [
-            { field: 'delivery.pickupPointId', message: 'Pickup point is required' }
+            { field: 'customerName', message: 'Customer name is required' },
+            { field: 'homeAddress', message: 'Home address is required' }
           ]
         }
       })
     ).toEqual({
       fieldErrors: {
-        selectedPickupPointId: 'Pickup point is required'
+        customerName: 'Customer name is required',
+        homeAddress: 'Home address is required'
       },
-      nextStep: 2
+      nextStep: 0
     });
   });
 
-  it('maps nested delivery email errors back to the contact step', () => {
+  it('maps receipt email errors back to the contact step', () => {
     expect(
       mapCheckoutBackendErrors({
         details: {
           fieldErrors: [
-            { field: 'delivery.email', message: 'Email is required' }
+            { field: 'receiptEmail', message: 'Email is required' }
           ]
         }
       })
@@ -60,7 +66,7 @@ describe('checkout validation', () => {
         details: {
           fieldErrors: [
             {
-              field: 'delivery.address',
+              field: 'homeAddress',
               message: 'org.springframework.dao.DataIntegrityViolationException: duplicate key value violates unique constraint'
             }
           ]
@@ -68,9 +74,9 @@ describe('checkout validation', () => {
       })
     ).toEqual({
       fieldErrors: {
-        deliveryAddress: 'Проверьте это поле.'
+        homeAddress: 'Проверьте это поле.'
       },
-      nextStep: 2
+      nextStep: 1
     });
   });
 
@@ -81,21 +87,9 @@ describe('checkout validation', () => {
       })
     ).toEqual({
       fieldErrors: {
-        deliveryAddress: 'Delivery address is required'
+        homeAddress: 'Delivery address is required'
       },
-      nextStep: 2
-    });
-  });
-
-  it('validates fields required before loading delivery offers', () => {
-    expect(
-      validateCheckoutForOfferFetch({
-        deliveryType: 'PICKUP',
-        fullDeliveryAddress: '',
-        selectedPickupPointId: ''
-      })
-    ).toEqual({
-      selectedPickupPointId: 'Сначала выберите пункт выдачи.'
+      nextStep: 1
     });
   });
 });

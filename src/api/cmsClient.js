@@ -5,6 +5,7 @@ import {
   getCmsSiteSettings as getCmsSiteSettingsRequest,
   isApiRequestError,
 } from './index';
+import { readEnv } from '../config/runtime.js';
 
 const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_RETRY_COUNT = 1;
@@ -18,7 +19,7 @@ function parseCacheTtlMs(value, fallback = DEFAULT_CACHE_TTL_MS) {
 }
 
 const CLIENT_CACHE_TTL_MS = parseCacheTtlMs(
-  process.env.REACT_APP_CMS_CACHE_TTL_MS,
+  readEnv('REACT_APP_CMS_CACHE_TTL_MS'),
   DEFAULT_CACHE_TTL_MS
 );
 

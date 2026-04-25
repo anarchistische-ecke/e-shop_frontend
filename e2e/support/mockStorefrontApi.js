@@ -48,6 +48,8 @@ async function mockStorefrontApi(page, overrides = {}) {
   const cartState = createCartState();
   const stats = {
     addItemRequests: 0,
+    checkoutRequests: 0,
+    checkoutPayloads: [],
   };
   const paymentProviderConfig = {
     ...clone(paymentProvider),
@@ -190,6 +192,8 @@ async function mockStorefrontApi(page, overrides = {}) {
     }
 
     if (pathname === '/orders/checkout' && method === 'POST') {
+      stats.checkoutRequests += 1;
+      stats.checkoutPayloads.push(request.postDataJSON());
       return fulfillJson(route, clone(checkoutResponse));
     }
 
@@ -203,35 +207,6 @@ async function mockStorefrontApi(page, overrides = {}) {
 
     if (pathname === `/orders/public/${publicOrderPayload.publicToken}/refresh-payment` && method === 'POST') {
       return fulfillJson(route, clone(publicOrderPayload));
-    }
-
-    if (pathname === '/deliveries/yandex/offers' && method === 'POST') {
-      return fulfillJson(route, {
-        offers: [
-          {
-            offerId: 'offer-e2e-1',
-            pricing: 0,
-            pricingTotal: 0,
-            intervalFrom: '2026-04-08T10:00:00.000Z',
-            intervalTo: '2026-04-08T14:00:00.000Z',
-          },
-        ],
-      });
-    }
-
-    if (pathname === '/deliveries/yandex/pickup-points' && method === 'POST') {
-      return fulfillJson(route, {
-        geoId: 'geo-e2e',
-        points: [
-          {
-            id: 'pickup-e2e-1',
-            name: 'ПВЗ Тестовый',
-            address: 'Москва, Тестовая улица, 1',
-            latitude: 55.75,
-            longitude: 37.61,
-          },
-        ],
-      });
     }
 
     return route.continue();
