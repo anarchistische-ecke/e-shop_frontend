@@ -35,7 +35,12 @@ describe('payment utils', () => {
       resumePaymentLabel: 'Открыть форму оплаты через YooKassa',
       confirmationMode: 'EMBEDDED',
       supportsEmbedded: true,
-      widgetScriptUrl: 'https://yookassa.ru/checkout-widget/v1/checkout-widget.js'
+      widgetScriptUrl: 'https://yookassa.ru/checkout-widget/v1/checkout-widget.js',
+      methods: ['CARD', 'SBP'],
+      fullPrepayment: true,
+      splitPaymentsEnabled: false,
+      cashOnDeliveryEnabled: false,
+      fiscalConfig: null
     });
   });
 

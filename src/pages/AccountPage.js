@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
+  getActivePromotions,
   getCustomerOrders,
   updateCustomerProfile
 } from '../api';
@@ -175,6 +176,7 @@ function AccountPage() {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
+  const [activePromotions, setActivePromotions] = useState({ promotions: [], promoCodes: [] });
 
   const routeState = useMemo(() => {
     const nextState = resolveAccountLocationState({
@@ -217,6 +219,25 @@ function AccountPage() {
     if (!isAuthenticated || isManager) return;
     loadOrders();
   }, [isAuthenticated, isManager, loadOrders]);
+
+  useEffect(() => {
+    if (!isAuthenticated || isManager) return;
+    let mounted = true;
+    getActivePromotions()
+      .then((data) => {
+        if (!mounted) return;
+        setActivePromotions({
+          promotions: Array.isArray(data?.promotions) ? data.promotions : [],
+          promoCodes: Array.isArray(data?.promoCodes) ? data.promoCodes : []
+        });
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch active promotions:', err);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated, isManager]);
 
   useEffect(() => {
     if (!isAuthenticated || isManager) return;
@@ -397,6 +418,41 @@ function AccountPage() {
     return 'Уточним после подтверждения заказа';
   };
 
+  const formatMinorAmount = (amount, currency = 'RUB') => {
+    const numeric = Number(amount);
+    if (!Number.isFinite(numeric)) return '';
+    return `${(numeric / 100).toLocaleString('ru-RU')} ${currency}`;
+  };
+
+  const promotionCards = [
+    ...activePromotions.promotions.map((promotion) => ({
+      id: `promotion-${promotion.id}`,
+      title: promotion.name,
+      label: 'Акция',
+      description:
+        promotion.description ||
+        (promotion.discountPercent
+          ? `Скидка ${promotion.discountPercent}% применяется автоматически к товарам акции.`
+          : promotion.discountAmount
+          ? `Скидка ${formatMinorAmount(promotion.discountAmount, promotion.currency)} применяется автоматически.`
+          : promotion.salePriceAmount
+          ? `Акционная цена ${formatMinorAmount(promotion.salePriceAmount, promotion.currency)} применяется автоматически.`
+          : 'Акция применяется автоматически при оформлении заказа.')
+    })),
+    ...activePromotions.promoCodes.map((promoCode) => ({
+      id: `promo-code-${promoCode.id}`,
+      title: promoCode.code,
+      label: 'Промокод',
+      description:
+        promoCode.description ||
+        (promoCode.discountPercent
+          ? `Введите код в корзине, чтобы получить скидку ${promoCode.discountPercent}%.`
+          : promoCode.discountAmount
+          ? `Введите код в корзине, чтобы получить скидку ${formatMinorAmount(promoCode.discountAmount)}.`
+          : 'Введите код в корзине, чтобы применить скидку.')
+    }))
+  ];
+
   const renderSection = () => {
     switch (activeSection) {
       case 'profile':
@@ -565,11 +621,23 @@ function AccountPage() {
           <Card className="reveal-up" padding="lg">
             <h2 className="text-xl sm:text-2xl font-semibold mb-3">Акции и промокоды</h2>
             <p className="text-sm text-muted">
-              Здесь появятся активные промокоды и условия акций, доступные для ваших заказов.
+              Акции из Directus применяются на сервере при расчёте корзины. Промокод можно ввести в корзине перед оплатой.
             </p>
-            <Card variant="quiet" padding="sm" className="mt-5 text-sm text-muted">
-              Пока нет активных промокодов. Общие скидки по сумме корзины рассчитываются автоматически.
-            </Card>
+            {promotionCards.length ? (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {promotionCards.map((promotion) => (
+                  <Card key={promotion.id} variant="quiet" padding="sm" className="text-sm">
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted">{promotion.label}</p>
+                    <h3 className="mt-2 text-base font-semibold">{promotion.title}</h3>
+                    <p className="mt-2 text-muted">{promotion.description}</p>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card variant="quiet" padding="sm" className="mt-5 text-sm text-muted">
+                Пока нет активных промокодов. Общие скидки по сумме корзины рассчитываются автоматически.
+              </Card>
+            )}
           </Card>
         );
       case 'orders':
@@ -628,6 +696,34 @@ function AccountPage() {
                             .filter(Boolean)
                             .join(' · ') || 'Контакты уточняются'}
                         </p>
+                        {selectedOrder.paymentSummary ? (
+                          <div className="mt-3 space-y-1 text-xs text-muted">
+                            <p>
+                              Статус платежа:{' '}
+                              <span className="font-semibold text-ink">{selectedOrder.paymentSummary.status}</span>
+                            </p>
+                            {selectedOrder.paymentSummary.receiptUrl ? (
+                              <p>
+                                <a
+                                  className="font-semibold text-primary"
+                                  href={selectedOrder.paymentSummary.receiptUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Открыть чек 54-ФЗ
+                                </a>
+                              </p>
+                            ) : null}
+                            {moneyToNumber(selectedOrder.paymentSummary.refundedAmount) > 0 ? (
+                              <p>
+                                Возвращено:{' '}
+                                <span className="font-semibold text-ink">
+                                  {moneyToNumber(selectedOrder.paymentSummary.refundedAmount).toLocaleString('ru-RU')} ₽
+                                </span>
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </Card>
                       <Card variant="tint" padding="sm" className="bg-white/90 shadow-none">
                         <p className="text-xs uppercase tracking-[0.16em] text-muted">Доставка</p>

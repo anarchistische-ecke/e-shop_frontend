@@ -12,7 +12,6 @@ function AdminSettings() {
       currency: 'RUB',
       shippingRate: 300,
       taxRate: 20,
-      cod: true,
       sbp: true,
       card: true,
       showBanner: storedBannerToggle !== null ? storedBannerToggle === 'true' : true
@@ -115,7 +114,6 @@ function AdminSettings() {
           {[
             { key: 'card', label: 'Банковская карта' },
             { key: 'sbp', label: 'СБП' },
-            { key: 'cod', label: 'Оплата при получении' },
           ].map((method) => (
             <label key={method.key} className="flex items-center gap-2 text-sm">
               <input

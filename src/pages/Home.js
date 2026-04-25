@@ -7,6 +7,7 @@ import PromoBanners from '../components/home/PromoBanners';
 import ShopTheLook from '../components/home/ShopTheLook';
 import BrandIntro from '../components/home/BrandIntro';
 import NewsletterForm from '../components/home/NewsletterForm';
+import { getActivePromotions } from '../api';
 import { useProductDirectoryData } from '../features/product-list/data';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
 import { getPrimaryImageUrl, getProductPrice, resolveImageUrl } from '../utils/product';
@@ -31,6 +32,7 @@ function Home() {
   const [bannerText, setBannerText] = useState('');
   const [bannerEnabled, setBannerEnabled] = useState(true);
   const [heroConfig, setHeroConfig] = useState(() => ({ ...homeHeroDefaults }));
+  const [activePromotions, setActivePromotions] = useState({ promotions: [], promoCodes: [] });
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -54,6 +56,24 @@ function Home() {
       console.error('Failed to parse home hero config', err);
       setHeroConfig({ ...homeHeroDefaults });
     }
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    getActivePromotions()
+      .then((data) => {
+        if (!mounted) return;
+        setActivePromotions({
+          promotions: Array.isArray(data?.promotions) ? data.promotions : [],
+          promoCodes: Array.isArray(data?.promoCodes) ? data.promoCodes : []
+        });
+      })
+      .catch((err) => {
+        console.warn('Failed to load active promotions', err);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const activeProducts = useMemo(
@@ -125,32 +145,49 @@ function Home() {
     },
   ];
 
-  const promoBanners = [
-    {
-      id: 'bedroom-bundle',
-      eyebrow: 'Готовые сценарии',
-      title: 'Соберите спальню за один заход',
+  const formatMinorAmount = (amount, currency = 'RUB') => {
+    const numeric = Number(amount);
+    if (!Number.isFinite(numeric)) return '';
+    return `${(numeric / 100).toLocaleString('ru-RU')} ${currency}`;
+  };
+
+  const livePromoBanners = useMemo(() => {
+    const promotionCards = activePromotions.promotions.slice(0, 2).map((promotion) => ({
+      id: `promotion-${promotion.id}`,
+      eyebrow: 'Акция',
+      title: promotion.name,
       description:
-        'Начните с комплекта белья, добавьте плед и полотенца-компаньоны. Мы уже подобрали сочетания по цвету и фактуре.',
-      cta: 'Открыть бестселлеры',
-      link: '/category/popular',
-      secondaryCta: 'Перейти в каталог',
-      secondaryLink: '/catalog',
-      className: 'bg-gradient-to-br from-[#f4e7dc] via-white to-[#efe2d6]'
-    },
-    {
-      id: 'new-collection',
-      eyebrow: 'Новая коллекция',
-      title: 'Мягкие оттенки и спокойные фактуры для дома',
+        promotion.description ||
+        (promotion.discountPercent
+          ? `Скидка ${promotion.discountPercent}% применяется автоматически к товарам акции.`
+          : promotion.discountAmount
+          ? `Скидка ${formatMinorAmount(promotion.discountAmount, promotion.currency)} применяется автоматически.`
+          : promotion.salePriceAmount
+          ? `Акционная цена ${formatMinorAmount(promotion.salePriceAmount, promotion.currency)} применяется автоматически.`
+          : 'Акционная цена применяется автоматически при оформлении заказа.'),
+      cta: 'Смотреть каталог',
+      link: '/catalog',
+      secondaryCta: 'Условия оплаты',
+      secondaryLink: '/info/payment',
+      className: 'bg-gradient-to-br from-[#eaf2ec] via-white to-[#f4efe8]'
+    }));
+    const promoCodeCards = activePromotions.promoCodes.slice(0, Math.max(0, 2 - promotionCards.length)).map((promoCode) => ({
+      id: `promo-code-${promoCode.id}`,
+      eyebrow: 'Промокод',
+      title: promoCode.code,
       description:
-        'Новинки с натуральными тканями, нейтральной палитрой и тем самым визуальным покоем, который хорошо работает в спальне и гостиной.',
-      cta: 'Смотреть новинки',
-      link: '/category/new',
-      secondaryCta: 'Условия доставки',
-      secondaryLink: '/info/delivery',
-      className: 'bg-gradient-to-br from-[#dfe9e2] via-white to-[#eff5f1]'
-    }
-  ];
+        promoCode.description ||
+        (promoCode.discountPercent
+          ? `Введите промокод в корзине, чтобы получить скидку ${promoCode.discountPercent}%.`
+          : 'Введите промокод в корзине, чтобы применить скидку.'),
+      cta: 'Открыть корзину',
+      link: '/cart',
+      secondaryCta: 'Все акции',
+      secondaryLink: '/account#promocodes',
+      className: 'bg-gradient-to-br from-[#edf4f6] via-white to-[#f7eee8]'
+    }));
+    return [...promotionCards, ...promoCodeCards];
+  }, [activePromotions]);
 
   const shopTheLookProducts = useMemo(() => {
     const ordered = [featuredProduct, ...bestsellers].filter(Boolean);
@@ -229,7 +266,7 @@ function Home() {
           ctaLink="/category/popular"
         />
 
-        <PromoBanners banners={promoBanners} />
+        <PromoBanners banners={livePromoBanners} />
 
         <ShopTheLook
           title="Посмотрите на композицию и откройте товар прямо из сцены"

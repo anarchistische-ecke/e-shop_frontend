@@ -91,7 +91,7 @@ describe('CMS blocks', () => {
       anchorId: 'rich',
       eyebrow: 'Оплата',
       title: 'Как проходит оплата',
-      body: '<p><strong>Оплачивайте</strong> заказ картой, СБП или при получении.</p>',
+      body: '<p><strong>Оплачивайте</strong> заказ картой или через СБП.</p>',
       primaryCtaLabel: 'Условия доставки',
       primaryCtaUrl: '/info/delivery',
     };

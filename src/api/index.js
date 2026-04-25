@@ -344,6 +344,9 @@ export async function refreshPublicOrderPayment(token) {
 export async function getPublicPaymentConfig() {
   return request('/payments/public-config');
 }
+export async function getActivePromotions() {
+  return request('/promotions/active');
+}
 export async function updateOrderStatus(id, status) {
   return request(
     `/orders/${id}/status?status=${encodeURIComponent(status)}`,
