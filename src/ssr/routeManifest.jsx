@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom';
 import RequireAdmin from '../components/RequireAdmin';
 import AboutPage from '../pages/AboutPage';
 import AccountPage from '../pages/AccountPage';
-import BonusesInfoPage from '../pages/BonusesInfoPage';
 import CartPage from '../pages/CartPage';
 import CataloguePage from '../pages/CataloguePage';
 import CategoryPage from '../pages/CategoryPage';
@@ -56,7 +55,6 @@ const routeRenderers = {
   order: () => <OrderPage />,
   'payment-info': () => <PaymentInfoPage />,
   'delivery-info': () => <DeliveryInfoPage />,
-  'bonuses-info': () => <BonusesInfoPage />,
   'production-info': () => <ProductionInfoPage />,
   catalog: () => <CataloguePage />,
   'legal-info': () => <LegalInfoPage />,

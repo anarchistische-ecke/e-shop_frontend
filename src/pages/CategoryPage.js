@@ -14,6 +14,7 @@ import {
 } from '../components/ui';
 import {
   getPrimaryImageUrl,
+  getPrimaryVariant,
   getProductPrice,
   moneyToNumber,
   normalizeProductImages
@@ -69,10 +70,17 @@ function CategoryCard({ product, fromPath, fromLabel }) {
   }, [activeImageIndex, images.length]);
 
   const currentImage = images[activeImageIndex]?.url || '';
-  const price = getProductPrice(product);
-  const oldPrice = product?.oldPrice ? moneyToNumber(product.oldPrice) : 0;
+  const primaryVariant = getPrimaryVariant(product);
+  const price = primaryVariant?.price ? moneyToNumber(primaryVariant.price) : getProductPrice(product);
+  const oldPrice = primaryVariant?.oldPrice
+    ? moneyToNumber(primaryVariant.oldPrice)
+    : product?.oldPrice
+    ? moneyToNumber(product.oldPrice)
+    : 0;
   const hasDiscount = oldPrice > price;
-  const discount = hasDiscount ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
+  const discount = hasDiscount
+    ? primaryVariant?.discountPercent || product.discountPercent || Math.round(((oldPrice - price) / oldPrice) * 100)
+    : 0;
   const rating = Number(product?.rating || 0);
   const reviewCount = getReviewCount(product);
   const stockCount = getStockCount(product);

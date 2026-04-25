@@ -50,7 +50,7 @@ function AboutFallbackPage() {
           {[
             { number: '>100', label: 'магазинов' },
             { number: '38', label: 'городов присутствия' },
-            { number: '2 млн', label: 'лояльных покупателей' },
+            { number: '2 млн', label: 'покупателей' },
             { number: '9 лет', label: 'на рынке' },
           ].map((item, idx) => (
             <div key={idx} className="min-w-[120px]">

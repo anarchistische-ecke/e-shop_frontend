@@ -31,10 +31,14 @@ function ProductCard({ product }) {
   const currentPrice = primaryVariant?.price
     ? moneyToNumber(primaryVariant.price)
     : getProductPrice(product);
-  const oldPrice = product.oldPrice ? moneyToNumber(product.oldPrice) : null;
+  const oldPrice = primaryVariant?.oldPrice
+    ? moneyToNumber(primaryVariant.oldPrice)
+    : product.oldPrice
+    ? moneyToNumber(product.oldPrice)
+    : null;
   const hasDiscount = Boolean(oldPrice && oldPrice > currentPrice);
   const discount = hasDiscount
-    ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
+    ? primaryVariant?.discountPercent || product.discountPercent || Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
     : null;
 
   const images = useMemo(() => {

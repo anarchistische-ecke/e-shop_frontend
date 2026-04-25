@@ -408,7 +408,9 @@ function ProductPage() {
       ? moneyToNumber(product.oldPrice)
       : 0;
   const hasDiscount = oldPrice > price;
-  const discountPercent = hasDiscount ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
+  const discountPercent = hasDiscount
+    ? selectedVariant?.discountPercent || product?.discountPercent || Math.round(((oldPrice - price) / oldPrice) * 100)
+    : 0;
 
   const availableStock = selectedVariant
     ? getStockValue(selectedVariant)

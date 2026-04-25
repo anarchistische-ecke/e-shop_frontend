@@ -74,11 +74,11 @@ describe('account helpers', () => {
 
     expect(
       resolveAccountLocationState({
-        hash: '#bonuses',
+        hash: '#promocodes',
         search: '?order=abc'
       })
     ).toEqual({
-      section: 'bonuses',
+      section: 'promocodes',
       orderId: ''
     });
 

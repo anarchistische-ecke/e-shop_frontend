@@ -15,7 +15,6 @@ export const storefrontRouteConfig = [
   { id: 'order', path: '/order/:token', renderMode: 'csr' },
   { id: 'payment-info', path: '/info/payment', renderMode: 'ssr' },
   { id: 'delivery-info', path: '/info/delivery', renderMode: 'ssr' },
-  { id: 'bonuses-info', path: '/info/bonuses', renderMode: 'ssr' },
   { id: 'production-info', path: '/info/production', renderMode: 'ssr' },
   { id: 'catalog', path: '/catalog', renderMode: 'ssr' },
   { id: 'legal-info', path: '/info/legal', renderMode: 'ssr' },

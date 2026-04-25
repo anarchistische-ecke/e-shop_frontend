@@ -2,6 +2,9 @@ import React, { createContext, useState, useEffect, useCallback, useMemo } from 
 import {
   createCart,
   getCart,
+  getCartPricing,
+  applyCartPromoCode,
+  removeCartPromoCode,
   addItemToCart,
   updateCartItem,
   removeCartItem
@@ -34,6 +37,8 @@ function normalizeVariantsMap(products = []) {
           productSlug: product.slug,
           variantName: variant.name,
           variantPrice: variant.price,
+          variantOldPrice: variant.oldPrice,
+          discountPercent: variant.discountPercent,
           imageUrl: getPrimaryImageUrl(product, variant.id)
         };
       }
@@ -42,11 +47,18 @@ function normalizeVariantsMap(products = []) {
   return map;
 }
 
-function enrichCartItems(items = [], variantMap = {}) {
+function enrichCartItems(items = [], variantMap = {}, pricing = null) {
+  const pricingLinesByVariantId = new Map(
+    Array.isArray(pricing?.items)
+      ? pricing.items.map((line) => [line.variantId, line])
+      : []
+  );
   return items.map((item) => {
     const variantMeta = variantMap[item.variantId];
+    const pricingLine = pricingLinesByVariantId.get(item.variantId) || null;
     return {
       ...item,
+      pricingLine,
       productInfo: variantMeta
         ? {
             id: variantMeta.productId,
@@ -56,7 +68,14 @@ function enrichCartItems(items = [], variantMap = {}) {
             imageUrl: variantMeta.imageUrl
           }
         : null,
-      unitPriceValue: moneyToNumber(item.unitPrice || variantMeta?.variantPrice)
+      unitPriceValue: moneyToNumber(pricingLine?.unitPrice || item.unitPrice || variantMeta?.variantPrice),
+      oldUnitPriceValue: moneyToNumber(pricingLine?.originalUnitPrice || variantMeta?.variantOldPrice),
+      discountPercent: pricingLine?.saleApplied
+        ? Math.round(
+            ((moneyToNumber(pricingLine.originalUnitPrice) - moneyToNumber(pricingLine.unitPrice)) /
+              Math.max(1, moneyToNumber(pricingLine.originalUnitPrice))) * 100
+          )
+        : variantMeta?.discountPercent || null
     };
   });
 }
@@ -93,6 +112,7 @@ export function CartProvider({ children }) {
     return null;
   });
   const [rawItems, setRawItems] = useState([]);
+  const [pricing, setPricing] = useState(null);
   const [lastAddedItem, setLastAddedItem] = useState(null);
 
   const variantMap = useMemo(
@@ -101,8 +121,8 @@ export function CartProvider({ children }) {
   );
 
   const items = useMemo(
-    () => enrichCartItems(rawItems, variantMap),
-    [rawItems, variantMap]
+    () => enrichCartItems(rawItems, variantMap, pricing),
+    [rawItems, variantMap, pricing]
   );
 
   const syncCart = useCallback(
@@ -110,6 +130,13 @@ export function CartProvider({ children }) {
       try {
         const cart = await getCart(id);
         setRawItems(Array.isArray(cart?.items) ? cart.items : []);
+        try {
+          const nextPricing = await getCartPricing(id);
+          setPricing(nextPricing || null);
+        } catch (pricingErr) {
+          console.error('Failed to load cart pricing:', pricingErr);
+          setPricing(null);
+        }
       } catch (err) {
         console.error('Failed to load cart:', err);
       }
@@ -253,6 +280,48 @@ export function CartProvider({ children }) {
     [cartId, syncCart]
   );
 
+  const refreshPricing = useCallback(async () => {
+    if (!cartId) return null;
+    try {
+      const nextPricing = await getCartPricing(cartId);
+      setPricing(nextPricing || null);
+      return nextPricing || null;
+    } catch (err) {
+      console.error('Failed to refresh cart pricing:', err);
+      setPricing(null);
+      return null;
+    }
+  }, [cartId]);
+
+  const applyPromoCode = useCallback(
+    async (code) => {
+      if (!cartId) return { ok: false };
+      const normalizedCode = String(code || '').trim();
+      if (!normalizedCode) return { ok: false };
+      try {
+        await applyCartPromoCode(cartId, normalizedCode);
+        await syncCart(cartId);
+        return { ok: true };
+      } catch (err) {
+        console.error('Failed to apply promo code:', err);
+        return { ok: false, error: err };
+      }
+    },
+    [cartId, syncCart]
+  );
+
+  const removePromoCode = useCallback(async () => {
+    if (!cartId) return { ok: false };
+    try {
+      await removeCartPromoCode(cartId);
+      await syncCart(cartId);
+      return { ok: true };
+    } catch (err) {
+      console.error('Failed to remove promo code:', err);
+      return { ok: false, error: err };
+    }
+  }, [cartId, syncCart]);
+
   const clearCart = useCallback(async () => {
     if (!cartId) return;
     try {
@@ -273,9 +342,13 @@ export function CartProvider({ children }) {
   const contextValue = {
     items,
     cartId,
+    pricing,
     addItem,
     removeItem,
     updateQuantity,
+    refreshPricing,
+    applyPromoCode,
+    removePromoCode,
     clearCart,
     lastAddedItem,
     dismissLastAddedItem
