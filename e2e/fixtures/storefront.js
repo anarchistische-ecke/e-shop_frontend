@@ -163,6 +163,10 @@ const publicOrder = {
   publicToken: 'order-e2e-token',
   status: 'PENDING',
   totalAmount: 4200,
+  receiptEmail: 'buyer@example.com',
+  contactName: 'Иван Петров',
+  contactPhone: '+79990000000',
+  homeAddress: 'Москва, Тестовая улица, 1',
   items: [
     {
       id: 'order-item-1',
@@ -172,11 +176,6 @@ const publicOrder = {
       unitPrice: 4200,
     },
   ],
-  delivery: {
-    deliveryType: 'COURIER',
-    address: 'Москва, тестовая улица, 1',
-    pricingTotal: 0,
-  },
 };
 
 const paymentProvider = {

@@ -1,7 +1,6 @@
 import {
   createInitialAttempt,
   createInitialSafeRetryState,
-  createPickupLocationSuggestion,
   createSafeRetryState
 } from './state';
 
@@ -58,19 +57,4 @@ describe('checkout state helpers', () => {
     );
   });
 
-  it('creates pickup suggestions only for non-empty cities', () => {
-    expect(createPickupLocationSuggestion('')).toBeNull();
-    expect(createPickupLocationSuggestion('Москва', 'timezone')).toEqual(
-      expect.objectContaining({
-        city: 'Москва',
-        source: 'timezone'
-      })
-    );
-    expect(createPickupLocationSuggestion('Сочи', 'geocoder')).toEqual(
-      expect.objectContaining({
-        city: 'Сочи',
-        source: 'geocoder'
-      })
-    );
-  });
 });

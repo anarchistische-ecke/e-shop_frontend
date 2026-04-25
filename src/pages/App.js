@@ -4,7 +4,6 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ScrollToTop from '../components/ScrollToTop';
 import { trackMetrikaHit } from '../utils/metrika';
-import DeliveryConfigNotice from '../components/DeliveryConfigNotice';
 import { useRenderContext } from '../ssr/RenderContext';
 import { getAllStorefrontRoutes } from '../ssr/routeManifest';
 
@@ -71,7 +70,6 @@ function App() {
             Перейти к содержимому
           </a>
         ) : null}
-        <DeliveryConfigNotice />
         {!isAdminRoute && <Header />}
         <main
           id="main-content"

@@ -444,23 +444,14 @@ function ProductPage() {
   }, 0);
   const bundleTotal = price * quantity + bundleAddOnTotal;
 
-  const deliveryDate = useMemo(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 3);
-    return date.toLocaleDateString('ru-RU', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
-  }, []);
   const infoHighlights = useMemo(
     () => [
       {
         key: 'shipping',
         icon: 'delivery',
         title: 'Доставка',
-        summary: `Ориентир: ${deliveryDate}`,
-        caption: 'Покажем стоимость и доступные интервалы до оплаты.'
+        summary: 'Согласует менеджер',
+        caption: 'После оплаты менеджер уточнит варианты и финальную стоимость.'
       },
       {
         key: 'returns',
@@ -477,7 +468,7 @@ function ProductPage() {
         caption: 'Оплата подтверждается на защищённом шаге и не дублируется.'
       }
     ],
-    [deliveryDate]
+    []
   );
   const hasBundleSelection = bundleItems.some((item) => bundleSelections[item.id]);
   const isCartActionPending = Boolean(pendingAction);
@@ -1373,9 +1364,9 @@ function ProductPage() {
       >
         {sheetType === 'shipping' ? (
           <div className="space-y-3 text-sm text-ink/85">
-            <p>Ориентировочная дата доставки: {deliveryDate} (при заказе до 14:00 по местному времени).</p>
-            <p>Стоимость и доступные интервалы показываются до оплаты на шаге оформления заказа.</p>
-            <p>Бесплатная доставка от 5000 ₽. Для удалённых регионов срок может увеличиваться.</p>
+            <p>Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.</p>
+            <p>При онлайн-оплате вы оплачиваете только товары. Доставка оплачивается отдельно после согласования.</p>
+            <p>Наш менеджер свяжется с вами в ближайшее время после оплаты.</p>
           </div>
         ) : sheetType === 'payment' ? (
           <div className="space-y-3 text-sm text-ink/85">

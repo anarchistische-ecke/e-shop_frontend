@@ -62,7 +62,7 @@ function LoginPage() {
               <p className="text-sm uppercase tracking-[0.2em] text-accent">Личный кабинет</p>
               <h1 className="text-2xl sm:text-3xl font-semibold">Войдите в аккаунт</h1>
               <p className="text-muted text-sm mt-1">
-                Сохраняйте данные для следующих покупок, отслеживайте заказы и возвращайтесь к оформлению без лишних шагов.
+                Войдите или зарегистрируйтесь, чтобы сохранять данные для следующих покупок, отслеживать заказы и возвращаться к оформлению без лишних шагов.
               </p>
               {returnsToCheckout ? (
                 <NotificationBanner
@@ -113,7 +113,7 @@ function LoginPage() {
             onClick={handleKeycloakLogin}
             disabled={isSubmitting || !keycloakReady}
           >
-            {isSubmitting ? 'Перенаправляем…' : 'Войти'}
+            {isSubmitting ? 'Перенаправляем…' : 'Войти или зарегистрироваться'}
           </Button>
         </Card>
       </div>

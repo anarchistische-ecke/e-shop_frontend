@@ -450,6 +450,7 @@ function AccountPage() {
 
   const getOrderDeliveryLabel = (order) => {
     if (!order) return 'Уточним после подтверждения заказа';
+    if (order.homeAddress) return order.homeAddress;
     if (order.deliveryPickupPointName) return order.deliveryPickupPointName;
     if (order.deliveryAddress) return order.deliveryAddress;
     if (order.deliveryMethod) return order.deliveryMethod;
@@ -721,16 +722,16 @@ function AccountPage() {
                           {getOrderTotal(selectedOrder).toLocaleString('ru-RU')} ₽
                         </p>
                         <p className="mt-1 text-xs text-muted">
-                          {selectedOrder.receiptEmail || 'Email для чека уточняется'}
+                          {[selectedOrder.contactName, selectedOrder.contactPhone, selectedOrder.receiptEmail]
+                            .filter(Boolean)
+                            .join(' · ') || 'Контакты уточняются'}
                         </p>
                       </Card>
                       <Card variant="tint" padding="sm" className="bg-white/90 shadow-none">
                         <p className="text-xs uppercase tracking-[0.16em] text-muted">Доставка</p>
                         <p className="mt-2 text-sm font-semibold">{getOrderDeliveryLabel(selectedOrder)}</p>
                         <p className="mt-1 text-xs text-muted">
-                          {selectedOrder.deliveryProvider
-                            ? `${selectedOrder.deliveryProvider} · ${selectedOrder.deliveryMethod || 'способ уточняется'}`
-                            : 'Способ доставки уточняется'}
+                          Финальную стоимость и варианты доставки согласует менеджер.
                         </p>
                       </Card>
                     </div>

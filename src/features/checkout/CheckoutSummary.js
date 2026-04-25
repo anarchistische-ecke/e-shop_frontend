@@ -13,7 +13,8 @@ function CheckoutSummary({
   deliveryLabel,
   payableTotal,
   formatRub,
-  mobileAction
+  mobileAction,
+  deliveryNotice
 }) {
   const { paymentConfig } = usePaymentConfig();
   const paymentDescription = getCheckoutPaymentDescription(paymentConfig);
@@ -45,7 +46,7 @@ function CheckoutSummary({
 
           <TrustLinksPanel
             title="Почему нам доверяют"
-            description={`${paymentDescription} Доставка рассчитывается до оплаты, а документы и правила возврата доступны сразу.`}
+            description={`${paymentDescription} ${deliveryNotice}`}
             linkIds={CHECKOUT_TRUST_LINK_IDS}
           />
         </div>
@@ -92,7 +93,7 @@ function CheckoutSummary({
 
         <TrustLinksPanel
           title="Доверие и безопасность"
-          description={`${paymentDescription} Доставка рассчитывается через интеграцию Яндекс и отображается до оплаты.`}
+          description={`${paymentDescription} ${deliveryNotice}`}
           linkIds={CHECKOUT_TRUST_LINK_IDS}
         />
       </aside>

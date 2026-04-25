@@ -13,7 +13,7 @@ function PaymentInfoFallbackPage() {
       <p className="text-xs uppercase tracking-[0.3em] text-muted">Сервис</p>
       <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Удобная оплата</h1>
       <p className="text-muted mb-6">
-        Мы поддерживаем безопасные способы оплаты и сразу показываем итоговую стоимость заказа.
+        Мы поддерживаем безопасные способы оплаты. В онлайн-заказе оплачиваются товары, а доставку менеджер согласует отдельно после оформления.
       </p>
       <div className="grid md:grid-cols-2 gap-4 mb-6">
         <div className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm">
@@ -30,9 +30,9 @@ function PaymentInfoFallbackPage() {
         </div>
       </div>
       <div className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm space-y-3">
-        <h2 className="text-lg font-semibold">Оплата при получении</h2>
+        <h2 className="text-lg font-semibold">Доставка после оплаты</h2>
         <p className="text-sm text-muted">
-          В пунктах выдачи и у курьеров доступна оплата картой или наличными, если поддерживается оператором доставки. На некоторых локациях доступна только предоплата — это будет указано при оформлении.
+          Финальную стоимость и варианты доставки согласует менеджер. После оплаты заказа он свяжется с вами, уточнит адрес и предложит доступные способы получения.
         </p>
         <ul className="list-disc list-inside text-sm text-muted space-y-1">
           <li>Чеки отправляем на e‑mail и в личный кабинет.</li>
