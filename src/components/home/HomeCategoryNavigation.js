@@ -206,9 +206,6 @@ function HomeCategoryNavigation({ categories = [], products = [] }) {
   return (
     <section className="page-shell page-section--tight">
       <div className="ambient-panel relative overflow-hidden rounded-[28px] border border-white/70 bg-white/70 px-4 py-6 shadow-[0_24px_60px_rgba(43,39,34,0.12)] backdrop-blur-lg sm:px-6 md:px-10 md:py-10">
-        <div className="absolute -top-16 right-6 h-32 w-32 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-sky/60 blur-3xl pointer-events-none" />
-
         <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs uppercase tracking-[0.32em] text-accent">Категории</p>

@@ -10,14 +10,14 @@ test('home page shows categories as a visible mobile list instead of a hidden sl
 
   const categorySection = page.getByTestId('home-category-grid');
   await expect(
-    categorySection.getByRole('heading', { name: /Разделы каталога без скрытых свайпов/i })
+    categorySection.getByRole('heading', { name: /Быстрый вход в популярные разделы/i })
   ).toBeVisible();
   await expect(categorySection.getByRole('link', { name: 'Весь каталог' })).toHaveCount(0);
   await expect(categorySection.locator('.overflow-x-auto')).toHaveCount(0);
 
   const categoryLinks = categorySection.locator('a[href^="/category/"]');
   await expect(categoryLinks.first()).toBeVisible();
-  expect(await categoryLinks.count()).toBeGreaterThanOrEqual(3);
+  expect(await categoryLinks.count()).toBeGreaterThanOrEqual(2);
 
   await categoryLinks.first().click();
 

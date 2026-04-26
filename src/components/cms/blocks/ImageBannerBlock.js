@@ -29,7 +29,7 @@ function BannerMedia({ section, items = [] }) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-white/75 bg-[radial-gradient(circle_at_top_left,rgba(182,91,74,0.18),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(217,229,223,0.42),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.9),rgba(244,238,231,0.82))] shadow-[0_18px_38px_rgba(43,39,34,0.12)]">
+    <div className="relative overflow-hidden rounded-[28px] border border-white/75 bg-white/88 shadow-[0_18px_38px_rgba(43,39,34,0.12)]">
       <div className="aspect-[5/4]">
         <div className="absolute left-6 top-6 rounded-full border border-white/65 bg-white/55 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-accent">
           CMS banner

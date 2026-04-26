@@ -245,9 +245,9 @@ function CartPage() {
                   key={item.id}
                   variant="quiet"
                   padding="sm"
-                  className="flex flex-col gap-4 sm:flex-row sm:items-center"
+                  className="grid grid-cols-[6rem_minmax(0,1fr)] gap-4 sm:flex sm:flex-row sm:items-center"
                 >
-                  <div className="w-full sm:w-24 h-24 rounded-2xl overflow-hidden bg-sand/60 border border-white/70 flex-shrink-0">
+                  <div className="h-24 w-24 rounded-2xl overflow-hidden bg-sand/60 border border-white/70 flex-shrink-0">
                     {item.productInfo?.imageUrl ? (
                       <img src={item.productInfo.imageUrl} alt={item.productInfo?.name || 'Товар'} className="w-full h-full object-cover" />
                     ) : (
@@ -256,7 +256,7 @@ function CartPage() {
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <h4 className="text-base font-semibold m-0">{item.productInfo?.name || 'Товар'}</h4>
                     <p className="text-xs text-muted mt-1">
                       {item.productInfo?.variantName ? `Вариант: ${item.productInfo.variantName}` : item.variantId}
@@ -269,7 +269,7 @@ function CartPage() {
                         </span>
                       ) : null}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
+                    <div className="col-span-2 flex flex-wrap items-center gap-2 mt-3 text-sm sm:col-span-1">
                       <div className="flex items-center gap-1 rounded-2xl border border-ink/10 bg-white/85 p-1">
                         <Button
                           variant="ghost"
@@ -325,7 +325,7 @@ function CartPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="!px-1 text-xs text-primary hover:text-primary"
+                        className="!min-h-11 !px-2 text-xs text-primary hover:text-primary"
                       >
                         Добавить ещё одну
                       </Button>
@@ -333,7 +333,7 @@ function CartPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeItem(item.id)}
-                        className="!px-1 text-xs text-muted hover:text-primary"
+                        className="!min-h-11 !px-2 text-xs text-muted hover:text-primary"
                       >
                         Удалить
                       </Button>

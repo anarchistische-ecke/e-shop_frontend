@@ -25,7 +25,10 @@ const CmsContentContext = createContext({
   isFooterNavigationFallbackActive: true,
   pagesBySlug: {},
   missingPageSlugs: new Set(),
-  cachePage: () => {}
+  collectionsByKey: {},
+  missingCollectionKeys: new Set(),
+  cachePage: () => {},
+  cacheCollection: () => {}
 });
 
 function normalizeSiteSettings(payload) {
@@ -108,6 +111,29 @@ function normalizePagesBySlug(pages = {}) {
   }, {});
 }
 
+function normalizeCollection(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  return {
+    ...payload,
+    items: Array.isArray(payload.items) ? payload.items.slice().sort(sortBySortOrder) : [],
+  };
+}
+
+function normalizeCollectionsByKey(collections = {}) {
+  return Object.entries(collections || {}).reduce((acc, [key, payload]) => {
+    const normalizedCollection = normalizeCollection(payload);
+    if (!normalizedCollection) {
+      return acc;
+    }
+
+    acc[String(key || '').trim()] = normalizedCollection;
+    return acc;
+  }, {});
+}
+
 export function CmsContentProvider({ children, initialData = null }) {
   const seededSiteSettings = initialData?.siteSettings
     ? normalizeSiteSettings(initialData.siteSettings)
@@ -119,6 +145,10 @@ export function CmsContentProvider({ children, initialData = null }) {
     () => normalizePagesBySlug(initialData?.pages),
     [initialData?.pages]
   );
+  const seededCollections = useMemo(
+    () => normalizeCollectionsByKey(initialData?.collectionsByKey),
+    [initialData?.collectionsByKey]
+  );
   const seededMissingPageSlugs = useMemo(() => {
     return new Set(
       Array.isArray(initialData?.missingPageSlugs)
@@ -128,6 +158,15 @@ export function CmsContentProvider({ children, initialData = null }) {
         : []
     );
   }, [initialData?.missingPageSlugs]);
+  const seededMissingCollectionKeys = useMemo(() => {
+    return new Set(
+      Array.isArray(initialData?.missingCollectionKeys)
+        ? initialData.missingCollectionKeys
+            .map((key) => String(key || '').trim())
+            .filter(Boolean)
+        : []
+    );
+  }, [initialData?.missingCollectionKeys]);
 
   const [siteSettings, setSiteSettings] = useState(
     seededSiteSettings || DEFAULT_CMS_SITE_SETTINGS
@@ -143,6 +182,8 @@ export function CmsContentProvider({ children, initialData = null }) {
   const [isFooterNavigationFallbackActive, setIsFooterNavigationFallbackActive] = useState(!seededFooterNavigation);
   const [pagesBySlug, setPagesBySlug] = useState(seededPages);
   const [missingPageSlugs, setMissingPageSlugs] = useState(seededMissingPageSlugs);
+  const [collectionsByKey, setCollectionsByKey] = useState(seededCollections);
+  const [missingCollectionKeys, setMissingCollectionKeys] = useState(seededMissingCollectionKeys);
 
   const cachePage = useCallback((slug, payload) => {
     const normalizedSlug = String(slug || '').trim();
@@ -182,6 +223,47 @@ export function CmsContentProvider({ children, initialData = null }) {
     setPagesBySlug((current) => ({
       ...current,
       [normalizedSlug]: normalizedPage
+    }));
+  }, []);
+
+  const cacheCollection = useCallback((key, payload) => {
+    const normalizedKey = String(key || '').trim();
+    const normalizedCollection = normalizeCollection(payload);
+
+    if (!normalizedKey) {
+      return;
+    }
+
+    if (!normalizedCollection) {
+      setMissingCollectionKeys((current) => {
+        const next = new Set(current);
+        next.add(normalizedKey);
+        return next;
+      });
+      setCollectionsByKey((current) => {
+        if (!Object.prototype.hasOwnProperty.call(current, normalizedKey)) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[normalizedKey];
+        return next;
+      });
+      return;
+    }
+
+    setMissingCollectionKeys((current) => {
+      if (!current.has(normalizedKey)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.delete(normalizedKey);
+      return next;
+    });
+    setCollectionsByKey((current) => ({
+      ...current,
+      [normalizedKey]: normalizedCollection
     }));
   }, []);
 
@@ -272,16 +354,22 @@ export function CmsContentProvider({ children, initialData = null }) {
       isFooterNavigationFallbackActive,
       pagesBySlug,
       missingPageSlugs,
-      cachePage
+      collectionsByKey,
+      missingCollectionKeys,
+      cachePage,
+      cacheCollection
     }),
     [
       cachePage,
+      cacheCollection,
+      collectionsByKey,
       footerNavigation,
       footerNavigationError,
       isFooterNavigationFallbackActive,
       isFooterNavigationLoaded,
       isSiteSettingsFallbackActive,
       isSiteSettingsLoaded,
+      missingCollectionKeys,
       missingPageSlugs,
       pagesBySlug,
       siteSettings,
@@ -483,6 +571,107 @@ export function useCmsPage(slug, { preview = false, enabled = true } = {}) {
     page,
     isPageLoading,
     pageError,
+    isFallbackActive,
+  };
+}
+
+export function useCmsCollection(key, { preview = false, enabled = true } = {}) {
+  const context = useContext(CmsContentContext);
+  const normalizedKey = String(key || '').trim();
+  const cachedCollection = normalizedKey ? context.collectionsByKey[normalizedKey] || null : null;
+  const isKnownMissingCollection = normalizedKey
+    ? context.missingCollectionKeys?.has(normalizedKey)
+    : false;
+  const [collection, setCollection] = useState(cachedCollection);
+  const [isCollectionLoading, setIsCollectionLoading] = useState(
+    Boolean(enabled && normalizedKey && !cachedCollection && !isKnownMissingCollection)
+  );
+  const [collectionError, setCollectionError] = useState(null);
+  const [isFallbackActive, setIsFallbackActive] = useState(isKnownMissingCollection);
+
+  useEffect(() => {
+    if (!enabled || !normalizedKey) {
+      setCollection(null);
+      setIsCollectionLoading(false);
+      setCollectionError(null);
+      setIsFallbackActive(false);
+      return undefined;
+    }
+
+    if (isKnownMissingCollection) {
+      setCollection(null);
+      setIsCollectionLoading(false);
+      setCollectionError(null);
+      setIsFallbackActive(true);
+      return undefined;
+    }
+
+    if (cachedCollection) {
+      setCollection(cachedCollection);
+      setIsCollectionLoading(false);
+      setCollectionError(null);
+      setIsFallbackActive(false);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    let active = true;
+
+    setIsCollectionLoading(true);
+    setCollectionError(null);
+    setIsFallbackActive(false);
+
+    cmsClient
+      .getCollection(normalizedKey, { preview, signal: controller.signal })
+      .then((payload) => {
+        if (!active) {
+          return;
+        }
+
+        const normalizedCollection = normalizeCollection(payload);
+        setCollection(normalizedCollection);
+        context.cacheCollection(normalizedKey, normalizedCollection);
+        setCollectionError(null);
+        setIsFallbackActive(!normalizedCollection);
+      })
+      .catch((error) => {
+        if (!active || controller.signal.aborted) {
+          return;
+        }
+        console.warn(`Failed to load CMS collection "${normalizedKey}".`, error);
+        setCollection(null);
+        setCollectionError(error);
+        if (error?.status === 404) {
+          context.cacheCollection(normalizedKey, null);
+          setIsFallbackActive(true);
+          return;
+        }
+        setIsFallbackActive(true);
+      })
+      .finally(() => {
+        if (!active) {
+          return;
+        }
+        setIsCollectionLoading(false);
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [
+    cachedCollection,
+    context.cacheCollection,
+    enabled,
+    isKnownMissingCollection,
+    normalizedKey,
+    preview
+  ]);
+
+  return {
+    collection,
+    isCollectionLoading,
+    collectionError,
     isFallbackActive,
   };
 }

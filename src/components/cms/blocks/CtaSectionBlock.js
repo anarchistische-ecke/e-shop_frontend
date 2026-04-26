@@ -16,9 +16,6 @@ function CtaSectionBlock({ section }) {
         className={`overflow-hidden rounded-[32px] border border-primary/16 ${getSurfaceToneClass(section.styleVariant || 'warm')}`}
       >
         <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="absolute -left-12 top-0 h-28 w-28 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-32 w-32 rounded-full bg-sky/30 blur-3xl" />
-
           <div className="relative z-10 space-y-5">
             <CmsSectionHeading
               eyebrow={section.eyebrow}

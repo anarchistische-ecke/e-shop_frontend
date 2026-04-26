@@ -60,7 +60,6 @@ function CmsImage({
         </picture>
       ) : (
         <div className="cms-media-placeholder absolute inset-0">
-          <div className="cms-media-placeholder__glow" />
           <div className="cms-media-placeholder__content">
             <span className="cms-media-placeholder__label">{placeholderLabel}</span>
           </div>

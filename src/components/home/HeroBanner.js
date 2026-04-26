@@ -48,9 +48,6 @@ function HeroBanner({
         data-testid="home-hero"
         className="catalog-hero relative overflow-hidden rounded-[26px] border border-white/70 px-4 py-3.5 shadow-[0_18px_38px_rgba(43,39,34,0.11)] sm:rounded-[32px] sm:px-5 sm:py-5 md:px-8 md:py-8 lg:px-10 lg:py-10"
       >
-        <div className="absolute -left-10 top-4 h-24 w-24 rounded-full bg-primary/12 blur-3xl sm:top-6 sm:h-36 sm:w-36 sm:bg-primary/14" />
-        <div className="absolute bottom-0 right-0 h-28 w-28 rounded-full bg-sky/36 blur-3xl sm:h-48 sm:w-48 sm:bg-sky/45" />
-
         <div className="page-grid--hero relative z-10 gap-4 sm:gap-6">
           <div className="space-y-3 sm:space-y-5">
             <div className="grid grid-cols-[minmax(0,1fr)_6.6rem] items-start gap-3 sm:block">
@@ -74,7 +71,6 @@ function HeroBanner({
               </div>
 
               <div className="relative self-start sm:hidden">
-                <div className="absolute -right-2 -top-2 h-12 w-12 rounded-full bg-white/65 blur-2xl" />
                 <HeroVisual
                   imageUrl={imageUrl}
                   alt={heroAlt}
@@ -154,7 +150,6 @@ function HeroBanner({
           </div>
 
           <div className="relative">
-            <div className="absolute -top-4 right-4 h-20 w-20 rounded-full bg-white/60 blur-2xl" />
             <HeroVisual
               imageUrl={imageUrl}
               alt={heroAlt}

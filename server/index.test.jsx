@@ -51,6 +51,65 @@ const products = [
     ]
   }
 ];
+const homePage = {
+  title: 'Домашний текстиль для уютного дома',
+  slug: 'home',
+  path: '/',
+  template: 'home',
+  summary: 'Редакционная главная витрина.',
+  seoTitle: 'Домашний текстиль для уютного дома',
+  seoDescription: 'Домашний текстиль для уютного дома с понятной доставкой и оплатой.',
+  sections: [
+    {
+      anchorId: 'home-hero',
+      sectionType: 'hero',
+      sort: 1,
+      eyebrow: 'Постельное Белье-ЮГ',
+      title: 'Обновите спальню без лишней суеты',
+      body: '<p>Главная страница управляется через Directus.</p>',
+      primaryCtaLabel: 'Смотреть каталог',
+      primaryCtaUrl: '/catalog',
+      secondaryCtaLabel: 'Доставка',
+      secondaryCtaUrl: '/info/delivery',
+      styleVariant: 'warm',
+      items: [
+        {
+          title: 'Доставка по России',
+          description: 'Стоимость видна до оплаты.',
+          sort: 1
+        }
+      ]
+    },
+    {
+      anchorId: 'home-categories',
+      sectionType: 'category_reference_list',
+      sort: 2,
+      title: 'Быстрый вход в популярные разделы',
+      items: [
+        {
+          title: 'Бестселлеры',
+          referenceKind: 'category_slug',
+          referenceKey: 'popular',
+          sort: 1
+        }
+      ]
+    },
+    {
+      anchorId: 'home-collection',
+      sectionType: 'collection_teaser',
+      sort: 3,
+      title: 'Выбор для спокойной спальни',
+      items: [
+        {
+          title: 'Подборка для главной',
+          referenceKind: 'storefront_collection',
+          referenceKey: 'home-bestsellers',
+          sort: 1
+        }
+      ]
+    }
+  ]
+};
 const aboutPage = {
   title: 'О бренде',
   path: '/about',
@@ -73,6 +132,32 @@ const footerNavigation = [
     items: [{ label: 'Доставка', url: '/info/delivery' }]
   }
 ];
+const homeBestsellersCollection = {
+  key: 'home-bestsellers',
+  title: 'Подборка для главной',
+  description: 'CMS-подборка, связанная с backend-каталогом.',
+  primaryCtaLabel: 'Открыть каталог',
+  primaryCtaUrl: '/catalog',
+  items: [
+    {
+      entityKind: 'product',
+      entityKey: 'prod-satin-sand',
+      href: '/product/prod-satin-sand/satin-sand',
+      title: 'Сатиновый комплект Sand',
+      summary: 'Комплект из мягкого сатина.',
+      price: 4200,
+      image: {
+        url: 'https://cdn.example.com/satin-sand.jpg',
+        alt: 'Сатиновый комплект Sand'
+      },
+      presentation: {
+        marketingTitle: 'Сатиновый комплект Sand',
+        introBody: 'Комплект из мягкого сатина.',
+        badgeText: 'Бестселлер'
+      }
+    }
+  ]
+};
 
 function jsonResponse(payload, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -110,6 +195,14 @@ function createFetchMock() {
 
     if (pathname === '/content/pages/about') {
       return jsonResponse(aboutPage);
+    }
+
+    if (pathname === '/content/pages/home') {
+      return jsonResponse(homePage);
+    }
+
+    if (pathname === '/content/collections/home-bestsellers') {
+      return jsonResponse(homeBestsellersCollection);
     }
 
     if (
@@ -177,12 +270,15 @@ describe('storefront SSR server', () => {
       'Домашний текстиль для уютного дома | Постельное Белье-ЮГ'
     );
     expect(response.text).toContain('href="https://yug-postel.ru/"');
+    expect(response.text).toContain('Обновите спальню без лишней суеты');
     expect(response.text).toContain('Сатиновый комплект Sand');
     expect(response.text).toContain('window.__APP_CONFIG__=');
     expect(response.text).toContain('"siteUrl":"https://yug-postel.ru"');
     expect(response.text).toContain('window.__SSR_DATA__=');
     expect(response.text).toContain('"routeId":"home"');
     expect(response.text).toContain('"directory"');
+    expect(response.text).toContain('"collectionsByKey"');
+    expect(response.text).toContain('"home-bestsellers"');
   });
 
   it('renders catalog, category, product, legal info, and legal document SSR routes', async () => {

@@ -44,6 +44,159 @@ function fulfillJson(route, payload, status = 200) {
   });
 }
 
+const cmsSiteSettings = {
+  siteName: 'Постельное Белье-ЮГ',
+  brandDescription: 'Домашний текстиль с понятной доставкой и оплатой.',
+  supportPhone: '+7 961 466-88-33',
+  supportEmail: 'postel-yug@yandex.ru',
+  legalEntityShort: 'ИП Касьянова И.Л.',
+  defaultSeoTitleSuffix: 'Постельное Белье-ЮГ',
+  defaultSeoDescription: 'Домашний текстиль для уютного дома.',
+};
+
+const cmsHeaderNavigation = [
+  {
+    key: 'header_main',
+    title: 'Полезное',
+    placement: 'header',
+    sort: 1,
+    items: [
+      { label: 'О бренде', url: '/about', sort: 1 },
+      { label: 'Доставка', url: '/info/delivery', sort: 2 },
+      { label: 'Оплата', url: '/info/payment', sort: 3 },
+      { label: 'Документы', url: '/info/legal', sort: 4 },
+    ],
+  },
+];
+
+const cmsFooterNavigation = [
+  {
+    key: 'footer_catalog',
+    title: 'Каталог',
+    placement: 'footer',
+    sort: 1,
+    items: [
+      { label: 'Все категории', url: '/catalog', sort: 1 },
+      { label: 'Бестселлеры', url: '/category/popular', sort: 2 },
+      { label: 'Новинки', url: '/category/new', sort: 3 },
+    ],
+  },
+  {
+    key: 'footer_service',
+    title: 'Сервис',
+    placement: 'footer',
+    sort: 2,
+    items: [
+      { label: 'Доставка и самовывоз', url: '/info/delivery', sort: 1 },
+      { label: 'Способы оплаты', url: '/info/payment', sort: 2 },
+      { label: 'Реквизиты и документы', url: '/info/legal', sort: 3 },
+    ],
+  },
+];
+
+const cmsHomePage = {
+  title: 'Домашний текстиль для уютного дома',
+  slug: 'home',
+  path: '/',
+  template: 'home',
+  summary: 'Редакционная главная витрина.',
+  seoTitle: 'Домашний текстиль для уютного дома',
+  seoDescription: 'Домашний текстиль для уютного дома с понятной доставкой и оплатой.',
+  sections: [
+    {
+      anchorId: 'home-hero',
+      sectionType: 'hero',
+      sort: 1,
+      eyebrow: 'Постельное Белье-ЮГ',
+      title: 'Обновите спальню без лишней суеты',
+      body: '<p>Выбирайте комплекты, пледы и домашний текстиль с понятными условиями доставки и оплаты.</p>',
+      primaryCtaLabel: 'Смотреть каталог',
+      primaryCtaUrl: '/catalog',
+      secondaryCtaLabel: 'Условия доставки',
+      secondaryCtaUrl: '/info/delivery',
+      styleVariant: 'warm',
+      items: [
+        {
+          label: 'Сервис',
+          title: 'Доставка по России',
+          description: 'Финальную стоимость видно до оплаты.',
+          sort: 1,
+        },
+        {
+          label: 'Оплата',
+          title: 'Безопасный checkout',
+          description: 'Карта или СБП через защищённую форму.',
+          sort: 2,
+        },
+      ],
+    },
+    {
+      anchorId: 'home-categories',
+      sectionType: 'category_reference_list',
+      sort: 2,
+      eyebrow: 'Каталог',
+      title: 'Быстрый вход в популярные разделы',
+      body: '<p>Разделы открываются сразу с мобильной главной.</p>',
+      items: [
+        {
+          label: 'Выбор покупателей',
+          title: 'Бестселлеры',
+          referenceKind: 'category_slug',
+          referenceKey: 'popular',
+          sort: 1,
+        },
+        {
+          label: 'Новинки',
+          title: 'Новые поступления',
+          referenceKind: 'category_slug',
+          referenceKey: 'new',
+          sort: 2,
+        },
+      ],
+    },
+    {
+      anchorId: 'home-collection',
+      sectionType: 'collection_teaser',
+      sort: 3,
+      eyebrow: 'Подборка',
+      title: 'Выбор для спокойной спальни',
+      body: '<p>Актуальные товары и разделы для быстрого выбора.</p>',
+      items: [
+        {
+          title: 'Подборка для главной',
+          referenceKind: 'storefront_collection',
+          referenceKey: 'home-bestsellers',
+          sort: 1,
+        },
+      ],
+    },
+  ],
+};
+
+const cmsCollections = {
+  'home-bestsellers': {
+    key: 'home-bestsellers',
+    title: 'Подборка для главной',
+    description: 'Товары и разделы, которые редактор закрепил в Directus.',
+    primaryCtaLabel: 'Открыть каталог',
+    primaryCtaUrl: '/catalog',
+    items: products.slice(0, 2).map((product) => ({
+      entityKind: 'product',
+      entityKey: product.id,
+      href: `/product/${product.id}/${product.slug}`,
+      title: product.name,
+      summary: product.description,
+      price: product.price,
+      image: product.images?.[0] || null,
+      presentation: {
+        marketingTitle: product.name,
+        introBody: product.description,
+        badgeText: product.category === 'new' ? 'Новинка' : 'Бестселлер',
+      },
+    })),
+  },
+};
+
 async function mockStorefrontApi(page, overrides = {}) {
   const cartState = createCartState();
   const stats = {
@@ -84,6 +237,42 @@ async function mockStorefrontApi(page, overrides = {}) {
     const url = new URL(request.url());
     const { pathname } = url;
     const method = request.method();
+
+    if (pathname === '/content/site-settings' && method === 'GET') {
+      return fulfillJson(route, clone(cmsSiteSettings));
+    }
+
+    if (pathname === '/content/navigation' && method === 'GET') {
+      const placement = url.searchParams.get('placement');
+      if (placement === 'header') {
+        return fulfillJson(route, clone(cmsHeaderNavigation));
+      }
+      if (placement === 'footer') {
+        return fulfillJson(route, clone(cmsFooterNavigation));
+      }
+      return fulfillJson(route, clone([...cmsHeaderNavigation, ...cmsFooterNavigation]));
+    }
+
+    if (pathname === '/content/pages/home' && method === 'GET') {
+      return fulfillJson(route, clone(cmsHomePage));
+    }
+
+    if (/^\/content\/pages\/[^/]+$/.test(pathname) && method === 'GET') {
+      return fulfillJson(route, { message: 'CMS page not found' }, 404);
+    }
+
+    if (/^\/content\/collections\/[^/]+$/.test(pathname) && method === 'GET') {
+      const key = pathname.split('/').pop();
+      const collection = cmsCollections[key];
+      if (!collection) {
+        return fulfillJson(route, { message: 'CMS collection not found' }, 404);
+      }
+      return fulfillJson(route, clone(collection));
+    }
+
+    if (pathname === '/promotions/active' && method === 'GET') {
+      return fulfillJson(route, { promotions: [], promoCodes: [] });
+    }
 
     if (pathname === '/categories' && method === 'GET') {
       return fulfillJson(route, clone(categories));

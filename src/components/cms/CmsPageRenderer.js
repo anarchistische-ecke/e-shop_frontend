@@ -10,6 +10,7 @@ function CmsPageRenderer({ page }) {
   const sections = Array.isArray(page?.sections) ? page.sections : [];
   const canonicalPath = page?.path || '/';
   const shareImage = page?.seoImage?.url || siteSettings?.defaultOgImage?.url || '';
+  const isHomeTemplate = page?.template === 'home' || page?.slug === 'home' || page?.path === '/';
 
   return (
     <>
@@ -20,9 +21,9 @@ function CmsPageRenderer({ page }) {
         image={shareImage}
       />
 
-      <section className="py-10 sm:py-12">
-        <div className="container mx-auto max-w-5xl px-4">
-          <div className="space-y-5 sm:space-y-6">
+      <section className={isHomeTemplate ? 'py-6 sm:py-8' : 'py-10 sm:py-12'}>
+        <div className={`container mx-auto px-4 ${isHomeTemplate ? 'max-w-6xl' : 'max-w-5xl'}`}>
+          <div className={isHomeTemplate ? 'space-y-6 sm:space-y-8' : 'space-y-5 sm:space-y-6'}>
             {sections.length > 0 ? (
               sections.map((section, index) => {
                 const BlockComponent = getCmsBlockComponent(section.sectionType);

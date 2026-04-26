@@ -11,7 +11,9 @@ import Home from './Home';
 
 vi.mock('../api', () => ({
   getActivePromotions: vi.fn(),
+  getCmsPage: vi.fn(() => Promise.reject(Object.assign(new Error('Not found'), { status: 404 }))),
   getCustomerOrders: vi.fn(),
+  isApiRequestError: vi.fn((error) => Boolean(error?.status)),
   updateCustomerProfile: vi.fn(),
 }));
 
@@ -26,6 +28,12 @@ vi.mock('../features/product-list/data', () => ({
 vi.mock('../components/Seo', () => ({
   default: function SeoMock() {
     return null;
+  },
+}));
+
+vi.mock('../components/cms/CmsManagedPage', () => ({
+  default: function CmsManagedPageMock({ fallback }) {
+    return fallback;
   },
 }));
 

@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import cmsClient from '../../api/cmsClient';
+import { useCmsCollection } from '../../contexts/CmsContentContext';
 import { Card } from '../ui';
 import { moneyToNumber, resolveImageUrl } from '../../utils/product';
 
@@ -105,10 +105,67 @@ function CollectionCategoryCard({ entry }) {
   );
 }
 
-function CollectionEntryCard({ entry }) {
+export function CollectionEntryCard({ entry }) {
   return entry?.entityKind === 'category'
     ? <CollectionCategoryCard entry={entry} />
     : <CollectionProductCard entry={entry} />;
+}
+
+function CmsCollectionRailSection({ collectionKey }) {
+  const { collection, isCollectionLoading, collectionError } = useCmsCollection(collectionKey);
+
+  if (collection && Array.isArray(collection.items) && collection.items.length > 0) {
+    const hero = collection?.hero || null;
+    const title = hero?.title || collection?.title || 'Подборка';
+    const description = hero?.body || collection?.description || '';
+
+    return (
+      <section className="space-y-4">
+        <div className="space-y-2">
+          {hero?.eyebrow ? (
+            <p className="m-0 text-xs font-semibold uppercase tracking-[0.28em] text-primary/85">
+              {hero.eyebrow}
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-ink sm:text-3xl">{title}</h2>
+              {description ? <p className="max-w-3xl text-sm leading-7 text-muted">{description}</p> : null}
+            </div>
+            {collection?.primaryCtaLabel && collection?.primaryCtaUrl ? (
+              <Link to={collection.primaryCtaUrl} className="inline-flex min-h-11 items-center text-sm font-medium text-primary">
+                {collection.primaryCtaLabel} →
+              </Link>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {collection.items.map((entry) => (
+            <CollectionEntryCard key={`${collection.key}-${entry.entityKind}-${entry.entityKey}`} entry={entry} />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (isCollectionLoading) {
+    return (
+      <Card padding="lg" className="rounded-[24px] border border-dashed border-ink/10 bg-white/60 text-sm text-muted">
+        Загружаем подборку…
+      </Card>
+    );
+  }
+
+  if (collectionError) {
+    return (
+      <Card padding="lg" className="rounded-[24px] border border-dashed border-ink/10 bg-white/60 text-sm text-muted">
+        Подборка временно недоступна.
+      </Card>
+    );
+  }
+
+  return null;
 }
 
 function CmsStorefrontCollectionRail({ collectionKeys = [], className = '' }) {
@@ -124,101 +181,16 @@ function CmsStorefrontCollectionRail({ collectionKeys = [], className = '' }) {
     [collectionKeys]
   );
 
-  const [state, setState] = useState({
-    isLoading: false,
-    collections: [],
-    hasError: false,
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!normalizedKeys.length) {
-      setState({ isLoading: false, collections: [], hasError: false });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setState((current) => ({ ...current, isLoading: true, hasError: false }));
-
-    Promise.all(normalizedKeys.map((key) => cmsClient.getCollection(key).catch(() => null)))
-      .then((collections) => {
-        if (cancelled) {
-          return;
-        }
-        const availableCollections = collections.filter((entry) => entry && Array.isArray(entry.items) && entry.items.length > 0);
-        setState({
-          isLoading: false,
-          collections: availableCollections,
-          hasError: !availableCollections.length && collections.some((entry) => entry == null),
-        });
-      })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-        setState({ isLoading: false, collections: [], hasError: true });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [normalizedKeys]);
-
-  if (!normalizedKeys.length || (!state.isLoading && !state.collections.length && !state.hasError)) {
+  if (!normalizedKeys.length) {
     return null;
   }
 
   return (
     <div className={className}>
       <div className="space-y-6 sm:space-y-8">
-        {state.collections.map((collection) => {
-          const hero = collection?.hero || null;
-          const title = hero?.title || collection?.title || 'Подборка';
-          const description = hero?.body || collection?.description || '';
-
-          return (
-            <section key={collection.key} className="space-y-4">
-              <div className="space-y-2">
-                {hero?.eyebrow ? (
-                  <p className="m-0 text-xs font-semibold uppercase tracking-[0.28em] text-primary/85">
-                    {hero.eyebrow}
-                  </p>
-                ) : null}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-semibold text-ink sm:text-3xl">{title}</h2>
-                    {description ? <p className="max-w-3xl text-sm leading-7 text-muted">{description}</p> : null}
-                  </div>
-                  {collection?.primaryCtaLabel && collection?.primaryCtaUrl ? (
-                    <Link to={collection.primaryCtaUrl} className="inline-flex items-center text-sm font-medium text-primary">
-                      {collection.primaryCtaLabel} →
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {collection.items.map((entry) => (
-                  <CollectionEntryCard key={`${collection.key}-${entry.entityKind}-${entry.entityKey}`} entry={entry} />
-                ))}
-              </div>
-            </section>
-          );
-        })}
-
-        {state.isLoading ? (
-          <Card padding="lg" className="rounded-[24px] border border-dashed border-ink/10 bg-white/60 text-sm text-muted">
-            Загружаем подборки…
-          </Card>
-        ) : null}
-
-        {state.hasError && !state.collections.length ? (
-          <Card padding="lg" className="rounded-[24px] border border-dashed border-ink/10 bg-white/60 text-sm text-muted">
-            Подборки временно недоступны.
-          </Card>
-        ) : null}
+        {normalizedKeys.map((key) => (
+          <CmsCollectionRailSection key={key} collectionKey={key} />
+        ))}
       </div>
     </div>
   );

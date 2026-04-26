@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   getBrands,
   getCategories,
+  getCmsCollection,
   getCmsNavigation,
   getCmsPage,
   getCmsSiteSettings,
@@ -19,6 +20,7 @@ import {
 
 const DIRECTORY_ROUTE_IDS = new Set(['home', 'catalog', 'category', 'product']);
 const CMS_PAGE_SLUG_BY_ROUTE_ID = {
+  home: 'home',
   about: 'about',
   'payment-info': 'payment',
   'delivery-info': 'delivery',
@@ -162,6 +164,109 @@ async function loadCmsPageSeed(slug) {
   }
 }
 
+function normalizeReferenceKind(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, '_');
+}
+
+function readReferenceKey(source = {}) {
+  return String(
+    source.referenceKey ||
+      source.reference_key ||
+      source.collectionKey ||
+      source.collection_key ||
+      source.key ||
+      ''
+  ).trim();
+}
+
+function collectCmsCollectionKeysFromPage(page) {
+  const keys = new Set();
+
+  if (!page || !Array.isArray(page.sections)) {
+    return [];
+  }
+
+  page.sections.forEach((section) => {
+    const sectionType = normalizeReferenceKind(section?.sectionType);
+    const addKey = (key) => {
+      const normalizedKey = String(key || '').trim();
+      if (normalizedKey) {
+        keys.add(normalizedKey);
+      }
+    };
+
+    addKey(section?.collectionKey || section?.collection_key);
+    if (Array.isArray(section?.collectionKeys)) {
+      section.collectionKeys.forEach(addKey);
+    }
+    if (Array.isArray(section?.collection_keys)) {
+      section.collection_keys.forEach(addKey);
+    }
+
+    const sectionReferenceKind = normalizeReferenceKind(
+      section?.referenceKind || section?.reference_kind
+    );
+    if (
+      ['collection', 'storefront_collection', 'collection_key', 'cms_collection'].includes(
+        sectionReferenceKind
+      )
+    ) {
+      addKey(readReferenceKey(section));
+    }
+
+    (Array.isArray(section?.items) ? section.items : []).forEach((item) => {
+      const referenceKind = normalizeReferenceKind(item?.referenceKind || item?.reference_kind);
+      const referenceKey = readReferenceKey(item);
+      const isCollectionReference = [
+        'collection',
+        'storefront_collection',
+        'collection_key',
+        'cms_collection'
+      ].includes(referenceKind);
+
+      if (isCollectionReference || (sectionType === 'collection_teaser' && !referenceKind)) {
+        addKey(referenceKey);
+      }
+    });
+  });
+
+  return Array.from(keys);
+}
+
+async function loadCmsCollectionsSeed(page) {
+  const collectionKeys = collectCmsCollectionKeysFromPage(page);
+  if (!collectionKeys.length) {
+    return null;
+  }
+
+  const results = await Promise.allSettled(
+    collectionKeys.map((key) =>
+      readThroughCache(`cms:collection:${key}`, () => getCmsCollection(key))
+        .then((collection) => ({ key, collection }))
+    )
+  );
+
+  return results.reduce(
+    (acc, result, index) => {
+      const key = collectionKeys[index];
+      if (result.status === 'fulfilled' && result.value?.collection) {
+        acc.collectionsByKey[result.value.key] = result.value.collection;
+        return acc;
+      }
+
+      const error = result.reason;
+      if (error?.status === 404) {
+        acc.missingCollectionKeys.push(key);
+      }
+      return acc;
+    },
+    { collectionsByKey: {}, missingCollectionKeys: [] }
+  );
+}
+
 async function loadProductSeed(productId) {
   try {
     const product = await readThroughCache(
@@ -223,7 +328,7 @@ async function loadLegalDocumentSeed(fileName, requestOrigin) {
   }
 }
 
-function mergeCmsSeed(currentCms, sharedCms, pageSeed) {
+function mergeCmsSeed(currentCms, sharedCms, pageSeed, collectionsSeed) {
   const cms = currentCms ? { ...currentCms } : {};
 
   if (sharedCms?.siteSettings) {
@@ -243,6 +348,19 @@ function mergeCmsSeed(currentCms, sharedCms, pageSeed) {
   if (pageSeed?.shouldUseFallback) {
     cms.missingPageSlugs = Array.from(
       new Set([...(cms.missingPageSlugs || []), pageSeed.slug])
+    );
+  }
+
+  if (collectionsSeed?.collectionsByKey && Object.keys(collectionsSeed.collectionsByKey).length > 0) {
+    cms.collectionsByKey = {
+      ...(cms.collectionsByKey || {}),
+      ...collectionsSeed.collectionsByKey
+    };
+  }
+
+  if (Array.isArray(collectionsSeed?.missingCollectionKeys) && collectionsSeed.missingCollectionKeys.length > 0) {
+    cms.missingCollectionKeys = Array.from(
+      new Set([...(cms.missingCollectionKeys || []), ...collectionsSeed.missingCollectionKeys])
     );
   }
 
@@ -299,7 +417,10 @@ export async function loadSsrRequestData({
         : Promise.resolve(null)
     ]);
 
-  const cmsSeed = mergeCmsSeed(null, sharedCms, cmsPageSeed);
+  const cmsCollectionsSeed = cmsPageSeed?.page
+    ? await loadCmsCollectionsSeed(cmsPageSeed.page)
+    : null;
+  const cmsSeed = mergeCmsSeed(null, sharedCms, cmsPageSeed, cmsCollectionsSeed);
   if (cmsSeed) {
     ssrData.cms = cmsSeed;
   }
@@ -312,9 +433,10 @@ export async function loadSsrRequestData({
     ssrData.routeData = {
       kind: 'product',
       productId: productSeed.productId,
-      product: productSeed.product
+      product: productSeed.product,
+      notFound: productSeed.notFound
     };
-    if (!productSeed.product) {
+    if (!productSeed.product && productSeed.notFound) {
       statusCode = 404;
     }
   }
