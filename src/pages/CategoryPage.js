@@ -309,16 +309,13 @@ function CategoryPage() {
   };
 
   return (
-    <div className="category-page relative overflow-hidden page-section page-section--listing">
+    <div className="category-page relative page-section page-section--listing">
       <Seo
         title={seoTitle}
         description={seoDescription}
         canonicalPath={canonicalPath}
         image={categoryPresentation?.seoImage?.url || list.activeCategory?.imageUrl || ''}
       />
-      <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 left-0 h-72 w-72 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
-
       <div className="page-shell">
         <nav
           data-testid="category-breadcrumbs"

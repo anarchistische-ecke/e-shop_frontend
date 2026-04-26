@@ -181,15 +181,9 @@ test('core storefront routes fit the mobile viewport without horizontal overflow
   await expect(page.getByRole('heading', { name: /Обновите спальню/i })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
-  const homeCarousel = page.locator('[data-carousel-item]').first();
-  await expect(homeCarousel).toBeVisible();
-  await homeCarousel.scrollIntoViewIfNeeded();
-  await page.evaluate(() => {
-    const scroller = document.querySelector('[data-carousel-item]')?.parentElement;
-    if (scroller) {
-      scroller.scrollLeft = 240;
-    }
-  });
+  const cmsCollectionLink = page.getByRole('link', { name: /Сатиновый комплект Sand/i }).first();
+  await expect(cmsCollectionLink).toBeVisible();
+  await cmsCollectionLink.scrollIntoViewIfNeeded();
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/catalog');

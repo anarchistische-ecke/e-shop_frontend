@@ -8,6 +8,7 @@ import { useCmsSiteSettings } from '../../contexts/CmsContentContext';
 
 vi.mock('../../contexts/CmsContentContext', () => ({
   useCmsSiteSettings: vi.fn(),
+  useCmsCollection: vi.fn(),
 }));
 
 vi.mock('../Seo', () => ({

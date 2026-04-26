@@ -8,14 +8,14 @@ test.beforeEach(async ({ page }) => {
 test('customer can add a product to cart and open checkout on mobile', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Бестселлеры недели' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Выбор для спокойной спальни' })).toBeVisible();
 
-  const bestsellersSection = page.locator('section').filter({
-    has: page.getByRole('heading', { name: 'Бестселлеры недели' })
+  const cmsCollectionSection = page.locator('section').filter({
+    has: page.getByRole('heading', { name: 'Выбор для спокойной спальни' })
   });
 
-  const featuredProductLink = bestsellersSection
-    .getByRole('link', { name: 'Сатиновый комплект Sand' })
+  const featuredProductLink = cmsCollectionSection
+    .getByRole('link', { name: /Сатиновый комплект Sand/i })
     .first();
   await featuredProductLink.focus();
   await page.keyboard.press('Enter');

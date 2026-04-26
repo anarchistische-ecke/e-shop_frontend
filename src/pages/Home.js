@@ -7,6 +7,7 @@ import PromoBanners from '../components/home/PromoBanners';
 import ShopTheLook from '../components/home/ShopTheLook';
 import BrandIntro from '../components/home/BrandIntro';
 import NewsletterForm from '../components/home/NewsletterForm';
+import CmsManagedPage from '../components/cms/CmsManagedPage';
 import { getActivePromotions } from '../api';
 import { useProductDirectoryData } from '../features/product-list/data';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
@@ -27,7 +28,7 @@ function getProductStock(product) {
   );
 }
 
-function Home() {
+function HomeFallbackPage() {
   const { products, categories, loading } = useProductDirectoryData();
   const [bannerText, setBannerText] = useState('');
   const [bannerEnabled, setBannerEnabled] = useState(true);
@@ -296,6 +297,10 @@ function Home() {
       </div>
     </>
   );
+}
+
+function Home() {
+  return <CmsManagedPage slug="home" fallback={<HomeFallbackPage />} />;
 }
 
 export default Home;

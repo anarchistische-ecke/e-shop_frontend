@@ -849,8 +849,6 @@ function AccountPage() {
       />
       <div className="page-shell">
         <div className="relative mb-8">
-          <div className="pointer-events-none absolute -top-10 right-0 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />
-          <div className="pointer-events-none absolute top-12 left-6 h-24 w-24 rounded-full bg-sky/40 blur-2xl" />
           <nav className="text-xs sm:text-sm text-muted flex flex-wrap items-center gap-2">
             <Link to="/" className="hover:text-primary transition">
               Главная
@@ -873,9 +871,8 @@ function AccountPage() {
               <p className="text-sm text-muted mt-1">{displayPhone}</p>
             </Card>
 
-            <div className="rounded-3xl p-5 text-white relative overflow-hidden reveal-up bg-gradient-to-br from-[#55746a] via-[#49665e] to-[#384e49]">
-              <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_top,#ffffff,transparent_65%)]" />
-              <div className="relative space-y-3">
+            <div className="rounded-3xl p-5 text-white reveal-up bg-[#49665e]">
+              <div className="space-y-3">
                 <p className="text-sm uppercase tracking-[0.25em] text-white/80">Акции</p>
                 <p className="text-base font-semibold leading-snug">
                   Промокоды и скидки по сумме корзины применяются автоматически по правилам акции.

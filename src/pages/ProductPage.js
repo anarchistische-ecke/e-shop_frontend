@@ -175,9 +175,11 @@ function ProductPage() {
   const { addItem } = useContext(CartContext);
   const { routeData } = useSsrData();
   const { categories, products: directoryProducts } = useProductDirectoryData();
-  const hasInitialProductLoad =
+  const hasProductRouteSeed =
     routeData?.kind === 'product' && String(routeData.productId || '') === String(id);
-  const initialProduct = hasInitialProductLoad ? routeData.product || null : null;
+  const hasInitialProductLoad = hasProductRouteSeed && Boolean(routeData.product);
+  const hasConfirmedNotFound = hasProductRouteSeed && routeData.product == null && routeData.notFound === true;
+  const initialProduct = hasInitialProductLoad ? routeData.product : null;
 
   const [product, setProduct] = useState(initialProduct);
   const [selectedVariant, setSelectedVariant] = useState(() =>
@@ -187,7 +189,7 @@ function ProductPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [bundleSelections, setBundleSelections] = useState({});
   const [quantity, setQuantity] = useState(1);
-  const [isLoading, setIsLoading] = useState(!hasInitialProductLoad);
+  const [isLoading, setIsLoading] = useState(!hasInitialProductLoad && !hasConfirmedNotFound);
   const [isImageZoomOpen, setIsImageZoomOpen] = useState(false);
   const [showZoomHint, setShowZoomHint] = useState(true);
   const [sheetType, setSheetType] = useState('shipping');
@@ -230,9 +232,9 @@ function ProductPage() {
     setCartStatus(null);
     setProduct(initialProduct);
     setSelectedVariant(resolveInitialSelectedVariant(initialProduct));
-    setIsLoading(!hasInitialProductLoad);
+    setIsLoading(!hasInitialProductLoad && !hasConfirmedNotFound);
 
-    if (hasInitialProductLoad) {
+    if (hasInitialProductLoad || hasConfirmedNotFound) {
       return undefined;
     }
 
@@ -257,7 +259,7 @@ function ProductPage() {
       })
       .finally(() => setIsLoading(false));
     return undefined;
-  }, [hasInitialProductLoad, id, initialProduct]);
+  }, [hasConfirmedNotFound, hasInitialProductLoad, id, initialProduct]);
 
   const relatedProducts = useMemo(() => {
     if (!product) {

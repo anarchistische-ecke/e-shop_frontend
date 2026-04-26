@@ -5,10 +5,10 @@ import { resolveImageUrl } from '../../utils/product';
 
 const SURFACE_TONE_CLASS = {
   default: 'border border-ink/10 bg-white/88 shadow-[0_18px_36px_rgba(43,39,34,0.08)]',
-  warm: 'border border-primary/12 bg-[radial-gradient(circle_at_top_left,rgba(182,91,74,0.16),transparent_34%),rgba(255,255,255,0.92)] shadow-[0_18px_36px_rgba(43,39,34,0.1)]',
-  sage: 'border border-[#d7e1dc] bg-[radial-gradient(circle_at_top_right,rgba(217,229,223,0.42),transparent_36%),rgba(255,255,255,0.92)] shadow-[0_18px_36px_rgba(43,39,34,0.08)]',
+  warm: 'border border-primary/12 bg-white/92 shadow-[0_18px_36px_rgba(43,39,34,0.1)]',
+  sage: 'border border-[#d7e1dc] bg-white/92 shadow-[0_18px_36px_rgba(43,39,34,0.08)]',
   quiet: 'border border-ink/10 bg-[#f8f4ee] shadow-[0_16px_28px_rgba(43,39,34,0.07)]',
-  legal: 'border border-ink/10 bg-[radial-gradient(circle_at_top_left,rgba(182,91,74,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(217,229,223,0.34),transparent_34%),rgba(255,255,255,0.9)] shadow-[0_18px_36px_rgba(43,39,34,0.1)]',
+  legal: 'border border-ink/10 bg-white/90 shadow-[0_18px_36px_rgba(43,39,34,0.1)]',
 };
 const CMS_IMAGE_WIDTHS = [320, 480, 640, 768, 960, 1200, 1440];
 

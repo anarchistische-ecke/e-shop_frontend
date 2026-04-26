@@ -35,12 +35,17 @@ function HeroHighlights({ items = [] }) {
 }
 
 function HeroMedia({ section, page, priority = false }) {
+  const hasMedia = section.image || section.imageUrl || section.mobileImage || section.mobileImageUrl;
+
+  if (!hasMedia) {
+    return null;
+  }
+
   return (
     <div className="relative">
-      <div className="absolute -right-4 top-2 h-20 w-20 rounded-full bg-white/50 blur-2xl" />
       <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-white/55 shadow-[0_20px_42px_rgba(43,39,34,0.15)]">
         <div className="absolute inset-0 bg-gradient-to-br from-white/32 via-transparent to-white/70" />
-        <div className="relative aspect-[4/5] sm:aspect-[1.05/1]">
+        <div className="relative aspect-[16/10] sm:aspect-[1.05/1]">
           <CmsImage
             media={section.image || section.imageUrl}
             mobileMedia={section.mobileImage || section.mobileImageUrl}
@@ -63,6 +68,7 @@ function HeroBlock({ page, section, index = 0 }) {
   return (
     <section
       id={section.anchorId || undefined}
+      data-testid={page?.template === 'home' && index === 0 ? 'home-hero' : undefined}
       className={`overflow-hidden rounded-[2rem] px-6 py-7 sm:px-8 sm:py-9 ${getSurfaceToneClass(section.styleVariant)}`}
     >
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,24rem)] lg:items-center">

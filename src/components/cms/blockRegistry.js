@@ -1,4 +1,5 @@
 import CtaSectionBlock from './blocks/CtaSectionBlock';
+import CommerceReferenceBlock from './blocks/CommerceReferenceBlock';
 import FallbackBlock from './blocks/FallbackBlock';
 import FaqSectionBlock from './blocks/FaqSectionBlock';
 import FeatureListBlock from './blocks/FeatureListBlock';
@@ -12,9 +13,9 @@ const CMS_BLOCK_COMPONENTS = {
   feature_list: FeatureListBlock,
   banner_group: ImageBannerBlock,
   image_banner: ImageBannerBlock,
-  collection_teaser: FeatureListBlock,
-  product_reference_list: FeatureListBlock,
-  category_reference_list: FeatureListBlock,
+  collection_teaser: CommerceReferenceBlock,
+  product_reference_list: CommerceReferenceBlock,
+  category_reference_list: CommerceReferenceBlock,
   faq_list: FaqSectionBlock,
   newsletter_cta: CtaSectionBlock,
   cta_section: CtaSectionBlock,
