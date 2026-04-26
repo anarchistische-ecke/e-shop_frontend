@@ -295,7 +295,6 @@ export async function checkoutCart({
   return request('/orders/checkout', {
     method: 'POST',
     signal,
-    headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify({
       cartId,
       receiptEmail,
@@ -305,7 +304,8 @@ export async function checkoutCart({
       returnUrl,
       orderPageUrl,
       confirmationMode,
-      savePaymentMethod
+      savePaymentMethod,
+      idempotencyKey
     })
   });
 }
