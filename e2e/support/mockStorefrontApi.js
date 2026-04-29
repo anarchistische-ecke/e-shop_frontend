@@ -18,8 +18,8 @@ function createCartState() {
   };
 }
 
-function findVariant(variantId) {
-  for (const product of products) {
+function findVariant(catalogProducts, variantId) {
+  for (const product of catalogProducts) {
     for (const variant of product.variants || []) {
       if (variant.id === variantId) {
         return { product, variant };
@@ -199,6 +199,7 @@ const cmsCollections = {
 
 async function mockStorefrontApi(page, overrides = {}) {
   const cartState = createCartState();
+  const storefrontProducts = clone(overrides.products || products);
   const stats = {
     addItemRequests: 0,
     checkoutRequests: 0,
@@ -313,12 +314,12 @@ async function mockStorefrontApi(page, overrides = {}) {
     }
 
     if (pathname === '/products' && method === 'GET') {
-      return fulfillJson(route, clone(products));
+      return fulfillJson(route, clone(storefrontProducts));
     }
 
     if (/^\/products\/[^/]+$/.test(pathname) && method === 'GET') {
       const productId = pathname.split('/').pop();
-      const product = products.find((entry) => String(entry.id) === String(productId));
+      const product = storefrontProducts.find((entry) => String(entry.id) === String(productId));
       if (!product) {
         return fulfillJson(route, { message: 'Product not found' }, 404);
       }
@@ -341,7 +342,7 @@ async function mockStorefrontApi(page, overrides = {}) {
       const body = request.postDataJSON();
       const quantity = Number(body.quantity) || 1;
       const variantId = body.variantId;
-      const resolved = findVariant(variantId);
+      const resolved = findVariant(storefrontProducts, variantId);
 
       if (!resolved) {
         return fulfillJson(route, { message: 'Variant not found' }, 404);

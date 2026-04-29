@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { mockStorefrontApi } = require('./support/mockStorefrontApi');
+const { products } = require('./fixtures/storefront');
 
 async function getPageMetrics(page) {
   return page.evaluate(() => {
@@ -32,8 +33,8 @@ async function expectNoHorizontalOverflow(page) {
   expect(Math.abs(metrics.scrollX)).toBeLessThanOrEqual(1);
 }
 
-async function openProductMediaViewer(page) {
-  await mockStorefrontApi(page);
+async function openProductMediaViewer(page, overrides = {}) {
+  await mockStorefrontApi(page, overrides);
   await page.goto('/product/prod-satin-sand');
   await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
 
@@ -241,7 +242,7 @@ test('mobile controls work and auto-hide on the requested timers', async ({ page
   const [captionBox, viewport] = await Promise.all([caption.boundingBox(), page.viewportSize()]);
   expect(captionBox).not.toBeNull();
   expect(viewport).not.toBeNull();
-  expect(captionBox.y).toBeGreaterThan(viewport.height * 0.68);
+  expect(captionBox.y).toBeLessThan(viewport.height * 0.22);
 
   await page.waitForTimeout(3200);
   await expect(viewer).toHaveAttribute('data-controls-visible', 'false');
@@ -279,7 +280,14 @@ test('mobile controls and swipe transitions use the longer fluent animation timi
   expect(topbarTransition.timing).toContain('cubic-bezier');
 
   const swipe = await getHorizontalSwipePoints(page);
-  await pointerDrag(stage, swipe.start, swipe.end);
+  await dispatchPointer(stage, 'pointerdown', { id: 1, ...swipe.start });
+  await dispatchPointer(stage, 'pointermove', { id: 1, ...swipe.end });
+  await expect(page.getByTestId('product-media-drag-neighbor-frame')).toBeVisible();
+  await expect(page.getByTestId('product-media-drag-neighbor-frame')).toHaveAttribute(
+    'data-slide',
+    'next'
+  );
+  await dispatchPointer(stage, 'pointerup', { id: 1, ...swipe.end, buttons: 0 });
   await expect(page.getByTestId('product-media-counter')).toHaveText('2 / 3');
 
   const previousFrame = page.getByTestId('product-media-previous-frame').first();
@@ -292,6 +300,48 @@ test('mobile controls and swipe transitions use the longer fluent animation timi
   expect(await page.getByTestId('product-media-frame').getAttribute('class')).toContain(
     'product-media-viewer__frame--enter-next'
   );
+  await page.waitForTimeout(250);
+  await expect(previousFrame).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(viewer).toHaveCount(0);
+});
+
+test('mobile top caption handles 50 character product names without clipping controls', async ({ page }) => {
+  const longName = 'Сатиновый комплект Sand с расширенным названием XL';
+  expect(longName.length).toBe(50);
+
+  const viewer = await openProductMediaViewer(page, {
+    products: products.map((product) =>
+      product.id === 'prod-satin-sand'
+        ? {
+            ...product,
+            name: longName,
+          }
+        : product
+    ),
+  });
+
+  const title = page.locator('.product-media-viewer__caption-title');
+  const caption = page.getByTestId('product-media-caption');
+  const close = page.getByTestId('product-media-close');
+  await expect(title).toHaveText(longName);
+
+  const [captionBox, titleBox, closeBox, viewport] = await Promise.all([
+    caption.boundingBox(),
+    title.boundingBox(),
+    close.boundingBox(),
+    page.viewportSize(),
+  ]);
+
+  expect(captionBox).not.toBeNull();
+  expect(titleBox).not.toBeNull();
+  expect(closeBox).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(captionBox.y).toBeLessThan(viewport.height * 0.22);
+  expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(closeBox.x - 8);
+  await expectNoHorizontalOverflow(page);
+  expect(await title.evaluate((node) => node.scrollHeight <= node.clientHeight + 2)).toBe(true);
 
   await page.keyboard.press('Escape');
   await expect(viewer).toHaveCount(0);
@@ -333,6 +383,22 @@ test('mobile viewer buttons close, navigate, and zoom', async ({ page }) => {
   const viewer = await openProductMediaViewer(page);
   const counter = page.getByTestId('product-media-counter');
   await expect(counter).toHaveText('1 / 3');
+
+  const closeButton = page.getByTestId('product-media-close');
+  await expect(closeButton.locator('svg')).toBeVisible();
+  const controlStyle = await closeButton.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      background: style.backgroundColor,
+      radius: style.borderRadius,
+      width: style.width,
+      height: style.height,
+    };
+  });
+  expect(controlStyle.background).toContain('255, 255, 255');
+  expect(controlStyle.radius).toBe('16px');
+  expect(controlStyle.width).toBe('44px');
+  expect(controlStyle.height).toBe('44px');
 
   await viewer.getByRole('button', { name: 'Следующее изображение' }).click();
   await expect(counter).toHaveText('2 / 3');
