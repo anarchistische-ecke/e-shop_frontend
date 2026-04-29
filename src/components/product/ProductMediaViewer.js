@@ -11,7 +11,7 @@ const VERTICAL_DISMISS_DISTANCE = 72;
 const INITIAL_CONTROLS_HIDE_MS = 3000;
 const REVEALED_CONTROLS_HIDE_MS = 10000;
 const DISMISS_ANIMATION_MS = 220;
-const SLIDE_ANIMATION_MS = 680;
+const SLIDE_ANIMATION_MS = 520;
 
 const INITIAL_TRANSFORM = {
   scale: 1,
@@ -47,6 +47,80 @@ function preventDefault(event) {
   }
 }
 
+function ViewerIcon({ children }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="product-media-viewer__icon"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <ViewerIcon>
+      <path d="M6 6l12 12" />
+      <path d="M18 6L6 18" />
+    </ViewerIcon>
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <ViewerIcon>
+      <path d="M15 18l-6-6 6-6" />
+    </ViewerIcon>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <ViewerIcon>
+      <path d="M9 6l6 6-6 6" />
+    </ViewerIcon>
+  );
+}
+
+function ZoomInIcon() {
+  return (
+    <ViewerIcon>
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="M10.5 8v5" />
+      <path d="M8 10.5h5" />
+      <path d="M15.2 15.2L20 20" />
+    </ViewerIcon>
+  );
+}
+
+function ZoomOutIcon() {
+  return (
+    <ViewerIcon>
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="M8 10.5h5" />
+      <path d="M15.2 15.2L20 20" />
+    </ViewerIcon>
+  );
+}
+
+function ResetZoomIcon() {
+  return (
+    <ViewerIcon>
+      <path d="M5.5 9A7 7 0 0 1 17 5.5" />
+      <path d="M17.5 3.5v4h-4" />
+      <path d="M18.5 15A7 7 0 0 1 7 18.5" />
+      <path d="M6.5 20.5v-4h4" />
+    </ViewerIcon>
+  );
+}
+
 function ProductMediaViewer({
   items = [],
   activeIndex = 0,
@@ -68,6 +142,7 @@ function ProductMediaViewer({
   const closeTimerRef = useRef(null);
   const slideTimersRef = useRef(new Set());
   const slideRequestDirectionRef = useRef('');
+  const slideStartOffsetRef = useRef(0);
   const latestTransitionKeyRef = useRef('');
   const transitionCounterRef = useRef(0);
   const previousActiveRef = useRef({ item: null, index: 0 });
@@ -78,6 +153,7 @@ function ProductMediaViewer({
   const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
   const [isDismissing, setIsDismissing] = useState(false);
   const [slideDirection, setSlideDirection] = useState('');
+  const [slideStartOffsetX, setSlideStartOffsetX] = useState(0);
   const [transitionLayers, setTransitionLayers] = useState([]);
 
   const mediaItems = useMemo(
@@ -235,10 +311,11 @@ function ProductMediaViewer({
   );
 
   const selectByOffset = useCallback(
-    (offset) => {
+    (offset, releaseOffsetX = 0) => {
       if (itemCount <= 1 || typeof onSelect !== 'function') return;
 
       slideRequestDirectionRef.current = offset > 0 ? 'next' : 'prev';
+      slideStartOffsetRef.current = Number(releaseOffsetX) || 0;
       revealControls(REVEALED_CONTROLS_HIDE_MS);
       onSelect((selectedIndex + offset + itemCount) % itemCount);
     },
@@ -279,9 +356,11 @@ function ProductMediaViewer({
       setIsDismissing(false);
       setIsInteracting(false);
       setSlideDirection('');
+      setSlideStartOffsetX(0);
       setTransitionLayers([]);
       previousActiveRef.current = { item: null, index: 0 };
       slideRequestDirectionRef.current = '';
+      slideStartOffsetRef.current = 0;
       latestTransitionKeyRef.current = '';
       transitionCounterRef.current = 0;
       clearControlsTimer();
@@ -316,10 +395,12 @@ function ProductMediaViewer({
           item: previous.item,
           index: previous.index,
           direction: inferredDirection,
+          startOffsetX: slideStartOffsetRef.current,
           key: transitionKey,
         },
       ]);
       setSlideDirection(inferredDirection);
+      setSlideStartOffsetX(slideStartOffsetRef.current);
 
       const timerId = window.setTimeout(() => {
         setTransitionLayers((currentLayers) =>
@@ -328,6 +409,7 @@ function ProductMediaViewer({
         if (latestTransitionKeyRef.current === transitionKey) {
           latestTransitionKeyRef.current = '';
           setSlideDirection('');
+          setSlideStartOffsetX(0);
         }
         slideTimersRef.current.delete(timerId);
       }, SLIDE_ANIMATION_MS);
@@ -340,6 +422,7 @@ function ProductMediaViewer({
 
     previousActiveRef.current = { item: activeItem, index: selectedIndex };
     slideRequestDirectionRef.current = '';
+    slideStartOffsetRef.current = 0;
     return undefined;
   }, [activeItem, itemCount, open, selectedIndex]);
 
@@ -675,7 +758,7 @@ function ProductMediaViewer({
         absX >= SWIPE_DISTANCE &&
         absX > absY * 1.15
       ) {
-        selectByOffset(deltaX < 0 ? 1 : -1);
+        selectByOffset(deltaX < 0 ? 1 : -1, deltaX);
         gestureRef.current = null;
         lastTapRef.current = null;
         setSwipeOffset({ x: 0, y: 0 });
@@ -750,14 +833,45 @@ function ProductMediaViewer({
     return null;
   }
 
-  const renderMediaFrame = ({ item, index, isCurrent = false, direction = '', key }) => {
+  const dragDirection =
+    activeItem &&
+    itemCount > 1 &&
+    transform.scale <= MIN_SCALE + 0.01 &&
+    Math.abs(swipeOffset.x) > 4 &&
+    Math.abs(swipeOffset.x) >= Math.abs(swipeOffset.y)
+      ? swipeOffset.x < 0
+        ? 'next'
+        : 'prev'
+      : '';
+  const dragNeighborIndex =
+    dragDirection === 'next'
+      ? (selectedIndex + 1) % itemCount
+      : dragDirection === 'prev'
+        ? (selectedIndex - 1 + itemCount) % itemCount
+        : -1;
+  const dragNeighborItem = dragNeighborIndex >= 0 ? mediaItems[dragNeighborIndex] : null;
+
+  const renderMediaFrame = ({
+    item,
+    index,
+    isCurrent = false,
+    isDragNeighbor = false,
+    direction = '',
+    key,
+    startOffsetX = 0,
+  }) => {
     const frameClassName = [
       'product-media-viewer__frame',
-      isCurrent ? 'product-media-viewer__frame--current' : 'product-media-viewer__frame--previous',
+      isCurrent ? 'product-media-viewer__frame--current' : '',
+      !isCurrent && !isDragNeighbor ? 'product-media-viewer__frame--previous' : '',
+      isDragNeighbor ? 'product-media-viewer__frame--drag-neighbor' : '',
+      isDragNeighbor && direction ? `product-media-viewer__frame--drag-${direction}` : '',
       isCurrent && isInteracting ? 'product-media-viewer__frame--interacting' : '',
       isCurrent && isDismissing ? 'product-media-viewer__frame--dismissing' : '',
       isCurrent && direction ? `product-media-viewer__frame--enter-${direction}` : '',
-      !isCurrent && direction ? `product-media-viewer__frame--exit-${direction}` : '',
+      !isCurrent && !isDragNeighbor && direction
+        ? `product-media-viewer__frame--exit-${direction}`
+        : '',
     ]
       .filter(Boolean)
       .join(' ');
@@ -765,7 +879,13 @@ function ProductMediaViewer({
     return (
       <div
         key={key || item.id || item.url || index}
-        data-testid={isCurrent ? 'product-media-frame' : 'product-media-previous-frame'}
+        data-testid={
+          isCurrent
+            ? 'product-media-frame'
+            : isDragNeighbor
+              ? 'product-media-drag-neighbor-frame'
+              : 'product-media-previous-frame'
+        }
         data-slide={isCurrent ? slideDirection : direction}
         data-transition-key={!isCurrent ? key : undefined}
         data-swipe-offset-x={isCurrent ? Math.round(swipeOffset.x) : 0}
@@ -776,8 +896,18 @@ function ProductMediaViewer({
             ? {
                 '--swipe-x': `${swipeOffset.x}px`,
                 '--swipe-y': `${swipeOffset.y}px`,
+                '--slide-start-x': `${slideStartOffsetX}px`,
               }
-            : undefined
+            : isDragNeighbor
+              ? {
+                  '--drag-x':
+                    direction === 'next'
+                      ? `calc(${swipeOffset.x}px + 100%)`
+                      : `calc(${swipeOffset.x}px - 100%)`,
+                }
+              : {
+                  '--slide-start-x': `${startOffsetX}px`,
+                }
         }
       >
         <img
@@ -842,9 +972,19 @@ function ProductMediaViewer({
                 item: layer.item,
                 index: layer.index,
                 direction: layer.direction,
+                startOffsetX: layer.startOffsetX,
                 key: layer.key,
               })
             )}
+            {dragNeighborItem
+              ? renderMediaFrame({
+                  item: dragNeighborItem,
+                  index: dragNeighborIndex,
+                  direction: dragDirection,
+                  isDragNeighbor: true,
+                  key: `drag-${dragNeighborItem.id || dragNeighborItem.url || dragNeighborIndex}`,
+                })
+              : null}
             {renderMediaFrame({
               item: activeItem,
               index: selectedIndex,
@@ -859,6 +999,16 @@ function ProductMediaViewer({
       </div>
 
       <div className="product-media-viewer__topbar">
+        <div className="product-media-viewer__caption" data-testid="product-media-caption">
+          <span className="product-media-viewer__caption-title">
+            {productName || 'Фото товара'}
+          </span>
+          {activeVariantName ? (
+            <span className="product-media-viewer__caption-meta">
+              Вариант: {activeVariantName}
+            </span>
+          ) : null}
+        </div>
         <button
           type="button"
           data-testid="product-media-close"
@@ -866,7 +1016,7 @@ function ProductMediaViewer({
           onClick={onClose}
           aria-label="Закрыть просмотр изображения"
         >
-          ×
+          <CloseIcon />
         </button>
       </div>
 
@@ -878,7 +1028,7 @@ function ProductMediaViewer({
             onClick={() => selectByOffset(-1)}
             aria-label="Предыдущее изображение"
           >
-            ‹
+            <ChevronLeftIcon />
           </button>
           <button
             type="button"
@@ -886,25 +1036,15 @@ function ProductMediaViewer({
             onClick={() => selectByOffset(1)}
             aria-label="Следующее изображение"
           >
-            ›
+            <ChevronRightIcon />
           </button>
         </>
       ) : null}
 
       <div className="product-media-viewer__bottombar">
-        <div className="product-media-viewer__caption" data-testid="product-media-caption">
-          <span className="product-media-viewer__caption-title">
-            {productName || 'Фото товара'}
-          </span>
-          {activeVariantName ? (
-            <span className="product-media-viewer__caption-meta">
-              Вариант: {activeVariantName}
-            </span>
-          ) : null}
-          <span data-testid="product-media-counter" className="product-media-viewer__counter">
-            {selectedIndex + 1} / {Math.max(1, itemCount)}
-          </span>
-        </div>
+        <span data-testid="product-media-counter" className="product-media-viewer__counter">
+          {selectedIndex + 1} / {Math.max(1, itemCount)}
+        </span>
         <div className="product-media-viewer__zoom-controls" aria-label="Управление масштабом">
           <button
             type="button"
@@ -915,7 +1055,7 @@ function ProductMediaViewer({
             }}
             aria-label="Уменьшить изображение"
           >
-            −
+            <ZoomOutIcon />
           </button>
           <button
             type="button"
@@ -927,7 +1067,7 @@ function ProductMediaViewer({
             }}
             aria-label="Сбросить масштаб"
           >
-            1:1
+            <ResetZoomIcon />
           </button>
           <button
             type="button"
@@ -938,7 +1078,7 @@ function ProductMediaViewer({
             }}
             aria-label="Увеличить изображение"
           >
-            +
+            <ZoomInIcon />
           </button>
         </div>
       </div>
