@@ -100,6 +100,16 @@ const products = [
         url: svgDataUrl('Sand', '#ead7c7'),
         alt: 'Сатиновый комплект Sand',
       },
+      {
+        id: 'img-satin-sand-2',
+        url: svgDataUrl('Detail', '#f4ece2'),
+        alt: 'Фактура сатинового комплекта Sand',
+      },
+      {
+        id: 'img-satin-sand-3',
+        url: svgDataUrl('Scale', '#ded7cb'),
+        alt: 'Сатиновый комплект Sand в масштабе',
+      },
     ],
   },
   {
