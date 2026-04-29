@@ -11,6 +11,7 @@ import {
 import CmsStorefrontCollectionRail from '../components/cms/CmsStorefrontCollectionRail';
 import { CmsRichText } from '../components/cms/cmsBlockShared';
 import ProductCard from '../components/ProductCard';
+import ProductMediaViewer from '../components/product/ProductMediaViewer';
 import { Button, Card, Modal, Tabs } from '../components/ui';
 import { legalTokens } from '../data/legal/constants';
 import { useProductDirectoryData } from '../features/product-list/data';
@@ -801,7 +802,7 @@ function ProductPage() {
                     <img
                       src={mainImage}
                       alt={product.name}
-                      className="absolute inset-0 h-full w-full object-cover"
+                      className="absolute inset-0 h-full w-full object-contain p-3 sm:p-4"
                       loading="eager"
                       decoding="async"
                     />
@@ -884,7 +885,7 @@ function ProductPage() {
                   } bg-sand/60`}
                 >
                   {image ? (
-                    <img src={image.url} alt={`Изображение ${index + 1}`} className="h-full w-full object-cover" />
+                    <img src={image.url} alt={`Изображение ${index + 1}`} className="h-full w-full object-contain p-1" />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center text-[10px] text-muted">Нет фото</span>
                   )}
@@ -1291,60 +1292,15 @@ function ProductPage() {
         </div>
       </div>
 
-      <Modal
+      <ProductMediaViewer
         open={isImageZoomOpen}
+        items={orderedImages}
+        activeIndex={activeImageIndex}
+        productName={marketingTitle || product.name}
+        variantNameById={variantNameById}
+        onSelect={selectImageByIndex}
         onClose={() => setIsImageZoomOpen(false)}
-        placement="center"
-        size="lg"
-        showCloseButton={false}
-        closeLabel="Закрыть просмотр изображения"
-        overlayClassName="bg-black/80 backdrop-blur-sm"
-        panelClassName="max-w-5xl border-white/10 bg-black/35 p-0 shadow-none"
-      >
-        <div className="relative min-h-[60vh]">
-          <Button
-            variant="secondary"
-            size="icon"
-            className="absolute right-4 top-4 z-10 border-white/30 bg-black/40 text-white hover:border-white/50 hover:bg-black/55 hover:text-white"
-            onClick={() => setIsImageZoomOpen(false)}
-            aria-label="Закрыть"
-          >
-            ✕
-          </Button>
-
-          {orderedImages.length > 1 && (
-            <>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="absolute left-4 top-1/2 z-10 -translate-y-1/2 border-white/30 bg-black/40 text-white hover:border-white/50 hover:bg-black/55 hover:text-white"
-                onClick={() => selectImageByIndex(activeImageIndex - 1)}
-                aria-label="Предыдущее изображение"
-              >
-                ‹
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="absolute right-4 top-1/2 z-10 -translate-y-1/2 border-white/30 bg-black/40 text-white hover:border-white/50 hover:bg-black/55 hover:text-white"
-                onClick={() => selectImageByIndex(activeImageIndex + 1)}
-                aria-label="Следующее изображение"
-              >
-                ›
-              </Button>
-            </>
-          )}
-
-          <div className="mx-auto flex min-h-[60vh] max-w-5xl items-center justify-center p-6 sm:p-10">
-            {mainImage ? (
-              <img src={mainImage} alt={product.name} className="max-h-[75vh] w-auto max-w-full object-contain" />
-            ) : null}
-          </div>
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/25 bg-black/40 px-3 py-1 text-xs text-white/90">
-            {activeImageIndex + 1} / {Math.max(1, orderedImages.length)}
-          </p>
-        </div>
-      </Modal>
+      />
 
       <Modal
         open={isInfoSheetOpen}
