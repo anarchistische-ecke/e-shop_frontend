@@ -102,6 +102,23 @@ async function getBackgroundPoint(page) {
   expect(stageBox).not.toBeNull();
   expect(imageBox).not.toBeNull();
 
+  const centerY = imageBox.y + imageBox.height / 2;
+  const leftCandidate = imageBox.x - 32;
+  if (leftCandidate > stageBox.x + 24) {
+    return {
+      x: leftCandidate,
+      y: centerY,
+    };
+  }
+
+  const rightCandidate = imageBox.x + imageBox.width + 32;
+  if (rightCandidate < stageBox.x + stageBox.width - 24) {
+    return {
+      x: rightCandidate,
+      y: centerY,
+    };
+  }
+
   const topCandidate = imageBox.y - 32;
   if (topCandidate > stageBox.y + 24) {
     return {
@@ -200,6 +217,14 @@ test('mobile media viewer double-tap zooms, clamps pan, and swipes only at base 
   await pointerDrag(stage, baseSwipe.start, baseSwipe.end);
   expect(await page.getByTestId('product-media-frame').getAttribute('data-slide')).toBe('next');
   await expect(counter).toHaveText('2 / 3');
+  await expect(page.getByTestId('product-media-previous-frame').first()).toBeVisible();
+
+  const immediateSwipe = await getHorizontalSwipePoints(page);
+  await pointerDrag(stage, immediateSwipe.start, immediateSwipe.end);
+  await expect(counter).toHaveText('3 / 3');
+  await expect
+    .poll(async () => page.getByTestId('product-media-previous-frame').count())
+    .toBeGreaterThanOrEqual(2);
 
   await page.keyboard.press('Escape');
   await expect(viewer).toHaveCount(0);
@@ -209,12 +234,27 @@ test('mobile controls work and auto-hide on the requested timers', async ({ page
   test.setTimeout(25_000);
 
   const viewer = await openProductMediaViewer(page);
+  const stage = page.getByTestId('product-media-stage');
+  const caption = page.getByTestId('product-media-caption');
   await expect(viewer).toHaveAttribute('data-controls-visible', 'true');
 
-  await page.waitForTimeout(4200);
+  const [captionBox, viewport] = await Promise.all([caption.boundingBox(), page.viewportSize()]);
+  expect(captionBox).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(captionBox.y).toBeGreaterThan(viewport.height * 0.68);
+
+  await page.waitForTimeout(3200);
   await expect(viewer).toHaveAttribute('data-controls-visible', 'false');
 
-  await pointerTap(page.getByTestId('product-media-stage'), await getImageCenter(page));
+  await pointerTap(stage, await getImageCenter(page));
+  await expect(viewer).toHaveAttribute('data-controls-visible', 'true');
+
+  await page.waitForTimeout(350);
+  await pointerTap(stage, await getImageCenter(page));
+  await expect(viewer).toHaveAttribute('data-controls-visible', 'false');
+
+  await page.waitForTimeout(350);
+  await pointerTap(stage, await getImageCenter(page));
   await expect(viewer).toHaveAttribute('data-controls-visible', 'true');
 
   await page.waitForTimeout(9200);
@@ -222,6 +262,39 @@ test('mobile controls work and auto-hide on the requested timers', async ({ page
 
   await page.waitForTimeout(1200);
   await expect(viewer).toHaveAttribute('data-controls-visible', 'false');
+});
+
+test('mobile controls and swipe transitions use the longer fluent animation timings', async ({ page }) => {
+  const viewer = await openProductMediaViewer(page);
+  const stage = page.getByTestId('product-media-stage');
+
+  const topbarTransition = await page.locator('.product-media-viewer__topbar').evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      duration: style.transitionDuration,
+      timing: style.transitionTimingFunction,
+    };
+  });
+  expect(topbarTransition.duration).toContain('0.52s');
+  expect(topbarTransition.timing).toContain('cubic-bezier');
+
+  const swipe = await getHorizontalSwipePoints(page);
+  await pointerDrag(stage, swipe.start, swipe.end);
+  await expect(page.getByTestId('product-media-counter')).toHaveText('2 / 3');
+
+  const previousFrame = page.getByTestId('product-media-previous-frame').first();
+  await expect(previousFrame).toBeVisible();
+  await expect(previousFrame).toHaveAttribute('data-slide', 'next');
+
+  expect(await previousFrame.getAttribute('class')).toContain(
+    'product-media-viewer__frame--exit-next'
+  );
+  expect(await page.getByTestId('product-media-frame').getAttribute('class')).toContain(
+    'product-media-viewer__frame--enter-next'
+  );
+
+  await page.keyboard.press('Escape');
+  await expect(viewer).toHaveCount(0);
 });
 
 test('mobile background taps close and image vertical swipes dismiss with animation', async ({ page }) => {

@@ -8,10 +8,10 @@ const DOUBLE_TAP_DISTANCE = 42;
 const TAP_MOVE_TOLERANCE = 12;
 const SWIPE_DISTANCE = 56;
 const VERTICAL_DISMISS_DISTANCE = 72;
-const INITIAL_CONTROLS_HIDE_MS = 4000;
+const INITIAL_CONTROLS_HIDE_MS = 3000;
 const REVEALED_CONTROLS_HIDE_MS = 10000;
-const DISMISS_ANIMATION_MS = 180;
-const SLIDE_ANIMATION_MS = 700;
+const DISMISS_ANIMATION_MS = 220;
+const SLIDE_ANIMATION_MS = 680;
 
 const INITIAL_TRANSFORM = {
   scale: 1,
@@ -66,7 +66,11 @@ function ProductMediaViewer({
   const transformRef = useRef(INITIAL_TRANSFORM);
   const controlsTimerRef = useRef(null);
   const closeTimerRef = useRef(null);
-  const slideTimerRef = useRef(null);
+  const slideTimersRef = useRef(new Set());
+  const slideRequestDirectionRef = useRef('');
+  const latestTransitionKeyRef = useRef('');
+  const transitionCounterRef = useRef(0);
+  const previousActiveRef = useRef({ item: null, index: 0 });
 
   const [transform, setTransform] = useState(INITIAL_TRANSFORM);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -74,6 +78,7 @@ function ProductMediaViewer({
   const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
   const [isDismissing, setIsDismissing] = useState(false);
   const [slideDirection, setSlideDirection] = useState('');
+  const [transitionLayers, setTransitionLayers] = useState([]);
 
   const mediaItems = useMemo(
     () => (Array.isArray(items) ? items.filter((item) => item?.url) : []),
@@ -86,10 +91,19 @@ function ProductMediaViewer({
     activeItem?.variantId ? variantNameById[activeItem.variantId] || activeItem.variantId : '';
 
   const clearControlsTimer = useCallback(() => {
-    if (controlsTimerRef.current) {
+    if (controlsTimerRef.current && typeof window !== 'undefined') {
       window.clearTimeout(controlsTimerRef.current);
       controlsTimerRef.current = null;
     }
+  }, []);
+
+  const clearSlideTimers = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    slideTimersRef.current.forEach((timerId) => {
+      window.clearTimeout(timerId);
+    });
+    slideTimersRef.current.clear();
   }, []);
 
   const revealControls = useCallback(
@@ -223,15 +237,8 @@ function ProductMediaViewer({
   const selectByOffset = useCallback(
     (offset) => {
       if (itemCount <= 1 || typeof onSelect !== 'function') return;
-      const nextDirection = offset > 0 ? 'next' : 'prev';
-      setSlideDirection(nextDirection);
-      if (slideTimerRef.current) {
-        window.clearTimeout(slideTimerRef.current);
-      }
-      slideTimerRef.current = window.setTimeout(() => {
-        setSlideDirection('');
-        slideTimerRef.current = null;
-      }, SLIDE_ANIMATION_MS);
+
+      slideRequestDirectionRef.current = offset > 0 ? 'next' : 'prev';
       revealControls(REVEALED_CONTROLS_HIDE_MS);
       onSelect((selectedIndex + offset + itemCount) % itemCount);
     },
@@ -250,7 +257,7 @@ function ProductMediaViewer({
       setIsInteracting(false);
       setSwipeOffset({
         x: 0,
-        y: normalizedDirection * Math.max(stageHeight * 0.72, VERTICAL_DISMISS_DISTANCE * 2),
+        y: normalizedDirection * Math.max(stageHeight * 0.78, VERTICAL_DISMISS_DISTANCE * 2),
       });
 
       if (closeTimerRef.current) {
@@ -272,7 +279,13 @@ function ProductMediaViewer({
       setIsDismissing(false);
       setIsInteracting(false);
       setSlideDirection('');
+      setTransitionLayers([]);
+      previousActiveRef.current = { item: null, index: 0 };
+      slideRequestDirectionRef.current = '';
+      latestTransitionKeyRef.current = '';
+      transitionCounterRef.current = 0;
       clearControlsTimer();
+      clearSlideTimers();
       return;
     }
 
@@ -280,7 +293,55 @@ function ProductMediaViewer({
     setSwipeOffset({ x: 0, y: 0 });
     setIsDismissing(false);
     setIsInteracting(false);
-  }, [clearControlsTimer, open, resetTransform, selectedIndex]);
+  }, [clearControlsTimer, clearSlideTimers, open, resetTransform, selectedIndex]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previous = previousActiveRef.current;
+    if (previous.item && previous.index !== selectedIndex) {
+      const requestedDirection = slideRequestDirectionRef.current;
+      const inferredDirection =
+        requestedDirection ||
+        (selectedIndex > previous.index || (previous.index === itemCount - 1 && selectedIndex === 0)
+          ? 'next'
+          : 'prev');
+      transitionCounterRef.current += 1;
+      const transitionKey = `${previous.item.id || previous.item.url || previous.index}-${transitionCounterRef.current}`;
+      latestTransitionKeyRef.current = transitionKey;
+
+      setTransitionLayers((currentLayers) => [
+        ...currentLayers,
+        {
+          item: previous.item,
+          index: previous.index,
+          direction: inferredDirection,
+          key: transitionKey,
+        },
+      ]);
+      setSlideDirection(inferredDirection);
+
+      const timerId = window.setTimeout(() => {
+        setTransitionLayers((currentLayers) =>
+          currentLayers.filter((layer) => layer.key !== transitionKey)
+        );
+        if (latestTransitionKeyRef.current === transitionKey) {
+          latestTransitionKeyRef.current = '';
+          setSlideDirection('');
+        }
+        slideTimersRef.current.delete(timerId);
+      }, SLIDE_ANIMATION_MS);
+
+      slideTimersRef.current.add(timerId);
+    } else if (!previous.item) {
+      setTransitionLayers([]);
+      setSlideDirection('');
+    }
+
+    previousActiveRef.current = { item: activeItem, index: selectedIndex };
+    slideRequestDirectionRef.current = '';
+    return undefined;
+  }, [activeItem, itemCount, open, selectedIndex]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -423,14 +484,12 @@ function ProductMediaViewer({
   useEffect(() => {
     return () => {
       clearControlsTimer();
+      clearSlideTimers();
       if (closeTimerRef.current) {
         window.clearTimeout(closeTimerRef.current);
       }
-      if (slideTimerRef.current) {
-        window.clearTimeout(slideTimerRef.current);
-      }
     };
-  }, [clearControlsTimer]);
+  }, [clearControlsTimer, clearSlideTimers]);
 
   useEffect(() => {
     if (!open) {
@@ -590,16 +649,15 @@ function ProductMediaViewer({
       const absY = Math.abs(deltaY);
       const currentScale = transformRef.current.scale;
 
-      if (!gesture.startedOnImage) {
-        if (absX <= TAP_MOVE_TOLERANCE && absY <= TAP_MOVE_TOLERANCE) {
-          onClose?.();
-          gestureRef.current = null;
-          setSwipeOffset({ x: 0, y: 0 });
-          return;
-        }
+      if (!gesture.startedOnImage && absX <= TAP_MOVE_TOLERANCE && absY <= TAP_MOVE_TOLERANCE) {
+        onClose?.();
+        gestureRef.current = null;
+        setSwipeOffset({ x: 0, y: 0 });
+        return;
       }
 
       if (
+        gesture.startedOnImage &&
         currentScale <= MIN_SCALE + 0.01 &&
         absY >= VERTICAL_DISMISS_DISTANCE &&
         absY > absX * 1.15
@@ -611,6 +669,7 @@ function ProductMediaViewer({
       }
 
       if (
+        gesture.startedOnImage &&
         currentScale <= MIN_SCALE + 0.01 &&
         itemCount > 1 &&
         absX >= SWIPE_DISTANCE &&
@@ -623,8 +682,7 @@ function ProductMediaViewer({
         return;
       }
 
-      if (absX <= TAP_MOVE_TOLERANCE && absY <= TAP_MOVE_TOLERANCE) {
-        revealControls(REVEALED_CONTROLS_HIDE_MS);
+      if (gesture.startedOnImage && absX <= TAP_MOVE_TOLERANCE && absY <= TAP_MOVE_TOLERANCE) {
         const now = Date.now();
         const lastTap = lastTapRef.current;
 
@@ -645,6 +703,13 @@ function ProductMediaViewer({
           return;
         }
 
+        if (controlsVisible) {
+          clearControlsTimer();
+          setControlsVisible(false);
+        } else {
+          revealControls(REVEALED_CONTROLS_HIDE_MS);
+        }
+
         lastTapRef.current = {
           time: now,
           point,
@@ -654,7 +719,17 @@ function ProductMediaViewer({
       gestureRef.current = null;
       setSwipeOffset({ x: 0, y: 0 });
     },
-    [itemCount, onClose, resetTransform, revealControls, selectByOffset, startDismiss, zoomAtPoint]
+    [
+      clearControlsTimer,
+      controlsVisible,
+      itemCount,
+      onClose,
+      resetTransform,
+      revealControls,
+      selectByOffset,
+      startDismiss,
+      zoomAtPoint,
+    ]
   );
 
   const handleWheel = useCallback(
@@ -674,6 +749,60 @@ function ProductMediaViewer({
   if (!open || typeof document === 'undefined') {
     return null;
   }
+
+  const renderMediaFrame = ({ item, index, isCurrent = false, direction = '', key }) => {
+    const frameClassName = [
+      'product-media-viewer__frame',
+      isCurrent ? 'product-media-viewer__frame--current' : 'product-media-viewer__frame--previous',
+      isCurrent && isInteracting ? 'product-media-viewer__frame--interacting' : '',
+      isCurrent && isDismissing ? 'product-media-viewer__frame--dismissing' : '',
+      isCurrent && direction ? `product-media-viewer__frame--enter-${direction}` : '',
+      !isCurrent && direction ? `product-media-viewer__frame--exit-${direction}` : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    return (
+      <div
+        key={key || item.id || item.url || index}
+        data-testid={isCurrent ? 'product-media-frame' : 'product-media-previous-frame'}
+        data-slide={isCurrent ? slideDirection : direction}
+        data-transition-key={!isCurrent ? key : undefined}
+        data-swipe-offset-x={isCurrent ? Math.round(swipeOffset.x) : 0}
+        data-swipe-offset-y={isCurrent ? Math.round(swipeOffset.y) : 0}
+        className={frameClassName}
+        style={
+          isCurrent
+            ? {
+                '--swipe-x': `${swipeOffset.x}px`,
+                '--swipe-y': `${swipeOffset.y}px`,
+              }
+            : undefined
+        }
+      >
+        <img
+          ref={isCurrent ? imageRef : undefined}
+          src={item.url}
+          alt={item.alt || productName || 'Фото товара'}
+          data-testid={isCurrent ? 'product-media-image' : undefined}
+          data-scale={isCurrent ? transform.scale.toFixed(2) : undefined}
+          data-translate-x={isCurrent ? Math.round(transform.x) : undefined}
+          data-translate-y={isCurrent ? Math.round(transform.y) : undefined}
+          className={`product-media-viewer__image ${
+            isCurrent && isInteracting ? 'product-media-viewer__image--interacting' : ''
+          }`}
+          draggable={false}
+          style={
+            isCurrent
+              ? {
+                  transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
+                }
+              : undefined
+          }
+        />
+      </div>
+    );
+  };
 
   return createPortal(
     <div
@@ -707,54 +836,29 @@ function ProductMediaViewer({
         }}
       >
         {activeItem ? (
-          <div
-            key={activeItem.id || activeItem.url || selectedIndex}
-            data-testid="product-media-frame"
-            data-slide={slideDirection}
-            data-swipe-offset-x={Math.round(swipeOffset.x)}
-            data-swipe-offset-y={Math.round(swipeOffset.y)}
-            className={`product-media-viewer__frame ${
-              isInteracting ? 'product-media-viewer__frame--interacting' : ''
-            } ${isDismissing ? 'product-media-viewer__frame--dismissing' : ''} ${
-              slideDirection ? `product-media-viewer__frame--slide-${slideDirection}` : ''
-            }`}
-            style={{
-              transform: `translate3d(${swipeOffset.x}px, ${swipeOffset.y}px, 0)`,
-            }}
-          >
-            <img
-              ref={imageRef}
-              src={activeItem.url}
-              alt={activeItem.alt || productName || 'Фото товара'}
-              data-testid="product-media-image"
-              data-scale={transform.scale.toFixed(2)}
-              data-translate-x={Math.round(transform.x)}
-              data-translate-y={Math.round(transform.y)}
-              className={`product-media-viewer__image ${
-                isInteracting ? 'product-media-viewer__image--interacting' : ''
-              }`}
-              draggable={false}
-              style={{
-                transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
-              }}
-            />
-          </div>
+          <>
+            {transitionLayers.map((layer) =>
+              renderMediaFrame({
+                item: layer.item,
+                index: layer.index,
+                direction: layer.direction,
+                key: layer.key,
+              })
+            )}
+            {renderMediaFrame({
+              item: activeItem,
+              index: selectedIndex,
+              isCurrent: true,
+              direction: slideDirection,
+              key: activeItem.id || activeItem.url || selectedIndex,
+            })}
+          </>
         ) : (
           <div className="product-media-viewer__empty">Изображение недоступно</div>
         )}
       </div>
 
       <div className="product-media-viewer__topbar">
-        <div className="product-media-viewer__caption">
-          <span className="product-media-viewer__caption-title">
-            {productName || 'Фото товара'}
-          </span>
-          {activeVariantName ? (
-            <span className="product-media-viewer__caption-meta">
-              Вариант: {activeVariantName}
-            </span>
-          ) : null}
-        </div>
         <button
           type="button"
           data-testid="product-media-close"
@@ -788,9 +892,19 @@ function ProductMediaViewer({
       ) : null}
 
       <div className="product-media-viewer__bottombar">
-        <p data-testid="product-media-counter" className="product-media-viewer__counter">
-          {selectedIndex + 1} / {Math.max(1, itemCount)}
-        </p>
+        <div className="product-media-viewer__caption" data-testid="product-media-caption">
+          <span className="product-media-viewer__caption-title">
+            {productName || 'Фото товара'}
+          </span>
+          {activeVariantName ? (
+            <span className="product-media-viewer__caption-meta">
+              Вариант: {activeVariantName}
+            </span>
+          ) : null}
+          <span data-testid="product-media-counter" className="product-media-viewer__counter">
+            {selectedIndex + 1} / {Math.max(1, itemCount)}
+          </span>
+        </div>
         <div className="product-media-viewer__zoom-controls" aria-label="Управление масштабом">
           <button
             type="button"
