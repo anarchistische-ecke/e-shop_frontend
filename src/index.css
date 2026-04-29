@@ -521,9 +521,13 @@ body {
     isolation: isolate;
     overscroll-behavior: none;
     touch-action: none;
+    transition: background-color 180ms ease;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+  }
+  .product-media-viewer--dismissing {
+    background: rgba(8, 8, 9, 0);
   }
   .product-media-viewer__stage {
     position: absolute;
@@ -545,6 +549,29 @@ body {
   }
   .product-media-viewer__stage--interacting {
     cursor: grabbing;
+  }
+  .product-media-viewer__frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition:
+      transform 180ms cubic-bezier(0.2, 0, 0.2, 1),
+      opacity 180ms ease;
+    will-change: transform, opacity;
+    pointer-events: none;
+  }
+  .product-media-viewer__frame--interacting {
+    transition: none;
+  }
+  .product-media-viewer__frame--dismissing {
+    opacity: 0;
+  }
+  .product-media-viewer__frame--slide-next {
+    animation: productMediaSlideInNext 260ms cubic-bezier(0.2, 0, 0.2, 1) both;
+  }
+  .product-media-viewer__frame--slide-prev {
+    animation: productMediaSlideInPrev 260ms cubic-bezier(0.2, 0, 0.2, 1) both;
   }
   .product-media-viewer__image {
     display: block;
@@ -580,6 +607,10 @@ body {
     display: flex;
     align-items: center;
     pointer-events: none;
+    opacity: 1;
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease;
   }
   .product-media-viewer__topbar {
     top: 0;
@@ -605,7 +636,7 @@ body {
   }
   .product-media-viewer__caption {
     min-width: 0;
-    pointer-events: auto;
+    pointer-events: none;
   }
   .product-media-viewer__caption-title,
   .product-media-viewer__caption-meta {
@@ -701,6 +732,22 @@ body {
     align-items: center;
     gap: 0.4rem;
     pointer-events: auto;
+  }
+  .product-media-viewer--controls-hidden .product-media-viewer__topbar {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  .product-media-viewer--controls-hidden .product-media-viewer__bottombar {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  .product-media-viewer--controls-hidden .product-media-viewer__nav {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .product-media-viewer--controls-hidden .product-media-viewer__topbar *,
+  .product-media-viewer--controls-hidden .product-media-viewer__bottombar * {
+    pointer-events: none;
   }
   .ui-toast {
     @apply shadow-[0_18px_44px_rgba(43,39,34,0.14)];
@@ -1021,6 +1068,28 @@ body {
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
+  }
+}
+
+@keyframes productMediaSlideInNext {
+  from {
+    opacity: 0.8;
+    transform: translate3d(18%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes productMediaSlideInPrev {
+  from {
+    opacity: 0.8;
+    transform: translate3d(-18%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
 

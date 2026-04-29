@@ -7,6 +7,11 @@ const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_DISTANCE = 42;
 const TAP_MOVE_TOLERANCE = 12;
 const SWIPE_DISTANCE = 56;
+const VERTICAL_DISMISS_DISTANCE = 72;
+const INITIAL_CONTROLS_HIDE_MS = 4000;
+const REVEALED_CONTROLS_HIDE_MS = 10000;
+const DISMISS_ANIMATION_MS = 180;
+const SLIDE_ANIMATION_MS = 700;
 
 const INITIAL_TRANSFORM = {
   scale: 1,
@@ -59,9 +64,16 @@ function ProductMediaViewer({
   const gestureRef = useRef(null);
   const lastTapRef = useRef(null);
   const transformRef = useRef(INITIAL_TRANSFORM);
+  const controlsTimerRef = useRef(null);
+  const closeTimerRef = useRef(null);
+  const slideTimerRef = useRef(null);
 
   const [transform, setTransform] = useState(INITIAL_TRANSFORM);
   const [isInteracting, setIsInteracting] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
+  const [isDismissing, setIsDismissing] = useState(false);
+  const [slideDirection, setSlideDirection] = useState('');
 
   const mediaItems = useMemo(
     () => (Array.isArray(items) ? items.filter((item) => item?.url) : []),
@@ -72,6 +84,41 @@ function ProductMediaViewer({
   const activeItem = mediaItems[selectedIndex] || null;
   const activeVariantName =
     activeItem?.variantId ? variantNameById[activeItem.variantId] || activeItem.variantId : '';
+
+  const clearControlsTimer = useCallback(() => {
+    if (controlsTimerRef.current) {
+      window.clearTimeout(controlsTimerRef.current);
+      controlsTimerRef.current = null;
+    }
+  }, []);
+
+  const revealControls = useCallback(
+    (durationMs = REVEALED_CONTROLS_HIDE_MS) => {
+      setControlsVisible(true);
+      clearControlsTimer();
+
+      if (!open || typeof window === 'undefined') return;
+
+      controlsTimerRef.current = window.setTimeout(() => {
+        setControlsVisible(false);
+        controlsTimerRef.current = null;
+      }, durationMs);
+    },
+    [clearControlsTimer, open]
+  );
+
+  const isPointInsideImage = useCallback((point) => {
+    const image = imageRef.current;
+    if (!image) return false;
+
+    const rect = image.getBoundingClientRect();
+    return (
+      point.x >= rect.left &&
+      point.x <= rect.right &&
+      point.y >= rect.top &&
+      point.y <= rect.bottom
+    );
+  }, []);
 
   const clampTransform = useCallback((nextTransform) => {
     const nextScale = clamp(Number(nextTransform.scale) || MIN_SCALE, MIN_SCALE, MAX_SCALE);
@@ -176,19 +223,70 @@ function ProductMediaViewer({
   const selectByOffset = useCallback(
     (offset) => {
       if (itemCount <= 1 || typeof onSelect !== 'function') return;
+      const nextDirection = offset > 0 ? 'next' : 'prev';
+      setSlideDirection(nextDirection);
+      if (slideTimerRef.current) {
+        window.clearTimeout(slideTimerRef.current);
+      }
+      slideTimerRef.current = window.setTimeout(() => {
+        setSlideDirection('');
+        slideTimerRef.current = null;
+      }, SLIDE_ANIMATION_MS);
+      revealControls(REVEALED_CONTROLS_HIDE_MS);
       onSelect((selectedIndex + offset + itemCount) % itemCount);
     },
-    [itemCount, onSelect, selectedIndex]
+    [itemCount, onSelect, revealControls, selectedIndex]
+  );
+
+  const startDismiss = useCallback(
+    (directionY = 1) => {
+      if (isDismissing || typeof window === 'undefined') return;
+
+      const stageHeight = stageRef.current?.clientHeight || window.innerHeight || 700;
+      const normalizedDirection = directionY < 0 ? -1 : 1;
+      setControlsVisible(false);
+      clearControlsTimer();
+      setIsDismissing(true);
+      setIsInteracting(false);
+      setSwipeOffset({
+        x: 0,
+        y: normalizedDirection * Math.max(stageHeight * 0.72, VERTICAL_DISMISS_DISTANCE * 2),
+      });
+
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+
+      closeTimerRef.current = window.setTimeout(() => {
+        closeTimerRef.current = null;
+        onClose?.();
+      }, DISMISS_ANIMATION_MS);
+    },
+    [clearControlsTimer, isDismissing, onClose]
   );
 
   useEffect(() => {
     if (!open) {
       resetTransform();
+      setSwipeOffset({ x: 0, y: 0 });
+      setIsDismissing(false);
+      setIsInteracting(false);
+      setSlideDirection('');
+      clearControlsTimer();
       return;
     }
 
     resetTransform();
-  }, [open, resetTransform, selectedIndex]);
+    setSwipeOffset({ x: 0, y: 0 });
+    setIsDismissing(false);
+    setIsInteracting(false);
+  }, [clearControlsTimer, open, resetTransform, selectedIndex]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    revealControls(INITIAL_CONTROLS_HIDE_MS);
+    return undefined;
+  }, [open, revealControls]);
 
   useEffect(() => {
     if (!open || typeof document === 'undefined') {
@@ -301,26 +399,38 @@ function ProductMediaViewer({
       return undefined;
     }
 
-    const overlay = overlayRef.current;
-    if (!overlay) {
+    const stage = stageRef.current;
+    if (!stage) {
       return undefined;
     }
 
     const options = { passive: false };
-    overlay.addEventListener('touchstart', preventDefault, options);
-    overlay.addEventListener('touchmove', preventDefault, options);
-    overlay.addEventListener('gesturestart', preventDefault, options);
-    overlay.addEventListener('gesturechange', preventDefault, options);
-    overlay.addEventListener('gestureend', preventDefault, options);
+    stage.addEventListener('touchstart', preventDefault, options);
+    stage.addEventListener('touchmove', preventDefault, options);
+    stage.addEventListener('gesturestart', preventDefault, options);
+    stage.addEventListener('gesturechange', preventDefault, options);
+    stage.addEventListener('gestureend', preventDefault, options);
 
     return () => {
-      overlay.removeEventListener('touchstart', preventDefault, options);
-      overlay.removeEventListener('touchmove', preventDefault, options);
-      overlay.removeEventListener('gesturestart', preventDefault, options);
-      overlay.removeEventListener('gesturechange', preventDefault, options);
-      overlay.removeEventListener('gestureend', preventDefault, options);
+      stage.removeEventListener('touchstart', preventDefault, options);
+      stage.removeEventListener('touchmove', preventDefault, options);
+      stage.removeEventListener('gesturestart', preventDefault, options);
+      stage.removeEventListener('gesturechange', preventDefault, options);
+      stage.removeEventListener('gestureend', preventDefault, options);
     };
   }, [open]);
+
+  useEffect(() => {
+    return () => {
+      clearControlsTimer();
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+      if (slideTimerRef.current) {
+        window.clearTimeout(slideTimerRef.current);
+      }
+    };
+  }, [clearControlsTimer]);
 
   useEffect(() => {
     if (!open) {
@@ -342,38 +452,47 @@ function ProductMediaViewer({
     };
   }, [commitTransform, open]);
 
-  const handlePointerDown = useCallback((event) => {
-    if (!activeItem) return;
+  const handlePointerDown = useCallback(
+    (event) => {
+      if (!activeItem || isDismissing) return;
 
-    preventDefault(event);
-    setIsInteracting(true);
+      preventDefault(event);
 
-    try {
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-    } catch {
-      // Synthetic pointer events in tests can miss the browser's active-pointer bookkeeping.
-    }
+      try {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Synthetic pointer events in tests can miss the browser's active-pointer bookkeeping.
+      }
 
-    const point = getPointerPoint(event);
-    pointersRef.current.set(event.pointerId, point);
+      const point = getPointerPoint(event);
+      const startedOnImage = isPointInsideImage(point);
+      pointersRef.current.set(event.pointerId, {
+        ...point,
+        startedOnImage,
+      });
+      setIsInteracting(startedOnImage);
 
-    if (pointersRef.current.size >= 2) {
-      const [first, second] = Array.from(pointersRef.current.values());
+      if (pointersRef.current.size >= 2) {
+        const points = Array.from(pointersRef.current.values());
+        const [first, second] = points;
+        gestureRef.current = {
+          type: 'pinch',
+          startDistance: Math.max(1, getDistance(first, second)),
+          startTransform: transformRef.current,
+        };
+        return;
+      }
+
       gestureRef.current = {
-        type: 'pinch',
-        startDistance: Math.max(1, getDistance(first, second)),
+        type: 'single',
+        start: point,
+        startedOnImage,
         startTransform: transformRef.current,
+        startedAt: Date.now(),
       };
-      return;
-    }
-
-    gestureRef.current = {
-      type: 'single',
-      start: point,
-      startTransform: transformRef.current,
-      startedAt: Date.now(),
-    };
-  }, [activeItem]);
+    },
+    [activeItem, isDismissing, isPointInsideImage]
+  );
 
   const handlePointerMove = useCallback(
     (event) => {
@@ -381,10 +500,15 @@ function ProductMediaViewer({
 
       preventDefault(event);
       const point = getPointerPoint(event);
-      pointersRef.current.set(event.pointerId, point);
+      const previousPointer = pointersRef.current.get(event.pointerId);
+      pointersRef.current.set(event.pointerId, {
+        ...point,
+        startedOnImage: previousPointer?.startedOnImage || false,
+      });
 
       if (pointersRef.current.size >= 2) {
-        const [first, second] = Array.from(pointersRef.current.values());
+        const points = Array.from(pointersRef.current.values());
+        const [first, second] = points;
         const gesture = gestureRef.current;
         const startTransform = gesture?.startTransform || transformRef.current;
         const startDistance =
@@ -406,7 +530,21 @@ function ProductMediaViewer({
       if (gesture?.type !== 'single') return;
 
       const currentTransform = transformRef.current;
-      if (currentTransform.scale <= MIN_SCALE + 0.01) return;
+      if (currentTransform.scale <= MIN_SCALE + 0.01) {
+        const deltaX = point.x - gesture.start.x;
+        const deltaY = point.y - gesture.start.y;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        if (absX > 4 || absY > 4) {
+          setSwipeOffset(
+            absY > absX
+              ? { x: 0, y: deltaY }
+              : { x: deltaX, y: 0 }
+          );
+        }
+        return;
+      }
 
       commitTransform({
         scale: currentTransform.scale,
@@ -428,12 +566,8 @@ function ProductMediaViewer({
       pointersRef.current.delete(event.pointerId);
 
       if (hadMultiplePointers && pointersRef.current.size === 1) {
-        const [remainingPoint] = Array.from(pointersRef.current.values());
         gestureRef.current = {
-          type: 'single',
-          start: remainingPoint,
-          startTransform: transformRef.current,
-          startedAt: Date.now(),
+          type: 'pinch-end',
         };
         return;
       }
@@ -446,6 +580,7 @@ function ProductMediaViewer({
 
       if (gesture?.type !== 'single') {
         gestureRef.current = null;
+        setSwipeOffset({ x: 0, y: 0 });
         return;
       }
 
@@ -454,6 +589,26 @@ function ProductMediaViewer({
       const absX = Math.abs(deltaX);
       const absY = Math.abs(deltaY);
       const currentScale = transformRef.current.scale;
+
+      if (!gesture.startedOnImage) {
+        if (absX <= TAP_MOVE_TOLERANCE && absY <= TAP_MOVE_TOLERANCE) {
+          onClose?.();
+          gestureRef.current = null;
+          setSwipeOffset({ x: 0, y: 0 });
+          return;
+        }
+      }
+
+      if (
+        currentScale <= MIN_SCALE + 0.01 &&
+        absY >= VERTICAL_DISMISS_DISTANCE &&
+        absY > absX * 1.15
+      ) {
+        startDismiss(deltaY);
+        gestureRef.current = null;
+        lastTapRef.current = null;
+        return;
+      }
 
       if (
         currentScale <= MIN_SCALE + 0.01 &&
@@ -464,10 +619,12 @@ function ProductMediaViewer({
         selectByOffset(deltaX < 0 ? 1 : -1);
         gestureRef.current = null;
         lastTapRef.current = null;
+        setSwipeOffset({ x: 0, y: 0 });
         return;
       }
 
       if (absX <= TAP_MOVE_TOLERANCE && absY <= TAP_MOVE_TOLERANCE) {
+        revealControls(REVEALED_CONTROLS_HIDE_MS);
         const now = Date.now();
         const lastTap = lastTapRef.current;
 
@@ -481,8 +638,10 @@ function ProductMediaViewer({
           } else {
             zoomAtPoint(point.x, point.y, 2.4);
           }
+          revealControls(REVEALED_CONTROLS_HIDE_MS);
           lastTapRef.current = null;
           gestureRef.current = null;
+          setSwipeOffset({ x: 0, y: 0 });
           return;
         }
 
@@ -493,8 +652,9 @@ function ProductMediaViewer({
       }
 
       gestureRef.current = null;
+      setSwipeOffset({ x: 0, y: 0 });
     },
-    [itemCount, resetTransform, selectByOffset, zoomAtPoint]
+    [itemCount, onClose, resetTransform, revealControls, selectByOffset, startDismiss, zoomAtPoint]
   );
 
   const handleWheel = useCallback(
@@ -505,9 +665,10 @@ function ProductMediaViewer({
       const currentTransform = transformRef.current;
       const multiplier = Math.exp(-event.deltaY * 0.002);
       const nextScale = clamp(currentTransform.scale * multiplier, MIN_SCALE, MAX_SCALE);
+      revealControls(REVEALED_CONTROLS_HIDE_MS);
       zoomAtPoint(event.clientX, event.clientY, nextScale);
     },
-    [activeItem, zoomAtPoint]
+    [activeItem, revealControls, zoomAtPoint]
   );
 
   if (!open || typeof document === 'undefined') {
@@ -518,7 +679,11 @@ function ProductMediaViewer({
     <div
       ref={overlayRef}
       data-testid="product-media-viewer"
-      className="product-media-viewer"
+      data-controls-visible={controlsVisible ? 'true' : 'false'}
+      data-dismissing={isDismissing ? 'true' : 'false'}
+      className={`product-media-viewer ${
+        controlsVisible ? '' : 'product-media-viewer--controls-hidden'
+      } ${isDismissing ? 'product-media-viewer--dismissing' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label="Просмотр фотографий товара"
@@ -542,22 +707,38 @@ function ProductMediaViewer({
         }}
       >
         {activeItem ? (
-          <img
-            ref={imageRef}
-            src={activeItem.url}
-            alt={activeItem.alt || productName || 'Фото товара'}
-            data-testid="product-media-image"
-            data-scale={transform.scale.toFixed(2)}
-            data-translate-x={Math.round(transform.x)}
-            data-translate-y={Math.round(transform.y)}
-            className={`product-media-viewer__image ${
-              isInteracting ? 'product-media-viewer__image--interacting' : ''
+          <div
+            key={activeItem.id || activeItem.url || selectedIndex}
+            data-testid="product-media-frame"
+            data-slide={slideDirection}
+            data-swipe-offset-x={Math.round(swipeOffset.x)}
+            data-swipe-offset-y={Math.round(swipeOffset.y)}
+            className={`product-media-viewer__frame ${
+              isInteracting ? 'product-media-viewer__frame--interacting' : ''
+            } ${isDismissing ? 'product-media-viewer__frame--dismissing' : ''} ${
+              slideDirection ? `product-media-viewer__frame--slide-${slideDirection}` : ''
             }`}
-            draggable={false}
             style={{
-              transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
+              transform: `translate3d(${swipeOffset.x}px, ${swipeOffset.y}px, 0)`,
             }}
-          />
+          >
+            <img
+              ref={imageRef}
+              src={activeItem.url}
+              alt={activeItem.alt || productName || 'Фото товара'}
+              data-testid="product-media-image"
+              data-scale={transform.scale.toFixed(2)}
+              data-translate-x={Math.round(transform.x)}
+              data-translate-y={Math.round(transform.y)}
+              className={`product-media-viewer__image ${
+                isInteracting ? 'product-media-viewer__image--interacting' : ''
+              }`}
+              draggable={false}
+              style={{
+                transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
+              }}
+            />
+          </div>
         ) : (
           <div className="product-media-viewer__empty">Изображение недоступно</div>
         )}
@@ -614,7 +795,10 @@ function ProductMediaViewer({
           <button
             type="button"
             className="product-media-viewer__button"
-            onClick={() => zoomFromCenter(0.8)}
+            onClick={() => {
+              revealControls(REVEALED_CONTROLS_HIDE_MS);
+              zoomFromCenter(0.8);
+            }}
             aria-label="Уменьшить изображение"
           >
             −
@@ -623,7 +807,10 @@ function ProductMediaViewer({
             type="button"
             data-testid="product-media-reset"
             className="product-media-viewer__reset"
-            onClick={resetTransform}
+            onClick={() => {
+              revealControls(REVEALED_CONTROLS_HIDE_MS);
+              resetTransform();
+            }}
             aria-label="Сбросить масштаб"
           >
             1:1
@@ -631,7 +818,10 @@ function ProductMediaViewer({
           <button
             type="button"
             className="product-media-viewer__button"
-            onClick={() => zoomFromCenter(1.25)}
+            onClick={() => {
+              revealControls(REVEALED_CONTROLS_HIDE_MS);
+              zoomFromCenter(1.25);
+            }}
             aria-label="Увеличить изображение"
           >
             +
