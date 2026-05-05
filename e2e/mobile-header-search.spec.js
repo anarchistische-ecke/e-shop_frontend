@@ -33,11 +33,9 @@ test('mobile menu exposes nested categories from the catalog navigation', async 
     .getByRole('button', { name: 'Каталог' })
     .click();
   const mobileMenu = page.getByTestId('mobile-nav-panel');
-  await expect(mobileMenu.getByRole('button', { name: /Популярное/i })).toBeVisible();
+  await expect(mobileMenu.getByRole('link', { name: /Популярное/i })).toBeVisible();
+  await expect(mobileMenu.getByRole('link', { name: /^Сатин/i })).toBeVisible();
 
-  await mobileMenu.getByRole('button', { name: /Популярное/i }).click();
-  await expect(mobileMenu.getByRole('link', { name: /Смотреть всё: Популярное/i })).toBeVisible();
-  await expect(
-    mobileMenu.getByRole('link', { name: /Сатин Комплекты сатинового белья/i })
-  ).toBeVisible();
+  await mobileMenu.getByRole('link', { name: /^Сатин/i }).click();
+  await expect(page).toHaveURL(/\/category\/popular-satin$/);
 });

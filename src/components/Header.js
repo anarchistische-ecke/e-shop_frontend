@@ -136,36 +136,19 @@ function Header() {
             </div>
           </div>
           <DesktopMegaMenu
-            activeMegaCategory={header.activeMegaCategory}
-            activeMegaCategoryData={header.activeMegaCategoryData}
             childrenByParent={header.childrenByParent}
             isOpen={header.isCatalogMenuOpen}
-            megaChildren={header.megaChildren}
             navCategories={header.navCategories}
             onCloseMega={header.closeMega}
-            onCloseMegaWithDelay={header.closeMegaWithDelay}
-            onOpenMega={header.openMega}
             onTrackCategoryClick={header.trackCategoryNavigation}
-            onToggleMega={(token) => {
-              header.setActiveMegaCategory((current) => (current === token ? '' : token));
-            }}
           />
         </header>
       </div>
       <MobileMenu
-        activeMobileParent={header.activeMobileParent}
         childrenByParent={header.childrenByParent}
         isOpen={header.isMenuOpen}
         mobileCategories={header.mobileCategories}
-        mobilePath={header.mobilePath}
-        mobileTitle={header.mobileTitle}
         onClose={header.closeMenu}
-        onOpenCategory={(token) => {
-          header.setMobilePath((current) => [...current, token]);
-        }}
-        onStepBack={() => {
-          header.setMobilePath((current) => current.slice(0, -1));
-        }}
         onTrackCategoryClick={header.trackCategoryNavigation}
         searchTerm={header.searchTerm}
         siteName={siteSettings.siteName}

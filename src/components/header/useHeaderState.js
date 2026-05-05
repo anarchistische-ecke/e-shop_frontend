@@ -10,7 +10,6 @@ import {
   buildCategoryCollections,
   buildHeaderSearchParams,
   resolveMobileBottomNavKey,
-  resolveCategoryToken,
   resolveWayfindingLabel,
   shouldShowMobileBottomNav
 } from '../../utils/header';
@@ -23,9 +22,8 @@ export function useHeaderState() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [mobilePath, setMobilePath] = useState([]);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [activeMegaCategory, setActiveMegaCategory] = useState('');
+  const [isCatalogMenuOpen, setIsCatalogMenuOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,12 +39,10 @@ export function useHeaderState() {
   const searchRef = useRef(null);
   const searchInputRef = useRef(null);
   const accountMenuRef = useRef(null);
-  const hoverCloseTimerRef = useRef(null);
   const lastAddedDismissTimerRef = useRef(null);
 
   const {
     navCategories,
-    categoryByToken,
     childrenByParent
   } = useMemo(() => buildCategoryCollections(categories), [categories]);
 
@@ -122,30 +118,7 @@ export function useHeaderState() {
     [isMenuOpen, isSearchPanelVisible, location.pathname, location.search]
   );
 
-  const activeMegaCategoryData = activeMegaCategory
-    ? categoryByToken[activeMegaCategory]
-    : null;
-  const megaChildren = activeMegaCategoryData
-    ? childrenByParent[String(activeMegaCategoryData.id)] || []
-    : [];
-
-  const activeMobileParentToken = mobilePath[mobilePath.length - 1] || '';
-  const activeMobileParent = activeMobileParentToken
-    ? categoryByToken[activeMobileParentToken]
-    : null;
-  const mobileCategories = activeMobileParent
-    ? childrenByParent[String(activeMobileParent.id)] || []
-    : navCategories;
-  const mobileTitle = activeMobileParent ? activeMobileParent.name : 'Каталог';
-
-  const clearHoverCloseTimer = useCallback(() => {
-    if (!hoverCloseTimerRef.current) {
-      return;
-    }
-    clearTimeout(hoverCloseTimerRef.current);
-    hoverCloseTimerRef.current = null;
-  }, []);
-
+  const mobileCategories = navCategories;
   const closeSearch = useCallback(() => {
     setIsSearchOpen(false);
     setIsSearchFocused(false);
@@ -153,7 +126,6 @@ export function useHeaderState() {
 
   const closeMenu = useCallback(() => {
     setIsMenuOpen(false);
-    setMobilePath([]);
   }, []);
 
   const closeAccountMenu = useCallback(() => {
@@ -161,9 +133,8 @@ export function useHeaderState() {
   }, []);
 
   const closeMega = useCallback(() => {
-    clearHoverCloseTimer();
-    setActiveMegaCategory('');
-  }, [clearHoverCloseTimer]);
+    setIsCatalogMenuOpen(false);
+  }, []);
 
   const closeAllPanels = useCallback(() => {
     closeSearch();
@@ -315,7 +286,7 @@ export function useHeaderState() {
   }, [closeAccountMenu, isAccountMenuOpen]);
 
   useEffect(() => {
-    if (!activeMegaCategory || typeof document === 'undefined') {
+    if (!isCatalogMenuOpen || typeof document === 'undefined') {
       return undefined;
     }
 
@@ -328,7 +299,7 @@ export function useHeaderState() {
 
     document.addEventListener('pointerdown', handlePointerDown);
     return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [activeMegaCategory, closeMega]);
+  }, [isCatalogMenuOpen, closeMega]);
 
   useEffect(() => {
     if (!lastAddedItem) {
@@ -356,7 +327,7 @@ export function useHeaderState() {
       !isSearchOpen &&
       !isSearchFocused &&
       !isAccountMenuOpen &&
-      !activeMegaCategory
+      !isCatalogMenuOpen
     ) {
       return undefined;
     }
@@ -371,8 +342,8 @@ export function useHeaderState() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [
-    activeMegaCategory,
     closeAllPanels,
+    isCatalogMenuOpen,
     isAccountMenuOpen,
     isMenuOpen,
     isSearchFocused,
@@ -381,12 +352,11 @@ export function useHeaderState() {
 
   useEffect(
     () => () => {
-      clearHoverCloseTimer();
       if (lastAddedDismissTimerRef.current) {
         clearTimeout(lastAddedDismissTimerRef.current);
       }
     },
-    [clearHoverCloseTimer]
+    []
   );
 
   const buildSearchParams = useCallback(
@@ -491,23 +461,7 @@ export function useHeaderState() {
     navigate(target);
   }, [closeAccountMenu, closeMega, closeMenu, navigate, searchScope, searchTerm]);
 
-  const openMega = useCallback(
-    (categoryToken) => {
-      clearHoverCloseTimer();
-      setActiveMegaCategory(categoryToken);
-    },
-    [clearHoverCloseTimer]
-  );
-
-  const closeMegaWithDelay = useCallback(() => {
-    clearHoverCloseTimer();
-    hoverCloseTimerRef.current = setTimeout(() => {
-      setActiveMegaCategory('');
-    }, 120);
-  }, [clearHoverCloseTimer]);
-
   const openMenu = useCallback(() => {
-    setMobilePath([]);
     setIsMenuOpen(true);
     closeAccountMenu();
     closeSearch();
@@ -518,13 +472,8 @@ export function useHeaderState() {
     setIsMenuOpen(false);
     closeAccountMenu();
     closeSearch();
-    setActiveMegaCategory((current) => {
-      if (current) {
-        return '';
-      }
-      return resolveCategoryToken(navCategories[0]) || '';
-    });
-  }, [closeAccountMenu, closeSearch, navCategories]);
+    setIsCatalogMenuOpen((current) => !current);
+  }, [closeAccountMenu, closeSearch]);
 
   const handleLogout = useCallback(() => {
     closeAccountMenu();
@@ -552,16 +501,12 @@ export function useHeaderState() {
   return {
     accountLinks,
     accountMenuRef,
-    activeMegaCategory,
     activeBottomNavKey,
-    activeMegaCategoryData,
-    activeMobileParent,
     autocompleteData,
     childrenByParent,
     clearSearch,
     closeMenu,
     closeMega,
-    closeMegaWithDelay,
     closeSearch,
     dismissLastAddedItem,
     displayName,
@@ -578,27 +523,21 @@ export function useHeaderState() {
     isAccountMenuOpen,
     isAuthenticated,
     isBottomNavEnabled,
-    isCatalogMenuOpen: Boolean(activeMegaCategory),
+    isCatalogMenuOpen,
     isManager,
     isMenuOpen,
     isSearchPanelVisible,
     lastAddedItem,
-    megaChildren,
     mobileCategories,
-    mobilePath,
-    mobileTitle,
     navCategories,
     navigateSearch,
     openMenu,
-    openMega,
     openSearchPanel,
     scopeOptions,
     searchRef,
     searchInputRef,
     searchScope,
     searchTerm,
-    setActiveMegaCategory,
-    setMobilePath,
     setSearchScope,
     trackCategoryNavigation,
     trackSearchSuggestionClick,
