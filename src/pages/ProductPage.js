@@ -4,15 +4,12 @@ import { CartContext } from '../contexts/CartContext';
 import { getProduct } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
-import {
-  CataloguePresentationBlocks,
-  CataloguePresentationHero,
-} from '../components/cms/CataloguePresentationSections';
+import { CataloguePresentationBlocks } from '../components/cms/CataloguePresentationSections';
 import CmsStorefrontCollectionRail from '../components/cms/CmsStorefrontCollectionRail';
 import { CmsRichText } from '../components/cms/cmsBlockShared';
 import ProductCard from '../components/ProductCard';
 import ProductMediaViewer from '../components/product/ProductMediaViewer';
-import { Button, Card, Modal, Tabs } from '../components/ui';
+import { Button, Card, Modal } from '../components/ui';
 import { legalTokens } from '../data/legal/constants';
 import { useProductDirectoryData } from '../features/product-list/data';
 import {
@@ -49,6 +46,25 @@ function resolveProductCategoryToken(product) {
 
 function formatRub(value) {
   return `${Math.max(0, Number(value) || 0).toLocaleString('ru-RU')} ₽`;
+}
+
+function splitSpecLine(entry) {
+  const parts = String(entry || '').split(':');
+  if (parts.length < 2) {
+    return {
+      label: 'Параметр',
+      value: String(entry || ''),
+    };
+  }
+
+  return {
+    label: parts.shift().trim(),
+    value: parts.join(':').trim(),
+  };
+}
+
+function getFirstImageUrl(product) {
+  return normalizeProductImages(product?.images || [])[0]?.url || '';
 }
 
 function getStockValue(entity) {
@@ -145,27 +161,45 @@ function TrustIcon({ type }) {
 
 function ProductInfoCard({ icon, title, summary, caption, onOpen }) {
   return (
-    <Card
-      as="button"
+    <button
       type="button"
-      variant="quiet"
-      padding="sm"
-      interactive
-      className="w-full rounded-3xl text-left"
+      className="group flex w-full items-start gap-3 border-b border-ink/10 py-3 text-left transition hover:border-ink/25"
       onClick={onOpen}
     >
-      <div className="flex items-start gap-3">
-        <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-ink/10 bg-white/80 text-ink/85">
-          <TrustIcon type={icon} />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-ink">{title}</span>
-          <span className="mt-1 block text-sm text-ink/85">{summary}</span>
-          <span className="mt-2 block text-xs text-muted">{caption}</span>
-          <span className="mt-2 inline-flex text-xs font-medium text-primary">Подробнее</span>
-        </span>
-      </div>
-    </Card>
+      <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center text-ink/70">
+        <TrustIcon type={icon} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium text-ink">{title}</span>
+        <span className="mt-0.5 block text-sm text-ink/70">{summary}</span>
+        <span className="mt-1 block text-xs text-muted">{caption}</span>
+      </span>
+      <span className="mt-1 text-xs uppercase tracking-[0.16em] text-ink/45 group-hover:text-ink">
+        Подробнее
+      </span>
+    </button>
+  );
+}
+
+function ProductAccordionItem({ id, title, isOpen, onToggle, children }) {
+  return (
+    <div className="border-b border-ink/10">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-medium text-ink"
+        aria-expanded={isOpen}
+        aria-controls={`${id}-panel`}
+        onClick={onToggle}
+      >
+        <span>{title}</span>
+        <span className="text-xl leading-none text-ink/55">{isOpen ? '−' : '+'}</span>
+      </button>
+      {isOpen ? (
+        <div id={`${id}-panel`} className="pb-5 text-sm leading-relaxed text-ink/78">
+          {children}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -186,7 +220,7 @@ function ProductPage() {
   const [selectedVariant, setSelectedVariant] = useState(() =>
     resolveInitialSelectedVariant(initialProduct)
   );
-  const [activeTab, setActiveTab] = useState('about');
+  const [openAccordions, setOpenAccordions] = useState({ description: true });
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [bundleSelections, setBundleSelections] = useState({});
   const [quantity, setQuantity] = useState(1);
@@ -225,7 +259,7 @@ function ProductPage() {
     }, [cartStatus, quantity, selectedVariant?.id]);
 
   useEffect(() => {
-    setActiveTab('about');
+    setOpenAccordions({ description: true });
     setActiveImageIndex(0);
     setBundleSelections({});
     setQuantity(1);
@@ -329,6 +363,7 @@ function ProductPage() {
 
   const activeImage = orderedImages[activeImageIndex] || null;
   const mainImage = activeImage?.url || '';
+  const galleryItems = orderedImages.length > 0 ? orderedImages : [null];
 
   const hasScaleImage = useMemo(() => detectScaleImage(orderedImages), [orderedImages]);
   const hasDimensionsImage = useMemo(() => detectDimensionsImage(orderedImages), [orderedImages]);
@@ -384,9 +419,6 @@ function ProductPage() {
   }, [categories, product]);
   const productPresentation = product?.presentation || null;
   const marketingTitle = productPresentation?.marketingTitle || product?.name || '';
-  const marketingSubtitle =
-    productPresentation?.marketingSubtitle ||
-    (activeCategory?.name ? `Категория: ${activeCategory.name}` : '');
   const introBody = productPresentation?.introBody || product?.description || '';
 
   const fallbackSpecs = [
@@ -434,12 +466,15 @@ function ProductPage() {
     fallbackAvailableVariant && fallbackAvailableVariant.id !== selectedVariant?.id
   );
 
-  const productTabs = useMemo(
-    () => [
-      { value: 'about', label: 'О товаре' },
-      { value: 'details', label: 'Характеристики' },
-    ],
-    []
+  const variantImageSwatches = useMemo(
+    () =>
+      productVariants
+        .map((variant) => ({
+          variant,
+          image: images.find((image) => image.variantId === variant.id),
+        }))
+        .filter((entry) => entry.image?.url),
+    [images, productVariants]
   );
 
   const bundleItems = relatedProducts.slice(0, 3);
@@ -478,6 +513,11 @@ function ProductPage() {
   const hasBundleSelection = bundleItems.some((item) => bundleSelections[item.id]);
   const isCartActionPending = Boolean(pendingAction);
   const canPurchaseSelectedVariant = availableStock > 0 && !isCartActionPending;
+  const ratingValue = Number(product?.rating || 0);
+  const reviewCount = Number(product?.reviewCount || product?.reviewsCount || 0);
+  const hasReviewSummary = ratingValue > 0 && reviewCount > 0;
+  const careText = product?.care || 'Деликатная стирка при 30°. Следуйте рекомендациям на ярлыке изделия.';
+  const hasDetailsContent = specificationSections.length > 0 || fallbackSpecs.length > 0;
   const canonicalProductPath = useMemo(() => buildProductPath(product), [product]);
   const canonicalProductUrl = useMemo(
     () => getCanonicalUrl(canonicalProductPath, { origin: legalTokens.SITE_URL }) || canonicalProductPath,
@@ -605,6 +645,25 @@ function ProductPage() {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('pdp-zoom-hint-seen', '1');
     }
+  };
+
+  const openImageZoomAtIndex = (index) => {
+    selectImageByIndex(index);
+    openImageZoom();
+  };
+
+  const toggleAccordion = (key) => {
+    setOpenAccordions((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const openDetailsAccordion = () => {
+    setOpenAccordions((prev) => ({
+      ...prev,
+      details: true,
+    }));
   };
 
   const handleVariantChange = (variant) => {
@@ -746,7 +805,7 @@ function ProductPage() {
   }
 
   return (
-    <div className="product-page page-section pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
+    <div className="product-page bg-white pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-0 lg:pb-16">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -755,201 +814,374 @@ function ProductPage() {
         type="product"
         jsonLd={productJsonLd}
       />
-      <div className="page-shell">
-        <nav className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted sm:mb-5" aria-label="Хлебные крошки">
+      <div className="page-shell page-shell--wide pt-4 sm:pt-6">
+        <nav className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-ink/55 sm:mb-5" aria-label="Хлебные крошки">
           {location.state?.fromPath ? (
-            <Link to={location.state.fromPath} className="text-primary hover:text-accent">
+            <Link to={location.state.fromPath} className="underline-offset-4 hover:underline">
               ← {location.state.fromLabel || 'Назад к результатам'}
             </Link>
           ) : null}
-          <Link to="/" className="hover:text-primary">Главная</Link>
-          <span className="text-ink/40">›</span>
-          <Link to="/category/popular" className="hover:text-primary">Каталог</Link>
+          <Link to="/" className="hover:text-ink">Главная</Link>
+          <span>›</span>
+          <Link to="/category/popular" className="hover:text-ink">Каталог</Link>
           {activeCategory && (
             <>
-              <span className="text-ink/40">›</span>
-              <Link to={`/category/${resolveCategoryToken(activeCategory)}`} className="hover:text-primary">
+              <span>›</span>
+              <Link to={`/category/${resolveCategoryToken(activeCategory)}`} className="hover:text-ink">
                 {activeCategory.name}
               </Link>
             </>
           )}
-          <span className="text-ink/40">›</span>
+          <span>›</span>
           <span className="text-ink/80" aria-current="page">{marketingTitle || product.name}</span>
         </nav>
 
-        <CataloguePresentationHero
-          hero={productPresentation?.hero}
-          page={presentationPage}
-          className="mb-6"
-        />
-
-        <div className="grid gap-5 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)]">
-          <section>
-            <div
-              data-testid="product-gallery-card"
-              className={`group relative overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/80 shadow-[0_24px_60px_rgba(43,39,34,0.16)] bg-gradient-to-br from-sand/70 to-white transition-opacity duration-200 ${
-                isVariantTransitioning ? 'opacity-80' : 'opacity-100'
-              }`}
-            >
-              <div className="relative w-full pt-[96%] sm:pt-[95%]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] lg:items-start xl:gap-10">
+          <section
+            data-testid="product-gallery-card"
+            className={`min-w-0 transition-opacity duration-200 ${
+              isVariantTransitioning ? 'opacity-80' : 'opacity-100'
+            }`}
+          >
+            <div className="lg:hidden">
+              <div className="relative overflow-hidden border border-ink/10 bg-[#f3f0eb]">
                 {mainImage ? (
                   <button
                     type="button"
-                    className="absolute inset-0 block"
+                    className="relative block aspect-square w-full"
                     onClick={openImageZoom}
                     aria-label="Увеличить изображение"
                   >
                     <img
                       src={mainImage}
-                      alt={product.name}
-                      className="absolute inset-0 h-full w-full object-contain p-3 sm:p-4"
+                      alt={activeImage?.alt || product.name}
+                      className="absolute inset-0 h-full w-full object-cover"
                       loading="eager"
                       decoding="async"
                     />
-                    <span className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/70 bg-white/88 text-ink shadow-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                      +
-                    </span>
+                    {showZoomHint && (
+                      <span className="absolute bottom-3 left-3 bg-white/90 px-3 py-1 text-xs text-ink/70">
+                        Нажмите, чтобы увеличить
+                      </span>
+                    )}
                   </button>
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
+                  <div className="flex aspect-square items-center justify-center text-sm text-muted">
                     Изображение появится после загрузки
                   </div>
                 )}
+              </div>
 
-                {showZoomHint && (
-                  <p className="absolute bottom-3 left-3 rounded-xl bg-white/85 px-3 py-1 text-xs text-ink/75">
-                    Нажмите, чтобы увеличить
-                  </p>
-                )}
-
-                <div className="absolute left-2 top-2 flex max-w-[calc(100%-5.5rem)] flex-wrap gap-1.5 text-[10px] sm:left-3 sm:top-3 sm:max-w-none sm:gap-2 sm:text-[11px]">
-                  {hasScaleImage && (
-                    <span className="rounded-full border border-ink/10 bg-white/90 px-2.5 py-1 text-ink/75">Есть фото в масштабе</span>
-                  )}
-                  {hasDimensionsImage && (
-                    <span className="rounded-full border border-ink/10 bg-white/90 px-2.5 py-1 text-ink/75">Есть схема размеров</span>
-                  )}
-                </div>
-
-                {activeImage?.variantId && (
-                  <div className="absolute right-12 top-2 max-w-[calc(100%-8rem)] truncate rounded-2xl border border-ink/10 bg-white/88 px-2.5 py-1 text-[11px] sm:top-3 sm:right-14 sm:max-w-none sm:px-3 sm:text-xs">
-                    Вариант: {variantNameById[activeImage.variantId] || activeImage.variantId}
-                  </div>
-                )}
-
-                {orderedImages.length > 1 && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-2xl bg-white/90"
-                      onClick={() => selectImageByIndex(activeImageIndex - 1)}
-                      aria-label="Предыдущее изображение"
-                    >
-                      ‹
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-2xl bg-white/90"
-                      onClick={() => selectImageByIndex(activeImageIndex + 1)}
-                      aria-label="Следующее изображение"
-                    >
-                      ›
-                    </Button>
-                  </>
-                )}
+              <div
+                data-testid="product-gallery-rail"
+                className="mt-4 flex items-center justify-center gap-2"
+                aria-label="Изображения товара"
+              >
+                {galleryItems.map((image, index) => (
+                  <button
+                    key={image ? image.id || index : index}
+                    type="button"
+                    onClick={() => selectImageByIndex(index)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      index === activeImageIndex ? 'w-7 bg-ink' : 'w-7 bg-ink/15'
+                    }`}
+                    aria-label={`Показать изображение ${index + 1}`}
+                    aria-current={index === activeImageIndex ? 'true' : undefined}
+                  />
+                ))}
               </div>
             </div>
 
-            <div className="mt-4 hidden items-center justify-between gap-3 text-xs text-muted sm:flex">
-              <p>Фото: {orderedImages.length || 1} · Масштаб и фактуру можно проверить через zoom</p>
-              <Button variant="ghost" size="sm" className="!px-1 text-primary" onClick={openImageZoom}>
-                Открыть крупно
-              </Button>
+            <div className="hidden lg:grid lg:gap-4">
+              <div className="overflow-hidden border border-ink/10 bg-[#f3f0eb]">
+                {galleryItems[0] ? (
+                  <button
+                    type="button"
+                    className="group relative block aspect-[1/0.82] w-full"
+                    onClick={() => openImageZoomAtIndex(0)}
+                    aria-label="Увеличить изображение"
+                  >
+                    <img
+                      src={galleryItems[0].url}
+                      alt={galleryItems[0].alt || product.name}
+                      className="absolute inset-0 h-full w-full object-cover"
+                      loading="eager"
+                      decoding="async"
+                    />
+                    <span className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 text-xs text-ink/70 opacity-0 transition-opacity group-hover:opacity-100">
+                      Открыть крупно
+                    </span>
+                  </button>
+                ) : (
+                  <div className="flex aspect-[1/0.82] items-center justify-center text-sm text-muted">
+                    Изображение появится после загрузки
+                  </div>
+                )}
+              </div>
+
+              {galleryItems.length > 1 && (
+                <div className="grid grid-cols-2 gap-4">
+                  {galleryItems.slice(1).map((image, index) => {
+                    const imageIndex = index + 1;
+                    return (
+                      <button
+                        key={image ? image.id || imageIndex : imageIndex}
+                        type="button"
+                        className="relative aspect-square overflow-hidden border border-ink/10 bg-[#f3f0eb]"
+                        onClick={() => openImageZoomAtIndex(imageIndex)}
+                        aria-label={`Увеличить изображение ${imageIndex + 1}`}
+                      >
+                        {image ? (
+                          <img
+                            src={image.url}
+                            alt={image.alt || `${product.name}, изображение ${imageIndex + 1}`}
+                            className="absolute inset-0 h-full w-full object-cover transition duration-300 hover:scale-[1.02]"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-xs text-muted">
+                            Нет фото
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            <div
-              data-testid="product-gallery-rail"
-              className="mt-2 flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory sm:mt-3 sm:gap-3"
-            >
-              {(orderedImages.length > 0 ? orderedImages : [null]).map((image, index) => (
-                <button
-                  key={image ? image.id || index : index}
-                  type="button"
-                  onClick={() => selectImageByIndex(index)}
-                  className={`relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl border snap-center sm:h-20 sm:w-20 ${
-                    index === activeImageIndex
-                      ? 'border-primary ring-2 ring-primary/30'
-                      : 'border-ink/10'
-                  } bg-sand/60`}
-                >
-                  {image ? (
-                    <img src={image.url} alt={`Изображение ${index + 1}`} className="h-full w-full object-contain p-1" />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-[10px] text-muted">Нет фото</span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-6 hidden gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
-              {highlights.map((entry) => (
-                <Card key={entry} variant="quiet" padding="sm" className="text-xs shadow-sm sm:text-sm">
-                  {entry}
-                </Card>
-              ))}
+            <div className="mt-3 hidden items-center gap-3 text-xs text-ink/50 lg:flex">
+              <span>Фото: {orderedImages.length || 1}</span>
+              {hasScaleImage ? <span>Есть фото в масштабе</span> : null}
+              {hasDimensionsImage ? <span>Есть схема размеров</span> : null}
             </div>
           </section>
 
-          <aside className="h-fit space-y-4 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)]">
-            <Card
+          <aside className="min-w-0 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)]">
+            <div
               data-testid="product-purchase-card"
-              padding="md"
-              className={`sm:p-6 transition-opacity duration-200 ${isVariantTransitioning ? 'opacity-80' : 'opacity-100'}`}
+              className={`transition-opacity duration-200 ${
+                isVariantTransitioning ? 'opacity-80' : 'opacity-100'
+              }`}
             >
-              <p className="text-xs uppercase tracking-[0.25em] text-accent">Карточка товара</p>
-              <h1 className="mt-2 text-xl sm:text-2xl font-semibold">{marketingTitle || product.name}</h1>
-              {marketingSubtitle ? <p className="mt-2 text-sm text-muted">{marketingSubtitle}</p> : null}
-
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
-                {activeCategory ? (
-                  <Link to={`/category/${resolveCategoryToken(activeCategory)}`} className="text-primary hover:text-accent">
-                    {activeCategory.name}
-                  </Link>
+              <div className="border-b border-ink/10 pb-5">
+                <h1 className="max-w-xl text-2xl font-medium leading-tight tracking-normal text-ink sm:text-3xl lg:text-3xl">
+                  {marketingTitle || product.name}
+                </h1>
+                {productPresentation?.marketingSubtitle ? (
+                  <p className="mt-3 text-sm leading-relaxed text-ink/65">
+                    {productPresentation.marketingSubtitle}
+                  </p>
                 ) : null}
-                {product?.material ? <span>Материал: {product.material}</span> : null}
-                {selectedVariant?.name ? <span>Вариант: {selectedVariant.name}</span> : null}
-                {productPresentation?.badgeText ? (
-                  <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                    {productPresentation.badgeText}
-                  </span>
-                ) : null}
-                {productPresentation?.ribbonText ? (
-                  <span className="rounded-full border border-ink/10 bg-white/90 px-2.5 py-1 text-xs text-ink/75">
-                    {productPresentation.ribbonText}
-                  </span>
-                ) : null}
+                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs uppercase tracking-[0.14em] text-ink/50">
+                  {activeCategory ? (
+                    <Link to={`/category/${resolveCategoryToken(activeCategory)}`} className="hover:text-ink">
+                      {activeCategory.name}
+                    </Link>
+                  ) : null}
+                  {product?.material ? <span>{product.material}</span> : null}
+                  {selectedVariant?.name ? <span>{selectedVariant.name}</span> : null}
+                  {productPresentation?.badgeText ? <span>{productPresentation.badgeText}</span> : null}
+                  {productPresentation?.ribbonText ? <span>{productPresentation.ribbonText}</span> : null}
+                </div>
               </div>
 
-              <div className="mt-4 flex items-end gap-3">
-                <p className="text-accent text-3xl font-semibold leading-none">{formatRub(price)}</p>
-                {hasDiscount && (
-                  <>
-                    <span className="text-base line-through text-muted">{formatRub(oldPrice)}</span>
-                    <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                      −{discountPercent}%
-                    </span>
-                  </>
+              <div className="border-b border-ink/10 py-5">
+                <div className="flex items-end gap-3">
+                  <p className="text-3xl font-medium leading-none text-ink">{formatRub(price)}</p>
+                  {hasDiscount && (
+                    <>
+                      <span className="text-base line-through text-ink/45">{formatRub(oldPrice)}</span>
+                      <span className="text-sm text-primary">−{discountPercent}%</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-4 text-sm">
+                  <div>
+                    <p className={`font-medium ${availabilityMeta.tone}`}>{availabilityMeta.label}</p>
+                    <p className="mt-1 text-xs text-ink/55">{availabilityMeta.detail}</p>
+                  </div>
+                  {hasDetailsContent ? (
+                    <button
+                      type="button"
+                      className="flex-shrink-0 text-xs text-ink/60 underline underline-offset-4 hover:text-ink"
+                      onClick={openDetailsAccordion}
+                    >
+                      Таблица размеров
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {productVariants.length > 0 && (
+                <div className="border-b border-ink/10 py-5">
+                  <label
+                    htmlFor="product-variant-select"
+                    className="text-xs uppercase tracking-[0.18em] text-ink/50"
+                  >
+                    Размер
+                  </label>
+                  <select
+                    id="product-variant-select"
+                    aria-label="Выберите вариант"
+                    value={selectedVariant?.id || ''}
+                    onChange={(event) => {
+                      const variant = productVariants.find((item) => item.id === event.target.value);
+                      if (variant) {
+                        handleVariantChange(variant);
+                      }
+                    }}
+                    disabled={isCartActionPending || productVariants.length < 2}
+                    className="control-inline mt-2 min-h-[44px] w-full border border-ink/20 px-3 py-2 text-sm text-ink focus:border-ink focus:outline-none"
+                  >
+                    {!selectedVariant ? <option value="">Выберите вариант</option> : null}
+                    {productVariants.map((variant) => {
+                      const variantStock = getStockValue(variant);
+                      const variantStatus =
+                        variantStock <= 0
+                          ? 'Нет в наличии'
+                          : variantStock <= 3
+                          ? `Осталось ${variantStock} шт.`
+                          : 'В наличии';
+                      return (
+                        <option key={variant.id} value={variant.id}>
+                          {variant.name || variant.sku || variant.id}
+                          {` · ${formatRub(moneyToNumber(variant.price))} · ${variantStatus}`}
+                        </option>
+                      );
+                    })}
+                  </select>
+
+                  {variantImageSwatches.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-ink/50">Фото вариантов</p>
+                      <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                        {variantImageSwatches.map(({ variant, image }) => {
+                          const isActive = selectedVariant?.id === variant.id;
+                          return (
+                            <button
+                              key={variant.id}
+                              type="button"
+                              className={`relative h-16 w-16 flex-shrink-0 overflow-hidden border ${
+                                isActive ? 'border-ink' : 'border-ink/10'
+                              }`}
+                              onClick={() => handleVariantChange(variant)}
+                              aria-label={`Выбрать вариант ${variant.name || variant.sku || variant.id}`}
+                              aria-pressed={isActive}
+                              disabled={isCartActionPending}
+                            >
+                              <img src={image.url} alt={image.alt || variant.name || ''} className="h-full w-full object-cover" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="border-b border-ink/10 py-5">
+                <p className="text-xs uppercase tracking-[0.18em] text-ink/50">Количество</p>
+                <div className="mt-2 inline-grid min-h-[44px] grid-cols-[44px_52px_44px] border border-ink/20 text-sm">
+                  <button
+                    type="button"
+                    className="border-r border-ink/10 text-lg text-ink/70 disabled:opacity-40"
+                    onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                    aria-label="Уменьшить количество"
+                    disabled={isCartActionPending || availableStock <= 0}
+                  >
+                    −
+                  </button>
+                  <span className="flex items-center justify-center font-medium">{quantity}</span>
+                  <button
+                    type="button"
+                    className="border-l border-ink/10 text-lg text-ink/70 disabled:opacity-40"
+                    onClick={() => setQuantity((prev) => Math.min(Math.max(1, availableStock || 99), 99, prev + 1))}
+                    aria-label="Увеличить количество"
+                    disabled={isCartActionPending || availableStock <= 0}
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="mt-5 grid gap-2">
+                  <Button
+                    block
+                    className="!rounded-none !bg-ink !text-white !shadow-none hover:!translate-y-0 hover:!bg-ink/90 hover:!shadow-none"
+                    onClick={handleAddToCart}
+                    disabled={!canPurchaseSelectedVariant}
+                  >
+                    {pendingAction === 'add' ? 'Добавляем…' : 'Добавить в корзину'}
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    block
+                    className="!rounded-none !border-ink !bg-white !text-ink !shadow-none hover:!translate-y-0 hover:!border-ink hover:!text-ink hover:!shadow-none"
+                    onClick={handleBuyNow}
+                    disabled={!canPurchaseSelectedVariant}
+                  >
+                    {pendingAction === 'buy' ? 'Переходим к оформлению…' : 'Купить сейчас'}
+                  </Button>
+                </div>
+
+                {cartStatus ? <NotificationBanner notification={cartStatus} className="mt-3" /> : null}
+
+                {availableStock <= 0 && (
+                  <Card variant="quiet" padding="sm" className="mt-4 rounded-none text-sm shadow-none">
+                    <p className="font-medium text-ink">Этот вариант сейчас недоступен</p>
+                    <p className="mt-1 text-xs text-muted">
+                      Не показываем форму «сообщить о поступлении», пока она не подключена к реальному сервису.
+                      Выберите доступный вариант или откройте похожие товары.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {hasSelectableFallbackVariant ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="!rounded-none !shadow-none"
+                          onClick={handleSelectAvailableVariant}
+                          disabled={isCartActionPending}
+                        >
+                          Выбрать доступный вариант
+                        </Button>
+                      ) : null}
+                      {!hasSelectableFallbackVariant && fallbackAvailableVariant ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="!rounded-none !shadow-none"
+                          onClick={handleSelectAvailableVariant}
+                          disabled={isCartActionPending}
+                        >
+                          Выбрать вариант в наличии
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="!rounded-none"
+                        onClick={() => openInfoSheet('shipping')}
+                      >
+                        Уточнить доставку
+                      </Button>
+                    </div>
+                    <Button
+                      as={Link}
+                      to={`/category/${resolveCategoryToken(activeCategory) || 'popular'}`}
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 inline-flex !min-h-0 !rounded-none !px-0 !py-0 text-xs text-primary"
+                    >
+                      Показать похожие товары
+                    </Button>
+                  </Card>
                 )}
               </div>
 
-              <div className={`mt-4 rounded-2xl border px-3 py-3 text-sm ${availabilityMeta.badgeClass}`}>
-                <p className={`font-semibold ${availabilityMeta.tone}`}>{availabilityMeta.label}</p>
-                <p className="mt-1 text-xs text-ink/70">{availabilityMeta.detail}</p>
-              </div>
-
-              <div className="mt-4 grid gap-2">
+              <div data-testid="product-mobile-highlights" className="border-b border-ink/10">
                 {infoHighlights.map((item) => (
                   <ProductInfoCard
                     key={item.key}
@@ -962,285 +1194,174 @@ function ProductPage() {
                 ))}
               </div>
 
-              {productVariants.length > 1 && (
-                <div className="mt-5">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted">Выберите вариант</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {productVariants.map((variant) => {
-                      const isActive = selectedVariant?.id === variant.id;
-                      const variantStock = getStockValue(variant);
-                      const variantStatus =
-                        variantStock <= 0
-                          ? 'Нет в наличии'
-                          : variantStock <= 3
-                          ? `Осталось ${variantStock} шт.`
-                          : 'В наличии';
+              {bundleItems.length > 0 && (
+                <section className="border-b border-ink/10 py-6">
+                  <h2 className="text-xl font-medium tracking-normal text-ink">Товары коллекции</h2>
+                  <div className="mt-4 space-y-4">
+                    {bundleItems.map((item) => {
+                      const itemImage = getFirstImageUrl(item);
                       return (
-                        <Button
-                          key={variant.id}
-                          variant="secondary"
-                          size="sm"
-                          className={`h-auto min-h-[44px] px-3 py-1.5 text-sm ${
-                            isActive
-                              ? 'border-primary bg-primary/10 text-primary shadow-none'
-                              : variantStock <= 0
-                              ? 'border-red-200 bg-red-50/70 text-red-700 shadow-none hover:border-red-300 hover:text-red-800'
-                              : 'border-ink/10 bg-white/90 hover:border-primary/40 hover:text-primary'
-                          }`}
-                          onClick={() => handleVariantChange(variant)}
-                          disabled={isCartActionPending}
-                          aria-pressed={isActive}
-                        >
-                          <span className="block font-medium">{variant.name || variant.sku || variant.id}</span>
-                          <span className={`block text-[11px] ${variantStock <= 0 ? 'text-red-700/90' : 'text-muted'}`}>
-                            {formatRub(moneyToNumber(variant.price))}
-                            {` · ${variantStatus}`}
+                        <label key={item.id} className="grid cursor-pointer grid-cols-[18px_72px_minmax(0,1fr)] gap-3 text-sm">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={Boolean(bundleSelections[item.id])}
+                            onChange={(event) => {
+                              setBundleSelections((prev) => ({
+                                ...prev,
+                                [item.id]: event.target.checked,
+                              }));
+                            }}
+                          />
+                          <span className="block aspect-square overflow-hidden bg-[#f3f0eb]">
+                            {itemImage ? (
+                              <img src={itemImage} alt={item.name} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                            ) : null}
                           </span>
-                        </Button>
+                          <span className="min-w-0">
+                            <Link
+                              to={buildProductPath(item)}
+                              className="block font-medium leading-snug text-ink hover:underline"
+                            >
+                              {item.name}
+                            </Link>
+                            <span className="mt-1 block text-ink/65">от {formatRub(getProductPrice(item))}</span>
+                          </span>
+                        </label>
                       );
                     })}
                   </div>
-                </div>
-              )}
 
-              <div className="mt-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted">Количество</p>
-                <div className="mt-2 inline-flex items-center rounded-2xl border border-ink/10 bg-white/90 p-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-xl border border-transparent text-lg text-ink/75 hover:text-primary"
-                    onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                    aria-label="Уменьшить количество"
-                    disabled={isCartActionPending || availableStock <= 0}
-                  >
-                    −
-                  </Button>
-                  <span className="min-w-[42px] text-center text-sm font-semibold">{quantity}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-xl border border-transparent text-lg text-ink/75 hover:text-primary"
-                    onClick={() => setQuantity((prev) => Math.min(Math.max(1, availableStock || 99), 99, prev + 1))}
-                    aria-label="Увеличить количество"
-                    disabled={isCartActionPending || availableStock <= 0}
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-col gap-1 text-sm">
-                <span className={availabilityMeta.tone}>{availabilityMeta.label}</span>
-                <span className="text-xs text-muted">
-                  {selectedVariant?.name
-                    ? `Покупка и остаток считаются для варианта «${selectedVariant.name}».`
-                    : 'Покупка и остаток рассчитываются по текущему товару.'}
-                </span>
-              </div>
-
-              <div className="mt-5 space-y-2">
-                <Button
-                  block
-                  onClick={handleAddToCart}
-                  disabled={!canPurchaseSelectedVariant}
-                >
-                  {pendingAction === 'add' ? 'Добавляем…' : 'Добавить в корзину'}
-                </Button>
-
-                <Button
-                  variant="secondary"
-                  block
-                  onClick={handleBuyNow}
-                  disabled={!canPurchaseSelectedVariant}
-                >
-                  {pendingAction === 'buy' ? 'Переходим к оформлению…' : 'Купить сейчас'}
-                </Button>
-              </div>
-
-              {cartStatus ? <NotificationBanner notification={cartStatus} className="mt-3" /> : null}
-
-              {availableStock <= 0 && (
-                <Card variant="quiet" padding="sm" className="mt-4 text-sm">
-                  <p className="font-medium text-ink">Этот вариант сейчас недоступен</p>
-                  <p className="mt-1 text-xs text-muted">
-                    Не показываем форму «сообщить о поступлении», пока она не подключена к реальному сервису.
-                    Выберите доступный вариант или откройте похожие товары.
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {hasSelectableFallbackVariant ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleSelectAvailableVariant}
-                        disabled={isCartActionPending}
-                      >
-                        Выбрать доступный вариант
-                      </Button>
-                    ) : null}
-                    {!hasSelectableFallbackVariant && fallbackAvailableVariant ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleSelectAvailableVariant}
-                        disabled={isCartActionPending}
-                      >
-                        Выбрать вариант в наличии
-                      </Button>
-                    ) : null}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openInfoSheet('shipping')}
-                    >
-                      Уточнить доставку
-                    </Button>
+                  <div className="mt-5 flex items-center justify-between text-sm">
+                    <span className="text-ink/55">Итого с комплектом</span>
+                    <span className="font-medium text-ink">{formatRub(bundleTotal)}</span>
                   </div>
+
+                  <Button
+                    block
+                    className="mt-3 !rounded-none !bg-ink !text-white !shadow-none hover:!translate-y-0 hover:!bg-ink/90 hover:!shadow-none"
+                    onClick={handleAddBundle}
+                    disabled={!canPurchaseSelectedVariant || !hasBundleSelection}
+                  >
+                    {pendingAction === 'bundle' ? 'Добавляем комплект…' : 'Добавить комплект'}
+                  </Button>
                   <Button
                     as={Link}
                     to={`/category/${resolveCategoryToken(activeCategory) || 'popular'}`}
                     variant="ghost"
                     size="sm"
-                    className="mt-2 inline-flex !min-h-0 !px-0 !py-0 text-xs text-primary"
+                    className="mt-2 !min-h-0 !rounded-none !px-0 !py-0 text-xs text-ink/65 underline underline-offset-4"
                   >
-                    Показать похожие товары
+                    Смотреть все
                   </Button>
-                </Card>
+                </section>
               )}
-            </Card>
 
-            {bundleItems.length > 0 && (
-              <Card padding="md">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted">Соберите комплект</p>
-                <p className="mt-2 text-sm text-muted">Часто покупают вместе: добавьте всё за один клик.</p>
+              <section className="divide-y-0" aria-label="Информация о товаре">
+                <ProductAccordionItem
+                  id="pdp-description"
+                  title="Описание"
+                  isOpen={Boolean(openAccordions.description)}
+                  onToggle={() => toggleAccordion('description')}
+                >
+                  {introBody ? (
+                    <CmsRichText html={introBody} className="text-sm leading-relaxed text-ink/78" />
+                  ) : (
+                    <p>Описание отсутствует.</p>
+                  )}
+                </ProductAccordionItem>
 
-                <div className="mt-3 space-y-3">
-                  {bundleItems.map((item) => (
-                    <label key={item.id} className="block">
-                      <Card
-                        variant="quiet"
-                        padding="sm"
-                        interactive
-                        className="flex items-start gap-3 rounded-2xl text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          className="mt-1"
-                          checked={Boolean(bundleSelections[item.id])}
-                          onChange={(event) => {
-                            setBundleSelections((prev) => ({
-                              ...prev,
-                              [item.id]: event.target.checked,
-                            }));
-                          }}
-                        />
-                        <span>
-                          <span className="block font-medium">{item.name}</span>
-                          <span className="text-xs text-muted">{formatRub(getProductPrice(item))}</span>
-                        </span>
-                      </Card>
-                    </label>
-                  ))}
-                </div>
-
-                <div className="mt-4 flex items-center justify-between text-sm">
-                  <span className="text-muted">Итого</span>
-                  <span className="font-semibold">{formatRub(bundleTotal)}</span>
-                </div>
-
-                <Button block className="mt-3" onClick={handleAddBundle} disabled={!canPurchaseSelectedVariant || !hasBundleSelection}>
-                  {pendingAction === 'bundle' ? 'Добавляем комплект…' : 'Добавить комплект'}
-                </Button>
-              </Card>
-            )}
-          </aside>
-
-          <div data-testid="product-mobile-highlights" className="grid gap-2 sm:hidden">
-            {highlights.map((entry) => (
-              <Card key={entry} variant="quiet" padding="sm" className="text-sm shadow-sm">
-                {entry}
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        <section id="product-tabs" className="mt-10 sm:mt-12">
-          <Tabs
-            items={productTabs}
-            value={activeTab}
-            onChange={setActiveTab}
-            ariaLabel="Разделы товара"
-            idBase="product-tabs"
-            fullWidth
-            className="max-w-3xl"
-          />
-
-          {activeTab === 'about' && (
-            <Card
-              as="section"
-              id="product-tabs-panel-about"
-              role="tabpanel"
-              aria-labelledby="product-tabs-tab-about"
-              tabIndex={0}
-              padding="md"
-              className="mt-4"
-            >
-              {introBody ? (
-                <CmsRichText html={introBody} className="text-sm leading-relaxed text-ink/80" />
-              ) : (
-                <p className="whitespace-pre-line text-sm leading-relaxed text-ink/80">
-                  Описание отсутствует.
-                </p>
-              )}
-            </Card>
-          )}
-
-          {activeTab === 'details' && (
-            <div
-              id="product-tabs-panel-details"
-              role="tabpanel"
-              aria-labelledby="product-tabs-tab-details"
-              tabIndex={0}
-              className="mt-4"
-            >
-              {specificationSections.length > 0 ? (
-                <div className="space-y-8">
-                  {specificationSections.map((section, index) => (
-                    <Card key={`${section.title || 'section'}-${index}`} padding="md">
-                      {section.title && (
-                        <h3 className="text-sm font-semibold text-ink mb-3">{section.title}</h3>
-                      )}
-                      {section.items.length > 0 && (
-                        <dl className="space-y-2">
-                          {section.items.map((item, itemIndex) => (
-                            <div
-                              key={`${item.label || 'item'}-${itemIndex}`}
-                              className="grid grid-cols-1 sm:grid-cols-[180px_minmax(0,1fr)] gap-1 sm:gap-6 text-sm"
-                            >
-                              <dt className="text-muted">{item.label || '—'}</dt>
-                              <dd className="text-ink whitespace-pre-line break-words">{item.value || '—'}</dd>
+                {hasDetailsContent && (
+                  <ProductAccordionItem
+                    id="pdp-details"
+                    title="Характеристики"
+                    isOpen={Boolean(openAccordions.details)}
+                    onToggle={() => toggleAccordion('details')}
+                  >
+                    {specificationSections.length > 0 ? (
+                      <div className="space-y-6">
+                        {specificationSections.map((section, index) => (
+                          <div key={`${section.title || 'section'}-${index}`}>
+                            {section.title ? <h3 className="mb-3 text-sm font-medium text-ink">{section.title}</h3> : null}
+                            {section.items.length > 0 && (
+                              <dl className="border-t border-ink/10">
+                                {section.items.map((item, itemIndex) => (
+                                  <div
+                                    key={`${item.label || 'item'}-${itemIndex}`}
+                                    className="grid grid-cols-[42%_minmax(0,1fr)] gap-4 border-b border-ink/10 py-2"
+                                  >
+                                    <dt className="text-ink/55">{item.label || '—'}</dt>
+                                    <dd className="break-words text-ink/80">{item.value || '—'}</dd>
+                                  </div>
+                                ))}
+                              </dl>
+                            )}
+                            {section.description ? (
+                              <p className="mt-3 whitespace-pre-line text-ink/78">{section.description}</p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <dl className="border-t border-ink/10">
+                        {fallbackSpecs.map((entry) => {
+                          const spec = splitSpecLine(entry);
+                          return (
+                            <div key={entry} className="grid grid-cols-[42%_minmax(0,1fr)] gap-4 border-b border-ink/10 py-2">
+                              <dt className="text-ink/55">{spec.label}</dt>
+                              <dd className="text-ink/80">{spec.value}</dd>
                             </div>
-                          ))}
-                        </dl>
-                      )}
-                      {section.description && (
-                        <p className="mt-3 text-sm leading-relaxed text-ink/80 whitespace-pre-line">
-                          {section.description}
-                        </p>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                  {fallbackSpecs.map((entry) => (
-                    <Card key={entry} variant="quiet" padding="sm">{entry}</Card>
-                  ))}
-                </div>
-              )}
+                          );
+                        })}
+                      </dl>
+                    )}
+                  </ProductAccordionItem>
+                )}
+
+                {careText ? (
+                  <ProductAccordionItem
+                    id="pdp-care"
+                    title="Уход"
+                    isOpen={Boolean(openAccordions.care)}
+                    onToggle={() => toggleAccordion('care')}
+                  >
+                    <p className="whitespace-pre-line">{careText}</p>
+                  </ProductAccordionItem>
+                ) : null}
+
+                <ProductAccordionItem
+                  id="pdp-delivery-payment"
+                  title="Доставка и оплата"
+                  isOpen={Boolean(openAccordions.service)}
+                  onToggle={() => toggleAccordion('service')}
+                >
+                  <div className="space-y-3">
+                    <p>Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.</p>
+                    <p>При онлайн-оплате вы оплачиваете только товары. Доставка оплачивается отдельно после согласования.</p>
+                    <p>Оплата подтверждается на защищённом шаге оформления заказа или на странице заказа.</p>
+                    <div className="flex flex-wrap gap-3 pt-1 text-xs">
+                      <Link to="/info/payment" className="underline underline-offset-4">Оплата</Link>
+                      <Link to="/info/delivery" className="underline underline-offset-4">Доставка</Link>
+                    </div>
+                  </div>
+                </ProductAccordionItem>
+
+                {hasReviewSummary ? (
+                  <ProductAccordionItem
+                    id="pdp-reviews"
+                    title="Отзывы"
+                    isOpen={Boolean(openAccordions.reviews)}
+                    onToggle={() => toggleAccordion('reviews')}
+                  >
+                    <p>
+                      Рейтинг {ratingValue.toFixed(1)} на основе {reviewCount.toLocaleString('ru-RU')} отзывов.
+                    </p>
+                  </ProductAccordionItem>
+                ) : null}
+              </section>
             </div>
-          )}
-        </section>
+          </aside>
+        </div>
 
         <CataloguePresentationBlocks
           blocks={productPresentation?.blocks}
@@ -1253,14 +1374,14 @@ function ProductPage() {
         />
 
         {relatedProducts.length > 0 && (
-          <section className="mt-10 sm:mt-12">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Дополните набор</h2>
-              <Button as={Link} to="/category/popular" variant="ghost" size="sm">
+          <section className="mt-12 sm:mt-14">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-2xl font-medium tracking-normal">С этим товаром покупают</h2>
+              <Button as={Link} to="/category/popular" variant="ghost" size="sm" className="!rounded-none">
                 Смотреть больше
               </Button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
               {relatedProducts.map((item) => (
                 <ProductCard key={item.id} product={item} />
               ))}
@@ -1271,18 +1392,18 @@ function ProductPage() {
 
       <div
         data-testid="product-mobile-cart-bar"
-        className="fixed bottom-0 left-0 right-0 z-30 border-t border-ink/10 bg-white/90 backdrop-blur pb-[calc(0.625rem+env(safe-area-inset-bottom))] lg:hidden"
+        className="fixed bottom-0 left-0 right-0 z-30 border-t border-ink/10 bg-white/95 pb-[calc(0.625rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden"
       >
         <div className="page-shell py-2.5">
           {cartStatus ? <NotificationBanner notification={cartStatus} compact className="mb-3" /> : null}
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <p className="text-xs text-muted">К оплате</p>
-              <p className="text-base font-semibold">{formatRub(price * quantity)}</p>
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(10rem,1.3fr)] items-center gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-ink/55">К оплате</p>
+              <p className="truncate text-lg font-medium text-ink">{formatRub(price * quantity)}</p>
             </div>
             <Button
               block
-              className="flex-1"
+              className="!rounded-none !bg-ink !text-white !shadow-none hover:!translate-y-0 hover:!bg-ink/90 hover:!shadow-none"
               onClick={handleAddToCart}
               disabled={!canPurchaseSelectedVariant}
             >
