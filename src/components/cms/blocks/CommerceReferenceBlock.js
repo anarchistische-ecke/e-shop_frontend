@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../../ProductCard';
+import ShopTheLook from '../../home/ShopTheLook';
 import CmsStorefrontCollectionRail from '../CmsStorefrontCollectionRail';
 import FeatureListBlock from './FeatureListBlock';
 import { Card } from '../../ui';
 import {
   CmsAction,
   CmsSectionHeading,
+  resolveMediaUrl,
   getSurfaceToneClass,
 } from '../cmsBlockShared';
 import { useProductDirectoryData } from '../../../features/product-list/data';
@@ -142,6 +144,17 @@ function buildCategoryImage(category, products) {
   return resolveImageUrl(getPrimaryImageUrl(product));
 }
 
+function stripHtml(value = '') {
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+
+  return value
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function CategoryReferenceCard({ category, products, item }) {
   const title = item?.title || category?.name || 'Категория';
   const description = item?.description || category?.description || category?.summary || '';
@@ -240,6 +253,21 @@ function ProductReferenceList({ section, page }) {
 
   if (!resolvedProducts.length && !loading) {
     return <FeatureListBlock section={section} />;
+  }
+
+  if (section?.layoutVariant === 'shop_the_look') {
+    const imageUrl =
+      resolveMediaUrl(section.image || section.imageUrl) ||
+      resolveImageUrl(getPrimaryImageUrl(resolvedProducts[0]));
+
+    return (
+      <ShopTheLook
+        title={section.title || 'Shop the look'}
+        description={stripHtml(section.body || section.description || '')}
+        imageUrl={imageUrl}
+        products={resolvedProducts}
+      />
+    );
   }
 
   return (

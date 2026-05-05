@@ -224,7 +224,7 @@ function SearchBar({
     <>
       <Link
         to={mobileSearchHref}
-        className="focus-ring-soft flex min-h-[52px] items-center gap-3 rounded-[22px] border border-ink/15 bg-white px-4 py-3 text-left shadow-[0_10px_24px_rgba(43,39,34,0.08)] lg:hidden"
+        className="focus-ring-soft flex min-h-[44px] items-center gap-3 rounded-[18px] border border-ink/15 bg-white px-4 py-2 text-left shadow-[0_8px_18px_rgba(43,39,34,0.08)] lg:hidden"
         aria-label="Открыть страницу поиска"
       >
         <SearchIcon className="h-4 w-4 shrink-0 text-ink/55" />

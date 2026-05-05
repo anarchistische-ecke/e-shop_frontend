@@ -29,6 +29,7 @@ function buildCategoryCards(categories = [], products = []) {
     return {
       category,
       token,
+      name: category.name,
       href: `/category/${token}`,
       imageUrl: resolveImageUrl(
         category.imageUrl ||
