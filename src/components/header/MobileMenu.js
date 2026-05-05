@@ -18,7 +18,7 @@ function MobileUtilityLink({ item, onClose }) {
   }
 
   const className =
-    'focus-ring-soft inline-flex min-h-[42px] items-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]';
+    'focus-ring-soft inline-flex min-h-[42px] items-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-medium text-ink shadow-[0_8px_18px_rgba(43,39,34,0.08)]';
 
   if (isInternalUrl(item.url)) {
     return (
@@ -41,23 +41,78 @@ function MobileUtilityLink({ item, onClose }) {
   );
 }
 
+function MobileCategoryItem({
+  category,
+  childrenByParent,
+  onClose,
+  onTrackCategoryClick
+}) {
+  const token = resolveCategoryToken(category);
+  const nestedCategories = childrenByParent[String(category.id)] || [];
+
+  return (
+    <li className="min-w-0">
+      <article className="rounded-[22px] border border-ink/10 bg-white shadow-[0_10px_22px_rgba(43,39,34,0.08)]">
+        <Link
+          to={`/category/${token}`}
+          className="focus-ring-soft grid min-h-[64px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[22px] px-4 py-3 text-sm text-ink"
+          onClick={() => {
+            onTrackCategoryClick(token, 'mobile_menu_category');
+            onClose();
+          }}
+        >
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-ink/10 bg-sand/35 text-ink/80">
+            <CategoryGlyph category={category} />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold">{category.name}</span>
+            <span className="block truncate text-xs text-muted">
+              {nestedCategories.length > 0
+                ? `${nestedCategories.length} подкатегорий`
+                : category.description || 'Открыть раздел'}
+            </span>
+          </span>
+          <span className="text-ink/45" aria-hidden="true">→</span>
+        </Link>
+
+        {nestedCategories.length > 0 ? (
+          <div className="grid gap-2 border-t border-ink/10 px-4 pb-4 pt-3">
+            {nestedCategories.map((subCategory) => {
+              const childToken = resolveCategoryToken(subCategory);
+
+              return (
+                <Link
+                  key={childToken}
+                  to={`/category/${childToken}`}
+                  className="focus-ring-soft inline-flex min-h-[44px] items-center justify-between rounded-2xl border border-ink/10 bg-sand/25 px-3 py-2 text-sm font-medium text-ink"
+                  onClick={() => {
+                    onTrackCategoryClick(childToken, 'mobile_menu_subcategory');
+                    onClose();
+                  }}
+                >
+                  <span className="truncate">{subCategory.name}</span>
+                  <span className="text-ink/45" aria-hidden="true">→</span>
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
+      </article>
+    </li>
+  );
+}
+
 function MobileMenu({
-  activeMobileParent,
   childrenByParent,
   isOpen,
   mobileCategories,
-  mobilePath,
-  mobileTitle,
   onClose,
-  onOpenCategory,
-  onStepBack,
   onTrackCategoryClick,
   searchTerm,
   siteName,
   utilityNavigation = []
 }) {
   const panelRef = useRef(null);
-  const backButtonRef = useRef(null);
   const closeButtonRef = useRef(null);
   const [isMounted, setIsMounted] = useState(isOpen);
 
@@ -82,8 +137,7 @@ function MobileMenu({
     <FocusTrap
       active={isOpen}
       focusTrapOptions={{
-        initialFocus: () =>
-          backButtonRef.current || closeButtonRef.current || panelRef.current,
+        initialFocus: () => closeButtonRef.current || panelRef.current,
         fallbackFocus: () => panelRef.current,
         escapeDeactivates: false,
         clickOutsideDeactivates: false,
@@ -105,58 +159,45 @@ function MobileMenu({
             : 'pointer-events-none translate-y-4 opacity-0'
         }`}
       >
+        <header className="shrink-0 border-b border-ink/10 bg-[#fbf7f1] shadow-[0_12px_24px_rgba(43,39,34,0.08)]">
+          <div className="page-shell grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 pb-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)]">
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Навигация</p>
+              <Link
+                to="/"
+                onClick={onClose}
+                className="mt-1 block truncate font-display text-xl font-semibold leading-none text-ink"
+              >
+                {siteName}
+              </Link>
+              <p className="mt-1 text-sm font-semibold text-ink">Каталог</p>
+            </div>
+
+            <Button
+              ref={closeButtonRef}
+              type="button"
+              variant="secondary"
+              size="icon"
+              onClick={onClose}
+              aria-label="Закрыть меню"
+            >
+              ×
+            </Button>
+          </div>
+        </header>
+
         <div className="flex-1 overflow-y-auto overscroll-contain">
-          <div className="sticky top-0 z-10 border-b border-ink/10 bg-[#fbf7f1]/96 pb-4 pt-5 shadow-[0_16px_32px_rgba(43,39,34,0.08)]">
-            <div className="page-shell space-y-4">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Навигация</p>
-                  <Link
-                    to="/"
-                    onClick={onClose}
-                    className="mt-1 block truncate font-display text-xl font-semibold leading-none tracking-tight text-ink"
-                  >
-                    {siteName}
-                  </Link>
-                  <p className="mt-1 text-sm font-semibold text-ink">{mobileTitle}</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {mobilePath.length > 0 ? (
-                    <Button
-                      ref={backButtonRef}
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={onStepBack}
-                    >
-                      Назад
-                    </Button>
-                  ) : null}
-                  <Button
-                    ref={closeButtonRef}
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    onClick={onClose}
-                    aria-label="Закрыть меню"
-                  >
-                    ✕
-                  </Button>
-                </div>
-              </div>
-
+          <div className="page-shell space-y-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-4">
+            <nav aria-label="Быстрые действия" className="space-y-3">
               <Link
                 to={buildSearchHref({ query: searchTerm.trim() })}
                 onClick={onClose}
-                className="focus-ring-soft flex min-h-[52px] items-center justify-between gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                className="focus-ring-soft flex min-h-[52px] items-center justify-between gap-3 rounded-[22px] border border-ink/10 bg-white px-4 py-3 text-sm font-semibold text-ink shadow-[0_10px_22px_rgba(43,39,34,0.08)]"
               >
                 <span className="truncate">
                   {searchTerm.trim() || 'Перейти к поиску товаров и категорий'}
                 </span>
-                <span className="text-ink/45" aria-hidden="true">
-                  →
-                </span>
+                <span className="text-ink/45" aria-hidden="true">→</span>
               </Link>
 
               <div className="grid grid-cols-2 gap-2">
@@ -166,7 +207,7 @@ function MobileMenu({
                     onTrackCategoryClick('catalog', 'mobile_menu');
                     onClose();
                   }}
-                  className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                  className="focus-ring-soft inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary"
                 >
                   Весь каталог
                 </Link>
@@ -176,121 +217,29 @@ function MobileMenu({
                     onTrackCategoryClick('new', 'mobile_menu');
                     onClose();
                   }}
-                  className="focus-ring-soft inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-4 text-sm font-medium text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+                  className="focus-ring-soft inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-3 text-sm font-semibold text-ink"
                 >
                   Новинки
                 </Link>
               </div>
-
-              {utilityNavigation.length > 0 ? (
-                <section className="rounded-[24px] border border-ink/10 bg-white/90 p-3 shadow-[0_10px_24px_rgba(43,39,34,0.08)]">
-                  <div className="space-y-3">
-                    {utilityNavigation.map((group) => (
-                      <div key={group.key || group.title} className="space-y-2">
-                        <p className="text-[11px] uppercase tracking-[0.2em] text-muted">
-                          {group.title}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {(group.items || []).map((item) => (
-                            <MobileUtilityLink
-                              key={`${group.key || group.title}:${item.label}:${item.url}`}
-                              item={item}
-                              onClose={onClose}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="page-shell space-y-5 py-4">
-            {activeMobileParent ? (
-              <Link
-                to={`/category/${resolveCategoryToken(activeMobileParent)}`}
-                onClick={() => {
-                  onTrackCategoryClick(resolveCategoryToken(activeMobileParent), 'mobile_menu_parent');
-                  onClose();
-                }}
-                className="focus-ring-soft inline-flex min-h-[48px] w-full items-center justify-between rounded-[24px] border border-primary/25 bg-primary/10 px-4 py-3 text-sm font-medium text-primary"
-              >
-                <span>Смотреть всё: {activeMobileParent.name}</span>
-                <span aria-hidden="true">→</span>
-              </Link>
-            ) : null}
+            </nav>
 
             <section>
-              <div className="mb-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Каталог</p>
-                <p className="mt-1 text-sm text-ink/75">
-                  Разделы каталога открываются списком, без скрытых свайпов и мелких попаданий.
-                </p>
-              </div>
-
+              <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-muted">Каталог</p>
               <nav aria-label="Разделы каталога">
                 <ul className="space-y-2">
-                  {mobileCategories.map((category) => {
-                    const token = resolveCategoryToken(category);
-                    const nested = childrenByParent[String(category.id)] || [];
-                    const hasNested = nested.length > 0;
-
-                    if (hasNested) {
-                      return (
-                        <li key={token}>
-                          <button
-                            type="button"
-                            className="focus-ring-soft grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-left text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
-                            onClick={() => onOpenCategory(token)}
-                          >
-                            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-sand/35 text-ink/80">
-                              <CategoryGlyph category={category} />
-                            </span>
-                            <span className="min-w-0">
-                              <span className="block truncate font-medium">{category.name}</span>
-                              <span className="block truncate text-xs text-muted">
-                                {nested.length} подкатегорий
-                              </span>
-                            </span>
-                            <span className="text-ink/45" aria-hidden="true">
-                              ›
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    }
-
-                    return (
-                      <li key={token}>
-                        <Link
-                          to={`/category/${token}`}
-                          className="focus-ring-soft grid min-h-[58px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border border-ink/10 bg-white px-4 py-3 text-sm text-ink shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
-                          onClick={() => {
-                            onTrackCategoryClick(token, 'mobile_menu_category');
-                            onClose();
-                          }}
-                        >
-                          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-sand/35 text-ink/80">
-                            <CategoryGlyph category={category} />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block truncate font-medium">{category.name}</span>
-                            <span className="block truncate text-xs text-muted">
-                              {category.description || 'Открыть подборку товаров'}
-                            </span>
-                          </span>
-                          <span className="text-ink/45" aria-hidden="true">
-                            →
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
+                  {mobileCategories.map((category) => (
+                    <MobileCategoryItem
+                      key={resolveCategoryToken(category)}
+                      category={category}
+                      childrenByParent={childrenByParent}
+                      onClose={onClose}
+                      onTrackCategoryClick={onTrackCategoryClick}
+                    />
+                  ))}
 
                   {mobileCategories.length === 0 ? (
-                    <li className="rounded-[24px] border border-dashed border-ink/20 bg-white px-4 py-4 text-sm text-muted">
+                    <li className="rounded-[22px] border border-dashed border-ink/20 bg-white px-4 py-4 text-sm text-muted">
                       Категории появятся после заполнения каталога.
                     </li>
                   ) : null}
@@ -298,7 +247,26 @@ function MobileMenu({
               </nav>
             </section>
 
-            <section className="rounded-[28px] border border-ink/10 bg-white/90 p-4 shadow-[0_14px_30px_rgba(43,39,34,0.08)]">
+            {utilityNavigation.length > 0 ? (
+              <section>
+                <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-muted">
+                  Полезное
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {utilityNavigation.flatMap((group) =>
+                    (group.items || []).map((item) => (
+                      <MobileUtilityLink
+                        key={`${group.key || group.title}:${item.label}:${item.url}`}
+                        item={item}
+                        onClose={onClose}
+                      />
+                    ))
+                  )}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="rounded-[22px] border border-ink/10 bg-white p-4 shadow-[0_10px_22px_rgba(43,39,34,0.08)]">
               <TrustLinksPanel
                 title="Почему нам доверяют"
                 description="Оплата, доставка, производство и документы доступны прямо из меню."
