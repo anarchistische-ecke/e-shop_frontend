@@ -4,11 +4,13 @@ import CategoryGlyph from '../navigation/CategoryGlyph';
 import { Card } from '../ui';
 
 function CategoryCard({ href, imageUrl, name, description, helperText, category }) {
+  const resolvedName = name || category?.name || 'Категория';
+
   return (
     <Card
       as={Link}
       to={href}
-      aria-label={name}
+      aria-label={resolvedName}
       variant="quiet"
       padding="sm"
       interactive
@@ -29,7 +31,7 @@ function CategoryCard({ href, imageUrl, name, description, helperText, category 
             {imageUrl ? (
               <img
                 src={imageUrl}
-                alt={name}
+                alt={resolvedName}
                 className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                 loading="lazy"
               />
@@ -42,7 +44,7 @@ function CategoryCard({ href, imageUrl, name, description, helperText, category 
         </div>
 
         <div className="space-y-1">
-          <h3 className="text-base font-semibold text-ink">{name}</h3>
+          <h3 className="text-base font-semibold text-ink">{resolvedName}</h3>
           {helperText ? (
             <p className="text-xs uppercase tracking-[0.14em] text-primary/85">{helperText}</p>
           ) : null}

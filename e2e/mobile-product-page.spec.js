@@ -47,6 +47,7 @@ test('mobile product page keeps gallery controls above the sticky cart bar and s
   expect(highlightsBox).not.toBeNull();
 
   expect(railBox.y).toBeLessThan(stickyBox.y);
+  expect(railBox.y).toBeLessThan(purchaseBox.y);
   expect(purchaseBox.y).toBeLessThan(highlightsBox.y);
 });
 
@@ -56,7 +57,7 @@ test('out-of-stock variant disables purchase CTAs and hides fake notify form', a
   await page.goto('/product/prod-satin-sand');
   await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
 
-  await page.getByRole('button', { name: /240×260/i }).click();
+  await page.getByLabel('Выберите вариант').selectOption('var-satin-sand-240');
 
   await expect(page.getByText('Нет в наличии для выбранного варианта').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Добавить в корзину' })).toBeDisabled();

@@ -6,7 +6,7 @@ function HeaderBrand({ siteName, wayfindingLabel }) {
     <div className="min-w-0">
       <Link
         to="/"
-        className="touch-link focus-ring-soft block rounded-xl truncate font-display text-base font-semibold leading-none tracking-tight text-ink transition hover:text-primary sm:text-2xl lg:text-3xl"
+        className="touch-link focus-ring-soft block min-h-[28px] rounded-xl truncate font-display text-base font-semibold leading-none tracking-tight text-ink transition hover:text-primary sm:text-2xl lg:min-h-[44px] lg:text-3xl"
       >
         {siteName}
       </Link>

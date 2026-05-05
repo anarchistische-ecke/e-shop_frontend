@@ -62,7 +62,7 @@ function Header() {
             ref={header.headerBarRef}
             className="relative z-[90] border-b border-ink/10 bg-[#fbf7f1]/96 shadow-[0_10px_24px_rgba(43,39,34,0.08)] backdrop-blur-xl lg:bg-white/92 lg:shadow-[0_12px_28px_rgba(43,39,34,0.08)]"
           >
-            <div className="page-shell page-section--tight py-2.5 sm:py-3 lg:py-3.5 xl:py-4">
+            <div className="page-shell page-section--tight py-1.5 sm:py-3 lg:py-3.5 xl:py-4">
               {headerLinks.length > 0 ? (
                 <div className="mb-3 hidden items-center justify-between gap-4 border-b border-ink/10 pb-3 lg:flex">
                   <nav
@@ -82,7 +82,7 @@ function Header() {
                 </div>
               ) : null}
 
-              <div className="grid grid-cols-1 gap-2.5 sm:gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3.5">
+              <div className="grid grid-cols-1 gap-1.5 sm:gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3.5">
                 <HeaderBrand
                   siteName={siteSettings.siteName}
                   wayfindingLabel={header.wayfindingLabel}

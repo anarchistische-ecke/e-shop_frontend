@@ -2,11 +2,19 @@ import React from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
+import { vi } from 'vitest';
 import HeroBlock from './blocks/HeroBlock';
 import RichTextBlock from './blocks/RichTextBlock';
 import ImageBannerBlock from './blocks/ImageBannerBlock';
 import FaqSectionBlock from './blocks/FaqSectionBlock';
 import CtaSectionBlock from './blocks/CtaSectionBlock';
+import CommerceReferenceBlock from './blocks/CommerceReferenceBlock';
+import CategoryGrid from '../home/CategoryGrid';
+import { useProductDirectoryData } from '../../features/product-list/data';
+
+vi.mock('../../features/product-list/data', () => ({
+  useProductDirectoryData: vi.fn(),
+}));
 
 function renderWithRouter(ui) {
   const container = document.createElement('div');
@@ -42,6 +50,7 @@ describe('CMS blocks', () => {
 
   afterEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment;
+    vi.clearAllMocks();
   });
 
   it('renders HeroBlock with media, actions, and highlight cards', () => {
@@ -195,6 +204,123 @@ describe('CMS blocks', () => {
     expect(view.container.textContent).toContain('Новые коллекции');
     expect(view.container.querySelector('a[href="/subscribe"]')?.textContent).toBe('Подписаться');
     expect(view.container.querySelector('a[href="https://wa.me/79990000000"]')?.getAttribute('target')).toBe('_blank');
+
+    view.unmount();
+  });
+
+  it('renders fallback home category cards with category names', () => {
+    const view = renderWithRouter(
+      <CategoryGrid
+        categories={[
+          {
+            id: 'throws',
+            slug: 'throws',
+            name: 'Пледы',
+            description: 'Мягкие пледы для спальни и гостиной.',
+          },
+        ]}
+        products={[
+          {
+            id: 'product-1',
+            category: 'throws',
+            images: [{ url: 'https://cdn.example.com/throw.jpg' }],
+          },
+        ]}
+      />
+    );
+
+    expect(view.container.textContent).toContain('Пледы');
+    expect(view.container.querySelector('a[href="/category/throws"]')?.textContent).toContain('Пледы');
+
+    view.unmount();
+  });
+
+  it('renders category reference cards with backend category names when CMS title is empty', () => {
+    useProductDirectoryData.mockReturnValue({
+      loading: false,
+      categories: [
+        {
+          id: 'duvets',
+          slug: 'duvets',
+          name: 'Одеяла',
+          description: 'Теплые одеяла для спальни.',
+          imageUrl: 'https://cdn.example.com/duvets.jpg',
+        },
+      ],
+      products: [],
+    });
+
+    const section = {
+      sectionType: 'category_reference_list',
+      items: [
+        {
+          referenceKind: 'category_slug',
+          referenceKey: 'duvets',
+          sort: 1,
+        },
+      ],
+    };
+
+    const view = renderWithRouter(
+      <CommerceReferenceBlock page={{ template: 'home' }} section={section} />
+    );
+
+    expect(view.container.textContent).toContain('Одеяла');
+    expect(view.container.querySelector('a[href="/category/duvets"]')).not.toBeNull();
+
+    view.unmount();
+  });
+
+  it('renders product references as a shop-the-look block when requested by layout', () => {
+    useProductDirectoryData.mockReturnValue({
+      loading: false,
+      categories: [],
+      products: [
+        {
+          id: 'prod-1',
+          slug: 'satin-set',
+          name: 'Сатиновый комплект',
+          description: 'Комплект для спокойной спальни.',
+          price: 4200,
+          images: [{ url: 'https://cdn.example.com/satin.jpg' }],
+        },
+        {
+          id: 'prod-2',
+          slug: 'throw',
+          name: 'Плед Soft',
+          description: 'Мягкий акцент для кровати.',
+          price: 2600,
+          images: [{ url: 'https://cdn.example.com/throw.jpg' }],
+        },
+      ],
+    });
+
+    const section = {
+      sectionType: 'product_reference_list',
+      layoutVariant: 'shop_the_look',
+      title: 'Соберите спальню',
+      body: '<p>Откройте товары прямо из композиции.</p>',
+      image: { url: 'https://cdn.example.com/look.jpg' },
+      items: [
+        {
+          referenceKind: 'product_slug',
+          referenceKey: 'satin-set',
+          sort: 1,
+        },
+        {
+          referenceKind: 'product_slug',
+          referenceKey: 'throw',
+          sort: 2,
+        },
+      ],
+    };
+
+    const view = renderWithRouter(<CommerceReferenceBlock page={{ template: 'home' }} section={section} />);
+
+    expect(view.container.textContent).toContain('Соберите спальню');
+    expect(view.container.textContent).toContain('Откройте товары прямо из композиции.');
+    expect(view.container.textContent).toContain('Точка внимания');
+    expect(view.container.textContent).toContain('Сатиновый комплект');
 
     view.unmount();
   });
