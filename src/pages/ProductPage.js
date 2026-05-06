@@ -163,10 +163,10 @@ function ProductInfoCard({ icon, title, summary, caption, onOpen }) {
   return (
     <button
       type="button"
-      className="group flex w-full items-start gap-3 border-b border-ink/10 py-3 text-left transition hover:border-ink/25"
+      className="group flex w-full items-start gap-3 border-b border-ink/10 py-3 text-left transition hover:border-primary/30"
       onClick={onOpen}
     >
-      <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center text-ink/70">
+      <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center text-primary">
         <TrustIcon type={icon} />
       </span>
       <span className="min-w-0 flex-1">
@@ -174,7 +174,7 @@ function ProductInfoCard({ icon, title, summary, caption, onOpen }) {
         <span className="mt-0.5 block text-sm text-ink/70">{summary}</span>
         <span className="mt-1 block text-xs text-muted">{caption}</span>
       </span>
-      <span className="mt-1 text-xs uppercase tracking-[0.16em] text-ink/45 group-hover:text-ink">
+      <span className="mt-1 text-xs uppercase tracking-[0.16em] text-primary/70 group-hover:text-primary">
         Подробнее
       </span>
     </button>
@@ -192,7 +192,7 @@ function ProductAccordionItem({ id, title, isOpen, onToggle, children }) {
         onClick={onToggle}
       >
         <span>{title}</span>
-        <span className="text-xl leading-none text-ink/55">{isOpen ? '−' : '+'}</span>
+        <span className="text-xl leading-none text-primary">{isOpen ? '−' : '+'}</span>
       </button>
       {isOpen ? (
         <div id={`${id}-panel`} className="pb-5 text-sm leading-relaxed text-ink/78">
@@ -230,11 +230,14 @@ function ProductPage() {
   const [sheetType, setSheetType] = useState('shipping');
   const [isInfoSheetOpen, setIsInfoSheetOpen] = useState(false);
   const [isVariantTransitioning, setIsVariantTransitioning] = useState(false);
+  const [isVariantMenuOpen, setIsVariantMenuOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState('');
   const [cartStatus, setCartStatus] = useState(null);
 
   const transitionTimerRef = useRef(null);
   const cartInputRef = useRef({ quantity: 1, variantId: null });
+  const variantMenuRef = useRef(null);
+  const galleryGestureRef = useRef(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -263,6 +266,7 @@ function ProductPage() {
     setActiveImageIndex(0);
     setBundleSelections({});
     setQuantity(1);
+    setIsVariantMenuOpen(false);
     setPendingAction('');
     setCartStatus(null);
     setProduct(initialProduct);
@@ -334,6 +338,22 @@ function ProductPage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isVariantMenuOpen || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      if (variantMenuRef.current?.contains(event.target)) {
+        return;
+      }
+      setIsVariantMenuOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [isVariantMenuOpen]);
 
   const images = useMemo(() => normalizeProductImages(product?.images || []), [product]);
 
@@ -652,6 +672,46 @@ function ProductPage() {
     openImageZoom();
   };
 
+  const handleMobileGalleryPointerDown = (event) => {
+    galleryGestureRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      didSwipe: false,
+    };
+  };
+
+  const handleMobileGalleryPointerUp = (event) => {
+    const gesture = galleryGestureRef.current;
+    if (!gesture || orderedImages.length < 2) {
+      return;
+    }
+
+    const deltaX = event.clientX - gesture.startX;
+    const deltaY = event.clientY - gesture.startY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (absX > 42 && absX > absY * 1.2) {
+      gesture.didSwipe = true;
+      selectImageByIndex(activeImageIndex + (deltaX < 0 ? 1 : -1));
+    }
+  };
+
+  const handleMobileGalleryPointerCancel = () => {
+    galleryGestureRef.current = null;
+  };
+
+  const handleMobileGalleryClick = (event) => {
+    if (galleryGestureRef.current?.didSwipe) {
+      event.preventDefault();
+      galleryGestureRef.current = null;
+      return;
+    }
+
+    galleryGestureRef.current = null;
+    openImageZoom();
+  };
+
   const toggleAccordion = (key) => {
     setOpenAccordions((prev) => ({
       ...prev,
@@ -664,6 +724,14 @@ function ProductPage() {
       ...prev,
       details: true,
     }));
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        document.getElementById('pdp-details-panel')?.scrollIntoView({
+          block: 'nearest',
+          behavior: 'smooth',
+        });
+      }, 0);
+    }
   };
 
   const handleVariantChange = (variant) => {
@@ -684,6 +752,11 @@ function ProductPage() {
     transitionTimerRef.current = setTimeout(() => {
       setIsVariantTransitioning(false);
     }, 200);
+  };
+
+  const handleVariantSelect = (variant) => {
+    handleVariantChange(variant);
+    setIsVariantMenuOpen(false);
   };
 
   const openInfoSheet = (nextSheetType) => {
@@ -805,7 +878,7 @@ function ProductPage() {
   }
 
   return (
-    <div className="product-page bg-white pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-0 lg:pb-16">
+    <div className="product-page pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-0 lg:pb-16">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -844,12 +917,15 @@ function ProductPage() {
             }`}
           >
             <div className="lg:hidden">
-              <div className="relative overflow-hidden border border-ink/10 bg-[#f3f0eb]">
+              <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-sand/45 shadow-[0_18px_42px_rgba(43,39,34,0.12)]">
                 {mainImage ? (
                   <button
                     type="button"
-                    className="relative block aspect-square w-full"
-                    onClick={openImageZoom}
+                    className="relative block aspect-square w-full touch-pan-y"
+                    onPointerDown={handleMobileGalleryPointerDown}
+                    onPointerUp={handleMobileGalleryPointerUp}
+                    onPointerCancel={handleMobileGalleryPointerCancel}
+                    onClick={handleMobileGalleryClick}
                     aria-label="Увеличить изображение"
                   >
                     <img
@@ -858,9 +934,10 @@ function ProductPage() {
                       className="absolute inset-0 h-full w-full object-cover"
                       loading="eager"
                       decoding="async"
+                      draggable={false}
                     />
                     {showZoomHint && (
-                      <span className="absolute bottom-3 left-3 bg-white/90 px-3 py-1 text-xs text-ink/70">
+                      <span className="absolute bottom-3 left-3 rounded-xl bg-white/90 px-3 py-1 text-xs text-ink/70">
                         Нажмите, чтобы увеличить
                       </span>
                     )}
@@ -883,7 +960,7 @@ function ProductPage() {
                     type="button"
                     onClick={() => selectImageByIndex(index)}
                     className={`h-1.5 rounded-full transition-all ${
-                      index === activeImageIndex ? 'w-7 bg-ink' : 'w-7 bg-ink/15'
+                      index === activeImageIndex ? 'w-7 bg-primary' : 'w-7 bg-ink/15'
                     }`}
                     aria-label={`Показать изображение ${index + 1}`}
                     aria-current={index === activeImageIndex ? 'true' : undefined}
@@ -893,7 +970,7 @@ function ProductPage() {
             </div>
 
             <div className="hidden lg:grid lg:gap-4">
-              <div className="overflow-hidden border border-ink/10 bg-[#f3f0eb]">
+              <div className="overflow-hidden rounded-[28px] border border-white/80 bg-sand/45 shadow-[0_18px_42px_rgba(43,39,34,0.12)]">
                 {galleryItems[0] ? (
                   <button
                     type="button"
@@ -907,8 +984,9 @@ function ProductPage() {
                       className="absolute inset-0 h-full w-full object-cover"
                       loading="eager"
                       decoding="async"
+                      draggable={false}
                     />
-                    <span className="absolute bottom-3 right-3 bg-white/90 px-3 py-1 text-xs text-ink/70 opacity-0 transition-opacity group-hover:opacity-100">
+                    <span className="absolute bottom-3 right-3 rounded-xl bg-white/90 px-3 py-1 text-xs text-ink/70 opacity-0 transition-opacity group-hover:opacity-100">
                       Открыть крупно
                     </span>
                   </button>
@@ -927,7 +1005,7 @@ function ProductPage() {
                       <button
                         key={image ? image.id || imageIndex : imageIndex}
                         type="button"
-                        className="relative aspect-square overflow-hidden border border-ink/10 bg-[#f3f0eb]"
+                        className="relative aspect-square overflow-hidden rounded-[24px] border border-white/80 bg-sand/45 shadow-[0_12px_28px_rgba(43,39,34,0.1)]"
                         onClick={() => openImageZoomAtIndex(imageIndex)}
                         aria-label={`Увеличить изображение ${imageIndex + 1}`}
                       >
@@ -938,6 +1016,7 @@ function ProductPage() {
                             className="absolute inset-0 h-full w-full object-cover transition duration-300 hover:scale-[1.02]"
                             loading="lazy"
                             decoding="async"
+                            draggable={false}
                           />
                         ) : (
                           <span className="flex h-full w-full items-center justify-center text-xs text-muted">
@@ -961,7 +1040,7 @@ function ProductPage() {
           <aside className="min-w-0 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)]">
             <div
               data-testid="product-purchase-card"
-              className={`transition-opacity duration-200 ${
+              className={`rounded-[28px] border border-white/80 bg-white/90 p-5 shadow-[0_24px_50px_rgba(43,39,34,0.1)] transition-opacity duration-200 sm:p-6 ${
                 isVariantTransitioning ? 'opacity-80' : 'opacity-100'
               }`}
             >
@@ -1017,42 +1096,81 @@ function ProductPage() {
 
               {productVariants.length > 0 && (
                 <div className="border-b border-ink/10 py-5">
-                  <label
-                    htmlFor="product-variant-select"
-                    className="text-xs uppercase tracking-[0.18em] text-ink/50"
-                  >
+                  <p className="text-xs uppercase tracking-[0.18em] text-ink/50">
                     Размер
-                  </label>
-                  <select
-                    id="product-variant-select"
-                    aria-label="Выберите вариант"
-                    value={selectedVariant?.id || ''}
-                    onChange={(event) => {
-                      const variant = productVariants.find((item) => item.id === event.target.value);
-                      if (variant) {
-                        handleVariantChange(variant);
-                      }
-                    }}
-                    disabled={isCartActionPending || productVariants.length < 2}
-                    className="control-inline mt-2 min-h-[44px] w-full border border-ink/20 px-3 py-2 text-sm text-ink focus:border-ink focus:outline-none"
-                  >
-                    {!selectedVariant ? <option value="">Выберите вариант</option> : null}
-                    {productVariants.map((variant) => {
-                      const variantStock = getStockValue(variant);
-                      const variantStatus =
-                        variantStock <= 0
-                          ? 'Нет в наличии'
-                          : variantStock <= 3
-                          ? `Осталось ${variantStock} шт.`
-                          : 'В наличии';
-                      return (
-                        <option key={variant.id} value={variant.id}>
-                          {variant.name || variant.sku || variant.id}
-                          {` · ${formatRub(moneyToNumber(variant.price))} · ${variantStatus}`}
-                        </option>
-                      );
-                    })}
-                  </select>
+                  </p>
+                  <div ref={variantMenuRef} className="relative mt-2">
+                    <button
+                      type="button"
+                      aria-label="Выберите вариант"
+                      aria-haspopup="listbox"
+                      aria-expanded={isVariantMenuOpen}
+                      className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-2xl border border-ink/12 bg-white/85 px-4 py-2 text-left text-sm text-ink shadow-[0_10px_22px_rgba(43,39,34,0.08)] transition hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      onClick={() => setIsVariantMenuOpen((prev) => !prev)}
+                      disabled={isCartActionPending}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate">
+                          {selectedVariant?.name || selectedVariant?.sku || selectedVariant?.id || 'Выберите вариант'}
+                        </span>
+                        {selectedVariant ? (
+                          <span className="mt-0.5 block text-xs text-ink/55">
+                            {formatRub(moneyToNumber(selectedVariant.price))}
+                            {' · '}
+                            {availableStock <= 0
+                              ? 'Нет в наличии'
+                              : availableStock <= 3
+                              ? `Осталось ${availableStock} шт.`
+                              : 'В наличии'}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className={`text-lg leading-none text-primary transition-transform ${isVariantMenuOpen ? 'rotate-180' : ''}`}>
+                        ↓
+                      </span>
+                    </button>
+
+                    {isVariantMenuOpen && (
+                      <div
+                        role="listbox"
+                        aria-label="Варианты товара"
+                        className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-20 max-h-72 overflow-y-auto rounded-2xl border border-ink/10 bg-white p-1 shadow-[0_24px_50px_rgba(43,39,34,0.18)]"
+                      >
+                        {productVariants.map((variant) => {
+                          const isActive = selectedVariant?.id === variant.id;
+                          const variantStock = getStockValue(variant);
+                          const variantStatus =
+                            variantStock <= 0
+                              ? 'Нет в наличии'
+                              : variantStock <= 3
+                              ? `Осталось ${variantStock} шт.`
+                              : 'В наличии';
+                          return (
+                            <button
+                              key={variant.id}
+                              type="button"
+                              role="option"
+                              aria-selected={isActive}
+                              className={`flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition ${
+                                isActive
+                                  ? 'bg-primary/10 text-primary'
+                                  : variantStock <= 0
+                                  ? 'text-red-700 hover:bg-red-50'
+                                  : 'text-ink hover:bg-secondary/70'
+                              }`}
+                              onClick={() => handleVariantSelect(variant)}
+                            >
+                              <span className="min-w-0">
+                                <span className="block font-medium">{variant.name || variant.sku || variant.id}</span>
+                                <span className="mt-0.5 block text-xs opacity-75">{variantStatus}</span>
+                              </span>
+                              <span className="flex-shrink-0 text-xs">{formatRub(moneyToNumber(variant.price))}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
                   {variantImageSwatches.length > 0 && (
                     <div className="mt-4">
@@ -1065,14 +1183,14 @@ function ProductPage() {
                               key={variant.id}
                               type="button"
                               className={`relative h-16 w-16 flex-shrink-0 overflow-hidden border ${
-                                isActive ? 'border-ink' : 'border-ink/10'
+                                isActive ? 'rounded-2xl border-primary shadow-[0_10px_22px_rgba(182,91,74,0.18)]' : 'rounded-2xl border-ink/10'
                               }`}
                               onClick={() => handleVariantChange(variant)}
                               aria-label={`Выбрать вариант ${variant.name || variant.sku || variant.id}`}
                               aria-pressed={isActive}
                               disabled={isCartActionPending}
                             >
-                              <img src={image.url} alt={image.alt || variant.name || ''} className="h-full w-full object-cover" />
+                              <img src={image.url} alt={image.alt || variant.name || ''} className="h-full w-full object-cover" draggable={false} />
                             </button>
                           );
                         })}
@@ -1084,10 +1202,10 @@ function ProductPage() {
 
               <div className="border-b border-ink/10 py-5">
                 <p className="text-xs uppercase tracking-[0.18em] text-ink/50">Количество</p>
-                <div className="mt-2 inline-grid min-h-[44px] grid-cols-[44px_52px_44px] border border-ink/20 text-sm">
+                <div className="mt-2 inline-grid min-h-[44px] grid-cols-[44px_52px_44px] overflow-hidden rounded-2xl border border-ink/12 bg-white/85 text-sm shadow-[0_10px_22px_rgba(43,39,34,0.08)]">
                   <button
                     type="button"
-                    className="border-r border-ink/10 text-lg text-ink/70 disabled:opacity-40"
+                    className="border-r border-ink/10 text-lg text-ink/70 transition hover:bg-secondary/70 hover:text-primary disabled:opacity-40"
                     onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
                     aria-label="Уменьшить количество"
                     disabled={isCartActionPending || availableStock <= 0}
@@ -1097,7 +1215,7 @@ function ProductPage() {
                   <span className="flex items-center justify-center font-medium">{quantity}</span>
                   <button
                     type="button"
-                    className="border-l border-ink/10 text-lg text-ink/70 disabled:opacity-40"
+                    className="border-l border-ink/10 text-lg text-ink/70 transition hover:bg-secondary/70 hover:text-primary disabled:opacity-40"
                     onClick={() => setQuantity((prev) => Math.min(Math.max(1, availableStock || 99), 99, prev + 1))}
                     aria-label="Увеличить количество"
                     disabled={isCartActionPending || availableStock <= 0}
@@ -1109,7 +1227,7 @@ function ProductPage() {
                 <div className="mt-5 grid gap-2">
                   <Button
                     block
-                    className="!rounded-none !bg-ink !text-white !shadow-none hover:!translate-y-0 hover:!bg-ink/90 hover:!shadow-none"
+                    className="!rounded-2xl"
                     onClick={handleAddToCart}
                     disabled={!canPurchaseSelectedVariant}
                   >
@@ -1119,7 +1237,7 @@ function ProductPage() {
                   <Button
                     variant="secondary"
                     block
-                    className="!rounded-none !border-ink !bg-white !text-ink !shadow-none hover:!translate-y-0 hover:!border-ink hover:!text-ink hover:!shadow-none"
+                    className="!rounded-2xl"
                     onClick={handleBuyNow}
                     disabled={!canPurchaseSelectedVariant}
                   >
@@ -1130,7 +1248,7 @@ function ProductPage() {
                 {cartStatus ? <NotificationBanner notification={cartStatus} className="mt-3" /> : null}
 
                 {availableStock <= 0 && (
-                  <Card variant="quiet" padding="sm" className="mt-4 rounded-none text-sm shadow-none">
+                  <Card variant="quiet" padding="sm" className="mt-4 rounded-2xl border-primary/20 bg-primary/5 text-sm shadow-none">
                     <p className="font-medium text-ink">Этот вариант сейчас недоступен</p>
                     <p className="mt-1 text-xs text-muted">
                       Не показываем форму «сообщить о поступлении», пока она не подключена к реальному сервису.
@@ -1141,7 +1259,7 @@ function ProductPage() {
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="!rounded-none !shadow-none"
+                          className="!rounded-2xl !shadow-none"
                           onClick={handleSelectAvailableVariant}
                           disabled={isCartActionPending}
                         >
@@ -1152,7 +1270,7 @@ function ProductPage() {
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="!rounded-none !shadow-none"
+                          className="!rounded-2xl !shadow-none"
                           onClick={handleSelectAvailableVariant}
                           disabled={isCartActionPending}
                         >
@@ -1162,7 +1280,7 @@ function ProductPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="!rounded-none"
+                        className="!rounded-2xl"
                         onClick={() => openInfoSheet('shipping')}
                       >
                         Уточнить доставку
@@ -1213,7 +1331,7 @@ function ProductPage() {
                               }));
                             }}
                           />
-                          <span className="block aspect-square overflow-hidden bg-[#f3f0eb]">
+                          <span className="block aspect-square overflow-hidden rounded-2xl border border-white/80 bg-sand/45">
                             {itemImage ? (
                               <img src={itemImage} alt={item.name} className="h-full w-full object-cover" loading="lazy" decoding="async" />
                             ) : null}
@@ -1239,7 +1357,7 @@ function ProductPage() {
 
                   <Button
                     block
-                    className="mt-3 !rounded-none !bg-ink !text-white !shadow-none hover:!translate-y-0 hover:!bg-ink/90 hover:!shadow-none"
+                    className="mt-3 !rounded-2xl"
                     onClick={handleAddBundle}
                     disabled={!canPurchaseSelectedVariant || !hasBundleSelection}
                   >
@@ -1250,7 +1368,7 @@ function ProductPage() {
                     to={`/category/${resolveCategoryToken(activeCategory) || 'popular'}`}
                     variant="ghost"
                     size="sm"
-                    className="mt-2 !min-h-0 !rounded-none !px-0 !py-0 text-xs text-ink/65 underline underline-offset-4"
+                    className="mt-2 !min-h-0 !rounded-none !px-0 !py-0 text-xs text-primary underline underline-offset-4"
                   >
                     Смотреть все
                   </Button>
@@ -1377,7 +1495,7 @@ function ProductPage() {
           <section className="mt-12 sm:mt-14">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-2xl font-medium tracking-normal">С этим товаром покупают</h2>
-              <Button as={Link} to="/category/popular" variant="ghost" size="sm" className="!rounded-none">
+              <Button as={Link} to="/category/popular" variant="ghost" size="sm" className="!rounded-2xl">
                 Смотреть больше
               </Button>
             </div>
@@ -1392,7 +1510,7 @@ function ProductPage() {
 
       <div
         data-testid="product-mobile-cart-bar"
-        className="fixed bottom-0 left-0 right-0 z-30 border-t border-ink/10 bg-white/95 pb-[calc(0.625rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden"
+        className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/80 bg-white/90 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shadow-[0_-18px_36px_rgba(43,39,34,0.1)] backdrop-blur lg:hidden"
       >
         <div className="page-shell py-2.5">
           {cartStatus ? <NotificationBanner notification={cartStatus} compact className="mb-3" /> : null}
@@ -1403,7 +1521,7 @@ function ProductPage() {
             </div>
             <Button
               block
-              className="!rounded-none !bg-ink !text-white !shadow-none hover:!translate-y-0 hover:!bg-ink/90 hover:!shadow-none"
+              className="!rounded-2xl"
               onClick={handleAddToCart}
               disabled={!canPurchaseSelectedVariant}
             >
