@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   getBrands,
   getCategories,
+  getCatalogueCards,
   getCmsCollection,
   getCmsNavigation,
   getCmsPage,
@@ -18,7 +19,9 @@ import {
   buildLegalRuntimeTokens
 } from '../src/pages/legal/legalDocuments.js';
 
-const DIRECTORY_ROUTE_IDS = new Set(['home', 'catalog', 'category', 'product']);
+const DIRECTORY_ROUTE_IDS = new Set(['catalog', 'category', 'product']);
+const HOME_PRODUCT_REFERENCE_KINDS = new Set(['product', 'product_id', 'product_slug']);
+const HOME_CATEGORY_REFERENCE_KINDS = new Set(['category', 'category_id', 'category_slug']);
 const CMS_PAGE_SLUG_BY_ROUTE_ID = {
   home: 'home',
   about: 'about',
@@ -150,20 +153,6 @@ async function loadDirectoryData() {
   }
 }
 
-async function loadCmsPageSeed(slug) {
-  try {
-    const page = await readThroughCache(`cms:page:${slug}`, () => getCmsPage(slug));
-    return { slug, page, shouldUseFallback: false };
-  } catch (error) {
-    return {
-      slug,
-      page: null,
-      shouldUseFallback: error?.status === 404,
-      error
-    };
-  }
-}
-
 function normalizeReferenceKind(value = '') {
   return String(value || '')
     .trim()
@@ -180,6 +169,70 @@ function readReferenceKey(source = {}) {
       source.key ||
       ''
   ).trim();
+}
+
+function collectHomeCardKeys(page) {
+  const productKeys = new Set();
+  const categoryKeys = new Set();
+
+  (Array.isArray(page?.sections) ? page.sections : []).forEach((section) => {
+    (Array.isArray(section?.items) ? section.items : []).forEach((item) => {
+      const kind = normalizeReferenceKind(item?.referenceKind || item?.reference_kind);
+      const key = readReferenceKey(item);
+      if (!key) {
+        return;
+      }
+      if (HOME_PRODUCT_REFERENCE_KINDS.has(kind)) {
+        productKeys.add(key);
+      }
+      if (HOME_CATEGORY_REFERENCE_KINDS.has(kind)) {
+        categoryKeys.add(key);
+      }
+    });
+  });
+
+  return {
+    productKeys: Array.from(productKeys),
+    categoryKeys: Array.from(categoryKeys)
+  };
+}
+
+async function loadHomeDirectoryData(page) {
+  try {
+    const { productKeys, categoryKeys } = collectHomeCardKeys(page);
+    const shouldUseFallbackLimits = productKeys.length === 0 && categoryKeys.length === 0;
+    const payload = await getCatalogueCards({
+      productKeys,
+      categoryKeys,
+      productLimit: shouldUseFallbackLimits ? 8 : productKeys.length,
+      categoryLimit: shouldUseFallbackLimits ? 6 : categoryKeys.length
+    });
+
+    return {
+      categories: Array.isArray(payload?.categories) ? payload.categories : [],
+      brands: [],
+      products: Array.isArray(payload?.products)
+        ? payload.products.filter((product) => product?.isActive !== false)
+        : [],
+      compact: true
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+async function loadCmsPageSeed(slug) {
+  try {
+    const page = await readThroughCache(`cms:page:${slug}`, () => getCmsPage(slug));
+    return { slug, page, shouldUseFallback: false };
+  } catch (error) {
+    return {
+      slug,
+      page: null,
+      shouldUseFallback: error?.status === 404,
+      error
+    };
+  }
 }
 
 function collectCmsCollectionKeysFromPage(page) {
@@ -377,9 +430,56 @@ export function buildClientRuntimeConfig({ requestOrigin = '' } = {}) {
       readEnv('REACT_APP_IMAGE_BASE') ||
       readEnv('REACT_APP_STORAGE_BASE_URL') ||
       readEnv('REACT_APP_ASSET_BASE_URL'),
+    imageCdnBase: readEnv('REACT_APP_IMAGE_CDN_BASE', 'https://img.yug-postel.ru'),
     keycloakUrl: readEnv('REACT_APP_KEYCLOAK_URL'),
     keycloakRealm: readEnv('REACT_APP_KEYCLOAK_REALM'),
     keycloakClientId: readEnv('REACT_APP_KEYCLOAK_CLIENT_ID')
+  };
+}
+
+function imageSourceSet(media, format = 'webp') {
+  const variants = Array.isArray(media?.sources?.[format]) ? media.sources[format] : [];
+  return variants
+    .filter((variant) => variant?.url && variant?.width)
+    .map((variant) => `${variant.url} ${variant.width}w`)
+    .join(', ');
+}
+
+function firstDirectoryMedia(directory) {
+  const productMedia = (Array.isArray(directory?.products) ? directory.products : [])
+    .map((product) => product?.primaryMedia || product?.images?.[0]?.media)
+    .find((media) => media?.url);
+  if (productMedia) {
+    return productMedia;
+  }
+
+  return (Array.isArray(directory?.categories) ? directory.categories : [])
+    .map((category) => category?.media)
+    .find((media) => media?.url) || null;
+}
+
+function buildPerformanceHints({ directory, runtimeConfig }) {
+  const imageOrigins = [runtimeConfig.imageCdnBase]
+    .filter(Boolean)
+    .map((value) => {
+      try {
+        return new URL(value).origin;
+      } catch (error) {
+        return '';
+      }
+    })
+    .filter(Boolean);
+  const lcpImage = firstDirectoryMedia(directory);
+
+  return {
+    imagePreconnectOrigins: Array.from(new Set(imageOrigins)),
+    lcpImage: lcpImage?.url
+      ? {
+          href: lcpImage.url,
+          imagesrcset: imageSourceSet(lcpImage, 'webp') || imageSourceSet(lcpImage, 'jpeg'),
+          imagesizes: '(min-width: 1024px) 24rem, (min-width: 640px) 42vw, 92vw'
+        }
+      : null
   };
 }
 
@@ -425,8 +525,13 @@ export async function loadSsrRequestData({
     ssrData.cms = cmsSeed;
   }
 
-  if (directory) {
-    ssrData.directory = directory;
+  const runtimeConfig = buildClientRuntimeConfig({ requestOrigin });
+  const resolvedDirectory = route.id === 'home'
+    ? await loadHomeDirectoryData(cmsPageSeed?.page)
+    : directory;
+
+  if (resolvedDirectory) {
+    ssrData.directory = resolvedDirectory;
   }
 
   if (productSeed) {
@@ -452,6 +557,11 @@ export async function loadSsrRequestData({
       statusCode = 404;
     }
   }
+
+  ssrData.performance = buildPerformanceHints({
+    directory: resolvedDirectory,
+    runtimeConfig
+  });
 
   return { ssrData, statusCode };
 }

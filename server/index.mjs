@@ -68,6 +68,19 @@ function renderHelmetTags(helmet = {}) {
   return renderedTags || DEFAULT_HEAD_TAGS;
 }
 
+function renderResourceHints(ssrData = {}) {
+  const hints = ssrData.performance || {};
+  const preconnectTags = Array.from(new Set(hints.imagePreconnectOrigins || []))
+    .filter(Boolean)
+    .map((origin) => `<link rel="preconnect" href="${escapeHtml(origin)}" crossorigin />`);
+  const lcpImage = hints.lcpImage;
+  const preloadTag = lcpImage?.href
+    ? `<link rel="preload" as="image" href="${escapeHtml(lcpImage.href)}"${lcpImage.imagesrcset ? ` imagesrcset="${escapeHtml(lcpImage.imagesrcset)}"` : ''}${lcpImage.imagesizes ? ` imagesizes="${escapeHtml(lcpImage.imagesizes)}"` : ''} fetchpriority="high" />`
+    : '';
+
+  return [...preconnectTags, preloadTag].filter(Boolean).join('');
+}
+
 function injectRenderedApp(template, { appHtml, helmet, ssrData, runtimeConfig }) {
   const stateScripts = [
     `<script>window.__APP_CONFIG__=${serializeForScript(runtimeConfig)};</script>`,
@@ -75,7 +88,7 @@ function injectRenderedApp(template, { appHtml, helmet, ssrData, runtimeConfig }
   ].join('');
 
   return template
-    .replace('<!--app-head-->', renderHelmetTags(helmet))
+    .replace('<!--app-head-->', `${renderResourceHints(ssrData)}${renderHelmetTags(helmet)}`)
     .replace('<!--app-html-->', appHtml)
     .replace('<!--app-state-->', stateScripts);
 }

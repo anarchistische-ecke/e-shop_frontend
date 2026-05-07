@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import ResponsiveImage from '../media/ResponsiveImage';
 import { Button, Card } from '../ui';
-import { getPrimaryImageUrl, getProductPrice } from '../../utils/product';
+import { getPrimaryImageMedia, getPrimaryImageUrl, getProductPrice } from '../../utils/product';
 import { buildProductPath } from '../../utils/url';
 
-function ShopTheLook({ title, description, imageUrl, products = [] }) {
+function ShopTheLook({ title, description, imageUrl, imageMedia = null, products = [] }) {
   const hotspots = useMemo(
     () =>
       products.slice(0, 3).map((product, index) => {
@@ -31,6 +32,8 @@ function ShopTheLook({ title, description, imageUrl, products = [] }) {
     hotspots.find((item) => item.id === activeHotspotId) || hotspots[0] || null;
   const fallbackImage =
     imageUrl || getPrimaryImageUrl(activeHotspot?.product) || getPrimaryImageUrl(products[0]);
+  const fallbackMedia =
+    imageMedia || getPrimaryImageMedia(activeHotspot?.product) || getPrimaryImageMedia(products[0]);
 
   if (!activeHotspot) {
     return null;
@@ -47,10 +50,12 @@ function ShopTheLook({ title, description, imageUrl, products = [] }) {
           <div className="mt-4 overflow-hidden rounded-[30px] border border-white/80 bg-white/70 shadow-[0_24px_56px_rgba(43,39,34,0.12)] lg:mt-5">
             <div className="relative pt-[112%] sm:pt-[78%]">
               {fallbackImage ? (
-                <img
+                <ResponsiveImage
+                  media={fallbackMedia}
                   src={fallbackImage}
                   alt="Композиция интерьера с товарами магазина"
                   className="absolute inset-0 h-full w-full object-cover"
+                  sizes="(min-width: 1024px) 52vw, 94vw"
                   loading="lazy"
                 />
               ) : (
@@ -97,10 +102,12 @@ function ShopTheLook({ title, description, imageUrl, products = [] }) {
               <div className="overflow-hidden rounded-2xl border border-ink/10 bg-sand/35">
                 <div className="relative pt-[100%]">
                   {getPrimaryImageUrl(activeHotspot.product) ? (
-                    <img
+                    <ResponsiveImage
+                      media={getPrimaryImageMedia(activeHotspot.product)}
                       src={getPrimaryImageUrl(activeHotspot.product)}
                       alt=""
                       className="absolute inset-0 h-full w-full object-cover"
+                      sizes="72px"
                       loading="lazy"
                     />
                   ) : null}

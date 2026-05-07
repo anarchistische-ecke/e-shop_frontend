@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import ResponsiveImage from '../media/ResponsiveImage';
 import CategoryGlyph from '../navigation/CategoryGlyph';
 import { Card } from '../ui';
 
-function CategoryCard({ href, imageUrl, name, description, helperText, category }) {
+function CategoryCard({ href, imageUrl, imageMedia, name, description, helperText, category }) {
   const resolvedName = name || category?.name || 'Категория';
 
   return (
@@ -29,10 +30,12 @@ function CategoryCard({ href, imageUrl, name, description, helperText, category 
         <div className="relative overflow-hidden rounded-[22px] border border-ink/10 bg-sand/35">
           <div className="relative pt-[70%]">
             {imageUrl ? (
-              <img
+              <ResponsiveImage
+                media={imageMedia || category?.media}
                 src={imageUrl}
                 alt={resolvedName}
                 className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                sizes="(min-width: 1280px) 22rem, (min-width: 640px) 46vw, 92vw"
                 loading="lazy"
               />
             ) : (

@@ -3,6 +3,7 @@ import {
   buildCmsMediaSources,
   getCmsMediaAlt,
 } from './cmsBlockShared';
+import ResponsiveImage from '../media/ResponsiveImage';
 
 function getAspectRatioStyle(media) {
   if (!media?.width || !media?.height) {
@@ -37,27 +38,19 @@ function CmsImage({
       style={aspectRatioStyle}
     >
       {fallbackSource?.src ? (
-        <picture>
-          {mobileSource?.src ? (
-            <source
-              media="(max-width: 767px)"
-              srcSet={mobileSource.srcSet || mobileSource.src}
-              sizes={mobileSource.sizes || sizes}
-            />
-          ) : null}
-          <img
-            src={desktopSource?.src || mobileSource.src}
-            srcSet={desktopSource?.srcSet || undefined}
-            sizes={desktopSource?.sizes || undefined}
-            alt={resolvedAlt}
-            width={fallbackSource.width || undefined}
-            height={fallbackSource.height || undefined}
-            loading={priority ? 'eager' : 'lazy'}
-            fetchpriority={priority ? 'high' : 'auto'}
-            decoding="async"
-            className={`absolute inset-0 h-full w-full ${imageClassName}`.trim()}
-          />
-        </picture>
+        <ResponsiveImage
+          media={desktopSource || mobileSource}
+          mobileMedia={mobileSource}
+          src={desktopSource?.src || mobileSource.src}
+          sizes={desktopSource?.sizes || sizes}
+          alt={resolvedAlt}
+          width={fallbackSource.width || undefined}
+          height={fallbackSource.height || undefined}
+          loading={priority ? 'eager' : 'lazy'}
+          fetchpriority={priority ? 'high' : 'auto'}
+          decoding="async"
+          className={`absolute inset-0 h-full w-full ${imageClassName}`.trim()}
+        />
       ) : (
         <div className="cms-media-placeholder absolute inset-0">
           <div className="cms-media-placeholder__content">

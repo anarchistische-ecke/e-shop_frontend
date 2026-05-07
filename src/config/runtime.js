@@ -93,6 +93,9 @@ export function getRuntimeConfig() {
       readEnv('REACT_APP_IMAGE_BASE') ||
       readEnv('REACT_APP_STORAGE_BASE_URL') ||
       readEnv('REACT_APP_ASSET_BASE_URL'),
+    imageCdnBase:
+      normalizeString(readWindowConfig('imageCdnBase')) ||
+      readEnv('REACT_APP_IMAGE_CDN_BASE'),
     keycloakUrl:
       normalizeString(readWindowConfig('keycloakUrl')) ||
       readEnv('REACT_APP_KEYCLOAK_URL'),

@@ -10,7 +10,7 @@ import '../styles/cms.css';
 import '../index.css';
 import '../styles/legal.css';
 
-function StorefrontApp({ initialData = {} }) {
+function StorefrontApp({ initialData = {}, routes = [] }) {
   return (
     <NotificationProvider>
       <AuthProvider>
@@ -18,7 +18,7 @@ function StorefrontApp({ initialData = {} }) {
           <PaymentConfigProvider initialConfig={initialData.paymentConfig}>
             <CatalogueDataProvider initialData={initialData.directory}>
               <CartProvider>
-                <App />
+                <App routes={routes} />
               </CartProvider>
             </CatalogueDataProvider>
           </PaymentConfigProvider>

@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import ResponsiveImage from '../media/ResponsiveImage';
 import { Button, Card } from '../ui';
 
-function HeroVisual({ imageUrl, alt, className = '', ratioClassName = 'pt-[60%]' }) {
+function HeroVisual({ imageUrl, media, alt, className = '', ratioClassName = 'pt-[60%]' }) {
   return (
     <div
       className={`relative overflow-hidden rounded-[26px] border border-white/80 bg-white/55 shadow-[0_22px_48px_rgba(43,39,34,0.16)] ${className}`}
@@ -10,11 +11,13 @@ function HeroVisual({ imageUrl, alt, className = '', ratioClassName = 'pt-[60%]'
       <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-white/65" />
       <div className={`relative ${ratioClassName}`}>
         {imageUrl ? (
-          <img
+          <ResponsiveImage
+            media={media}
             src={imageUrl}
             alt={alt}
             className="absolute inset-0 h-full w-full object-cover"
-            loading="eager"
+            sizes="(min-width: 1024px) 24rem, (min-width: 640px) 42vw, 38vw"
+            priority
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-sm text-muted">
@@ -28,6 +31,7 @@ function HeroVisual({ imageUrl, alt, className = '', ratioClassName = 'pt-[60%]'
 
 function HeroBanner({
   imageUrl,
+  imageMedia,
   title,
   accent,
   description,
@@ -73,6 +77,7 @@ function HeroBanner({
               <div className="relative self-start sm:hidden">
                 <HeroVisual
                   imageUrl={imageUrl}
+                  media={imageMedia}
                   alt={heroAlt}
                   className="rounded-[22px]"
                   ratioClassName="pt-[138%]"
@@ -152,6 +157,7 @@ function HeroBanner({
           <div className="relative">
             <HeroVisual
               imageUrl={imageUrl}
+              media={imageMedia}
               alt={heroAlt}
               className="hidden sm:block rounded-[30px]"
               ratioClassName="pt-[95%]"

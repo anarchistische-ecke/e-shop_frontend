@@ -209,7 +209,7 @@ function ProductPage() {
   const navigate = useNavigate();
   const { addItem } = useContext(CartContext);
   const { routeData } = useSsrData();
-  const { categories, products: directoryProducts } = useProductDirectoryData();
+  const { categories, products: directoryProducts } = useProductDirectoryData({ requireFull: true });
   const hasProductRouteSeed =
     routeData?.kind === 'product' && String(routeData.productId || '') === String(id);
   const hasInitialProductLoad = hasProductRouteSeed && Boolean(routeData.product);
