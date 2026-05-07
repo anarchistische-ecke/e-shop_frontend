@@ -2,7 +2,7 @@ import React from 'react';
 import Seo from '../Seo';
 import { Card } from '../ui';
 import { getCmsBlockComponent } from './blockRegistry';
-import { getBlockKey } from './cmsBlockShared';
+import { getBlockKey, getCmsLayoutVariant } from './cmsBlockShared';
 import { useCmsSiteSettings } from '../../contexts/CmsContentContext';
 
 function CmsPageRenderer({ page }) {
@@ -27,13 +27,18 @@ function CmsPageRenderer({ page }) {
             {sections.length > 0 ? (
               sections.map((section, index) => {
                 const BlockComponent = getCmsBlockComponent(section.sectionType);
+                const layoutVariant = getCmsLayoutVariant(section.layoutVariant);
                 return (
-                  <BlockComponent
+                  <div
                     key={getBlockKey(section, index)}
-                    page={page}
-                    section={section}
-                    index={index}
-                  />
+                    className={layoutVariant === 'full' ? 'relative left-1/2 w-screen -translate-x-1/2 px-4 sm:px-6' : ''}
+                  >
+                    <BlockComponent
+                      page={page}
+                      section={section}
+                      index={index}
+                    />
+                  </div>
                 );
               })
             ) : (

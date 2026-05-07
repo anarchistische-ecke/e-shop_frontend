@@ -9,6 +9,12 @@ const SURFACE_TONE_CLASS = {
   sage: 'border border-[#d7e1dc] bg-white/92 shadow-[0_18px_36px_rgba(43,39,34,0.08)]',
   quiet: 'border border-ink/10 bg-[#f8f4ee] shadow-[0_16px_28px_rgba(43,39,34,0.07)]',
   legal: 'border border-ink/10 bg-white/90 shadow-[0_18px_36px_rgba(43,39,34,0.1)]',
+  accent: 'border border-primary/20 bg-[#fff8ef] shadow-[0_18px_36px_rgba(126,81,44,0.12)]',
+};
+const LAYOUT_VARIANT_MAP = {
+  split_media: 'media_right',
+  two_column: 'media_right',
+  grid: 'cards',
 };
 const CMS_IMAGE_WIDTHS = [320, 480, 640, 768, 960, 1200, 1440];
 
@@ -22,6 +28,11 @@ export function getBlockKey(section, index) {
 
 export function getSurfaceToneClass(styleVariant = 'default') {
   return SURFACE_TONE_CLASS[styleVariant] || SURFACE_TONE_CLASS.default;
+}
+
+export function getCmsLayoutVariant(layoutVariant = 'contained') {
+  const normalized = String(layoutVariant || 'contained').trim().toLowerCase().replace(/[-\s]+/g, '_');
+  return LAYOUT_VARIANT_MAP[normalized] || normalized || 'contained';
 }
 
 function normalizePositiveNumber(value) {

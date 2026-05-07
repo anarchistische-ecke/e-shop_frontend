@@ -9,6 +9,7 @@ import { Card } from '../../ui';
 import {
   CmsAction,
   CmsSectionHeading,
+  getCmsLayoutVariant,
   resolveMediaUrl,
   getSurfaceToneClass,
 } from '../cmsBlockShared';
@@ -238,6 +239,23 @@ function CommerceSectionShell({ section, children, testId }) {
   );
 }
 
+function getReferenceListClass(section) {
+  const layoutVariant = getCmsLayoutVariant(section?.layoutVariant);
+  if (layoutVariant === 'rail') {
+    return 'flex gap-4 overflow-x-auto pb-2 pr-4 snap-x snap-mandatory';
+  }
+  if (layoutVariant === 'full') {
+    return 'grid gap-4 sm:grid-cols-2 lg:grid-cols-4';
+  }
+  return 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3';
+}
+
+function getReferenceItemClass(section) {
+  return getCmsLayoutVariant(section?.layoutVariant) === 'rail'
+    ? 'w-[82vw] max-w-[20rem] flex-none snap-start sm:w-[18rem]'
+    : '';
+}
+
 function ProductReferenceList({ section, page }) {
   const { products, loading } = useProductDirectoryData();
   const references = normalizeItems(section)
@@ -279,13 +297,14 @@ function ProductReferenceList({ section, page }) {
   return (
     <CommerceSectionShell section={section}>
       {resolvedProducts.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={getReferenceListClass(section)}>
           {resolvedProducts.map((product) => (
-            <ProductCard
-              key={product.id || product.slug}
-              product={product}
-              deferThumbnails={page?.template === 'home'}
-            />
+            <div key={product.id || product.slug} className={getReferenceItemClass(section)}>
+              <ProductCard
+                product={product}
+                deferThumbnails={page?.template === 'home'}
+              />
+            </div>
           ))}
         </div>
       ) : (
@@ -328,14 +347,15 @@ function CategoryReferenceList({ section, page }) {
       testId={page?.template === 'home' ? 'home-category-grid' : undefined}
     >
       {resolvedCategories.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={getReferenceListClass(section)}>
           {resolvedCategories.map(({ category, item }) => (
-            <CategoryReferenceCard
-              key={category.id || category.slug}
-              category={category}
-              products={products}
-              item={item}
-            />
+            <div key={category.id || category.slug} className={getReferenceItemClass(section)}>
+              <CategoryReferenceCard
+                category={category}
+                products={products}
+                item={item}
+              />
+            </div>
           ))}
         </div>
       ) : (
@@ -356,7 +376,7 @@ function CollectionTeaser({ section }) {
 
   return (
     <CommerceSectionShell section={section}>
-      <CmsStorefrontCollectionRail collectionKeys={collectionKeys} />
+      <CmsStorefrontCollectionRail collectionKeys={collectionKeys} layoutVariant={section.layoutVariant} />
     </CommerceSectionShell>
   );
 }

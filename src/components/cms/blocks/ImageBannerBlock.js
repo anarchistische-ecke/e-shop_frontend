@@ -4,6 +4,7 @@ import {
   CmsAction,
   CmsSectionActions,
   CmsSectionHeading,
+  getCmsLayoutVariant,
   getSurfaceToneClass,
 } from '../cmsBlockShared';
 import CmsImage from '../CmsImage';
@@ -81,14 +82,19 @@ function ImageBannerCards({ items = [] }) {
 
 function ImageBannerBlock({ section }) {
   const items = Array.isArray(section.items) ? section.items : [];
+  const layoutVariant = getCmsLayoutVariant(section.layoutVariant);
+  const mediaFirst = layoutVariant === 'media_left';
+  const gridClass = mediaFirst
+    ? 'grid gap-6 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)] lg:items-center'
+    : 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-center';
 
   return (
     <section
       id={section.anchorId || undefined}
       className={`overflow-hidden rounded-[2rem] px-6 py-7 sm:px-8 sm:py-9 ${getSurfaceToneClass(section.styleVariant)}`}
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-center">
-        <div className="space-y-5">
+      <div className={gridClass}>
+        <div className={`space-y-5 ${mediaFirst ? 'lg:order-2' : ''}`.trim()}>
           <CmsSectionHeading
             eyebrow={section.eyebrow}
             title={section.title}
