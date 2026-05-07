@@ -175,4 +175,31 @@ describe('CmsPageRenderer', () => {
 
     view.unmount();
   });
+
+  it('allows full-width homepage sections inside the CMS container', () => {
+    const page = {
+      title: 'Главная',
+      slug: 'home',
+      path: '/',
+      template: 'home',
+      sections: [
+        {
+          anchorId: 'wide',
+          internalName: 'Wide',
+          sectionType: 'rich_text',
+          layoutVariant: 'full',
+          title: 'Широкий блок',
+          body: '<p>Контент выходит на ширину viewport без горизонтального переполнения контейнера.</p>',
+        },
+      ],
+    };
+
+    const view = renderWithRouter(<CmsPageRenderer page={page} />);
+
+    const wideSection = view.container.querySelector('section#wide');
+    expect(wideSection).not.toBeNull();
+    expect(wideSection.parentElement.className).toContain('w-screen');
+
+    view.unmount();
+  });
 });

@@ -4,6 +4,7 @@ import { useCmsCollection } from '../../contexts/CmsContentContext';
 import ResponsiveImage from '../media/ResponsiveImage';
 import { Card } from '../ui';
 import { moneyToNumber, resolveImageUrl } from '../../utils/product';
+import { getCmsLayoutVariant } from './cmsBlockShared';
 
 function formatPrice(price) {
   const value = moneyToNumber(price);
@@ -116,7 +117,23 @@ export function CollectionEntryCard({ entry }) {
     : <CollectionProductCard entry={entry} />;
 }
 
-function CmsCollectionRailSection({ collectionKey }) {
+function collectionLayoutClass(layoutVariant) {
+  if (getCmsLayoutVariant(layoutVariant) === 'rail') {
+    return 'flex gap-4 overflow-x-auto pb-2 pr-4 snap-x snap-mandatory';
+  }
+  if (getCmsLayoutVariant(layoutVariant) === 'full') {
+    return 'grid gap-4 md:grid-cols-2 xl:grid-cols-4';
+  }
+  return 'grid gap-4 md:grid-cols-2 xl:grid-cols-3';
+}
+
+function collectionItemClass(layoutVariant) {
+  return getCmsLayoutVariant(layoutVariant) === 'rail'
+    ? 'w-[82vw] max-w-[20rem] flex-none snap-start sm:w-[18rem]'
+    : '';
+}
+
+function CmsCollectionRailSection({ collectionKey, layoutVariant = 'cards' }) {
   const { collection, isCollectionLoading, collectionError } = useCmsCollection(collectionKey);
 
   if (collection && Array.isArray(collection.items) && collection.items.length > 0) {
@@ -145,9 +162,11 @@ function CmsCollectionRailSection({ collectionKey }) {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className={collectionLayoutClass(layoutVariant)}>
           {collection.items.map((entry) => (
-            <CollectionEntryCard key={`${collection.key}-${entry.entityKind}-${entry.entityKey}`} entry={entry} />
+            <div key={`${collection.key}-${entry.entityKind}-${entry.entityKey}`} className={collectionItemClass(layoutVariant)}>
+              <CollectionEntryCard entry={entry} />
+            </div>
           ))}
         </div>
       </section>
@@ -173,7 +192,7 @@ function CmsCollectionRailSection({ collectionKey }) {
   return null;
 }
 
-function CmsStorefrontCollectionRail({ collectionKeys = [], className = '' }) {
+function CmsStorefrontCollectionRail({ collectionKeys = [], className = '', layoutVariant = 'cards' }) {
   const normalizedKeys = useMemo(
     () =>
       Array.from(
@@ -194,7 +213,7 @@ function CmsStorefrontCollectionRail({ collectionKeys = [], className = '' }) {
     <div className={className}>
       <div className="space-y-6 sm:space-y-8">
         {normalizedKeys.map((key) => (
-          <CmsCollectionRailSection key={key} collectionKey={key} />
+          <CmsCollectionRailSection key={key} collectionKey={key} layoutVariant={layoutVariant} />
         ))}
       </div>
     </div>

@@ -10,6 +10,7 @@ import FaqSectionBlock from './blocks/FaqSectionBlock';
 import CtaSectionBlock from './blocks/CtaSectionBlock';
 import CommerceReferenceBlock from './blocks/CommerceReferenceBlock';
 import CategoryGrid from '../home/CategoryGrid';
+import { CartContext } from '../../contexts/CartContext';
 import { useProductDirectoryData } from '../../features/product-list/data';
 
 vi.mock('../../features/product-list/data', () => ({
@@ -20,11 +21,16 @@ function renderWithRouter(ui) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
+  const cartValue = {
+    addItem: vi.fn().mockResolvedValue({ ok: true }),
+  };
 
   act(() => {
     root.render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        {ui}
+        <CartContext.Provider value={cartValue}>
+          {ui}
+        </CartContext.Provider>
       </MemoryRouter>
     );
   });
@@ -320,6 +326,43 @@ describe('CMS blocks', () => {
     expect(view.container.textContent).toContain('Соберите спальню');
     expect(view.container.textContent).toContain('Откройте товары прямо из композиции.');
     expect(view.container.textContent).toContain('Точка внимания');
+    expect(view.container.textContent).toContain('Сатиновый комплект');
+
+    view.unmount();
+  });
+
+  it('renders product references as a horizontal rail when requested by layout', () => {
+    useProductDirectoryData.mockReturnValue({
+      loading: false,
+      categories: [],
+      products: [
+        {
+          id: 'prod-1',
+          slug: 'satin-set',
+          name: 'Сатиновый комплект',
+          price: 4200,
+          images: [{ url: 'https://cdn.example.com/satin.jpg' }],
+        },
+      ],
+    });
+
+    const section = {
+      sectionType: 'product_reference_list',
+      layoutVariant: 'rail',
+      title: 'Товарная лента',
+      items: [
+        {
+          referenceKind: 'product_slug',
+          referenceKey: 'satin-set',
+          sort: 1,
+        },
+      ],
+    };
+
+    const view = renderWithRouter(<CommerceReferenceBlock page={{ template: 'home' }} section={section} />);
+
+    expect(view.container.textContent).toContain('Товарная лента');
+    expect(view.container.querySelector('.overflow-x-auto')).not.toBeNull();
     expect(view.container.textContent).toContain('Сатиновый комплект');
 
     view.unmount();

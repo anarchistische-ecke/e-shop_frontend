@@ -3,6 +3,7 @@ import { Card } from '../../ui';
 import {
   CmsRichText,
   CmsSectionActions,
+  getCmsLayoutVariant,
   getSurfaceToneClass,
 } from '../cmsBlockShared';
 import CmsImage from '../CmsImage';
@@ -64,20 +65,28 @@ function HeroMedia({ section, page, priority = false }) {
 
 function HeroBlock({ page, section, index = 0 }) {
   const accent = section.accent ? <span className="text-primary">{section.accent}</span> : null;
+  const layoutVariant = getCmsLayoutVariant(section.layoutVariant);
+  const mediaFirst = layoutVariant === 'media_left';
+  const shellClass = layoutVariant === 'full'
+    ? 'overflow-hidden rounded-[2rem] px-5 py-7 sm:px-8 sm:py-9 lg:px-10'
+    : 'overflow-hidden rounded-[2rem] px-5 py-7 sm:px-8 sm:py-9';
+  const gridClass = mediaFirst
+    ? 'grid gap-6 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1.15fr)] lg:items-center'
+    : 'grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,24rem)] lg:items-center';
 
   return (
     <section
       id={section.anchorId || undefined}
       data-testid={page?.template === 'home' && index === 0 ? 'home-hero' : undefined}
-      className={`overflow-hidden rounded-[2rem] px-6 py-7 sm:px-8 sm:py-9 ${getSurfaceToneClass(section.styleVariant)}`}
+      className={`${shellClass} ${getSurfaceToneClass(section.styleVariant)}`}
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,24rem)] lg:items-center">
-        <div className="space-y-5">
+      <div className={gridClass}>
+        <div className={`space-y-5 ${mediaFirst ? 'lg:order-2' : ''}`.trim()}>
           <div className="space-y-3">
             <p className="m-0 text-xs font-semibold uppercase tracking-[0.3em] text-muted">
               {section.eyebrow || page.navLabel || page.title}
             </p>
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl lg:text-[3.2rem] lg:leading-[0.95]">
+            <h1 className="font-display text-3xl font-semibold text-ink sm:text-4xl lg:text-[3.2rem] lg:leading-[1]">
               {section.title || page.title} {accent}
             </h1>
             <CmsRichText html={section.body} className="max-w-2xl text-base" />
