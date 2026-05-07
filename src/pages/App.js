@@ -5,7 +5,6 @@ import Footer from '../components/Footer';
 import ScrollToTop from '../components/ScrollToTop';
 import { trackMetrikaHit } from '../utils/metrika';
 import { useRenderContext } from '../ssr/RenderContext';
-import { getAllStorefrontRoutes } from '../ssr/routeManifest';
 
 function ClientRouteShell({ isAdminRoute = false }) {
   return (
@@ -33,11 +32,11 @@ function RouteEntryRenderer({ route }) {
   return route.renderElement();
 }
 
-function App() {
+function App({ routes = [] }) {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const mainRef = useRef(null);
-  const routes = useMemo(() => getAllStorefrontRoutes(), []);
+  const resolvedRoutes = useMemo(() => routes, [routes]);
 
   useEffect(() => {
     if (isAdminRoute) {
@@ -86,7 +85,7 @@ function App() {
           }
         >
           <Routes>
-            {routes.map((route) => (
+            {resolvedRoutes.map((route) => (
               <Route
                 key={`${route.id}:${route.path}`}
                 path={route.path}

@@ -98,7 +98,7 @@ export function getCmsMediaAlt(media, fallback = '') {
   return hasText(fallback) ? fallback.trim() : '';
 }
 
-export function buildCmsAssetUrl(url, { width, quality = 82 } = {}) {
+export function buildCmsAssetUrl(url, { width, quality = 82, format = '' } = {}) {
   const resolvedUrl = resolveImageUrl(url);
   if (!resolvedUrl || !isDirectusAssetUrl(resolvedUrl) || !normalizePositiveNumber(width)) {
     return resolvedUrl;
@@ -111,10 +111,21 @@ export function buildCmsAssetUrl(url, { width, quality = 82 } = {}) {
     );
     assetUrl.searchParams.set('width', String(normalizePositiveNumber(width)));
     assetUrl.searchParams.set('quality', String(quality));
+    if (format) {
+      assetUrl.searchParams.set('format', format);
+    }
     return assetUrl.toString();
   } catch (error) {
     return resolvedUrl;
   }
+}
+
+function buildSourceVariants(url, widths, format, quality) {
+  return widths.map((width) => ({
+    url: buildCmsAssetUrl(url, { width, quality, format }),
+    width,
+    format,
+  }));
 }
 
 export function buildCmsMediaSources(media, { sizes = '100vw', maxWidth = 1440 } = {}) {
@@ -143,6 +154,11 @@ export function buildCmsMediaSources(media, { sizes = '100vw', maxWidth = 1440 }
     ...normalizedMedia,
     src: buildCmsAssetUrl(normalizedMedia.url, { width: widths[widths.length - 1] }),
     srcSet: widths.map((candidate) => `${buildCmsAssetUrl(normalizedMedia.url, { width: candidate })} ${candidate}w`).join(', '),
+    sources: {
+      avif: buildSourceVariants(normalizedMedia.url, widths, 'avif', 64),
+      webp: buildSourceVariants(normalizedMedia.url, widths, 'webp', 68),
+      jpeg: buildSourceVariants(normalizedMedia.url, widths, 'jpeg', 82),
+    },
     sizes,
   };
 }

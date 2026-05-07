@@ -33,12 +33,16 @@ function buildCategoryCards(categories = [], products = []) {
       href: `/category/${token}`,
       imageUrl: resolveImageUrl(
         category.imageUrl ||
+          category.media?.url ||
           category.image ||
           getPrimaryImageUrl(matchingProducts[0]) ||
           ''
       ),
+      imageMedia: category.media || matchingProducts[0]?.primaryMedia || null,
       helperText:
-        matchingProducts.length > 0
+        Number(category.productCount) > 0
+          ? `${Number(category.productCount)} товаров`
+          : matchingProducts.length > 0
           ? `${matchingProducts.length} товаров`
           : directChildren.length > 0
           ? `${directChildren.length} подкатегорий`

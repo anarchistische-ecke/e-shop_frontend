@@ -38,7 +38,8 @@ function normalizeDirectoryData(payload) {
   return {
     categories,
     brands,
-    products
+    products,
+    compact: Boolean(payload.compact)
   };
 }
 
@@ -59,6 +60,7 @@ function createDirectoryState(initialData = null) {
     categories: seededData?.categories || [],
     brands: seededData?.brands || [],
     products: seededData?.products || [],
+    compact: Boolean(seededData?.compact),
     loading: !seededData,
     error: cachedDirectoryError
   };
@@ -69,13 +71,14 @@ function applyDirectoryState(setState, data) {
     categories: data.categories,
     brands: data.brands,
     products: data.products,
+    compact: Boolean(data.compact),
     loading: false,
     error: null
   });
 }
 
-export function loadProductDirectoryData({ force = false } = {}) {
-  if (!force && cachedDirectoryData) {
+export function loadProductDirectoryData({ force = false, requireFull = false } = {}) {
+  if (!force && cachedDirectoryData && !(requireFull && cachedDirectoryData.compact)) {
     return Promise.resolve(cachedDirectoryData);
   }
 
@@ -100,7 +103,7 @@ export function loadProductDirectoryData({ force = false } = {}) {
   return directoryRequest;
 }
 
-function useStandaloneDirectoryState({ enabled = true, initialData = null } = {}) {
+function useStandaloneDirectoryState({ enabled = true, initialData = null, requireFull = false } = {}) {
   const seededData = useMemo(() => {
     return normalizeDirectoryData(initialData) || cachedDirectoryData;
   }, [initialData]);
@@ -112,7 +115,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null } = {}
   const [state, setState] = useState(() => createDirectoryState(seededData));
 
   const refresh = useCallback((options = {}) => {
-    return loadProductDirectoryData(options)
+    return loadProductDirectoryData({ requireFull, ...options })
       .then((data) => {
         applyDirectoryState(setState, data);
         return data;
@@ -134,7 +137,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null } = {}
 
     let active = true;
 
-    if (seededData) {
+    if (seededData && !(requireFull && seededData.compact)) {
       applyDirectoryState(setState, seededData);
       return undefined;
     }
@@ -157,7 +160,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null } = {}
     return () => {
       active = false;
     };
-  }, [enabled, refresh, seededData]);
+  }, [enabled, refresh, requireFull, seededData]);
 
   return useMemo(
     () => ({
@@ -180,11 +183,20 @@ export function CatalogueDataProvider({ children, initialData = null }) {
   );
 }
 
-export function useProductDirectoryData() {
+export function useProductDirectoryData({ requireFull = false } = {}) {
   const context = useContext(CatalogueDataContext);
   const standaloneState = useStandaloneDirectoryState({
-    enabled: !context
+    enabled: !context,
+    requireFull
   });
+
+  useEffect(() => {
+    if (!context || !requireFull || !context.compact || context.loading) {
+      return undefined;
+    }
+    context.refresh({ force: true, requireFull: true }).catch(() => {});
+    return undefined;
+  }, [context, requireFull]);
 
   return context || standaloneState;
 }

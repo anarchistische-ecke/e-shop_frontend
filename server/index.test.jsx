@@ -226,6 +226,41 @@ function createFetchMock() {
       return jsonResponse(products);
     }
 
+    if (pathname === '/catalogue/cards') {
+      return jsonResponse({
+        compact: true,
+        categories,
+        products: products.map((product) => ({
+          id: product.id,
+          slug: product.slug,
+          name: product.name,
+          description: product.description,
+          category: product.category,
+          categories: product.categories || [],
+          brand: product.brand,
+          price: product.variants[0].price,
+          oldPrice: product.variants[0].oldPrice,
+          onSale: true,
+          discountPercent: 18,
+          stock: product.variants[0].stock,
+          images: product.images,
+          primaryMedia: {
+            url: 'https://img.example.com/media/products/prod-satin-sand/w640.webp',
+            originalUrl: product.images[0].url,
+            sources: {
+              webp: [
+                { url: 'https://img.example.com/media/products/prod-satin-sand/w320.webp', width: 320, format: 'webp' },
+                { url: 'https://img.example.com/media/products/prod-satin-sand/w640.webp', width: 640, format: 'webp' }
+              ],
+              jpeg: [
+                { url: 'https://img.example.com/media/products/prod-satin-sand/w640.jpeg', width: 640, format: 'jpeg' }
+              ]
+            }
+          }
+        }))
+      });
+    }
+
     if (pathname === '/products/prod-satin-sand') {
       return jsonResponse(products[0]);
     }
@@ -277,6 +312,8 @@ describe('storefront SSR server', () => {
     expect(response.text).toContain('window.__SSR_DATA__=');
     expect(response.text).toContain('"routeId":"home"');
     expect(response.text).toContain('"directory"');
+    expect(response.text).toContain('"compact":true');
+    expect(response.text).not.toContain('"reviewCount"');
     expect(response.text).toContain('"collectionsByKey"');
     expect(response.text).toContain('"home-bestsellers"');
   });

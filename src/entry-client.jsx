@@ -7,10 +7,12 @@ import { getRuntimeConfig } from './config/runtime';
 import { initYandexMetrika } from './utils/metrika';
 import { RenderContextProvider } from './ssr/RenderContext';
 import { SsrDataProvider } from './ssr/SsrDataContext';
+import { getAllStorefrontRoutes } from './ssr/routeManifest';
 
 const ssrData = window.__SSR_DATA__ || {};
 const runtimeConfig = getRuntimeConfig();
 const rootElement = document.getElementById('root');
+const routes = getAllStorefrontRoutes();
 
 initYandexMetrika();
 
@@ -25,7 +27,7 @@ const app = (
       >
         <SsrDataProvider value={ssrData}>
           <BrowserRouter basename={runtimeConfig.basePath || undefined}>
-            <StorefrontApp initialData={ssrData} />
+            <StorefrontApp initialData={ssrData} routes={routes} />
           </BrowserRouter>
         </SsrDataProvider>
       </RenderContextProvider>

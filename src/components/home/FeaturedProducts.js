@@ -149,14 +149,14 @@ function FeaturedProducts({
                   data-carousel-item
                   className="w-[82vw] max-w-[20rem] flex-none snap-start"
                 >
-                  <ProductCard product={product} />
+                  <ProductCard product={product} deferThumbnails />
                 </div>
               ))}
             </div>
 
             <div className="hidden md:grid page-grid--catalog">
               {slides.slice(0, 4).map((product) => (
-                <ProductCard key={`${title}-desktop-${product.id}`} product={product} />
+                <ProductCard key={`${title}-desktop-${product.id}`} product={product} deferThumbnails />
               ))}
             </div>
 

@@ -1,77 +1,87 @@
 import React, { Suspense, lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 import RequireAdmin from '../components/RequireAdmin';
-import AboutPage from '../pages/AboutPage';
-import AccountPage from '../pages/AccountPage';
-import CartPage from '../pages/CartPage';
-import CataloguePage from '../pages/CataloguePage';
-import CategoryPage from '../pages/CategoryPage';
-import CheckoutPage from '../pages/CheckoutPage';
-import DeliveryInfoPage from '../pages/DeliveryInfoPage';
 import Home from '../pages/Home';
-import LegalInfoPage from '../pages/LegalInfoPage';
-import LoginPage from '../pages/LoginPage';
 import NotFound from '../pages/NotFound';
-import OrderPage from '../pages/OrderPage';
-import PaymentInfoPage from '../pages/PaymentInfoPage';
-import ProductPage from '../pages/ProductPage';
-import ProductionInfoPage from '../pages/ProductionInfoPage';
-import SearchPage from '../pages/SearchPage';
-import SearchRedirectPage from '../pages/SearchRedirectPage';
-import AdsConsentPage from '../pages/legal/AdsConsentPage';
-import CookiesPolicyPage from '../pages/legal/CookiesPolicyPage';
-import PersonalDataConsentPage from '../pages/legal/PersonalDataConsentPage';
-import PrivacyPolicyPage from '../pages/legal/PrivacyPolicyPage';
-import SalesTermsPage from '../pages/legal/SalesTermsPage';
-import UserAgreementPage from '../pages/legal/UserAgreementPage';
 import {
   getAllStorefrontRouteConfigs,
   notFoundRouteConfig,
   storefrontRouteConfig
 } from './routeConfig';
 
+const AboutPage = lazy(() => import('../pages/AboutPage'));
+const CataloguePage = lazy(() => import('../pages/CataloguePage'));
+const CategoryPage = lazy(() => import('../pages/CategoryPage'));
+const DeliveryInfoPage = lazy(() => import('../pages/DeliveryInfoPage'));
+const LegalInfoPage = lazy(() => import('../pages/LegalInfoPage'));
+const PaymentInfoPage = lazy(() => import('../pages/PaymentInfoPage'));
+const ProductPage = lazy(() => import('../pages/ProductPage'));
+const ProductionInfoPage = lazy(() => import('../pages/ProductionInfoPage'));
+const AdsConsentPage = lazy(() => import('../pages/legal/AdsConsentPage'));
+const CookiesPolicyPage = lazy(() => import('../pages/legal/CookiesPolicyPage'));
+const PersonalDataConsentPage = lazy(() => import('../pages/legal/PersonalDataConsentPage'));
+const PrivacyPolicyPage = lazy(() => import('../pages/legal/PrivacyPolicyPage'));
+const SalesTermsPage = lazy(() => import('../pages/legal/SalesTermsPage'));
+const UserAgreementPage = lazy(() => import('../pages/legal/UserAgreementPage'));
 const AdminLoginPage = lazy(() => import('../pages/AdminLoginPage'));
 const AdminApp = lazy(() => import('../pages/AdminApp'));
+const AccountPage = lazy(() => import('../pages/AccountPage'));
+const CartPage = lazy(() => import('../pages/CartPage'));
+const CheckoutPage = lazy(() => import('../pages/CheckoutPage'));
+const LoginPage = lazy(() => import('../pages/LoginPage'));
+const OrderPage = lazy(() => import('../pages/OrderPage'));
+const SearchPage = lazy(() => import('../pages/SearchPage'));
+const SearchRedirectPage = lazy(() => import('../pages/SearchRedirectPage'));
 
-function AdminRouteFallback() {
+function RouteFallback({ isAdminRoute = false }) {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10 text-sm text-muted">
-      Загружаем панель управления…
+    <div
+      className={
+        isAdminRoute
+          ? 'flex min-h-screen items-center justify-center px-4 py-10 text-sm text-muted'
+          : 'page-shell page-section text-center text-sm text-muted'
+      }
+    >
+      {isAdminRoute ? 'Загружаем панель управления…' : 'Загружаем страницу…'}
     </div>
   );
 }
 
+function CsrRoute(routeElement, options = {}) {
+  return <Suspense fallback={<RouteFallback isAdminRoute={options.isAdminRoute} />}>{routeElement}</Suspense>;
+}
+
 const routeRenderers = {
   home: () => <Home />,
-  'category-search': () => <SearchRedirectPage />,
-  search: () => <SearchPage />,
-  category: () => <CategoryPage />,
-  product: () => <ProductPage />,
-  cart: () => <CartPage />,
-  checkout: () => <CheckoutPage />,
-  login: () => <LoginPage />,
-  account: () => <AccountPage />,
-  about: () => <AboutPage />,
-  order: () => <OrderPage />,
-  'payment-info': () => <PaymentInfoPage />,
-  'delivery-info': () => <DeliveryInfoPage />,
-  'production-info': () => <ProductionInfoPage />,
-  catalog: () => <CataloguePage />,
-  'legal-info': () => <LegalInfoPage />,
-  'privacy-policy': () => <PrivacyPolicyPage />,
-  'user-agreement': () => <UserAgreementPage />,
-  'ads-consent': () => <AdsConsentPage />,
-  'sales-terms': () => <SalesTermsPage />,
-  'cookies-policy': () => <CookiesPolicyPage />,
-  'personal-data-consent': () => <PersonalDataConsentPage />,
+  'category-search': () => CsrRoute(<SearchRedirectPage />),
+  search: () => CsrRoute(<SearchPage />),
+  category: () => CsrRoute(<CategoryPage />),
+  product: () => CsrRoute(<ProductPage />),
+  cart: () => CsrRoute(<CartPage />),
+  checkout: () => CsrRoute(<CheckoutPage />),
+  login: () => CsrRoute(<LoginPage />),
+  account: () => CsrRoute(<AccountPage />),
+  about: () => CsrRoute(<AboutPage />),
+  order: () => CsrRoute(<OrderPage />),
+  'payment-info': () => CsrRoute(<PaymentInfoPage />),
+  'delivery-info': () => CsrRoute(<DeliveryInfoPage />),
+  'production-info': () => CsrRoute(<ProductionInfoPage />),
+  catalog: () => CsrRoute(<CataloguePage />),
+  'legal-info': () => CsrRoute(<LegalInfoPage />),
+  'privacy-policy': () => CsrRoute(<PrivacyPolicyPage />),
+  'user-agreement': () => CsrRoute(<UserAgreementPage />),
+  'ads-consent': () => CsrRoute(<AdsConsentPage />),
+  'sales-terms': () => CsrRoute(<SalesTermsPage />),
+  'cookies-policy': () => CsrRoute(<CookiesPolicyPage />),
+  'personal-data-consent': () => CsrRoute(<PersonalDataConsentPage />),
   'admin-login': () => (
-    <Suspense fallback={<AdminRouteFallback />}>
+    <Suspense fallback={<RouteFallback isAdminRoute />}>
       <AdminLoginPage />
     </Suspense>
   ),
   'manager-login': () => <Navigate to="/admin/login" replace />,
   'admin-app': () => (
-    <Suspense fallback={<AdminRouteFallback />}>
+    <Suspense fallback={<RouteFallback isAdminRoute />}>
       <RequireAdmin>
         <AdminApp />
       </RequireAdmin>

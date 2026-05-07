@@ -11,7 +11,7 @@ import CmsManagedPage from '../components/cms/CmsManagedPage';
 import { getActivePromotions } from '../api';
 import { useProductDirectoryData } from '../features/product-list/data';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
-import { getPrimaryImageUrl, getProductPrice, resolveImageUrl } from '../utils/product';
+import { getPrimaryImageMedia, getPrimaryImageUrl, getProductPrice, resolveImageUrl } from '../utils/product';
 import { buildProductPath } from '../utils/url';
 
 function getProductStock(product) {
@@ -121,6 +121,7 @@ function HomeFallbackPage() {
   }, [activeProducts, bestsellers, heroConfig.featuredProductId]);
 
   const heroImage = getPrimaryImageUrl(featuredProduct);
+  const heroImageMedia = getPrimaryImageMedia(featuredProduct);
   const heroShareImage = heroImage ? resolveImageUrl(heroImage) : '';
 
   const heroHighlights = [
@@ -243,6 +244,7 @@ function HomeFallbackPage() {
 
         <HeroBanner
           imageUrl={heroImage}
+          imageMedia={heroImageMedia}
           title={heroConfig.title || homeHeroDefaults.title}
           accent={heroConfig.accent || homeHeroDefaults.accent}
           description={heroConfig.subtitle || homeHeroDefaults.subtitle}
@@ -273,6 +275,7 @@ function HomeFallbackPage() {
           title="Посмотрите на композицию и откройте товар прямо из сцены"
           description="Нажмите на точки интереса, чтобы быстро перейти к товару и собрать мягкий, спокойный интерьер без долгого поиска."
           imageUrl={heroImage}
+          imageMedia={heroImageMedia}
           products={shopTheLookProducts}
         />
 

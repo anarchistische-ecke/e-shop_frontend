@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import NotificationBanner from './NotificationBanner';
 import { CartContext } from '../contexts/CartContext';
+import ResponsiveImage from './media/ResponsiveImage';
 import { Button, Card } from './ui';
 import {
   getPrimaryVariant,
@@ -24,7 +25,12 @@ function getStockCount(product) {
   );
 }
 
-function ProductCard({ product }) {
+function ProductCard({
+  product,
+  deferThumbnails = false,
+  priority = false,
+  imageSizes = '(min-width: 1024px) 18rem, (min-width: 640px) 42vw, 82vw'
+}) {
   const location = useLocation();
   const primaryVariant = getPrimaryVariant(product);
 
@@ -69,6 +75,8 @@ function ProductCard({ product }) {
   }, [isHovered, images.length]);
 
   const activeImage = images[activeImageIndex]?.url || images[0]?.url || '';
+  const activeMedia = images[activeImageIndex]?.media || images[0]?.media || product?.primaryMedia || null;
+  const shouldRenderThumbnails = images.length > 1 && (!deferThumbnails || isHovered || activeImageIndex > 0);
 
   const stockCount = getStockCount(product);
   const isLowStock = stockCount > 0 && stockCount <= 3;
@@ -114,11 +122,14 @@ function ProductCard({ product }) {
         <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
           <div className="relative pt-[74%]">
             {activeImage ? (
-              <img
+              <ResponsiveImage
+                media={activeMedia}
                 src={activeImage}
                 alt={product.name}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                loading="lazy"
+                sizes={imageSizes}
+                priority={priority}
+                loading={priority ? 'eager' : 'lazy'}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">
@@ -146,7 +157,7 @@ function ProductCard({ product }) {
       </Link>
 
       <div className="mt-2 min-h-[34px]">
-        {images.length > 1 && (
+        {shouldRenderThumbnails && (
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
             {images.slice(0, 4).map((image, index) => (
               <button
@@ -160,7 +171,14 @@ function ProductCard({ product }) {
                 onClick={() => setActiveImageIndex(index)}
                 aria-label={`Показать изображение ${index + 1}`}
               >
-                <img src={image.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                <ResponsiveImage
+                  media={image.media}
+                  src={image.url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  sizes="2rem"
+                  loading="lazy"
+                />
               </button>
             ))}
           </div>

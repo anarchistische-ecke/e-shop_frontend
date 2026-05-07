@@ -97,14 +97,18 @@ export function normalizeProductImages(images = []) {
     .map((img, index) => {
       if (!img) return null;
       if (typeof img === 'string') {
+        const url = resolveImageUrl(img);
         return {
           id: `img-${index}`,
-          url: resolveImageUrl(img),
+          url,
           variantId: null,
-          alt: ''
+          alt: '',
+          media: null
         };
       }
+      const media = img.media || img.primaryMedia || null;
       const url =
+        media?.url ||
         img.url ||
         img.src ||
         img.imageUrl ||
@@ -125,7 +129,8 @@ export function normalizeProductImages(images = []) {
         id: img.id || img._id || img.imageId || img.image_id || img.key || `img-${index}`,
         url: resolveImageUrl(url),
         variantId: img.variantId || img.variant_id || img.variant || null,
-        alt: img.alt || img.label || ''
+        alt: img.alt || media?.alt || img.label || '',
+        media
       };
     })
     .filter(Boolean);
@@ -162,6 +167,9 @@ export function decimalToMinorUnits(value) {
  */
 export function getPrimaryImageUrl(product, variantId = null) {
   if (!product) return null;
+  if (product.primaryMedia?.url) {
+    return resolveImageUrl(product.primaryMedia.url);
+  }
   const images = normalizeProductImages(product.images);
   if (variantId) {
     const match = images.find((img) => img.variantId === variantId);
@@ -193,4 +201,25 @@ export function getPrimaryImageUrl(product, variantId = null) {
       ''
   );
   return productImage || null;
+}
+
+export function getPrimaryImageMedia(product, variantId = null) {
+  if (!product) return null;
+  if (product.primaryMedia?.url || product.primaryMedia?.sources) {
+    return product.primaryMedia;
+  }
+
+  const images = normalizeProductImages(product.images);
+  if (variantId) {
+    const match = images.find((img) => img.variantId === variantId && img.media);
+    if (match) return match.media;
+  }
+
+  const primaryImage = images.find((img) => !img.variantId && img.media) || images.find((img) => img.media);
+  if (primaryImage?.media) {
+    return primaryImage.media;
+  }
+
+  const url = getPrimaryImageUrl(product, variantId);
+  return url ? { url, originalUrl: url, alt: '' } : null;
 }

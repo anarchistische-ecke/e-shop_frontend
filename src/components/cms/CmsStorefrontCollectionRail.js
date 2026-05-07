@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCmsCollection } from '../../contexts/CmsContentContext';
+import ResponsiveImage from '../media/ResponsiveImage';
 import { Card } from '../ui';
 import { moneyToNumber, resolveImageUrl } from '../../utils/product';
 
@@ -29,10 +30,12 @@ function CollectionProductCard({ entry }) {
         <div className="relative overflow-hidden rounded-[20px] border border-ink/10 bg-sand/40">
           <div className="relative pt-[74%]">
             {imageUrl ? (
-              <img
+              <ResponsiveImage
+                media={entry?.image?.media}
                 src={imageUrl}
                 alt={entry?.image?.alt || title}
                 className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                sizes="(min-width: 1024px) 22rem, (min-width: 640px) 46vw, 92vw"
                 loading="lazy"
               />
             ) : (
@@ -80,10 +83,12 @@ function CollectionCategoryCard({ entry }) {
         <div className="relative overflow-hidden rounded-[20px] border border-ink/10 bg-sand/35">
           <div className="relative pt-[70%]">
             {imageUrl ? (
-              <img
+              <ResponsiveImage
+                media={entry?.image?.media}
                 src={imageUrl}
                 alt={entry?.image?.alt || title}
                 className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                sizes="(min-width: 1024px) 22rem, (min-width: 640px) 46vw, 92vw"
                 loading="lazy"
               />
             ) : (

@@ -165,6 +165,27 @@ export async function getProduct(id, params = {}) {
   const qs = params.includeInactive ? '?includeInactive=true' : '';
   return request(`/products/${id}${qs}`);
 }
+export async function getCatalogueCards(params = {}) {
+  const query = new URLSearchParams();
+  const addKeys = (name, values) => {
+    const normalizedValues = Array.isArray(values)
+      ? values
+      : String(values || '')
+          .split(',')
+          .map((value) => value.trim())
+          .filter(Boolean);
+    if (normalizedValues.length > 0) {
+      query.append(name, normalizedValues.join(','));
+    }
+  };
+
+  addKeys('productKeys', params.productKeys);
+  addKeys('categoryKeys', params.categoryKeys);
+  if (params.productLimit) query.append('productLimit', String(params.productLimit));
+  if (params.categoryLimit) query.append('categoryLimit', String(params.categoryLimit));
+  const qs = query.toString();
+  return request(`/catalogue/cards${qs ? `?${qs}` : ''}`);
+}
 export async function createProduct(product) {
   return request('/products', {
     method: 'POST',

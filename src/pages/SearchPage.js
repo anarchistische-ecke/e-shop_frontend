@@ -21,7 +21,7 @@ function SearchPage() {
     source: 'catalog',
     params
   });
-  const { categories, products } = useProductDirectoryData();
+  const { categories, products } = useProductDirectoryData({ requireFull: true });
 
   useEffect(() => {
     setSearchInput(params.query || '');

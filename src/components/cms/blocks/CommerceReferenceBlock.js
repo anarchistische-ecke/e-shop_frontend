@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../../ProductCard';
 import ShopTheLook from '../../home/ShopTheLook';
+import ResponsiveImage from '../../media/ResponsiveImage';
 import CmsStorefrontCollectionRail from '../CmsStorefrontCollectionRail';
 import FeatureListBlock from './FeatureListBlock';
 import { Card } from '../../ui';
@@ -13,7 +14,7 @@ import {
 } from '../cmsBlockShared';
 import { useProductDirectoryData } from '../../../features/product-list/data';
 import { buildCategoryListingHref } from '../../../features/product-list/url';
-import { getPrimaryImageUrl, resolveImageUrl } from '../../../utils/product';
+import { getPrimaryImageMedia, getPrimaryImageUrl, resolveImageUrl } from '../../../utils/product';
 
 const COLLECTION_REFERENCE_KINDS = new Set([
   'collection',
@@ -128,6 +129,7 @@ function findCategory(categories, referenceKey, referenceKind) {
 
 function buildCategoryImage(category, products) {
   const directImage = resolveImageUrl(
+    category?.media?.url ||
     category?.image?.url ||
       category?.imageUrl ||
       category?.coverImage?.url ||
@@ -159,6 +161,7 @@ function CategoryReferenceCard({ category, products, item }) {
   const title = item?.title || category?.name || 'Категория';
   const description = item?.description || category?.description || category?.summary || '';
   const imageUrl = buildCategoryImage(category, products);
+  const imageMedia = category?.media || getPrimaryImageMedia(products.find((candidate) => candidate?.category === String(category?.slug || category?.id || '').trim()));
   const href = item?.url || buildCategoryListingHref(category?.slug || category?.id || '');
 
   return (
@@ -174,10 +177,12 @@ function CategoryReferenceCard({ category, products, item }) {
         <div className="relative overflow-hidden rounded-[20px] border border-ink/10 bg-sand/45">
           <div className="relative pt-[68%]">
             {imageUrl ? (
-              <img
+              <ResponsiveImage
+                media={imageMedia}
                 src={imageUrl}
                 alt={category?.image?.alt || title}
                 className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                sizes="(min-width: 1024px) 22rem, (min-width: 640px) 46vw, 92vw"
                 loading="lazy"
               />
             ) : (
@@ -261,12 +266,13 @@ function ProductReferenceList({ section, page }) {
       resolveImageUrl(getPrimaryImageUrl(resolvedProducts[0]));
 
     return (
-      <ShopTheLook
-        title={section.title || 'Shop the look'}
-        description={stripHtml(section.body || section.description || '')}
-        imageUrl={imageUrl}
-        products={resolvedProducts}
-      />
+        <ShopTheLook
+          title={section.title || 'Shop the look'}
+          description={stripHtml(section.body || section.description || '')}
+          imageUrl={imageUrl}
+          imageMedia={resolveMediaUrl(section.image || section.imageUrl) ? null : getPrimaryImageMedia(resolvedProducts[0])}
+          products={resolvedProducts}
+        />
     );
   }
 
@@ -275,7 +281,11 @@ function ProductReferenceList({ section, page }) {
       {resolvedProducts.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {resolvedProducts.map((product) => (
-            <ProductCard key={product.id || product.slug} product={product} />
+            <ProductCard
+              key={product.id || product.slug}
+              product={product}
+              deferThumbnails={page?.template === 'home'}
+            />
           ))}
         </div>
       ) : (

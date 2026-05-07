@@ -57,7 +57,7 @@ function formatItemsLabel(count) {
 }
 
 export function useProductList({ source = 'catalog', categorySlug = '', params = {} } = {}) {
-  const { categories, brands, products, loading, error } = useProductDirectoryData();
+  const { categories, brands, products, loading, error } = useProductDirectoryData({ requireFull: true });
 
   const deferredParams = useDeferredValue(params);
   const normalizedQuery = normalizeSearchText(deferredParams.query || '');
