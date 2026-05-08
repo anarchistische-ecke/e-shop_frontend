@@ -78,8 +78,8 @@ const fabricGuideItems = [
 
 const benefitItems = [
   {
-    title: 'Доставка от 5000 ₽',
-    description: 'Порог бесплатной доставки и условия видны до оплаты.',
+    title: 'Доставка по России',
+    description: 'Финальные условия и стоимость доставки видны до оплаты.',
   },
   {
     title: 'Возврат без скрытых условий',
@@ -384,8 +384,8 @@ function HomeFallbackPage() {
 
   const heroHighlights = [
     {
-      title: 'Бесплатная доставка от 5000 ₽',
-      subtitle: 'Порог и условия доставки видны до оплаты.',
+      title: 'Условия доставки',
+      subtitle: 'Стоимость и способ доставки видны до оплаты.',
       link: '/info/delivery',
     },
     {

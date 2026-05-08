@@ -170,12 +170,12 @@ function CategoryReferenceCard({ category, products, item }) {
       as={Link}
       to={href}
       variant="quiet"
-      padding="sm"
+      padding="none"
       interactive
-      className="group h-full rounded-[24px]"
+      className="group h-full overflow-hidden rounded-[24px]"
     >
-      <div className="flex h-full flex-col gap-4">
-        <div className="relative overflow-hidden rounded-[20px] border border-ink/10 bg-sand/45">
+      <div className="flex h-full flex-col">
+        <div className="relative overflow-hidden border-b border-ink/10 bg-sand/45">
           <div className="relative pt-[68%]">
             {imageUrl ? (
               <ResponsiveImage
@@ -193,7 +193,7 @@ function CategoryReferenceCard({ category, products, item }) {
             )}
           </div>
         </div>
-        <div className="flex flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-2 p-4">
           {item?.label ? (
             <p className="m-0 text-[11px] font-medium uppercase tracking-[0.18em] text-primary/85">
               {item.label}
@@ -201,7 +201,7 @@ function CategoryReferenceCard({ category, products, item }) {
           ) : null}
           <h3 className="text-base font-semibold text-ink">{title}</h3>
           {description ? <p className="line-clamp-3 text-sm leading-6 text-muted">{description}</p> : null}
-          <span className="mt-auto inline-flex min-h-11 items-center text-sm font-medium text-primary">
+          <span className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary">
             Открыть раздел →
           </span>
         </div>

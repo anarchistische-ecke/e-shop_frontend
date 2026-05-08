@@ -43,6 +43,22 @@ function HeroBanner({
 }) {
   const proofChips = highlights.slice(0, 3);
   const heroAlt = featuredProduct?.name || 'Уютный домашний текстиль';
+  const featuredProductLink = featuredProduct ? (
+    <Link
+      to={featuredProduct.link}
+      className="focus-ring-soft mt-3 flex min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink shadow-[0_10px_22px_rgba(43,39,34,0.08)]"
+    >
+      <span className="min-w-0">
+        <span className="block truncate font-semibold">
+          Выбор недели: {featuredProduct.name}
+        </span>
+        <span className="block text-xs text-muted">
+          от {featuredProduct.priceLabel}
+        </span>
+      </span>
+      <span className="shrink-0 text-primary" aria-hidden="true">→</span>
+    </Link>
+  ) : null;
 
   return (
     <section className="page-shell page-section--tight">
@@ -56,6 +72,7 @@ function HeroBanner({
             media={imageMedia}
             alt={heroAlt}
           />
+          {featuredProductLink}
         </div>
 
         <div className="flex flex-col justify-center gap-4 px-4 py-5 sm:px-7 sm:py-8 lg:px-10 lg:py-10">
@@ -120,22 +137,6 @@ function HeroBanner({
             </div>
           ) : null}
 
-          {featuredProduct ? (
-            <Link
-              to={featuredProduct.link}
-              className="focus-ring-soft hidden min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink shadow-[0_10px_22px_rgba(43,39,34,0.08)] sm:inline-flex"
-            >
-              <span className="min-w-0">
-                <span className="block truncate font-semibold">
-                  Выбор недели: {featuredProduct.name}
-                </span>
-                <span className="block text-xs text-muted">
-                  от {featuredProduct.priceLabel}
-                </span>
-              </span>
-              <span className="shrink-0 text-primary" aria-hidden="true">→</span>
-            </Link>
-          ) : null}
         </div>
       </div>
     </section>

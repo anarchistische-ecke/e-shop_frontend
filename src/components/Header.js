@@ -54,6 +54,7 @@ function Header() {
     fallbackNavigation: DEFAULT_HEADER_NAVIGATION,
   });
   const headerLinks = headerNavigation.flatMap((group) => group.items || []);
+  const announcementText = String(siteSettings?.announcementBanner?.shortText || '').trim();
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -77,15 +78,17 @@ function Header() {
             ref={header.headerBarRef}
             className="relative z-[90] border-b border-ink/10 bg-[#fbf7f1]/96 shadow-[0_10px_24px_rgba(43,39,34,0.08)] backdrop-blur-xl lg:bg-white/92 lg:shadow-[0_12px_28px_rgba(43,39,34,0.08)]"
           >
-            <div
-              className={`overflow-hidden border-b border-white/12 bg-accent text-white transition-all duration-200 ${
-                isUtilityCollapsed ? 'max-h-0 opacity-0' : 'max-h-10 opacity-100'
-              }`}
-            >
-              <div className="page-shell flex min-h-[32px] items-center justify-center py-1 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-white/82 sm:min-h-[34px]">
-                Бесплатная доставка от 5000 ₽
+            {announcementText ? (
+              <div
+                className={`overflow-hidden border-b border-white/12 bg-accent text-white transition-all duration-200 ${
+                  isUtilityCollapsed ? 'max-h-0 opacity-0' : 'max-h-10 opacity-100'
+                }`}
+              >
+                <div className="page-shell flex min-h-[32px] items-center justify-center py-1 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-white/82 sm:min-h-[34px]">
+                  {announcementText}
+                </div>
               </div>
-            </div>
+            ) : null}
             <div className="page-shell page-section--tight py-1.5 sm:py-3 lg:pb-5 lg:pt-2.5 xl:pb-5 xl:pt-3">
               {headerLinks.length > 0 ? (
                 <div className="mb-2.5 hidden items-center justify-between gap-4 border-b border-ink/10 pb-2.5 lg:flex">
