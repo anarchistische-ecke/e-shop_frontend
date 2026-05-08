@@ -65,45 +65,47 @@ const homePage = {
       sectionType: 'hero',
       sort: 1,
       eyebrow: 'Постельное Белье-ЮГ',
-      title: 'Обновите спальню без лишней суеты',
+      title: 'Постель, которая остается свежей',
+      accent: 'ночь за ночью',
       body: '<p>Главная страница управляется через Directus.</p>',
-      primaryCtaLabel: 'Смотреть каталог',
-      primaryCtaUrl: '/catalog',
-      secondaryCtaLabel: 'Доставка',
-      secondaryCtaUrl: '/info/delivery',
+      primaryCtaLabel: 'Смотреть бестселлеры',
+      primaryCtaUrl: '/category/popular',
+      secondaryCtaLabel: 'Найти свою ткань',
+      secondaryCtaUrl: '/catalog?query=ткань',
       styleVariant: 'warm',
       items: [
         {
-          title: 'Доставка по России',
+          title: 'Бесплатно от 5000 ₽',
           description: 'Стоимость видна до оплаты.',
           sort: 1
         }
       ]
     },
     {
-      anchorId: 'home-categories',
-      sectionType: 'category_reference_list',
+      anchorId: 'home-bestsellers',
+      sectionType: 'product_reference_list',
       sort: 2,
-      title: 'Быстрый вход в популярные разделы',
+      title: 'Бестселлеры, которые быстро объясняют выбор',
       items: [
         {
-          title: 'Бестселлеры',
-          referenceKind: 'category_slug',
-          referenceKey: 'popular',
+          title: 'Сатиновый комплект Sand',
+          referenceKind: 'product_slug',
+          referenceKey: 'satin-sand',
           sort: 1
         }
       ]
     },
     {
-      anchorId: 'home-collection',
-      sectionType: 'collection_teaser',
+      anchorId: 'home-fabric-guide',
+      sectionType: 'feature_list',
       sort: 3,
-      title: 'Выбор для спокойной спальни',
+      title: 'Выберите по ощущению, а не по названию ткани',
+      layoutVariant: 'full',
       items: [
         {
-          title: 'Подборка для главной',
-          referenceKind: 'storefront_collection',
-          referenceKey: 'home-bestsellers',
+          label: 'Smooth & soft',
+          title: 'Сатин',
+          description: 'Гладкая поверхность с мягким блеском.',
           sort: 1
         }
       ]
@@ -305,7 +307,7 @@ describe('storefront SSR server', () => {
       'Домашний текстиль для уютного дома | Постельное Белье-ЮГ'
     );
     expect(response.text).toContain('href="https://yug-postel.ru/"');
-    expect(response.text).toContain('Обновите спальню без лишней суеты');
+    expect(response.text).toContain('Постель, которая остается свежей');
     expect(response.text).toContain('Сатиновый комплект Sand');
     expect(response.text).toContain('window.__APP_CONFIG__=');
     expect(response.text).toContain('"siteUrl":"https://yug-postel.ru"');
@@ -314,8 +316,6 @@ describe('storefront SSR server', () => {
     expect(response.text).toContain('"directory"');
     expect(response.text).toContain('"compact":true');
     expect(response.text).not.toContain('"reviewCount"');
-    expect(response.text).toContain('"collectionsByKey"');
-    expect(response.text).toContain('"home-bestsellers"');
   });
 
   it('renders catalog, category, product, legal info, and legal document SSR routes', async () => {

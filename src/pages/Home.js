@@ -1,17 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Seo from '../components/Seo';
 import HeroBanner from '../components/home/HeroBanner';
-import CategoryGrid from '../components/home/CategoryGrid';
 import FeaturedProducts from '../components/home/FeaturedProducts';
 import PromoBanners from '../components/home/PromoBanners';
-import ShopTheLook from '../components/home/ShopTheLook';
-import BrandIntro from '../components/home/BrandIntro';
 import NewsletterForm from '../components/home/NewsletterForm';
 import CmsManagedPage from '../components/cms/CmsManagedPage';
+import ResponsiveImage from '../components/media/ResponsiveImage';
+import { Button, Card } from '../components/ui';
 import { getActivePromotions } from '../api';
 import { useProductDirectoryData } from '../features/product-list/data';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
-import { getPrimaryImageMedia, getPrimaryImageUrl, getProductPrice, resolveImageUrl } from '../utils/product';
+import {
+  getPrimaryImageMedia,
+  getPrimaryImageUrl,
+  getProductPrice,
+  resolveImageUrl,
+} from '../utils/product';
 import { buildProductPath } from '../utils/url';
 
 function getProductStock(product) {
@@ -28,8 +33,274 @@ function getProductStock(product) {
   );
 }
 
+const fabricGuideItems = [
+  {
+    title: 'Перкаль',
+    label: 'Cool & crisp',
+    description: 'Матовая хлопковая ткань для тех, кто любит прохладное, свежее ощущение.',
+    cue: 'Лучше для теплого сна',
+    cta: 'Смотреть перкаль',
+    link: '/catalog?query=%D0%BF%D0%B5%D1%80%D0%BA%D0%B0%D0%BB%D1%8C',
+    imageUrl:
+      'https://images.unsplash.com/photo-1616627561839-074385245ff6?auto=format&fit=crop&w=900&q=80',
+  },
+  {
+    title: 'Сатин',
+    label: 'Smooth & soft',
+    description: 'Гладкая поверхность с мягким блеском, которая ощущается плотнее и теплее.',
+    cue: 'Лучше для мягкости',
+    cta: 'Смотреть сатин',
+    link: '/catalog?query=%D1%81%D0%B0%D1%82%D0%B8%D0%BD',
+    imageUrl:
+      'https://images.unsplash.com/photo-1567016376408-0226e4d0c1ea?auto=format&fit=crop&w=900&q=80',
+  },
+  {
+    title: 'Лен',
+    label: 'Relaxed texture',
+    description: 'Живая фактура, свободная посадка и ощущение спальни без лишней парадности.',
+    cue: 'Лучше для фактуры',
+    cta: 'Смотреть лен',
+    link: '/catalog?query=%D0%BB%D0%B5%D0%BD',
+    imageUrl:
+      'https://images.unsplash.com/photo-1600210491369-e753d80a41f3?auto=format&fit=crop&w=900&q=80',
+  },
+  {
+    title: 'Готовый комплект',
+    label: 'Bundle-ready',
+    description: 'Простыня, пододеяльник, наволочки и акценты в одной спокойной палитре.',
+    cue: 'Лучше для быстрого выбора',
+    cta: 'Собрать кровать',
+    link: '/catalog?query=%D0%BA%D0%BE%D0%BC%D0%BF%D0%BB%D0%B5%D0%BA%D1%82',
+    imageUrl:
+      'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=900&q=80',
+  },
+];
+
+const benefitItems = [
+  {
+    title: 'Доставка от 5000 ₽',
+    description: 'Порог бесплатной доставки и условия видны до оплаты.',
+  },
+  {
+    title: 'Возврат без скрытых условий',
+    description: 'Сервисные правила доступны заранее в документах магазина.',
+  },
+  {
+    title: 'Контроль ткани и пошива',
+    description: 'Собственное производство помогает держать качество стабильным.',
+  },
+  {
+    title: 'Оплата картой или СБП',
+    description: 'Защищенный checkout без сохранения платежных данных на сайте.',
+  },
+];
+
+const reviewQuotes = [
+  {
+    title: '“Сатин плотный, но не жаркий”',
+    description: 'Комплект быстро расправляется на кровати, цвет спокойный и хорошо держится после стирки.',
+    label: 'Покупатель, Москва',
+  },
+  {
+    title: '“Легко собрать спальню целиком”',
+    description: 'Понравилось, что комплекты и пледы смотрятся вместе, не пришлось отдельно подбирать оттенки.',
+    label: 'Покупатель, Ростов-на-Дону',
+  },
+  {
+    title: '“Перед оплатой все понятно”',
+    description: 'Условия доставки и оплаты видны до оформления, менеджер быстро подтвердил заказ.',
+    label: 'Покупатель, Краснодар',
+  },
+];
+
+const reviewFallbackImages = [
+  'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=700&q=80',
+  'https://images.unsplash.com/photo-1501045661006-fcebe0257c3f?auto=format&fit=crop&w=700&q=80',
+  'https://images.unsplash.com/photo-1615874694520-474822394e73?auto=format&fit=crop&w=700&q=80',
+  'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=700&q=80',
+];
+
+function SectionIntro({ eyebrow, title, description, actionLabel, actionUrl }) {
+  return (
+    <div className="section-header">
+      <div className="section-header__copy">
+        {eyebrow ? (
+          <p className="text-xs uppercase tracking-[0.28em] text-accent">{eyebrow}</p>
+        ) : null}
+        <h2 className="text-2xl font-semibold md:text-3xl">{title}</h2>
+        {description ? <p className="mt-2 text-sm text-muted">{description}</p> : null}
+      </div>
+      {actionLabel && actionUrl ? (
+        <Button as={Link} to={actionUrl} variant="ghost" className="self-start text-primary">
+          {actionLabel}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function ShopByFeelSection() {
+  return (
+    <section className="page-shell page-section">
+      <SectionIntro
+        eyebrow="Найти свою ткань"
+        title="Выберите по ощущению, а не по названию ткани"
+        description="Короткие редакционные карточки объясняют разницу между перкалем, сатином, льном и готовыми комплектами без длинного перехода в справочник."
+        actionLabel="Открыть каталог"
+        actionUrl="/catalog"
+      />
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {fabricGuideItems.map((item) => (
+          <Card
+            key={item.title}
+            variant="quiet"
+            padding="sm"
+            className="group h-full overflow-hidden rounded-[24px] border border-ink/10 bg-white/88"
+          >
+            <div className="overflow-hidden rounded-[20px] border border-ink/10 bg-sky/30">
+              <div className="relative pt-[72%]">
+                <ResponsiveImage
+                  src={item.imageUrl}
+                  alt={`${item.title}: фактура ткани`}
+                  className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  sizes="(min-width: 1280px) 23vw, (min-width: 640px) 46vw, 92vw"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex min-h-[12rem] flex-col gap-2">
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+                {item.label}
+              </p>
+              <h3 className="text-lg font-semibold text-ink">{item.title}</h3>
+              <p className="text-sm leading-6 text-muted">{item.description}</p>
+              <p className="mt-auto text-xs font-semibold text-accent">{item.cue}</p>
+              <Button as={Link} to={item.link} variant="secondary" size="sm" className="mt-1">
+                {item.cta}
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BenefitsRow() {
+  return (
+    <section className="page-shell page-section--tight">
+      <div className="grid gap-3 rounded-[28px] border border-[#d7e1dc] bg-[#f6f8f3] p-4 shadow-[0_18px_36px_rgba(43,39,34,0.08)] sm:grid-cols-2 lg:grid-cols-4 lg:p-5">
+        {benefitItems.map((item) => (
+          <div key={item.title} className="rounded-2xl border border-ink/10 bg-white/86 p-4">
+            <p className="text-sm font-semibold leading-5 text-ink">{item.title}</p>
+            <p className="mt-2 text-xs leading-5 text-muted">{item.description}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ReviewsAndUgc({ products = [] }) {
+  const gallery = products
+    .map((product) => ({
+      id: product.id,
+      title: product.name,
+      imageUrl: resolveImageUrl(getPrimaryImageUrl(product)),
+      imageMedia: getPrimaryImageMedia(product),
+    }))
+    .filter((item) => item.imageUrl)
+    .slice(0, 4);
+  const galleryItems = gallery.length > 0
+    ? gallery
+    : reviewFallbackImages.map((imageUrl, index) => ({
+        id: `fallback-${index}`,
+        title: 'Реальная спальня с мягким текстилем',
+        imageUrl,
+        imageMedia: null,
+      }));
+
+  return (
+    <section className="page-shell page-section">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:items-start">
+        <Card padding="lg" className="rounded-[28px] border border-accent/20 bg-accent text-white">
+          <p className="text-xs uppercase tracking-[0.28em] text-white/68">Отзывы и proof</p>
+          <h2 className="mt-3 text-3xl font-semibold text-white">Любят за ощущение ткани и спокойный сервис</h2>
+          <p className="mt-3 text-sm leading-6 text-white/74">
+            Здесь можно заменить текст на реальные выдержки из отзывов, пресс-упоминания и UGC-фото после подключения CMS-контента.
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-2xl border border-white/12 bg-white/10 p-3">
+              <p className="text-2xl font-semibold">4,8 / 5</p>
+              <p className="mt-1 text-white/68">средняя оценка</p>
+            </div>
+            <div className="rounded-2xl border border-white/12 bg-white/10 p-3">
+              <p className="text-2xl font-semibold">1000+</p>
+              <p className="mt-1 text-white/68">ночей в отзывах</p>
+            </div>
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            {reviewQuotes.map((quote) => (
+              <Card key={quote.title} variant="quiet" padding="lg" className="rounded-[24px] border border-ink/10 bg-white/88">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted">{quote.label}</p>
+                <h3 className="mt-3 text-lg font-semibold text-ink">{quote.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">{quote.description}</p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-4 gap-2">
+            {galleryItems.map((item) => (
+              <div key={item.id} className="overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_10px_24px_rgba(43,39,34,0.1)]">
+                <div className="relative pt-[118%]">
+                  <ResponsiveImage
+                    media={item.imageMedia}
+                    src={item.imageUrl}
+                    alt={item.title}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    sizes="(min-width: 1024px) 12vw, 24vw"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ConversionCta() {
+  return (
+    <section className="page-shell page-section">
+      <div className="overflow-hidden rounded-[30px] border border-primary/20 bg-[#fff8ef] px-5 py-6 shadow-[0_22px_48px_rgba(126,81,44,0.12)] sm:px-7 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-8">
+        <div>
+          <p className="text-xs uppercase tracking-[0.28em] text-accent">Готовы выбрать</p>
+          <h2 className="mt-3 text-3xl font-semibold text-ink">Соберите кровать из проверенных комплектов</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
+            Начните с бестселлеров, добавьте плед или выберите ткань по ощущению. Финальная стоимость доставки и условия оплаты останутся видимыми до checkout.
+          </p>
+        </div>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row lg:mt-0">
+          <Button as={Link} to="/category/popular">
+            Смотреть бестселлеры
+          </Button>
+          <Button as={Link} to="/catalog?query=%D0%BA%D0%BE%D0%BC%D0%BF%D0%BB%D0%B5%D0%BA%D1%82" variant="secondary">
+            Собрать кровать
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function HomeFallbackPage() {
-  const { products, categories, loading } = useProductDirectoryData();
+  const { products, loading } = useProductDirectoryData();
   const [bannerText, setBannerText] = useState('');
   const [bannerEnabled, setBannerEnabled] = useState(true);
   const [heroConfig, setHeroConfig] = useState(() => ({ ...homeHeroDefaults }));
@@ -98,19 +369,6 @@ function HomeFallbackPage() {
       .slice(0, 8);
   }, [activeProducts]);
 
-  const newArrivals = useMemo(() => {
-    return [...activeProducts]
-      .sort((a, b) => {
-        const aIsNew = String(a.category || '').toLowerCase().includes('new') ? 1 : 0;
-        const bIsNew = String(b.category || '').toLowerCase().includes('new') ? 1 : 0;
-        if (aIsNew !== bIsNew) {
-          return bIsNew - aIsNew;
-        }
-        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
-      })
-      .slice(0, 8);
-  }, [activeProducts]);
-
   const featuredProduct = useMemo(() => {
     return (
       activeProducts.find((product) => product.id === heroConfig.featuredProductId) ||
@@ -126,23 +384,23 @@ function HomeFallbackPage() {
 
   const heroHighlights = [
     {
-      title: 'Доставка и возврат без сюрпризов',
-      subtitle: 'Варианты доставки и финальную стоимость согласует менеджер.',
+      title: 'Бесплатная доставка от 5000 ₽',
+      subtitle: 'Порог и условия доставки видны до оплаты.',
       link: '/info/delivery',
     },
     {
-      title: 'Безопасная оплата',
-      subtitle: 'Защищённый checkout и подтверждение заказа до списания.',
+      title: 'Карта или СБП',
+      subtitle: 'Защищенный checkout через платежную форму.',
       link: '/info/payment',
     },
     {
-      title: 'Собственное производство',
-      subtitle: 'Контроль ткани, пошива и финальной упаковки.',
+      title: 'Ткань и пошив под контролем',
+      subtitle: 'Собственное производство и понятные материалы.',
       link: '/info/production',
     },
     {
-      title: 'Документы и прозрачные условия',
-      subtitle: 'Оферта, политика данных и реквизиты доступны заранее.',
+      title: 'Условия открыты заранее',
+      subtitle: 'Документы, возврат и реквизиты доступны до заказа.',
       link: '/info/legal',
     },
   ];
@@ -191,33 +449,6 @@ function HomeFallbackPage() {
     return [...promotionCards, ...promoCodeCards];
   }, [activePromotions]);
 
-  const shopTheLookProducts = useMemo(() => {
-    const ordered = [featuredProduct, ...bestsellers].filter(Boolean);
-    const seen = new Set();
-    return ordered.filter((product) => {
-      if (!product?.id || seen.has(product.id)) {
-        return false;
-      }
-      seen.add(product.id);
-      return true;
-    });
-  }, [bestsellers, featuredProduct]);
-
-  const brandValues = [
-    {
-      title: 'Ткани, которые хочется трогать',
-      description: 'Отбираем мягкие, понятные по уходу материалы для реальной повседневной жизни.'
-    },
-    {
-      title: 'Честный сервис до оплаты',
-      description: 'Стоимость, доставка и правила возврата видны заранее, без неприятных сюрпризов.'
-    },
-    {
-      title: 'Коллекции, которые легко сочетать',
-      description: 'Подбираем цвета и фактуры так, чтобы покупка не конфликтовала с уже любимым текстилем.'
-    }
-  ];
-
   const featuredProductSummary = featuredProduct
     ? {
         name: featuredProduct.name,
@@ -257,44 +488,25 @@ function HomeFallbackPage() {
           featuredProduct={featuredProductSummary}
         />
 
-        <CategoryGrid categories={categories} products={activeProducts} />
-
         <FeaturedProducts
-          eyebrow="Бестселлеры"
-          title="Бестселлеры недели"
-          description="Товары, которые покупают чаще всего: с хорошим рейтингом, понятной ценой и быстрым входом в оформление."
+          eyebrow="С чего начать"
+          title="Бестселлеры, которые быстро объясняют выбор"
+          description="Четыре-восемь проверенных SKU с тканью, ценой, рейтингом и быстрым действием прямо на главной."
           products={bestsellers}
           loading={loading}
-          ctaText="Смотреть подборку"
+          ctaText="Все бестселлеры"
           ctaLink="/category/popular"
         />
 
         <PromoBanners banners={livePromoBanners} />
 
-        <ShopTheLook
-          title="Посмотрите на композицию и откройте товар прямо из сцены"
-          description="Нажмите на точки интереса, чтобы быстро перейти к товару и собрать мягкий, спокойный интерьер без долгого поиска."
-          imageUrl={heroImage}
-          imageMedia={heroImageMedia}
-          products={shopTheLookProducts}
-        />
+        <ShopByFeelSection />
 
-        <FeaturedProducts
-          eyebrow="Новые поступления"
-          title="Новинки с мягким характером"
-          description="Свежие позиции, которые уже готовы к заказу и хорошо дополняют базовые комплекты."
-          products={newArrivals}
-          loading={loading}
-          ctaText="Все новинки"
-          ctaLink="/category/new"
-        />
+        <BenefitsRow />
 
-        <BrandIntro
-          eyebrow="О бренде"
-          title="Постельное Белье-ЮГ — магазин для спокойного домашнего выбора"
-          description="Мы строим витрину вокруг реальных сценариев: быстро найти нужную категорию, понять условия до оплаты и выбрать текстиль, который легко впишется в дом. Никакой визуальной суеты и лишних шагов между желанием и покупкой."
-          values={brandValues}
-        />
+        <ReviewsAndUgc products={activeProducts} />
+
+        <ConversionCta />
 
         <NewsletterForm />
       </div>

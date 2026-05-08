@@ -239,10 +239,16 @@ function CommerceSectionShell({ section, children, testId }) {
   );
 }
 
-function getReferenceListClass(section) {
+function getReferenceListClass(section, referenceType = 'generic') {
   const layoutVariant = getCmsLayoutVariant(section?.layoutVariant);
   if (layoutVariant === 'rail') {
     return 'flex gap-4 overflow-x-auto pb-2 pr-4 snap-x snap-mandatory';
+  }
+  if (referenceType === 'product') {
+    if (layoutVariant === 'full') {
+      return 'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4';
+    }
+    return 'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4';
   }
   if (layoutVariant === 'full') {
     return 'grid gap-4 sm:grid-cols-2 lg:grid-cols-4';
@@ -297,12 +303,13 @@ function ProductReferenceList({ section, page }) {
   return (
     <CommerceSectionShell section={section}>
       {resolvedProducts.length ? (
-        <div className={getReferenceListClass(section)}>
+        <div className={getReferenceListClass(section, 'product')}>
           {resolvedProducts.map((product) => (
             <div key={product.id || product.slug} className={getReferenceItemClass(section)}>
               <ProductCard
                 product={product}
                 deferThumbnails={page?.template === 'home'}
+                imageSizes="(max-width: 767px) 48vw, (min-width: 1024px) 22rem, 46vw"
               />
             </div>
           ))}
@@ -347,7 +354,7 @@ function CategoryReferenceList({ section, page }) {
       testId={page?.template === 'home' ? 'home-category-grid' : undefined}
     >
       {resolvedCategories.length ? (
-        <div className={getReferenceListClass(section)}>
+        <div className={getReferenceListClass(section, 'category')}>
           {resolvedCategories.map(({ category, item }) => (
             <div key={category.id || category.slug} className={getReferenceItemClass(section)}>
               <CategoryReferenceCard
