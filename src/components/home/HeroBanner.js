@@ -1,30 +1,28 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import ResponsiveImage from '../media/ResponsiveImage';
-import { Button, Card } from '../ui';
+import { Button } from '../ui';
 
-function HeroVisual({ imageUrl, media, alt, className = '', ratioClassName = 'pt-[60%]' }) {
+const FALLBACK_HERO_IMAGE =
+  'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=82';
+
+function HeroVisual({ imageUrl, media, alt, className = '' }) {
+  const resolvedImage = imageUrl || FALLBACK_HERO_IMAGE;
+
   return (
     <div
-      className={`relative overflow-hidden rounded-[26px] border border-white/80 bg-white/55 shadow-[0_22px_48px_rgba(43,39,34,0.16)] ${className}`}
+      className={`relative min-h-[220px] overflow-hidden bg-sky/35 sm:min-h-[300px] lg:min-h-[31rem] ${className}`}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-white/65" />
-      <div className={`relative ${ratioClassName}`}>
-        {imageUrl ? (
-          <ResponsiveImage
-            media={media}
-            src={imageUrl}
-            alt={alt}
-            className="absolute inset-0 h-full w-full object-cover"
-            sizes="(min-width: 1024px) 24rem, (min-width: 640px) 42vw, 38vw"
-            priority
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-sm text-muted">
-            Добавьте изображение для главного баннера
-          </div>
-        )}
-      </div>
+      <ResponsiveImage
+        media={media}
+        src={resolvedImage}
+        alt={alt}
+        className="absolute inset-0 h-full w-full object-cover"
+        sizes="(min-width: 1024px) 52vw, 100vw"
+        priority
+        loading="eager"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-ink/30 via-transparent to-white/10" />
     </div>
   );
 }
@@ -43,49 +41,41 @@ function HeroBanner({
   highlights = [],
   featuredProduct
 }) {
-  const mobileHighlights = highlights.slice(0, 2);
+  const proofChips = highlights.slice(0, 3);
   const heroAlt = featuredProduct?.name || 'Уютный домашний текстиль';
 
   return (
     <section className="page-shell page-section--tight">
       <div
         data-testid="home-hero"
-        className="catalog-hero relative overflow-hidden rounded-[26px] border border-white/70 px-4 py-3.5 shadow-[0_18px_38px_rgba(43,39,34,0.11)] sm:rounded-[32px] sm:px-5 sm:py-5 md:px-8 md:py-8 lg:px-10 lg:py-10"
+        className="overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_22px_54px_rgba(43,39,34,0.14)] sm:rounded-[32px] lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"
       >
-        <div className="page-grid--hero relative z-10 gap-4 sm:gap-6">
-          <div className="space-y-3 sm:space-y-5">
-            <div className="grid grid-cols-[minmax(0,1fr)_6.6rem] items-start gap-3 sm:block">
-              <div className="space-y-2.5 sm:space-y-3">
-                {badge ? (
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-accent sm:text-xs sm:tracking-[0.32em]">
-                    {badge}
-                  </p>
-                ) : null}
-                <div className="space-y-2 sm:space-y-3">
-                  <h1 className="max-w-3xl text-[1.78rem] font-semibold leading-[0.98] sm:text-4xl md:text-5xl">
-                    {title}{' '}
-                    {accent ? <span className="text-primary">{accent}</span> : null}
-                  </h1>
-                  {description ? (
-                    <p className="max-w-2xl text-[13px] leading-5 text-muted sm:text-base sm:leading-6">
-                      {description}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
+        <div className="lg:order-2">
+          <HeroVisual
+            imageUrl={imageUrl}
+            media={imageMedia}
+            alt={heroAlt}
+          />
+        </div>
 
-              <div className="relative self-start sm:hidden">
-                <HeroVisual
-                  imageUrl={imageUrl}
-                  media={imageMedia}
-                  alt={heroAlt}
-                  className="rounded-[22px]"
-                  ratioClassName="pt-[138%]"
-                />
-              </div>
-            </div>
+        <div className="flex flex-col justify-center gap-4 px-4 py-5 sm:px-7 sm:py-8 lg:px-10 lg:py-10">
+          <div className="space-y-3">
+            {badge ? (
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.28em] text-accent">
+                {badge}
+              </p>
+            ) : null}
+            <h1 className="font-display text-[2rem] font-semibold leading-[1.02] text-ink sm:text-4xl lg:text-[3.4rem]">
+              {title} {accent ? <span className="text-primary">{accent}</span> : null}
+            </h1>
+            {description ? (
+              <p className="max-w-2xl text-sm leading-6 text-muted sm:text-base sm:leading-7">
+                {description}
+              </p>
+            ) : null}
+          </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
               {ctaText && ctaLink ? (
                 <Button as={Link} to={ctaLink} className="w-full sm:w-auto">
                   {ctaText}
@@ -111,89 +101,41 @@ function HeroBanner({
                   </Button>
                 </>
               ) : null}
+          </div>
+
+          {proofChips.length > 0 ? (
+            <div className="hidden grid-cols-1 gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              {proofChips.map((item) => (
+                <Link
+                  key={item.title}
+                  to={item.link}
+                  className="focus-ring-soft rounded-2xl border border-ink/10 bg-[#f6f8f3] px-3 py-2.5"
+                >
+                  <p className="m-0 text-sm font-semibold leading-5 text-ink">{item.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">
+                    {item.subtitle}
+                  </p>
+                </Link>
+              ))}
             </div>
+          ) : null}
 
-            {mobileHighlights.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2 sm:hidden">
-                {mobileHighlights.map((item) => (
-                  <Card
-                    key={item.title}
-                    as={Link}
-                    to={item.link}
-                    variant="quiet"
-                    padding="sm"
-                    interactive
-                    className="min-h-[88px] rounded-[20px] p-2.5"
-                  >
-                    <p className="text-[13px] font-semibold leading-4 text-ink">{item.title}</p>
-                    <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted">
-                      {item.subtitle}
-                    </p>
-                  </Card>
-                ))}
-              </div>
-            ) : null}
-
-            {highlights.length > 0 ? (
-              <div className="hidden gap-3 sm:grid sm:grid-cols-2">
-                {highlights.map((item) => (
-                  <Card
-                    key={item.title}
-                    as={Link}
-                    to={item.link}
-                    variant="quiet"
-                    padding="sm"
-                    interactive
-                    className="rounded-[24px]"
-                  >
-                    <p className="text-sm font-semibold text-ink">{item.title}</p>
-                    <p className="mt-1 text-xs text-muted">{item.subtitle}</p>
-                  </Card>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="relative">
-            <HeroVisual
-              imageUrl={imageUrl}
-              media={imageMedia}
-              alt={heroAlt}
-              className="hidden sm:block rounded-[30px]"
-              ratioClassName="pt-[95%]"
-            />
-
-            {featuredProduct ? (
-              <Card
-                variant="soft"
-                padding="sm"
-                className="mt-4 hidden rounded-[24px] border border-white/80 bg-white/92 backdrop-blur sm:absolute sm:-bottom-6 sm:left-5 sm:right-5 sm:mt-0 sm:block"
-              >
-                <p className="text-[11px] uppercase tracking-[0.22em] text-muted">
-                  Выбор недели
-                </p>
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-semibold text-ink">
-                      {featuredProduct.name}
-                    </p>
-                    <p className="mt-1 text-sm text-muted">
-                      от {featuredProduct.priceLabel}
-                    </p>
-                  </div>
-                  <Button
-                    as={Link}
-                    to={featuredProduct.link}
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 text-primary"
-                  >
-                    Открыть →
-                  </Button>
-                </div>
-              </Card>
-            ) : null}
-          </div>
+          {featuredProduct ? (
+            <Link
+              to={featuredProduct.link}
+              className="focus-ring-soft hidden min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink shadow-[0_10px_22px_rgba(43,39,34,0.08)] sm:inline-flex"
+            >
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">
+                  Выбор недели: {featuredProduct.name}
+                </span>
+                <span className="block text-xs text-muted">
+                  от {featuredProduct.priceLabel}
+                </span>
+              </span>
+              <span className="shrink-0 text-primary" aria-hidden="true">→</span>
+            </Link>
+          ) : null}
         </div>
       </div>
     </section>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from '../../ui';
 import {
   CmsRichText,
@@ -7,6 +8,18 @@ import {
   getSurfaceToneClass,
 } from '../cmsBlockShared';
 import CmsImage from '../CmsImage';
+import ResponsiveImage from '../../media/ResponsiveImage';
+import { useProductDirectoryData } from '../../../features/product-list/data';
+import {
+  getPrimaryImageMedia,
+  getPrimaryImageUrl,
+  getProductPrice,
+  resolveImageUrl,
+} from '../../../utils/product';
+import { buildProductPath } from '../../../utils/url';
+
+const HOME_HERO_FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=82';
 
 function HeroHighlights({ items = [] }) {
   if (!items.length) {
@@ -17,6 +30,8 @@ function HeroHighlights({ items = [] }) {
     <div className="grid gap-3 sm:grid-cols-2">
       {items.map((item, index) => (
         <Card
+          as={item.url?.startsWith('/') ? Link : 'div'}
+          to={item.url?.startsWith('/') ? item.url : undefined}
           key={`${item.title || item.label || 'hero-item'}-${index}`}
           variant="quiet"
           padding="sm"
@@ -32,6 +47,131 @@ function HeroHighlights({ items = [] }) {
         </Card>
       ))}
     </div>
+  );
+}
+
+function findHeroProduct(products = []) {
+  return [...products]
+    .filter((product) => product?.isActive !== false)
+    .sort((left, right) => {
+      const leftScore =
+        (Number(left.rating) || 0) * 100 + (Number(left.reviewCount || left.reviewsCount) || 0);
+      const rightScore =
+        (Number(right.rating) || 0) * 100 + (Number(right.reviewCount || right.reviewsCount) || 0);
+      return rightScore - leftScore;
+    })[0] || null;
+}
+
+function HomeHeroVisual({ section, page, fallbackProduct }) {
+  const hasCmsMedia = section.image || section.imageUrl || section.mobileImage || section.mobileImageUrl;
+  const fallbackImage = resolveImageUrl(getPrimaryImageUrl(fallbackProduct)) || HOME_HERO_FALLBACK_IMAGE;
+  const fallbackMedia = getPrimaryImageMedia(fallbackProduct);
+
+  return (
+    <div className="relative min-h-[220px] overflow-hidden bg-sky/35 sm:min-h-[300px] lg:min-h-[30rem]">
+      {hasCmsMedia ? (
+        <CmsImage
+          media={section.image || section.imageUrl}
+          mobileMedia={section.mobileImage || section.mobileImageUrl}
+          alt={section.imageAlt || section.title || page.title}
+          frameClassName="absolute inset-0"
+          sizes="(min-width: 1024px) 52vw, 100vw"
+          priority
+          preserveAspectRatio={false}
+          placeholderLabel="Добавьте изображение для главного hero-блока"
+        />
+      ) : (
+        <ResponsiveImage
+          media={fallbackMedia}
+          src={fallbackImage}
+          alt={section.title || page.title || 'Постельное белье в спальне'}
+          className="absolute inset-0 h-full w-full object-cover"
+          sizes="(min-width: 1024px) 52vw, 100vw"
+          priority
+          loading="eager"
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-ink/32 via-transparent to-white/10" />
+      <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
+        {(section.items || []).slice(0, 2).map((item, index) => (
+          <span
+            key={`${item.title || item.label || 'home-hero-chip'}-${index}`}
+            className="rounded-full border border-white/45 bg-white/88 px-3 py-1.5 text-xs font-semibold text-ink shadow-[0_10px_22px_rgba(43,39,34,0.14)] backdrop-blur"
+          >
+            {item.title || item.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HomeHeroBlock({ page, section }) {
+  const { products } = useProductDirectoryData();
+  const fallbackProduct = findHeroProduct(products);
+  const accent = section.accent ? <span className="text-primary">{section.accent}</span> : null;
+  const productHref = fallbackProduct ? buildProductPath(fallbackProduct) : '';
+  const productPrice = fallbackProduct ? getProductPrice(fallbackProduct) : 0;
+
+  return (
+    <section
+      id={section.anchorId || undefined}
+      data-testid="home-hero"
+      className="overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_22px_54px_rgba(43,39,34,0.14)] sm:rounded-[32px] lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"
+    >
+      <div className="lg:order-2">
+        <HomeHeroVisual section={section} page={page} fallbackProduct={fallbackProduct} />
+      </div>
+
+      <div className="flex flex-col justify-center gap-4 px-4 py-5 sm:px-7 sm:py-8 lg:px-10 lg:py-10">
+        <div className="space-y-3">
+          <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.28em] text-accent">
+            {section.eyebrow || page.navLabel || page.title}
+          </p>
+          <h1 className="font-display text-[2rem] font-semibold leading-[1.02] text-ink sm:text-4xl lg:text-[3.4rem]">
+            {section.title || page.title} {accent}
+          </h1>
+          <CmsRichText html={section.body} className="max-w-2xl text-sm leading-6 sm:text-base sm:leading-7" />
+        </div>
+
+        <CmsSectionActions section={section} className="pt-1" />
+
+        {(section.items || []).length > 0 ? (
+          <div className="hidden grid-cols-1 gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+            {(section.items || []).slice(0, 3).map((item, index) => (
+              <div
+                key={`${item.title || item.label || 'home-hero-proof'}-${index}`}
+                className="rounded-2xl border border-ink/10 bg-[#f6f8f3] px-3 py-2.5"
+              >
+                {item.label ? (
+                  <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                    {item.label}
+                  </p>
+                ) : null}
+                <p className="m-0 text-sm font-semibold leading-5 text-ink">
+                  {item.title || item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {fallbackProduct ? (
+          <Link
+            to={productHref}
+            className="focus-ring-soft hidden min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink shadow-[0_10px_22px_rgba(43,39,34,0.08)] sm:inline-flex"
+          >
+            <span className="min-w-0">
+              <span className="block truncate font-semibold">Выбор недели: {fallbackProduct.name}</span>
+              {productPrice > 0 ? (
+                <span className="block text-xs text-muted">от {productPrice.toLocaleString('ru-RU')} ₽</span>
+              ) : null}
+            </span>
+            <span className="shrink-0 text-primary" aria-hidden="true">→</span>
+          </Link>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
@@ -64,6 +204,10 @@ function HeroMedia({ section, page, priority = false }) {
 }
 
 function HeroBlock({ page, section, index = 0 }) {
+  if (page?.template === 'home' && index === 0) {
+    return <HomeHeroBlock page={page} section={section} />;
+  }
+
   const accent = section.accent ? <span className="text-primary">{section.accent}</span> : null;
   const layoutVariant = getCmsLayoutVariant(section.layoutVariant);
   const mediaFirst = layoutVariant === 'media_left';

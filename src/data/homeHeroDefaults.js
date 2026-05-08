@@ -1,13 +1,13 @@
 export const homeHeroDefaults = {
-  badge: 'уютная новая коллекция',
-  title: 'Обновите спальню',
-  accent: 'с акцентом на комфорт',
+  badge: 'Постельное Белье-ЮГ',
+  title: 'Постель, которая остается свежей',
+  accent: 'ночь за ночью',
   subtitle:
-    'Натуральные ткани, мягкие цвета и текстуры, продуманные комплекты для спальни и гостиной. Закажите онлайн и получите доставку в удобное место.',
+    'Выберите crisp-перкаль, гладкий сатин или мягкие комплекты для всей кровати. Редакционные подсказки помогут понять ткань до перехода в карточку товара.',
   primaryCtaLabel: 'Смотреть бестселлеры',
   primaryCtaLink: '/category/popular',
-  secondaryCtaLabel: 'Новинки',
-  secondaryCtaLink: '/category/new',
+  secondaryCtaLabel: 'Найти свою ткань',
+  secondaryCtaLink: '/catalog?query=%D1%82%D0%BA%D0%B0%D0%BD%D1%8C',
   featuredProductId: '',
   featuredLabel: 'Избранный товар',
 };

@@ -178,7 +178,7 @@ test('mobile footer keeps navigation in a compact multi-column layout', async ({
 
 test('core storefront routes fit the mobile viewport without horizontal overflow', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /Обновите спальню/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Постель, которая остается свежей/i })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   const cmsCollectionLink = page.getByRole('link', { name: /Сатиновый комплект Sand/i }).first();

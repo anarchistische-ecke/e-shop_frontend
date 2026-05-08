@@ -5,8 +5,26 @@ import {
   CmsRichText,
   CmsSectionActions,
   CmsSectionHeading,
+  getCmsLayoutVariant,
   getSurfaceToneClass,
 } from '../cmsBlockShared';
+
+function getFeatureGridClass(layoutVariant) {
+  const variant = getCmsLayoutVariant(layoutVariant);
+  if (variant === 'full') {
+    return 'grid gap-3 sm:grid-cols-2 lg:grid-cols-4';
+  }
+  if (variant === 'rail') {
+    return 'flex gap-4 overflow-x-auto pb-2 pr-4 snap-x snap-mandatory';
+  }
+  return 'grid gap-4 md:grid-cols-2 xl:grid-cols-3';
+}
+
+function getFeatureItemClass(layoutVariant) {
+  return getCmsLayoutVariant(layoutVariant) === 'rail'
+    ? 'w-[82vw] max-w-[20rem] flex-none snap-start sm:w-[18rem]'
+    : '';
+}
 
 function FeatureListBlock({ section }) {
   const items = Array.isArray(section.items) ? section.items : [];
@@ -28,28 +46,32 @@ function FeatureListBlock({ section }) {
       )}
 
       {items.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className={getFeatureGridClass(section.layoutVariant)}>
           {items.map((item, index) => (
-            <Card
+            <div
               key={`${item.title || item.label || 'feature-item'}-${index}`}
-              padding="lg"
-              className="space-y-3 rounded-[24px] border border-ink/10 bg-white/88"
+              className={getFeatureItemClass(section.layoutVariant)}
             >
-              {item.label ? (
-                <p className="m-0 text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-                  {item.label}
-                </p>
-              ) : null}
-              {item.title ? <h3 className="text-lg font-semibold text-ink">{item.title}</h3> : null}
-              {item.description ? <p className="m-0 text-sm leading-6 text-muted">{item.description}</p> : null}
-              {item.url ? (
-                <CmsAction
-                  label={item.label || 'Открыть'}
-                  url={item.url}
-                  variant="secondary"
-                />
-              ) : null}
-            </Card>
+              <Card
+                padding="lg"
+                className="h-full space-y-3 rounded-[24px] border border-ink/10 bg-white/88"
+              >
+                {item.label ? (
+                  <p className="m-0 text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+                    {item.label}
+                  </p>
+                ) : null}
+                {item.title ? <h3 className="text-lg font-semibold text-ink">{item.title}</h3> : null}
+                {item.description ? <p className="m-0 text-sm leading-6 text-muted">{item.description}</p> : null}
+                {item.url ? (
+                  <CmsAction
+                    label="Подробнее"
+                    url={item.url}
+                    variant="secondary"
+                  />
+                ) : null}
+              </Card>
+            </div>
           ))}
         </div>
       ) : (
