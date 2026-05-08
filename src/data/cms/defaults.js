@@ -16,6 +16,7 @@ export const DEFAULT_CMS_SITE_SETTINGS = {
   defaultSeoDescription:
     'Домашний текстиль для уютного дома: доставка по России, честные условия покупки и собственное производство.',
   defaultOgImage: null,
+  announcementBanner: null,
 };
 
 export const DEFAULT_HEADER_NAVIGATION = [

@@ -62,7 +62,75 @@ function findHeroProduct(products = []) {
     })[0] || null;
 }
 
-function HomeHeroVisual({ section, page, fallbackProduct }) {
+function normalizeReferenceKind(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, '_');
+}
+
+function normalizeLookupValue(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function findProductByReference(products = [], referenceKey = '', referenceKind = '') {
+  const normalizedKey = normalizeLookupValue(referenceKey);
+  if (!normalizedKey) {
+    return null;
+  }
+
+  return products.find((product) => {
+    const productId = normalizeLookupValue(product?.id);
+    const productSlug = normalizeLookupValue(product?.slug);
+
+    if (referenceKind === 'product_id') {
+      return productId === normalizedKey;
+    }
+    if (referenceKind === 'product_slug') {
+      return productSlug === normalizedKey;
+    }
+
+    return productId === normalizedKey || productSlug === normalizedKey;
+  }) || null;
+}
+
+function readHeroFeaturedProductReference(items = []) {
+  return (items || []).find((item) => {
+    const kind = normalizeReferenceKind(item?.referenceKind || item?.reference_kind);
+    const key = item?.referenceKey || item?.reference_key;
+    return key && ['product', 'product_id', 'product_slug'].includes(kind);
+  }) || null;
+}
+
+function getHeroProofItems(items = []) {
+  return (items || []).filter((item) => item !== readHeroFeaturedProductReference(items));
+}
+
+function FeaturedProductLink({ product }) {
+  if (!product) {
+    return null;
+  }
+
+  const productHref = buildProductPath(product);
+  const productPrice = getProductPrice(product);
+
+  return (
+    <Link
+      to={productHref}
+      className="focus-ring-soft mt-3 flex min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink shadow-[0_10px_22px_rgba(43,39,34,0.08)]"
+    >
+      <span className="min-w-0">
+        <span className="block truncate font-semibold">Выбор недели: {product.name}</span>
+        {productPrice > 0 ? (
+          <span className="block text-xs text-muted">от {productPrice.toLocaleString('ru-RU')} ₽</span>
+        ) : null}
+      </span>
+      <span className="shrink-0 text-primary" aria-hidden="true">→</span>
+    </Link>
+  );
+}
+
+function HomeHeroVisual({ section, page, fallbackProduct, proofItems = [] }) {
   const hasCmsMedia = section.image || section.imageUrl || section.mobileImage || section.mobileImageUrl;
   const fallbackImage = resolveImageUrl(getPrimaryImageUrl(fallbackProduct)) || HOME_HERO_FALLBACK_IMAGE;
   const fallbackMedia = getPrimaryImageMedia(fallbackProduct);
@@ -93,7 +161,7 @@ function HomeHeroVisual({ section, page, fallbackProduct }) {
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-ink/32 via-transparent to-white/10" />
       <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-        {(section.items || []).slice(0, 2).map((item, index) => (
+        {proofItems.slice(0, 2).map((item, index) => (
           <span
             key={`${item.title || item.label || 'home-hero-chip'}-${index}`}
             className="rounded-full border border-white/45 bg-white/88 px-3 py-1.5 text-xs font-semibold text-ink shadow-[0_10px_22px_rgba(43,39,34,0.14)] backdrop-blur"
@@ -108,10 +176,17 @@ function HomeHeroVisual({ section, page, fallbackProduct }) {
 
 function HomeHeroBlock({ page, section }) {
   const { products } = useProductDirectoryData();
-  const fallbackProduct = findHeroProduct(products);
+  const featuredProductReference = readHeroFeaturedProductReference(section.items || []);
+  const featuredProduct = featuredProductReference
+    ? findProductByReference(
+        products,
+        featuredProductReference.referenceKey || featuredProductReference.reference_key,
+        normalizeReferenceKind(featuredProductReference.referenceKind || featuredProductReference.reference_kind)
+      )
+    : null;
+  const fallbackProduct = featuredProduct || findHeroProduct(products);
+  const proofItems = getHeroProofItems(section.items || []);
   const accent = section.accent ? <span className="text-primary">{section.accent}</span> : null;
-  const productHref = fallbackProduct ? buildProductPath(fallbackProduct) : '';
-  const productPrice = fallbackProduct ? getProductPrice(fallbackProduct) : 0;
 
   return (
     <section
@@ -120,7 +195,13 @@ function HomeHeroBlock({ page, section }) {
       className="overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_22px_54px_rgba(43,39,34,0.14)] sm:rounded-[32px] lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"
     >
       <div className="lg:order-2">
-        <HomeHeroVisual section={section} page={page} fallbackProduct={fallbackProduct} />
+        <HomeHeroVisual
+          section={section}
+          page={page}
+          fallbackProduct={fallbackProduct}
+          proofItems={proofItems}
+        />
+        <FeaturedProductLink product={fallbackProduct} />
       </div>
 
       <div className="flex flex-col justify-center gap-4 px-4 py-5 sm:px-7 sm:py-8 lg:px-10 lg:py-10">
@@ -136,9 +217,9 @@ function HomeHeroBlock({ page, section }) {
 
         <CmsSectionActions section={section} className="pt-1" />
 
-        {(section.items || []).length > 0 ? (
+        {proofItems.length > 0 ? (
           <div className="hidden grid-cols-1 gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-            {(section.items || []).slice(0, 3).map((item, index) => (
+            {proofItems.slice(0, 3).map((item, index) => (
               <div
                 key={`${item.title || item.label || 'home-hero-proof'}-${index}`}
                 className="rounded-2xl border border-ink/10 bg-[#f6f8f3] px-3 py-2.5"
@@ -154,21 +235,6 @@ function HomeHeroBlock({ page, section }) {
               </div>
             ))}
           </div>
-        ) : null}
-
-        {fallbackProduct ? (
-          <Link
-            to={productHref}
-            className="focus-ring-soft hidden min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink shadow-[0_10px_22px_rgba(43,39,34,0.08)] sm:inline-flex"
-          >
-            <span className="min-w-0">
-              <span className="block truncate font-semibold">Выбор недели: {fallbackProduct.name}</span>
-              {productPrice > 0 ? (
-                <span className="block text-xs text-muted">от {productPrice.toLocaleString('ru-RU')} ₽</span>
-              ) : null}
-            </span>
-            <span className="shrink-0 text-primary" aria-hidden="true">→</span>
-          </Link>
         ) : null}
       </div>
     </section>
