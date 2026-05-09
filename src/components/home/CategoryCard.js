@@ -15,7 +15,7 @@ function CategoryCard({ href, imageUrl, imageMedia, name, description, helperTex
       variant="quiet"
       padding="sm"
       interactive
-      className="group h-full rounded-[24px] border border-white/80 bg-white/88"
+      className="group block h-full rounded-[24px] border border-white/80 bg-white/88"
     >
       <div className="flex h-full flex-col gap-3">
         <div className="flex items-start justify-between gap-3">

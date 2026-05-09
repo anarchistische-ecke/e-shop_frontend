@@ -169,10 +169,10 @@ function CategoryReferenceCard({ category, products, item }) {
     <Card
       as={Link}
       to={href}
-      variant="quiet"
+      variant="outline"
       padding="none"
       interactive
-      className="group h-full overflow-hidden rounded-[24px]"
+      className="group block h-full overflow-hidden rounded-[24px] border-0 bg-transparent shadow-none"
     >
       <div className="flex h-full flex-col">
         <div className="relative overflow-hidden border-b border-ink/10 bg-sand/45">
