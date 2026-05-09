@@ -100,7 +100,7 @@ function DesktopCategoryCard({ card }) {
       variant="quiet"
       padding="sm"
       interactive
-      className="group h-full rounded-[28px] border border-white/75 bg-gradient-to-br from-white via-sand/30 to-[#ece4d8]"
+      className="group block h-full rounded-[28px] border border-white/75 bg-gradient-to-br from-white via-sand/30 to-[#ece4d8]"
     >
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
@@ -166,7 +166,7 @@ function MobileCategoryListItem({ card }) {
       variant="quiet"
       padding="sm"
       interactive
-      className="rounded-[24px] border border-white/80 bg-white/85"
+      className="block rounded-[24px] border border-white/80 bg-white/85"
     >
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
         <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-ink/10 bg-sand/40 text-ink/80">

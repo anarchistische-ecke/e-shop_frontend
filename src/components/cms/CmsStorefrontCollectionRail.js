@@ -25,7 +25,7 @@ function CollectionProductCard({ entry }) {
       variant="quiet"
       padding="sm"
       interactive
-      className="group h-full rounded-[24px]"
+      className="group block h-full rounded-[24px]"
     >
       <div className="flex h-full flex-col gap-4">
         <div className="relative overflow-hidden rounded-[20px] border border-ink/10 bg-sand/40">
@@ -78,7 +78,7 @@ function CollectionCategoryCard({ entry }) {
       variant="quiet"
       padding="sm"
       interactive
-      className="group h-full rounded-[24px]"
+      className="group block h-full rounded-[24px]"
     >
       <div className="flex h-full flex-col gap-4">
         <div className="relative overflow-hidden rounded-[20px] border border-ink/10 bg-sand/35">
