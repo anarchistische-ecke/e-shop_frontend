@@ -41,7 +41,7 @@ async function openProductMediaViewer(page, overrides = {}) {
   const gallery = page.getByTestId('product-gallery-card');
   await gallery.scrollIntoViewIfNeeded();
   await expect(gallery).toBeVisible();
-  await page.getByRole('button', { name: 'Увеличить изображение' }).click();
+  await gallery.getByRole('button', { name: 'Увеличить изображение', exact: true }).click();
 
   const viewer = page.getByTestId('product-media-viewer');
   await expect(viewer).toBeVisible();

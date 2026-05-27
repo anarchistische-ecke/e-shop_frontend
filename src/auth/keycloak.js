@@ -5,9 +5,9 @@ import { getRuntimeConfig, readEnv } from '../config/runtime.js';
 
 const runtimeConfig = getRuntimeConfig();
 const keycloakConfig = {
-  url: runtimeConfig.keycloakUrl || readEnv('REACT_APP_KEYCLOAK_URL'),
-  realm: runtimeConfig.keycloakRealm || readEnv('REACT_APP_KEYCLOAK_REALM'),
-  clientId: runtimeConfig.keycloakClientId || readEnv('REACT_APP_KEYCLOAK_CLIENT_ID')
+  url: runtimeConfig.keycloakUrl,
+  realm: runtimeConfig.keycloakRealm,
+  clientId: runtimeConfig.keycloakClientId
 };
 const keycloakLocale = (readEnv('REACT_APP_KEYCLOAK_LOCALE', 'ru') || 'ru').trim() || 'ru';
 

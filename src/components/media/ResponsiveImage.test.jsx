@@ -69,4 +69,35 @@ describe('ResponsiveImage', () => {
 
     view.unmount();
   });
+
+  it('falls back to the original image when a responsive derivative fails', () => {
+    const view = render(
+      <ResponsiveImage
+        media={{
+          url: 'https://img.example.com/media/product/w640.webp',
+          originalUrl: 'https://storage.example.com/product.jpg',
+          alt: 'Product',
+          sources: {
+            avif: [{ url: 'https://img.example.com/media/product/w320.avif', width: 320, format: 'avif' }],
+            webp: [{ url: 'https://img.example.com/media/product/w320.webp', width: 320, format: 'webp' }],
+            jpeg: [{ url: 'https://img.example.com/media/product/w320.jpeg', width: 320, format: 'jpeg' }],
+          },
+        }}
+      />
+    );
+
+    expect(view.container.querySelectorAll('source')).toHaveLength(2);
+    const img = view.container.querySelector('img');
+
+    act(() => {
+      img.dispatchEvent(new Event('error', { bubbles: true }));
+    });
+
+    expect(view.container.querySelectorAll('source')).toHaveLength(0);
+    expect(img.getAttribute('src')).toBe('https://storage.example.com/product.jpg');
+    expect(img.getAttribute('srcset')).toBeNull();
+    expect(img.getAttribute('sizes')).toBeNull();
+
+    view.unmount();
+  });
 });

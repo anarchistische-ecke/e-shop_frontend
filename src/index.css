@@ -1017,6 +1017,8 @@ body {
 @media (min-width: 1024px) {
   .site-content-layer {
     margin: clamp(0.65rem, 1vw, 1rem);
+    width: auto;
+    max-width: none;
     min-height: calc(100vh - clamp(1.3rem, 2vw, 2rem));
     border: 1px solid rgba(255, 255, 255, 0.78);
     border-radius: 36px;

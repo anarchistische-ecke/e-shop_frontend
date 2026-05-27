@@ -1,6 +1,7 @@
 import React from 'react';
+import { readEnv } from '../config/runtime';
 
-const DIRECTUS_BASE = (process.env.REACT_APP_DIRECTUS_URL || 'http://localhost:8055').replace(/\/$/, '');
+const DIRECTUS_BASE = (readEnv('REACT_APP_DIRECTUS_URL', 'http://localhost:8055') || 'http://localhost:8055').replace(/\/$/, '');
 const STOREFRONT_OPS_URL = `${DIRECTUS_BASE}/admin/storefront-ops`;
 
 function AdminPromotions() {
