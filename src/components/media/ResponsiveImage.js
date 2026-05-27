@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { resolveImageUrl } from '../../utils/product';
 
 function normalizeVariants(variants = []) {
@@ -56,9 +56,21 @@ function ResponsiveImage({
   width,
   height,
   draggable,
+  onError,
   ...rest
 }) {
+  const [useOriginalFallback, setUseOriginalFallback] = useState(false);
   const fallbackSrc = getResponsiveImageFallback(media, src);
+  const originalFallbackSrc = resolveImageUrl(
+    media?.originalUrl ||
+      mobileMedia?.originalUrl ||
+      src ||
+      media?.url ||
+      mobileMedia?.url ||
+      fallbackSrc ||
+      ''
+  );
+  const renderedSrc = useOriginalFallback && originalFallbackSrc ? originalFallbackSrc : fallbackSrc;
   const resolvedAlt = alt || media?.alt || '';
   const resolvedLoading = loading || (priority ? 'eager' : 'lazy');
   const resolvedFetchPriority = fetchPriority || fetchpriority || (priority ? 'high' : 'auto');
@@ -74,31 +86,45 @@ function ResponsiveImage({
   const resolvedWidth = width || media?.width || undefined;
   const resolvedHeight = height || media?.height || undefined;
 
+  useEffect(() => {
+    setUseOriginalFallback(false);
+  }, [fallbackSrc, originalFallbackSrc]);
+
+  const handleImageError = (event) => {
+    if (!useOriginalFallback && originalFallbackSrc) {
+      setUseOriginalFallback(true);
+    }
+
+    if (typeof onError === 'function') {
+      onError(event);
+    }
+  };
+
   if (!fallbackSrc) {
     return null;
   }
 
   return (
     <picture>
-      {mobileAvifSrcSet ? (
+      {!useOriginalFallback && mobileAvifSrcSet ? (
         <source media={mobileMediaQuery} type="image/avif" srcSet={mobileAvifSrcSet} sizes={sizes} />
       ) : null}
-      {mobileWebpSrcSet ? (
+      {!useOriginalFallback && mobileWebpSrcSet ? (
         <source media={mobileMediaQuery} type="image/webp" srcSet={mobileWebpSrcSet} sizes={sizes} />
       ) : null}
-      {mobileJpegSrcSet || mobileMedia?.src ? (
+      {!useOriginalFallback && (mobileJpegSrcSet || mobileMedia?.src) ? (
         <source
           media={mobileMediaQuery}
           srcSet={mobileJpegSrcSet || mobileMedia.src}
           sizes={mobileMedia?.sizes || sizes}
         />
       ) : null}
-      {avifSrcSet ? <source type="image/avif" srcSet={avifSrcSet} sizes={sizes} /> : null}
-      {webpSrcSet ? <source type="image/webp" srcSet={webpSrcSet} sizes={sizes} /> : null}
+      {!useOriginalFallback && avifSrcSet ? <source type="image/avif" srcSet={avifSrcSet} sizes={sizes} /> : null}
+      {!useOriginalFallback && webpSrcSet ? <source type="image/webp" srcSet={webpSrcSet} sizes={sizes} /> : null}
       <img
-        src={fallbackSrc}
-        srcSet={jpegSrcSet || undefined}
-        sizes={jpegSrcSet ? sizes : undefined}
+        src={renderedSrc}
+        srcSet={!useOriginalFallback && jpegSrcSet ? jpegSrcSet : undefined}
+        sizes={!useOriginalFallback && jpegSrcSet ? sizes : undefined}
         alt={resolvedAlt}
         width={resolvedWidth}
         height={resolvedHeight}
@@ -107,6 +133,7 @@ function ResponsiveImage({
         decoding={decoding}
         draggable={draggable}
         className={className}
+        onError={handleImageError}
         {...rest}
       />
     </picture>

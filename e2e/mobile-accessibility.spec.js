@@ -71,18 +71,20 @@ test('mobile filter sheet restores focus to its trigger when dismissed', async (
   await expect(filterTrigger).toBeFocused();
 });
 
-test('mobile product tabs support arrow-key navigation', async ({ page }) => {
+test('mobile product information accordion is keyboard operable', async ({ page }) => {
   await page.goto('/product/prod-satin-sand/satin-sand');
 
-  const aboutTab = page.getByRole('tab', { name: 'О товаре' });
-  const detailsTab = page.getByRole('tab', { name: 'Характеристики' });
+  const descriptionButton = page.getByRole('button', { name: /Описание/ });
+  const detailsButton = page.getByRole('button', { name: /Характеристики/ });
 
-  await aboutTab.focus();
-  await expect(aboutTab).toHaveAttribute('aria-selected', 'true');
+  await descriptionButton.focus();
+  await expect(descriptionButton).toHaveAttribute('aria-expanded', 'true');
 
-  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Tab');
+  await expect(detailsButton).toBeFocused();
 
-  await expect(detailsTab).toBeFocused();
-  await expect(detailsTab).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('#product-tabs-panel-details')).toBeVisible();
+  await page.keyboard.press('Enter');
+
+  await expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#pdp-details-panel')).toBeVisible();
 });

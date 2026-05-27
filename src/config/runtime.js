@@ -52,6 +52,15 @@ function readWindowConfig(key) {
   return config[key];
 }
 
+function hasWindowConfig(key) {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const config = window.__APP_CONFIG__ || {};
+  return Object.prototype.hasOwnProperty.call(config, key);
+}
+
 function normalizeBasePath(rawPath = '') {
   if (!rawPath) {
     return '';
@@ -96,15 +105,15 @@ export function getRuntimeConfig() {
     imageCdnBase:
       normalizeString(readWindowConfig('imageCdnBase')) ||
       readEnv('REACT_APP_IMAGE_CDN_BASE'),
-    keycloakUrl:
-      normalizeString(readWindowConfig('keycloakUrl')) ||
-      readEnv('REACT_APP_KEYCLOAK_URL'),
-    keycloakRealm:
-      normalizeString(readWindowConfig('keycloakRealm')) ||
-      readEnv('REACT_APP_KEYCLOAK_REALM'),
-    keycloakClientId:
-      normalizeString(readWindowConfig('keycloakClientId')) ||
-      readEnv('REACT_APP_KEYCLOAK_CLIENT_ID'),
+    keycloakUrl: hasWindowConfig('keycloakUrl')
+      ? normalizeString(readWindowConfig('keycloakUrl'))
+      : readEnv('REACT_APP_KEYCLOAK_URL'),
+    keycloakRealm: hasWindowConfig('keycloakRealm')
+      ? normalizeString(readWindowConfig('keycloakRealm'))
+      : readEnv('REACT_APP_KEYCLOAK_REALM'),
+    keycloakClientId: hasWindowConfig('keycloakClientId')
+      ? normalizeString(readWindowConfig('keycloakClientId'))
+      : readEnv('REACT_APP_KEYCLOAK_CLIENT_ID'),
     siteUrl:
       normalizeString(readWindowConfig('siteUrl')) ||
       readEnv('REACT_APP_SITE_URL') ||
