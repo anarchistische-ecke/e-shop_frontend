@@ -75,8 +75,8 @@ const homePage = {
       styleVariant: 'warm',
       items: [
         {
-          title: 'Бесплатно от 5000 ₽',
-          description: 'Стоимость видна до оплаты.',
+          title: 'Доставка по согласованию',
+          description: 'Менеджер рассчитает стоимость после заказа.',
           sort: 1
         }
       ]
