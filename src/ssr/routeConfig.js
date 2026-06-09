@@ -24,9 +24,8 @@ export const storefrontRouteConfig = [
   { id: 'sales-terms', path: '/usloviya-prodazhi', renderMode: 'ssr' },
   { id: 'cookies-policy', path: '/cookies', renderMode: 'ssr' },
   { id: 'personal-data-consent', path: '/soglasie-na-obrabotku-pd', renderMode: 'ssr' },
-  { id: 'admin-login', path: '/admin/login', renderMode: 'csr' },
   { id: 'manager-login', path: '/manager/login', renderMode: 'csr' },
-  { id: 'admin-app', path: '/admin/*', renderMode: 'csr' }
+  { id: 'legacy-admin-redirect', path: '/admin/*', renderMode: 'csr' }
 ];
 
 export const notFoundRouteConfig = {

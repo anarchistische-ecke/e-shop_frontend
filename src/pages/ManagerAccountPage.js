@@ -5,6 +5,7 @@ import NotificationBanner from '../components/NotificationBanner';
 import { Button, Card } from '../components/ui';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
+import { getDirectusAdminUrl, getStorefrontOpsUrl } from '../utils/cms';
 
 const statusLabels = {
   PENDING: 'Ожидает оплаты',
@@ -61,6 +62,8 @@ function ManagerAccountPage() {
 
   const lastOrderDate = stats.lastOrderAt ? new Date(stats.lastOrderAt) : null;
   const lastOrderLabel = lastOrderDate ? lastOrderDate.toLocaleDateString('ru-RU') : 'Нет заказов';
+  const storefrontOpsUrl = getStorefrontOpsUrl();
+  const directusAdminUrl = getDirectusAdminUrl();
 
   const handleLogout = () => {
     logout();
@@ -102,6 +105,9 @@ function ManagerAccountPage() {
                 </Button>
                 <Button as={Link} to="/catalog" block variant="secondary">
                   Перейти в каталог
+                </Button>
+                <Button as="a" href={storefrontOpsUrl} target="_blank" rel="noreferrer" block variant="secondary">
+                  Открыть CMS витрины
                 </Button>
                 <Button type="button" onClick={handleLogout} block variant="ghost">
                   Выйти из аккаунта
@@ -146,6 +152,26 @@ function ManagerAccountPage() {
                 <p className="text-xs text-muted mt-2">Среднее значение заказов</p>
               </Card>
             </div>
+
+            <Card id="cms" className="reveal-up" padding="lg">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted">CMS</p>
+                  <h2 className="mt-2 text-xl sm:text-2xl font-semibold">Управление витриной</h2>
+                  <p className="mt-2 text-sm text-muted">
+                    Контент, промо-блоки, подборки и операторские настройки открываются в Directus.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row md:flex-col xl:flex-row">
+                  <Button as="a" href={storefrontOpsUrl} target="_blank" rel="noreferrer">
+                    Открыть Storefront Ops
+                  </Button>
+                  <Button as="a" href={directusAdminUrl} target="_blank" rel="noreferrer" variant="secondary">
+                    Открыть Directus
+                  </Button>
+                </div>
+              </div>
+            </Card>
 
             <Card id="orders" className="reveal-up" padding="lg">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">

@@ -1,6 +1,5 @@
 import React, { Suspense, lazy } from 'react';
 import { Navigate } from 'react-router-dom';
-import RequireAdmin from '../components/RequireAdmin';
 import Home from '../pages/Home';
 import NotFound from '../pages/NotFound';
 import {
@@ -23,32 +22,35 @@ const PersonalDataConsentPage = lazy(() => import('../pages/legal/PersonalDataCo
 const PrivacyPolicyPage = lazy(() => import('../pages/legal/PrivacyPolicyPage'));
 const SalesTermsPage = lazy(() => import('../pages/legal/SalesTermsPage'));
 const UserAgreementPage = lazy(() => import('../pages/legal/UserAgreementPage'));
-const AdminLoginPage = lazy(() => import('../pages/AdminLoginPage'));
-const AdminApp = lazy(() => import('../pages/AdminApp'));
 const AccountPage = lazy(() => import('../pages/AccountPage'));
 const CartPage = lazy(() => import('../pages/CartPage'));
 const CheckoutPage = lazy(() => import('../pages/CheckoutPage'));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
+const ManagerLoginPage = lazy(() => import('../pages/ManagerLoginPage'));
 const OrderPage = lazy(() => import('../pages/OrderPage'));
 const SearchPage = lazy(() => import('../pages/SearchPage'));
 const SearchRedirectPage = lazy(() => import('../pages/SearchRedirectPage'));
 
-function RouteFallback({ isAdminRoute = false }) {
+function RouteFallback({ isStandaloneRoute = false }) {
   return (
     <div
       className={
-        isAdminRoute
+        isStandaloneRoute
           ? 'flex min-h-screen items-center justify-center px-4 py-10 text-sm text-muted'
           : 'page-shell page-section text-center text-sm text-muted'
       }
     >
-      {isAdminRoute ? 'Загружаем панель управления…' : 'Загружаем страницу…'}
+      Загружаем страницу…
     </div>
   );
 }
 
 function CsrRoute(routeElement, options = {}) {
-  return <Suspense fallback={<RouteFallback isAdminRoute={options.isAdminRoute} />}>{routeElement}</Suspense>;
+  return (
+    <Suspense fallback={<RouteFallback isStandaloneRoute={options.isStandaloneRoute} />}>
+      {routeElement}
+    </Suspense>
+  );
 }
 
 const routeRenderers = {
@@ -74,19 +76,8 @@ const routeRenderers = {
   'sales-terms': () => CsrRoute(<SalesTermsPage />),
   'cookies-policy': () => CsrRoute(<CookiesPolicyPage />),
   'personal-data-consent': () => CsrRoute(<PersonalDataConsentPage />),
-  'admin-login': () => (
-    <Suspense fallback={<RouteFallback isAdminRoute />}>
-      <AdminLoginPage />
-    </Suspense>
-  ),
-  'manager-login': () => <Navigate to="/admin/login" replace />,
-  'admin-app': () => (
-    <Suspense fallback={<RouteFallback isAdminRoute />}>
-      <RequireAdmin>
-        <AdminApp />
-      </RequireAdmin>
-    </Suspense>
-  ),
+  'manager-login': () => CsrRoute(<ManagerLoginPage />, { isStandaloneRoute: true }),
+  'legacy-admin-redirect': () => <Navigate to="/manager/login" replace />,
   'not-found': () => <NotFound />
 };
 

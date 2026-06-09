@@ -53,6 +53,7 @@ describe('header utils', () => {
     expect(buildAccountLinks(true)).toEqual([
       { to: '/account#overview', label: 'Сводка' },
       { to: '/account#orders', label: 'Заказы' },
+      { to: '/account#cms', label: 'CMS витрины' },
       { to: '/cart', label: 'Ссылка на оплату' }
     ]);
   });

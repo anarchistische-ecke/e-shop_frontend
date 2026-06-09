@@ -301,34 +301,8 @@ function ConversionCta() {
 
 function HomeFallbackPage() {
   const { products, loading } = useProductDirectoryData();
-  const [bannerText, setBannerText] = useState('');
-  const [bannerEnabled, setBannerEnabled] = useState(true);
-  const [heroConfig, setHeroConfig] = useState(() => ({ ...homeHeroDefaults }));
+  const heroConfig = homeHeroDefaults;
   const [activePromotions, setActivePromotions] = useState({ promotions: [], promoCodes: [] });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const storedBanner = localStorage.getItem('adminBanner');
-    setBannerText(storedBanner || '');
-    const enabled = localStorage.getItem('adminBannerEnabled');
-    setBannerEnabled(enabled === null ? true : enabled === 'true');
-
-    const storedHero = localStorage.getItem('homeHeroConfig');
-    if (!storedHero) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(storedHero);
-      setHeroConfig({ ...homeHeroDefaults, ...parsed });
-    } catch (err) {
-      console.error('Failed to parse home hero config', err);
-      setHeroConfig({ ...homeHeroDefaults });
-    }
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -467,12 +441,6 @@ function HomeFallbackPage() {
       />
 
       <div className="home">
-        {bannerText && bannerEnabled ? (
-          <div className="bg-ink text-white text-center py-2 px-4">
-            <p className="text-sm">{bannerText}</p>
-          </div>
-        ) : null}
-
         <HeroBanner
           imageUrl={heroImage}
           imageMedia={heroImageMedia}

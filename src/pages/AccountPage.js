@@ -301,7 +301,7 @@ function AccountPage() {
   }
 
   if (hasManagerRole && !isManager) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/manager/login" replace />;
   }
 
   if (isManager) {

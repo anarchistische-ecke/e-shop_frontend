@@ -6,11 +6,15 @@ import ScrollToTop from '../components/ScrollToTop';
 import { trackMetrikaHit } from '../utils/metrika';
 import { useRenderContext } from '../ssr/RenderContext';
 
-function ClientRouteShell({ isAdminRoute = false }) {
+function isChromeHiddenRoutePath(path = '') {
+  return path === '/manager/login' || path.startsWith('/admin');
+}
+
+function ClientRouteShell({ isChromeHiddenRoute = false }) {
   return (
     <div
       className={
-        isAdminRoute
+        isChromeHiddenRoute
           ? 'flex min-h-screen items-center justify-center px-4 py-10 text-sm text-muted'
           : 'page-shell page-section text-center text-sm text-muted'
       }
@@ -24,9 +28,10 @@ function RouteEntryRenderer({ route }) {
   const renderContext = useRenderContext();
   const isServerClientRoute =
     renderContext.target === 'server' && route.renderMode === 'csr';
+  const isChromeHiddenRoute = isChromeHiddenRoutePath(route.path);
 
   if (isServerClientRoute) {
-    return <ClientRouteShell isAdminRoute={route.path.startsWith('/admin')} />;
+    return <ClientRouteShell isChromeHiddenRoute={isChromeHiddenRoute} />;
   }
 
   return route.renderElement();
@@ -34,29 +39,29 @@ function RouteEntryRenderer({ route }) {
 
 function App({ routes = [] }) {
   const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isChromeHiddenRoute = isChromeHiddenRoutePath(location.pathname);
   const mainRef = useRef(null);
   const resolvedRoutes = useMemo(() => routes, [routes]);
 
   useEffect(() => {
-    if (isAdminRoute) {
+    if (isChromeHiddenRoute) {
       return;
     }
     const path = `${location.pathname}${location.search}${location.hash}`;
     trackMetrikaHit(path, typeof document !== 'undefined' ? document.title : undefined);
-  }, [isAdminRoute, location.pathname, location.search, location.hash]);
+  }, [isChromeHiddenRoute, location.pathname, location.search, location.hash]);
 
   return (
     <>
       <ScrollToTop />
       <div
         className={
-          isAdminRoute
-            ? 'site-content-layer site-content-layer--admin'
+          isChromeHiddenRoute
+            ? 'site-content-layer site-content-layer--standalone'
             : 'site-content-layer site-content-layer--public'
         }
       >
-        {!isAdminRoute ? (
+        {!isChromeHiddenRoute ? (
           <a
             href="#main-content"
             className="sr-only fixed left-3 top-3 z-[210] rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink shadow-[0_14px_28px_rgba(43,39,34,0.16)] focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -69,14 +74,14 @@ function App({ routes = [] }) {
             Перейти к содержимому
           </a>
         ) : null}
-        {!isAdminRoute && <Header />}
+        {!isChromeHiddenRoute && <Header />}
         <main
           id="main-content"
           ref={mainRef}
           tabIndex={-1}
-          className={isAdminRoute ? 'min-h-screen' : 'min-h-[80vh]'}
+          className={isChromeHiddenRoute ? 'min-h-screen' : 'min-h-[80vh]'}
           style={
-            isAdminRoute
+            isChromeHiddenRoute
               ? undefined
               : {
                   paddingTop: 'var(--site-header-height, 7rem)',
@@ -94,7 +99,7 @@ function App({ routes = [] }) {
             ))}
           </Routes>
         </main>
-        {!isAdminRoute && <Footer />}
+        {!isChromeHiddenRoute && <Footer />}
       </div>
     </>
   );
