@@ -36,7 +36,6 @@ export function buildLoginRedirectPath(locationLike, fallbackPath = '/account') 
   const path = `${pathname}${search}${hash}`;
   const isBlockedAuthPath =
     pathname === '/login' ||
-    pathname === '/admin/login' ||
     pathname === '/manager/login';
 
   if (!path.startsWith('/') || path.startsWith('//') || isBlockedAuthPath) {

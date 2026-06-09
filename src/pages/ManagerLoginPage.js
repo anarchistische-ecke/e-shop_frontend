@@ -43,24 +43,24 @@ function ManagerLoginPage() {
   }
 
   return (
-    <section className="admin-auth-page">
-      <div className="admin-auth-grid">
-        <aside className="admin-auth-showcase" aria-hidden="true">
-          <p className="admin-auth-showcase__eyebrow">Доступ менеджера</p>
-          <h1 className="admin-auth-showcase__title">Кабинет менеджера Постельное Белье-ЮГ</h1>
-          <p className="admin-auth-showcase__text">
+    <section className="manager-auth-page">
+      <div className="manager-auth-grid">
+        <aside className="manager-auth-showcase" aria-hidden="true">
+          <p className="manager-auth-showcase__eyebrow">Доступ менеджера</p>
+          <h1 className="manager-auth-showcase__title">Кабинет менеджера Постельное Белье-ЮГ</h1>
+          <p className="manager-auth-showcase__text">
             Отправляйте ссылки на оплату, отслеживайте сделки и управляйте заказами клиентов.
           </p>
-          <ul className="admin-auth-showcase__list">
+          <ul className="manager-auth-showcase__list">
             <li>Сводка по вашим продажам и заказам</li>
             <li>Быстрая генерация ссылок на оплату</li>
-            <li>Доступ к истории ваших заказов</li>
+            <li>Переход к Directus CMS для управления витриной</li>
           </ul>
         </aside>
 
-        <div className="admin-auth-card">
-          <p className="admin-auth-card__eyebrow">Вход менеджера</p>
-          <h2 className="admin-auth-card__title">Добро пожаловать</h2>
+        <div className="manager-auth-card">
+          <p className="manager-auth-card__eyebrow">Вход менеджера</p>
+          <h2 className="manager-auth-card__title">Добро пожаловать</h2>
 
           {status ? <NotificationBanner notification={status} className="mb-4" /> : null}
 

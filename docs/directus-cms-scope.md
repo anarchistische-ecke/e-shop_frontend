@@ -8,10 +8,10 @@ The existing Spring backend in `/Users/freddycooper/Documents/eshop` remains the
 
 ## Current Codebase Signals
 
-Frontend content surfaces are currently hardcoded or stored in temporary localStorage-based admin screens:
+Frontend content surfaces are CMS-backed where the Directus integration has landed, with code fallbacks for unavailable CMS data:
 
-- Homepage copy and hero configuration: `src/pages/Home.js`, `src/data/homeHeroDefaults.js`, `src/pages/AdminMainPage.js`
-- Announcement banner and ad hoc content settings: `src/pages/AdminContent.js`, `src/pages/AdminSettings.js`
+- Homepage copy and hero configuration: `src/pages/Home.js`, `src/data/homeHeroDefaults.js`, CMS page/block data
+- Announcement banner and ad hoc content settings: CMS site settings and storefront blocks
 - Header and footer content: `src/components/Header.js`, `src/components/Footer.js`, `src/components/header/useHeaderState.js`
 - Static info pages: `src/pages/DeliveryInfoPage.js`, `src/pages/PaymentInfoPage.js`, `src/pages/BonusesInfoPage.js`, `src/pages/ProductionInfoPage.js`, `src/pages/LegalInfoPage.js`
 - Legal document rendering and metadata: `src/pages/legal/LegalDocumentPage.js`, `src/data/legal/constants.js`
@@ -32,13 +32,13 @@ These are the pieces that should move into Directus.
 
 | Area | Current Source | Directus Ownership | Notes |
 | --- | --- | --- | --- |
-| Homepage announcement banner | `src/pages/Home.js`, `src/pages/AdminContent.js`, `src/pages/AdminSettings.js` | Yes | Simple publishable banner with text, enabled flag, start/end dates later if needed. |
-| Homepage hero | `src/pages/Home.js`, `src/data/homeHeroDefaults.js`, `src/pages/AdminMainPage.js` | Yes | Manage badge, title, accent, subtitle, CTA labels/links, featured label, and featured product reference. |
+| Homepage announcement banner | CMS site settings and storefront blocks | Yes | Simple publishable banner with text, enabled flag, start/end dates later if needed. |
+| Homepage hero | `src/pages/Home.js`, `src/data/homeHeroDefaults.js`, CMS page/block data | Yes | Manage badge, title, accent, subtitle, CTA labels/links, featured label, and featured product reference. |
 | Homepage trust highlights | `src/pages/Home.js`, `src/data/trustLinks.js` | Yes | Content block copy and links are editorial. |
 | Homepage promo banners | `src/pages/Home.js` | Yes | Banner title, body, CTA, styling token, and destination should be CMS-managed. |
 | Homepage brand intro | `src/pages/Home.js` | Yes | Brand story headline, description, and value cards belong in CMS. |
 | Homepage newsletter CTA copy | `src/components/home/NewsletterForm.js` | Yes | Only the copy and form labels belong in CMS. Subscription submission does not. |
-| Navigation editorial links | `src/components/Footer.js`, temporary `adminMenuLinks` in `src/pages/AdminContent.js` | Yes, partially | Manual links and service links can live in CMS. Product/category taxonomy must not. |
+| Navigation editorial links | `src/components/Footer.js`, CMS navigation data | Yes, partially | Manual links and service links can live in CMS. Product/category taxonomy must not. |
 | Footer groups and contact copy | `src/components/Footer.js` | Yes | Footer columns, phone/email display, seller summary, payment badges, social links if added later. |
 | Info pages: delivery, payment, bonuses, production | `src/pages/DeliveryInfoPage.js`, `src/pages/PaymentInfoPage.js`, `src/pages/BonusesInfoPage.js`, `src/pages/ProductionInfoPage.js` | Yes | Rich text / modular content pages with SEO fields. |
 | Legal hub page | `src/pages/LegalInfoPage.js` | Yes | Intro copy, document cards, and seller-facing display text can be CMS-managed. |
@@ -62,8 +62,8 @@ These must stay owned by the existing backend and should not be migrated into Di
 | Payments and saved payment methods | `Payment`, `PaymentRefund`, `SavedPaymentMethod`, `PaymentController`, `PaymentService` | Payment status, refunds, provider webhooks, and saved methods are sensitive operational records. |
 | Delivery quotes, request IDs, shipment status, pickup logic | `YandexDeliveryController`, `YandexDeliveryService`, `ShipmentController`, `ShipmentService` | These are live integration results, not editorial content. |
 | Customers, profiles, marketing consent state | `Customer`, `CustomerController` | Customer identity and consent evidence must stay in backend systems. |
-| Promotions, coupon validity, loyalty balances, referrals | current UI prototypes in `src/pages/AdminPromotions.js`, account logic in `src/pages/AccountPage.js` | These affect pricing and entitlements, so they cannot be CMS-owned. |
-| Admin analytics, security, roles, auth | `admin/*`, Keycloak integration, admin pages | Operational control plane data belongs to backend/auth systems. |
+| Promotions, coupon validity, loyalty balances, referrals | backend promotion APIs, account logic in `src/pages/AccountPage.js` | These affect pricing and entitlements, so they cannot be CMS-owned. |
+| Admin analytics, security, roles, auth | backend/admin services, Keycloak integration, Directus roles | Operational control plane data belongs to backend/auth systems. |
 | Site URL, canonical host, environment-specific public URLs | `src/data/legal/constants.js`, backend `app.public-base-url`, deployment env | These are deployment/runtime settings, not editorial content. |
 
 ## Mixed Boundaries And Rules

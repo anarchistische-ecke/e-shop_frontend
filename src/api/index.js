@@ -16,8 +16,6 @@ const DEFAULT_API_BASE =
   'http://localhost:8080';
 const API_BASE = DEFAULT_API_BASE.replace(/\/$/, '');
 const JSON_TYPE = 'application/json';
-const rawActivityPath = readEnv('REACT_APP_ACTIVITY_LOGS_PATH', '/admin/activity') || '/admin/activity';
-const ACTIVITY_LOGS_PATH = (rawActivityPath.startsWith('/') ? rawActivityPath : `/${rawActivityPath}`).replace(/\/$/, '');
 
 export class ApiRequestError extends Error {
   constructor(message, { status, statusText, details, url } = {}) {
@@ -330,12 +328,6 @@ export async function checkoutCart({
     })
   });
 }
-export async function createAdminOrderLink({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl } = {}) {
-  return request('/orders/admin-link', {
-    method: 'POST',
-    body: JSON.stringify({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl })
-  });
-}
 export async function createManagerOrderLink({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl, sendEmail } = {}) {
   return request('/orders/manager-link', {
     method: 'POST',
@@ -411,14 +403,6 @@ export async function getManagerProfile() {
 export async function getManagerDashboard({ limit = 8 } = {}) {
   const safeLimit = Number.isFinite(limit) ? limit : 8;
   return request(`/managers/me/dashboard?limit=${encodeURIComponent(safeLimit)}`);
-}
-
-export async function getAdminActivityLogs(params = {}) {
-  const query = new URLSearchParams();
-  if (params.page !== undefined) query.append('page', params.page);
-  if (params.size !== undefined) query.append('size', params.size);
-  const qs = query.toString();
-  return request(`${ACTIVITY_LOGS_PATH}${qs ? `?${qs}` : ''}`);
 }
 
 // CMS content façade

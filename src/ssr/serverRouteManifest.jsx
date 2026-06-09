@@ -1,6 +1,5 @@
 import React, { Suspense, lazy } from 'react';
 import { Navigate } from 'react-router-dom';
-import RequireAdmin from '../components/RequireAdmin';
 import AboutPage from '../pages/AboutPage';
 import CataloguePage from '../pages/CataloguePage';
 import CategoryPage from '../pages/CategoryPage';
@@ -23,25 +22,28 @@ import {
   storefrontRouteConfig
 } from './routeConfig';
 
-const AdminLoginPage = lazy(() => import('../pages/AdminLoginPage'));
-const AdminApp = lazy(() => import('../pages/AdminApp'));
+const ManagerLoginPage = lazy(() => import('../pages/ManagerLoginPage'));
 
-function RouteFallback({ isAdminRoute = false }) {
+function RouteFallback({ isStandaloneRoute = false }) {
   return (
     <div
       className={
-        isAdminRoute
+        isStandaloneRoute
           ? 'flex min-h-screen items-center justify-center px-4 py-10 text-sm text-muted'
           : 'page-shell page-section text-center text-sm text-muted'
       }
     >
-      {isAdminRoute ? 'Загружаем панель управления…' : 'Загружаем страницу…'}
+      Загружаем страницу…
     </div>
   );
 }
 
 function RouteBoundary(routeElement, options = {}) {
-  return <Suspense fallback={<RouteFallback isAdminRoute={options.isAdminRoute} />}>{routeElement}</Suspense>;
+  return (
+    <Suspense fallback={<RouteFallback isStandaloneRoute={options.isStandaloneRoute} />}>
+      {routeElement}
+    </Suspense>
+  );
 }
 
 const routeRenderers = {
@@ -67,19 +69,8 @@ const routeRenderers = {
   'sales-terms': () => RouteBoundary(<SalesTermsPage />),
   'cookies-policy': () => RouteBoundary(<CookiesPolicyPage />),
   'personal-data-consent': () => RouteBoundary(<PersonalDataConsentPage />),
-  'admin-login': () => (
-    <Suspense fallback={<RouteFallback isAdminRoute />}>
-      <AdminLoginPage />
-    </Suspense>
-  ),
-  'manager-login': () => <Navigate to="/admin/login" replace />,
-  'admin-app': () => (
-    <Suspense fallback={<RouteFallback isAdminRoute />}>
-      <RequireAdmin>
-        <AdminApp />
-      </RequireAdmin>
-    </Suspense>
-  ),
+  'manager-login': () => RouteBoundary(<ManagerLoginPage />, { isStandaloneRoute: true }),
+  'legacy-admin-redirect': () => <Navigate to="/manager/login" replace />,
   'not-found': () => <NotFound />
 };
 

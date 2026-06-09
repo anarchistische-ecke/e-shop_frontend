@@ -4,25 +4,6 @@ import CmsManagedPage from '../components/cms/CmsManagedPage';
 import { Button, Card } from '../components/ui';
 
 function AboutFallbackPage() {
-  if (typeof window !== 'undefined') {
-    const savedPages = localStorage.getItem('adminPages');
-    if (savedPages) {
-      try {
-        const pages = JSON.parse(savedPages);
-        const about = pages.find((p) => p.slug === 'about');
-        if (about && about.published === false) {
-          return (
-            <div className="py-12 text-center">
-              <h1 className="text-2xl font-semibold mb-2">Страница недоступна</h1>
-              <p className="text-muted">Эта страница скрыта администратором.</p>
-            </div>
-          );
-        }
-      } catch (e) {
-      }
-    }
-  }
-
   return (
     <div className="about-page">
       <section className="py-12">

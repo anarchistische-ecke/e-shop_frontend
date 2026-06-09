@@ -36,7 +36,7 @@ describe('storefront route config', () => {
       renderMode: 'csr'
     });
     expect(matchStorefrontRoute('/admin/products').route).toMatchObject({
-      id: 'admin-app',
+      id: 'legacy-admin-redirect',
       renderMode: 'csr'
     });
   });
