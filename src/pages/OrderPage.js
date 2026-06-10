@@ -198,7 +198,7 @@ function OrderPage() {
     if (!receiptEmail.trim()) {
       setStatus(createNotification({
         type: 'error',
-        title: 'Укажите email для чека',
+        title: 'Укажите электронную почту для чека',
         message: 'Перед повторной оплатой нужен адрес для отправки чека.'
       }));
       return;
@@ -402,7 +402,7 @@ function OrderPage() {
               <Card variant="quiet" padding="sm" className="mt-5 text-sm space-y-1">
                 {contactName ? <p><span className="text-muted">Имя:</span> {contactName}</p> : null}
                 {contactPhone ? <p><span className="text-muted">Телефон:</span> {contactPhone}</p> : null}
-                {contactEmail ? <p><span className="text-muted">Email:</span> {contactEmail}</p> : null}
+                {contactEmail ? <p><span className="text-muted">Электронная почта:</span> {contactEmail}</p> : null}
                 <p><span className="text-muted">Адрес:</span> {deliveryAddress}</p>
                 <p><span className="text-muted">Доставка:</span> {managerDeliveryNotice}</p>
               </Card>
@@ -482,12 +482,12 @@ function OrderPage() {
                     <NotificationBanner notification={paymentRecoveryNotice} compact />
                   ) : null}
                   <label className="block text-sm">
-                    <span className="text-muted">Email для чека</span>
+                    <span className="text-muted">Электронная почта для чека</span>
                     <Input
                       type="email"
                       value={receiptEmail}
                       onChange={(event) => setReceiptEmail(event.target.value)}
-                      placeholder="email@example.ru"
+                      placeholder="pochta@example.ru"
                       className="mt-2"
                     />
                   </label>

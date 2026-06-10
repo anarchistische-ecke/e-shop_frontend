@@ -25,16 +25,6 @@ function getStockCount(product) {
   );
 }
 
-function formatReviewCount(count) {
-  const value = Number(count) || 0;
-  if (value <= 0) return '';
-  const mod10 = value % 10;
-  const mod100 = value % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${value} отзыв`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${value} отзыва`;
-  return `${value} отзывов`;
-}
-
 function ProductCard({
   product,
   deferThumbnails = false,
@@ -108,8 +98,6 @@ function ProductCard({
       ? `Цвет: ${product.color}`
       : 'Подробности и характеристики на карточке товара';
   const descriptorLine = product?.description || attributeLine;
-  const ratingValue = Number(product?.rating) || 0;
-  const reviewCountLabel = formatReviewCount(product?.reviewCount || product?.reviewsCount);
 
   const badges = [
     isLowStock ? `Мало на складе: ${stockCount}` : '',
@@ -216,12 +204,6 @@ function ProductCard({
         </p>
 
         <div className="min-h-[1.1rem] flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-          {ratingValue > 0 ? (
-            <span className="font-semibold text-ink">
-              {ratingValue.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} / 5
-              {reviewCountLabel ? ` · ${reviewCountLabel}` : ''}
-            </span>
-          ) : null}
           <span className={stockTone}>{stockLabel}</span>
         </div>
 

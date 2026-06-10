@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { usePaymentConfig } from '../../contexts/PaymentConfigContext';
-import { getReviewPaymentHint } from '../../utils/payment';
+import { getConfirmationPaymentHint } from '../../utils/payment';
 import { Button, Card } from '../../components/ui';
 
-function ReviewStep({
+function ConfirmationStep({
   active,
   email,
   customerName,
@@ -20,8 +20,8 @@ function ReviewStep({
   onSafeRetry
 }) {
   const { paymentConfig } = usePaymentConfig();
-  const reviewPaymentHint = getReviewPaymentHint(paymentConfig);
-  const reviewDescription =
+  const confirmationPaymentHint = getConfirmationPaymentHint(paymentConfig);
+  const confirmationDescription =
     paymentConfig.confirmationMode === 'EMBEDDED'
       ? 'Проверьте данные. После этого откроется встроенная защищённая форма оплаты.'
       : 'Проверьте данные. После этого откроется защищённая страница оплаты.';
@@ -33,7 +33,7 @@ function ReviewStep({
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">3</span>
           <div>
             <h2 className="text-2xl font-semibold">Проверка и оплата</h2>
-            <p className="text-sm text-muted">{reviewDescription}</p>
+            <p className="text-sm text-muted">{confirmationDescription}</p>
           </div>
         </div>
         {!active ? (
@@ -71,8 +71,8 @@ function ReviewStep({
 
           <div className="mt-4 rounded-lg border border-ink/10 bg-white/90 p-3">
             <p className="text-xs uppercase tracking-[0.18em] text-muted">Онлайн-оплата</p>
-            <p className="mt-2 text-sm font-semibold">Карта или СБП через YooKassa</p>
-            <p className="mt-2 text-xs text-muted">{reviewPaymentHint}</p>
+            <p className="mt-2 text-sm font-semibold">Карта или СБП через платёжный сервис</p>
+            <p className="mt-2 text-xs text-muted">{confirmationPaymentHint}</p>
           </div>
 
           {safeRetryState ? (
@@ -109,4 +109,4 @@ function ReviewStep({
   );
 }
 
-export default ReviewStep;
+export default ConfirmationStep;

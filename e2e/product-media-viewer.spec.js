@@ -36,7 +36,7 @@ async function expectNoHorizontalOverflow(page) {
 async function openProductMediaViewer(page, overrides = {}) {
   await mockStorefrontApi(page, overrides);
   await page.goto('/product/prod-satin-sand');
-  await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
 
   const gallery = page.getByTestId('product-gallery-card');
   await gallery.scrollIntoViewIfNeeded();
@@ -146,7 +146,7 @@ async function expectImageScale(page, minimum) {
 test('mobile media viewer fills the viewport and isolates pinch zoom from the page', async ({ page }) => {
   await mockStorefrontApi(page);
   await page.goto('/product/prod-satin-sand');
-  await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
 
   const gallery = page.getByTestId('product-gallery-card');
   await gallery.scrollIntoViewIfNeeded();
@@ -308,7 +308,7 @@ test('mobile controls and swipe transitions use the longer fluent animation timi
 });
 
 test('mobile top caption handles 50 character product names without clipping controls', async ({ page }) => {
-  const longName = 'Сатиновый комплект Sand с расширенным названием XL';
+  const longName = 'Песочный сатиновый комплект с расширенным названием XL';
   expect(longName.length).toBe(50);
 
   const viewer = await openProductMediaViewer(page, {

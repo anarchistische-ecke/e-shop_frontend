@@ -16,7 +16,7 @@ const documents = [
   },
   {
     title: 'Согласие на получение рекламы',
-    description: 'Условия получения рекламных сообщений и отзыва согласия.',
+    description: 'Условия получения рекламных сообщений и аннулирования согласия.',
     path: '/soglasie-na-poluchenie-reklamy',
   },
   {
@@ -25,9 +25,9 @@ const documents = [
     path: '/usloviya-prodazhi',
   },
   {
-    title: 'Политика в отношении файлов cookie',
-    description: 'Какие cookie мы используем и как управлять настройками.',
-    path: '/cookies',
+    title: 'Политика в отношении куки',
+    description: 'Какие куки мы используем и как управлять настройками.',
+    path: '/kuki',
   },
   {
     title: 'Согласие на обработку персональных данных',
@@ -41,7 +41,7 @@ function LegalInfoPage() {
     <section className="legal-page">
       <Seo
         title="Юридическая информация"
-        description="Реквизиты продавца, оферта, политика персональных данных, cookies и другие обязательные документы."
+        description="Реквизиты продавца, оферта, политика персональных данных, куки и другие обязательные документы."
         canonicalPath="/info/legal"
       />
       <div className="legal-layout">
@@ -72,7 +72,7 @@ function LegalInfoPage() {
               <p>ОГРНИП {legalTokens.LEGAL_OGRNIP}</p>
               <p>Телефон: {legalTokens.LEGAL_PHONE}</p>
               <p className="sm:col-span-2">Адрес: {legalTokens.LEGAL_ADDRESS}</p>
-              <p className="sm:col-span-2">E-mail: {legalTokens.LEGAL_EMAIL}</p>
+              <p className="sm:col-span-2">Электронная почта: {legalTokens.LEGAL_EMAIL}</p>
             </div>
           </section>
         </div>

@@ -89,10 +89,6 @@ function CataloguePage() {
       updateParams({ minPrice: '', maxPrice: '' });
       return;
     }
-    if (key === 'rating') {
-      updateParams({ rating: '' });
-      return;
-    }
     if (key === 'inStock') {
       updateParams({ inStock: false });
       return;
@@ -115,7 +111,6 @@ function CataloguePage() {
     onBrandChange: (brand) => updateParams({ brand }),
     onMinPriceChange: (minPrice) => updateParams({ minPrice }),
     onMaxPriceChange: (maxPrice) => updateParams({ maxPrice }),
-    onRatingChange: (rating) => updateParams({ rating }),
     onToggleInStock: () => updateParams({ inStock: !params.inStock }),
     onToggleSale: () => updateParams({ sale: !params.sale }),
     onClearAll: clearFilters

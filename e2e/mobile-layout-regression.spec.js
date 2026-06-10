@@ -181,7 +181,7 @@ test('core storefront routes fit the mobile viewport without horizontal overflow
   await expect(page.getByRole('heading', { name: /Постель, которая остается свежей/i })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
-  const cmsCollectionLink = page.getByRole('link', { name: /Сатиновый комплект Sand/i }).first();
+  const cmsCollectionLink = page.getByRole('link', { name: /Песочный сатиновый комплект/i }).first();
   await expect(cmsCollectionLink).toBeVisible();
   await cmsCollectionLink.scrollIntoViewIfNeeded();
   await expectNoHorizontalOverflow(page);
@@ -200,7 +200,7 @@ test('core storefront routes fit the mobile viewport without horizontal overflow
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/product/prod-satin-sand/satin-sand');
-  await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole('button', { name: 'Добавить в корзину' }).click();

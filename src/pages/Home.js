@@ -36,7 +36,7 @@ function getProductStock(product) {
 const fabricGuideItems = [
   {
     title: 'Перкаль',
-    label: 'Cool & crisp',
+    label: 'Прохладная свежесть',
     description: 'Матовая хлопковая ткань для тех, кто любит прохладное, свежее ощущение.',
     cue: 'Лучше для теплого сна',
     cta: 'Смотреть перкаль',
@@ -46,7 +46,7 @@ const fabricGuideItems = [
   },
   {
     title: 'Сатин',
-    label: 'Smooth & soft',
+    label: 'Гладко и мягко',
     description: 'Гладкая поверхность с мягким блеском, которая ощущается плотнее и теплее.',
     cue: 'Лучше для мягкости',
     cta: 'Смотреть сатин',
@@ -56,7 +56,7 @@ const fabricGuideItems = [
   },
   {
     title: 'Лен',
-    label: 'Relaxed texture',
+    label: 'Живая фактура',
     description: 'Живая фактура, свободная посадка и ощущение спальни без лишней парадности.',
     cue: 'Лучше для фактуры',
     cta: 'Смотреть лен',
@@ -66,7 +66,7 @@ const fabricGuideItems = [
   },
   {
     title: 'Готовый комплект',
-    label: 'Bundle-ready',
+    label: 'Готовое сочетание',
     description: 'Простыня, пододеяльник, наволочки и акценты в одной спокойной палитре.',
     cue: 'Лучше для быстрого выбора',
     cta: 'Собрать кровать',
@@ -91,33 +91,8 @@ const benefitItems = [
   },
   {
     title: 'Оплата картой или СБП',
-    description: 'Защищенный checkout без сохранения платежных данных на сайте.',
+    description: 'Безопасная оплата без сохранения платёжных данных на сайте.',
   },
-];
-
-const reviewQuotes = [
-  {
-    title: '“Сатин плотный, но не жаркий”',
-    description: 'Комплект быстро расправляется на кровати, цвет спокойный и хорошо держится после стирки.',
-    label: 'Покупатель, Москва',
-  },
-  {
-    title: '“Легко собрать спальню целиком”',
-    description: 'Понравилось, что комплекты и пледы смотрятся вместе, не пришлось отдельно подбирать оттенки.',
-    label: 'Покупатель, Ростов-на-Дону',
-  },
-  {
-    title: '“Перед оплатой все понятно”',
-    description: 'Условия доставки и оплаты видны до оформления, менеджер быстро подтвердил заказ.',
-    label: 'Покупатель, Краснодар',
-  },
-];
-
-const reviewFallbackImages = [
-  'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=700&q=80',
-  'https://images.unsplash.com/photo-1501045661006-fcebe0257c3f?auto=format&fit=crop&w=700&q=80',
-  'https://images.unsplash.com/photo-1615874694520-474822394e73?auto=format&fit=crop&w=700&q=80',
-  'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=700&q=80',
 ];
 
 function SectionIntro({ eyebrow, title, description, actionLabel, actionUrl }) {
@@ -202,79 +177,6 @@ function BenefitsRow() {
   );
 }
 
-function ReviewsAndUgc({ products = [] }) {
-  const gallery = products
-    .map((product) => ({
-      id: product.id,
-      title: product.name,
-      imageUrl: resolveImageUrl(getPrimaryImageUrl(product)),
-      imageMedia: getPrimaryImageMedia(product),
-    }))
-    .filter((item) => item.imageUrl)
-    .slice(0, 4);
-  const galleryItems = gallery.length > 0
-    ? gallery
-    : reviewFallbackImages.map((imageUrl, index) => ({
-        id: `fallback-${index}`,
-        title: 'Реальная спальня с мягким текстилем',
-        imageUrl,
-        imageMedia: null,
-      }));
-
-  return (
-    <section className="page-shell page-section">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:items-start">
-        <Card padding="lg" className="rounded-[28px] border border-accent/20 bg-accent text-white">
-          <p className="text-xs uppercase tracking-[0.28em] text-white/68">Отзывы и proof</p>
-          <h2 className="mt-3 text-3xl font-semibold text-white">Любят за ощущение ткани и спокойный сервис</h2>
-          <p className="mt-3 text-sm leading-6 text-white/74">
-            Здесь можно заменить текст на реальные выдержки из отзывов, пресс-упоминания и UGC-фото после подключения CMS-контента.
-          </p>
-          <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-2xl border border-white/12 bg-white/10 p-3">
-              <p className="text-2xl font-semibold">4,8 / 5</p>
-              <p className="mt-1 text-white/68">средняя оценка</p>
-            </div>
-            <div className="rounded-2xl border border-white/12 bg-white/10 p-3">
-              <p className="text-2xl font-semibold">1000+</p>
-              <p className="mt-1 text-white/68">ночей в отзывах</p>
-            </div>
-          </div>
-        </Card>
-
-        <div className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            {reviewQuotes.map((quote) => (
-              <Card key={quote.title} variant="quiet" padding="lg" className="rounded-[24px] border border-ink/10 bg-white/88">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted">{quote.label}</p>
-                <h3 className="mt-3 text-lg font-semibold text-ink">{quote.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted">{quote.description}</p>
-              </Card>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-4 gap-2">
-            {galleryItems.map((item) => (
-              <div key={item.id} className="overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_10px_24px_rgba(43,39,34,0.1)]">
-                <div className="relative pt-[118%]">
-                  <ResponsiveImage
-                    media={item.imageMedia}
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="absolute inset-0 h-full w-full object-cover"
-                    sizes="(min-width: 1024px) 12vw, 24vw"
-                    loading="lazy"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function ConversionCta() {
   return (
     <section className="page-shell page-section">
@@ -283,7 +185,7 @@ function ConversionCta() {
           <p className="text-xs uppercase tracking-[0.28em] text-accent">Готовы выбрать</p>
           <h2 className="mt-3 text-3xl font-semibold text-ink">Соберите кровать из проверенных комплектов</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Начните с бестселлеров, добавьте плед или выберите ткань по ощущению. Финальная стоимость доставки и условия оплаты останутся видимыми до checkout.
+            Начните с бестселлеров, добавьте плед или выберите ткань по ощущению. Финальная стоимость доставки и условия оплаты останутся видимыми до оформления заказа.
           </p>
         </div>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row lg:mt-0">
@@ -331,13 +233,11 @@ function HomeFallbackPage() {
     return [...activeProducts]
       .sort((a, b) => {
         const scoreA =
-          (Number(a.rating) || 0) * 100 +
-          (Number(a.reviewCount || a.reviewsCount) || 0) * 4 +
-          Math.min(getProductStock(a), 12);
+          Math.min(getProductStock(a), 12) * 10 +
+          getProductPrice(a);
         const scoreB =
-          (Number(b.rating) || 0) * 100 +
-          (Number(b.reviewCount || b.reviewsCount) || 0) * 4 +
-          Math.min(getProductStock(b), 12);
+          Math.min(getProductStock(b), 12) * 10 +
+          getProductPrice(b);
         return scoreB - scoreA;
       })
       .slice(0, 8);
@@ -364,7 +264,7 @@ function HomeFallbackPage() {
     },
     {
       title: 'Карта или СБП',
-      subtitle: 'Защищенный checkout через платежную форму.',
+      subtitle: 'Безопасная оплата через платёжную форму.',
       link: '/info/payment',
     },
     {
@@ -459,7 +359,7 @@ function HomeFallbackPage() {
         <FeaturedProducts
           eyebrow="С чего начать"
           title="Бестселлеры, которые быстро объясняют выбор"
-          description="Четыре-восемь проверенных SKU с тканью, ценой, рейтингом и быстрым действием прямо на главной."
+          description="Четыре-восемь проверенных товаров с тканью, ценой и быстрым действием прямо на главной."
           products={bestsellers}
           loading={loading}
           ctaText="Все бестселлеры"
@@ -471,8 +371,6 @@ function HomeFallbackPage() {
         <ShopByFeelSection />
 
         <BenefitsRow />
-
-        <ReviewsAndUgc products={activeProducts} />
 
         <ConversionCta />
 

@@ -12,7 +12,6 @@ import {
   buildDiversityRanking,
   buildPriceBounds,
   getDiscountRate,
-  getReviewCount,
   getStockCount,
   resolveBrandToken,
   resolveCategoryToken,
@@ -63,7 +62,6 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
   const normalizedQuery = normalizeSearchText(deferredParams.query || '');
   const normalizedScope = normalizeSearchText(deferredParams.scope || '');
   const normalizedOriginal = normalizeSearchText(deferredParams.original || '');
-  const minRatingValue = deferredParams.rating ? Number(deferredParams.rating) : 0;
 
   const {
     navCategories,
@@ -240,7 +238,6 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
       const productPrice = getProductPrice(product);
       if (priceFilter.min !== null && productPrice < priceFilter.min) return false;
       if (priceFilter.max !== null && productPrice > priceFilter.max) return false;
-      if (minRatingValue && Number(product?.rating || 0) < minRatingValue) return false;
       if (deferredParams.inStock && getStockCount(product) <= 0) return false;
       if (deferredParams.sale && getDiscountRate(product) <= 0) return false;
       return true;
@@ -250,7 +247,6 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
     deferredParams.brand,
     deferredParams.inStock,
     deferredParams.sale,
-    minRatingValue,
     priceFilter
   ]);
 
@@ -274,18 +270,13 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
         const rankB = hasQuery ? (searchRank.get(b.id) || 0) : (diversityRank.get(b.id) || 0);
         if (rankB !== rankA) return rankB - rankA;
 
-        const ratingDelta = (b?.rating || 0) - (a?.rating || 0);
-        if (ratingDelta !== 0) return ratingDelta;
-        return getReviewCount(b) - getReviewCount(a);
+        const stockDelta = getStockCount(b) - getStockCount(a);
+        if (stockDelta !== 0) return stockDelta;
+        return String(a?.name || '').localeCompare(String(b?.name || ''), 'ru');
       },
       newest: (a, b) => String(b.id).localeCompare(String(a.id)),
       priceAsc: (a, b) => getProductPrice(a) - getProductPrice(b),
       priceDesc: (a, b) => getProductPrice(b) - getProductPrice(a),
-      rating: (a, b) => {
-        const ratingDelta = (b?.rating || 0) - (a?.rating || 0);
-        if (ratingDelta !== 0) return ratingDelta;
-        return getReviewCount(b) - getReviewCount(a);
-      },
       discount: (a, b) => getDiscountRate(b) - getDiscountRate(a)
     };
 
@@ -394,9 +385,6 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
     if (priceFilter.min !== null) parts.push(`от ${priceFilter.min.toLocaleString('ru-RU')} ₽`);
     if (priceFilter.max !== null) parts.push(`до ${priceFilter.max.toLocaleString('ru-RU')} ₽`);
     activeFilters.push({ key: 'price', label: `Цена ${parts.join(' ')}` });
-  }
-  if (minRatingValue) {
-    activeFilters.push({ key: 'rating', label: `Рейтинг от ${minRatingValue}` });
   }
   if (deferredParams.inStock) {
     activeFilters.push({ key: 'inStock', label: 'Только в наличии' });

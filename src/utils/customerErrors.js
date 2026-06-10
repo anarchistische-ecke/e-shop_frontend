@@ -15,6 +15,7 @@ const SENSITIVE_MESSAGE_PATTERNS = [
   /java\.[a-z]/i,
   /https?:\/\//i,
   /\blocalhost\b/i,
+  /[A-Za-z]/,
   /\b\d{2,5}\b.*\b(error|exception)\b/i
 ];
 

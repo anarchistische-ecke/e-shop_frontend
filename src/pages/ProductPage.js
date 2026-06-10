@@ -524,7 +524,7 @@ function ProductPage() {
         key: 'payment',
         icon: 'secure',
         title: 'Оплата',
-        summary: 'Безопасный checkout',
+        summary: 'Безопасная оплата',
         caption: 'Оплата подтверждается на защищённом шаге и не дублируется.'
       }
     ],
@@ -533,9 +533,6 @@ function ProductPage() {
   const hasBundleSelection = bundleItems.some((item) => bundleSelections[item.id]);
   const isCartActionPending = Boolean(pendingAction);
   const canPurchaseSelectedVariant = availableStock > 0 && !isCartActionPending;
-  const ratingValue = Number(product?.rating || 0);
-  const reviewCount = Number(product?.reviewCount || product?.reviewsCount || 0);
-  const hasReviewSummary = ratingValue > 0 && reviewCount > 0;
   const careText = product?.care || 'Деликатная стирка при 30°. Следуйте рекомендациям на ярлыке изделия.';
   const hasDetailsContent = specificationSections.length > 0 || fallbackSpecs.length > 0;
   const canonicalProductPath = useMemo(() => buildProductPath(product), [product]);
@@ -597,9 +594,6 @@ function ProductPage() {
     };
     const brandName =
       typeof product.brand === 'string' ? product.brand : product.brand?.name || '';
-    const aggregateRatingValue = Number(product.rating || 0);
-    const aggregateReviewCount = Number(product.reviewCount || product.reviewsCount || 0);
-
     return {
       '@context': 'https://schema.org',
       '@type': 'Product',
@@ -615,14 +609,6 @@ function ProductPage() {
             name: brandName,
           }
         : undefined,
-      aggregateRating:
-        aggregateRatingValue > 0 && aggregateReviewCount > 0
-          ? {
-              '@type': 'AggregateRating',
-              ratingValue: aggregateRatingValue.toFixed(1),
-              reviewCount: aggregateReviewCount,
-            }
-          : undefined,
       offers: offer,
     };
   }, [
@@ -1464,18 +1450,6 @@ function ProductPage() {
                   </div>
                 </ProductAccordionItem>
 
-                {hasReviewSummary ? (
-                  <ProductAccordionItem
-                    id="pdp-reviews"
-                    title="Отзывы"
-                    isOpen={Boolean(openAccordions.reviews)}
-                    onToggle={() => toggleAccordion('reviews')}
-                  >
-                    <p>
-                      Рейтинг {ratingValue.toFixed(1)} на основе {reviewCount.toLocaleString('ru-RU')} отзывов.
-                    </p>
-                  </ProductAccordionItem>
-                ) : null}
               </section>
             </div>
           </aside>

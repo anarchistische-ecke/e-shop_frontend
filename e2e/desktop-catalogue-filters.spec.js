@@ -23,16 +23,16 @@ test('desktop catalog scope chips filter results and can be cleared', async ({ p
   await expect(page).toHaveURL(/\/catalog\?scope=throws/);
   await expect(page.getByText(/3\s+товар/)).toHaveCount(0);
   await expect(page.getByText(/1\s+товар/)).toBeVisible();
-  await expect(page.getByText('Плед Cloud')).toBeVisible();
-  await expect(page.getByText('Сатиновый комплект Sand')).toHaveCount(0);
+  await expect(page.getByText('Плед Облако')).toBeVisible();
+  await expect(page.getByText('Песочный сатиновый комплект')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Категория: Пледы/i })).toBeVisible();
 
   await page.getByRole('button', { name: /Категория: Пледы/i }).click();
 
   await expect(page).toHaveURL(/\/catalog$/);
-  await expect(page.getByText('Плед Cloud')).toBeVisible();
-  await expect(page.getByText('Сатиновый комплект Sand')).toBeVisible();
-  await expect(page.getByText('Набор полотенец Moss')).toBeVisible();
+  await expect(page.getByText('Плед Облако')).toBeVisible();
+  await expect(page.getByText('Песочный сатиновый комплект')).toBeVisible();
+  await expect(page.getByText('Набор полотенец Лесной мох')).toBeVisible();
 });
 
 test('desktop footer stays centered and compact on wide screens', async ({ page }) => {

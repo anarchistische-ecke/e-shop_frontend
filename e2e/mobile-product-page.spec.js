@@ -5,7 +5,7 @@ test('buy now submits once on a slow mobile connection', async ({ page }) => {
   const { cartState, stats } = await mockStorefrontApi(page, { addItemDelayMs: 700 });
 
   await page.goto('/product/prod-satin-sand');
-  await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
 
   const buyNowButton = page.getByRole('button', { name: 'Купить сейчас' });
   await buyNowButton.dblclick();
@@ -22,7 +22,7 @@ test('mobile product page keeps gallery controls above the sticky cart bar and s
   await mockStorefrontApi(page);
 
   await page.goto('/product/prod-satin-sand');
-  await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
 
   const galleryRail = page.getByTestId('product-gallery-rail');
   const stickyBar = page.getByTestId('product-mobile-cart-bar');
@@ -55,7 +55,7 @@ test('mobile gallery swipes between images and still opens zoom on tap', async (
   await mockStorefrontApi(page);
 
   await page.goto('/product/prod-satin-sand');
-  await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
 
   const galleryButton = page
     .getByTestId('product-gallery-card')
@@ -82,7 +82,7 @@ test('out-of-stock variant disables purchase CTAs and hides fake notify form', a
   await mockStorefrontApi(page);
 
   await page.goto('/product/prod-satin-sand');
-  await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
 
   await page.getByLabel('Выберите вариант').click();
   await page.getByRole('option', { name: /240×260/ }).click();
@@ -92,7 +92,7 @@ test('out-of-stock variant disables purchase CTAs and hides fake notify form', a
   await expect(page.getByRole('button', { name: 'Купить сейчас' })).toBeDisabled();
   await expect(page.getByText('Этот вариант сейчас недоступен')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Выбрать доступный вариант' })).toBeVisible();
-  await expect(page.getByLabel('Email для уведомления')).toHaveCount(0);
+  await expect(page.getByLabel('Электронная почта для уведомления')).toHaveCount(0);
 });
 
 test.describe('desktop product page variant selector', () => {
@@ -107,7 +107,7 @@ test.describe('desktop product page variant selector', () => {
     await mockStorefrontApi(page);
 
     await page.goto('/product/prod-satin-sand');
-    await expect(page.getByRole('heading', { name: /Сатиновый комплект Sand/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
 
     const sizeButton = page.getByTestId('product-purchase-card').getByLabel('Выберите вариант');
     await expect(sizeButton).toBeVisible();

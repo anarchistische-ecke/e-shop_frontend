@@ -13,7 +13,7 @@ function NewsletterForm() {
     if (!isValid) {
       setStatus({
         type: 'error',
-        message: 'Введите email в формате name@example.ru.'
+        message: 'Введите адрес электронной почты в формате pochta@example.ru.'
       });
       return;
     }
@@ -53,8 +53,8 @@ function NewsletterForm() {
                   setStatus(null);
                 }
               }}
-              placeholder="Ваш email"
-              aria-label="Email для рассылки"
+              placeholder="Ваша электронная почта"
+              aria-label="Электронная почта для рассылки"
             />
             <Button type="submit" block>
               Подписаться

@@ -61,19 +61,17 @@ const categories = [
 ];
 
 const brands = [
-  { id: 'brand-cozy', slug: 'cozy-home', name: 'Cozy Home' },
-  { id: 'brand-luna', slug: 'luna-soft', name: 'Luna Soft' },
+  { id: 'brand-cozy', slug: 'cozy-home', name: 'Уютный дом' },
+  { id: 'brand-luna', slug: 'luna-soft', name: 'Луна мягкость' },
 ];
 
 const products = [
   {
     id: 'prod-satin-sand',
     slug: 'satin-sand',
-    name: 'Сатиновый комплект Sand',
+    name: 'Песочный сатиновый комплект',
     price: 4200,
     oldPrice: 5100,
-    rating: 4.9,
-    reviewCount: 18,
     material: 'Сатин',
     category: 'popular',
     brand: 'cozy-home',
@@ -97,28 +95,26 @@ const products = [
     images: [
       {
         id: 'img-satin-sand-1',
-        url: svgDataUrl('Sand', '#ead7c7'),
-        alt: 'Сатиновый комплект Sand',
+        url: svgDataUrl('Песок', '#ead7c7'),
+        alt: 'Песочный сатиновый комплект',
       },
       {
         id: 'img-satin-sand-2',
-        url: svgDataUrl('Detail', '#f4ece2'),
-        alt: 'Фактура сатинового комплекта Sand',
+        url: svgDataUrl('Деталь', '#f4ece2'),
+        alt: 'Фактура песочного сатинового комплекта',
       },
       {
         id: 'img-satin-sand-3',
-        url: svgDataUrl('Scale', '#ded7cb'),
-        alt: 'Сатиновый комплект Sand в масштабе',
+        url: svgDataUrl('Масштаб', '#ded7cb'),
+        alt: 'Песочный сатиновый комплект в масштабе',
       },
     ],
   },
   {
     id: 'prod-throw-cloud',
     slug: 'throw-cloud',
-    name: 'Плед Cloud',
+    name: 'Плед Облако',
     price: 2600,
-    rating: 4.6,
-    reviewCount: 9,
     material: 'Хлопок',
     category: 'throws',
     brand: 'luna-soft',
@@ -134,18 +130,16 @@ const products = [
     images: [
       {
         id: 'img-throw-cloud-1',
-        url: svgDataUrl('Cloud', '#dfe8ef'),
-        alt: 'Плед Cloud',
+        url: svgDataUrl('Облако', '#dfe8ef'),
+        alt: 'Плед Облако',
       },
     ],
   },
   {
     id: 'prod-towels-moss',
     slug: 'towels-moss',
-    name: 'Набор полотенец Moss',
+    name: 'Набор полотенец Лесной мох',
     price: 1800,
-    rating: 4.4,
-    reviewCount: 6,
     material: 'Махра',
     category: 'new',
     brand: 'cozy-home',
@@ -161,8 +155,8 @@ const products = [
     images: [
       {
         id: 'img-towels-moss-1',
-        url: svgDataUrl('Moss', '#d7e2d3'),
-        alt: 'Набор полотенец Moss',
+        url: svgDataUrl('Мох', '#d7e2d3'),
+        alt: 'Набор полотенец Лесной мох',
       },
     ],
   },
@@ -180,7 +174,7 @@ const publicOrder = {
   items: [
     {
       id: 'order-item-1',
-      productName: 'Сатиновый комплект Sand',
+      productName: 'Песочный сатиновый комплект',
       variantName: '200×220',
       quantity: 1,
       unitPrice: 4200,

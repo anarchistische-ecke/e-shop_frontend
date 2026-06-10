@@ -156,7 +156,7 @@ export function useCheckoutState() {
 
   const payableTotal = total;
   const deliveryLabel = 'Согласует менеджер';
-  const reviewDeliveryLabel = homeAddress.trim() || 'Адрес не указан';
+  const confirmationDeliveryLabel = homeAddress.trim() || 'Адрес не указан';
   const checkoutSubmitLabel = isEmbeddedPaymentMode(paymentConfig)
     ? 'Создать заказ и открыть форму оплаты'
     : 'Перейти к оплате';
@@ -673,7 +673,7 @@ export function useCheckoutState() {
     total,
     deliveryLabel,
     payableTotal,
-    reviewDeliveryLabel,
+    confirmationDeliveryLabel,
     deliveryNotice: MANUAL_DELIVERY_NOTICE,
     handleExpressCheckout,
     handleContactNext,

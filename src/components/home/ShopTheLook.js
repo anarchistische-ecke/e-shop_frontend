@@ -43,7 +43,7 @@ function ShopTheLook({ title, description, imageUrl, imageMedia = null, products
     <section className="page-shell page-section">
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:gap-6 lg:items-center">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-accent">Shop the look</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-accent">Готовый образ</p>
           <h2 className="mt-2 text-2xl font-semibold md:text-3xl">{title}</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted">{description}</p>
 
@@ -60,7 +60,7 @@ function ShopTheLook({ title, description, imageUrl, imageMedia = null, products
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/75 text-sm text-muted">
-                  Изображение лука появится после загрузки каталога
+                  Изображение образа появится после загрузки каталога
                 </div>
               )}
 

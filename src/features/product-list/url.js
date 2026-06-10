@@ -47,7 +47,6 @@ export function parseProductListSearchParams(
     sort: normalizeString(params.get('sort')) || defaultSort,
     minPrice: normalizeNullableNumber(params.get('minPrice')),
     maxPrice: normalizeNullableNumber(params.get('maxPrice')),
-    rating: normalizeString(params.get('rating')),
     inStock: TRUTHY_VALUES.has(normalizeString(params.get('inStock')).toLowerCase()),
     sale: TRUTHY_VALUES.has(normalizeString(params.get('sale')).toLowerCase()),
     page: normalizePositiveInteger(params.get('page'), 1),
@@ -79,9 +78,6 @@ export function buildProductListSearchParams(
   }
   if (normalizeNullableNumber(values.maxPrice)) {
     params.set('maxPrice', normalizeNullableNumber(values.maxPrice));
-  }
-  if (normalizeString(values.rating)) {
-    params.set('rating', normalizeString(values.rating));
   }
   if (values.inStock) {
     params.set('inStock', '1');

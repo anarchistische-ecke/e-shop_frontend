@@ -26,9 +26,8 @@ describe('search autocomplete', () => {
   const products = [
     {
       id: 'prod-1',
-      name: 'Плед Cloud',
+      name: 'Плед Облако',
       category: 'throws',
-      rating: 4.6,
       variants: [{ id: 'variant-1', name: '130×170', price: 2600, stock: 3 }]
     }
   ];

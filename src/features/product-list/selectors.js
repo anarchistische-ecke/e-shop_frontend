@@ -46,10 +46,6 @@ export function getStockCount(product) {
   );
 }
 
-export function getReviewCount(product) {
-  return Number(product?.reviewCount || product?.reviewsCount || product?.reviews_count || 0);
-}
-
 export function sortCategories(categories = []) {
   return categories
     .slice()
@@ -127,9 +123,9 @@ export function buildDiversityRanking(list = []) {
 
   buckets.forEach((bucket) => {
     bucket.sort((a, b) => {
-      const ratingDelta = (b?.rating || 0) - (a?.rating || 0);
-      if (ratingDelta !== 0) return ratingDelta;
-      return getReviewCount(b) - getReviewCount(a);
+      const stockDelta = getStockCount(b) - getStockCount(a);
+      if (stockDelta !== 0) return stockDelta;
+      return String(a?.name || '').localeCompare(String(b?.name || ''), 'ru');
     });
   });
 

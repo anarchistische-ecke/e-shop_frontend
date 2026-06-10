@@ -3,7 +3,7 @@ import CheckoutStepper from './CheckoutStepper';
 import CheckoutSummary from './CheckoutSummary';
 import ContactStep from './ContactStep';
 import AddressStep from './AddressStep';
-import ReviewStep from './ReviewStep';
+import ConfirmationStep from './ConfirmationStep';
 import { CHECKOUT_STEPS } from './constants';
 
 function CheckoutFlow({ checkout }) {
@@ -79,12 +79,12 @@ function CheckoutFlow({ checkout }) {
             disabled={checkout.isSubmitting}
           />
 
-          <ReviewStep
+          <ConfirmationStep
             active={checkout.activeStep === 2}
             email={checkout.email}
             customerName={checkout.customerName}
             phone={checkout.phone}
-            reviewDeliveryLabel={checkout.reviewDeliveryLabel}
+            confirmationDeliveryLabel={checkout.confirmationDeliveryLabel}
             homeAddress={checkout.homeAddress}
             deliveryNotice={checkout.deliveryNotice}
             safeRetryState={checkout.safeRetryState}

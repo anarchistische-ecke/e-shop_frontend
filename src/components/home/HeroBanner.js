@@ -41,7 +41,7 @@ function HeroBanner({
   highlights = [],
   featuredProduct
 }) {
-  const proofChips = highlights.slice(0, 3);
+  const highlightChips = highlights.slice(0, 3);
   const heroAlt = featuredProduct?.name || 'Уютный домашний текстиль';
   const featuredProductLink = featuredProduct ? (
     <Link
@@ -120,9 +120,9 @@ function HeroBanner({
               ) : null}
           </div>
 
-          {proofChips.length > 0 ? (
+          {highlightChips.length > 0 ? (
             <div className="hidden grid-cols-1 gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-              {proofChips.map((item) => (
+              {highlightChips.map((item) => (
                 <Link
                   key={item.title}
                   to={item.link}

@@ -109,9 +109,9 @@ function Footer() {
           <div className="mx-auto flex w-full max-w-[72rem] flex-wrap items-center justify-between gap-1.5 text-xs text-white/60">
             <p className="m-0">© {siteSettings.siteName}, {copyrightPeriod}</p>
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5">Mir</span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5">Visa</span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5">Mastercard</span>
+              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5">Карты</span>
+              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5">СБП</span>
+              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5">Чеки</span>
             </div>
           </div>
         </div>
