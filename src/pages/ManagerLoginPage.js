@@ -91,7 +91,7 @@ function ManagerLoginPage() {
           {isReady && isAuthenticated && (!isManager || !hasStrongSession) && (
             <p className="mt-4 text-sm text-red-600">
               {!hasStrongSession
-                ? 'Для доступа требуется подтвержденный e-mail и MFA.'
+                ? 'Для доступа требуется подтверждённая электронная почта и двухфакторная аутентификация.'
                 : 'У вашей учётной записи нет прав менеджера.'}
             </p>
           )}

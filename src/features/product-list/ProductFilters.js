@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button, FilterToggle, Input, Modal, Select } from '../../components/ui';
-import { PRODUCT_LIST_RATING_OPTIONS } from './constants';
 
 function ProductFilterFields({
   brands,
@@ -9,7 +8,6 @@ function ProductFilterFields({
   onBrandChange,
   onMinPriceChange,
   onMaxPriceChange,
-  onRatingChange,
   onToggleInStock,
   onToggleSale
 }) {
@@ -52,21 +50,6 @@ function ProductFilterFields({
           />
         </div>
       </div>
-
-      <label className="block text-sm">
-        <span className="text-xs uppercase tracking-[0.18em] text-muted">Рейтинг</span>
-        <Select
-          value={params.rating}
-          onChange={(event) => onRatingChange(event.target.value)}
-          className="mt-1 w-full"
-        >
-          {PRODUCT_LIST_RATING_OPTIONS.map((option) => (
-            <option key={option.label} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
-      </label>
 
       <div className="grid grid-cols-1 gap-2">
         <FilterToggle
@@ -115,7 +98,6 @@ export function ProductFiltersPanel({
   onBrandChange,
   onMinPriceChange,
   onMaxPriceChange,
-  onRatingChange,
   onToggleInStock,
   onToggleSale,
   onClearAll,
@@ -139,7 +121,6 @@ export function ProductFiltersPanel({
         onBrandChange={onBrandChange}
         onMinPriceChange={onMinPriceChange}
         onMaxPriceChange={onMaxPriceChange}
-        onRatingChange={onRatingChange}
         onToggleInStock={onToggleInStock}
         onToggleSale={onToggleSale}
       />
@@ -151,7 +132,6 @@ export function ProductFiltersPanel({
         onBrandChange={onBrandChange}
         onMinPriceChange={onMinPriceChange}
         onMaxPriceChange={onMaxPriceChange}
-        onRatingChange={onRatingChange}
         onToggleInStock={onToggleInStock}
         onToggleSale={onToggleSale}
         onClearAll={onClearAll}
@@ -189,7 +169,6 @@ export function ProductFiltersDesktop({
   onBrandChange,
   onMinPriceChange,
   onMaxPriceChange,
-  onRatingChange,
   onToggleInStock,
   onToggleSale,
   className = 'mt-4 hidden gap-3 lg:grid xl:grid-cols-4'
@@ -203,7 +182,6 @@ export function ProductFiltersDesktop({
         onBrandChange={onBrandChange}
         onMinPriceChange={onMinPriceChange}
         onMaxPriceChange={onMaxPriceChange}
-        onRatingChange={onRatingChange}
         onToggleInStock={onToggleInStock}
         onToggleSale={onToggleSale}
       />
@@ -219,7 +197,6 @@ export function ProductFiltersSheet({
   onBrandChange,
   onMinPriceChange,
   onMaxPriceChange,
-  onRatingChange,
   onToggleInStock,
   onToggleSale,
   onClearAll,
@@ -247,7 +224,6 @@ export function ProductFiltersSheet({
           onBrandChange={onBrandChange}
           onMinPriceChange={onMinPriceChange}
           onMaxPriceChange={onMaxPriceChange}
-          onRatingChange={onRatingChange}
           onToggleInStock={onToggleInStock}
           onToggleSale={onToggleSale}
         />

@@ -88,7 +88,8 @@ function Modal({
         if (
           closeOnOverlayClick &&
           typeof onClose === 'function' &&
-          event.target === event.currentTarget
+          panelRef.current &&
+          !panelRef.current.contains(event.target)
         ) {
           onClose();
         }

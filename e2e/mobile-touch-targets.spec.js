@@ -38,10 +38,10 @@ test('mobile primary controls keep a minimum 44x44 touch target', async ({ page 
   await page.goto('/cart');
 
   await expectMinTouchTarget(
-    page.getByRole('button', { name: /Уменьшить количество: Сатиновый комплект Sand/i })
+    page.getByRole('button', { name: /Уменьшить количество: Песочный сатиновый комплект/i })
   );
   await expectMinTouchTarget(
-    page.getByRole('button', { name: /Увеличить количество: Сатиновый комплект Sand/i })
+    page.getByRole('button', { name: /Увеличить количество: Песочный сатиновый комплект/i })
   );
   await expectMinTouchTarget(page.getByRole('button', { name: 'Оформить заказ' }));
 });

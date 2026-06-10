@@ -154,7 +154,7 @@ function CartPage() {
     if (!email || !customerName || !phone || !homeAddress) {
       setManagerStatus({
         type: 'error',
-        message: 'Укажите имя, телефон, адрес и email клиента.'
+        message: 'Укажите имя, телефон, адрес и электронную почту клиента.'
       });
       return;
     }
@@ -371,7 +371,7 @@ function CartPage() {
                       id="cart-promo-code"
                       value={promoDraft}
                       onChange={(event) => setPromoDraft(event.target.value.toUpperCase())}
-                      placeholder="PROMO"
+                      placeholder="ПРОМО"
                       autoComplete="off"
                       disabled={isPromoSubmitting}
                     />
@@ -485,11 +485,11 @@ function CartPage() {
                     />
                   </label>
                   <label className="text-sm">
-                    <span className="text-muted">Email клиента</span>
+                    <span className="text-muted">Электронная почта клиента</span>
                     <Input
                       type="email"
                       className="mt-2 w-full"
-                      placeholder="client@example.com"
+                      placeholder="pochta@example.ru"
                       value={managerEmail}
                       onChange={(event) => setManagerEmail(event.target.value)}
                     />

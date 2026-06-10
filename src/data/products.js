@@ -2,11 +2,10 @@ export const products = [
   {
     id: 'set-cinque',
     slug: 'set-cinque',
-    name: 'Комплект Cinque Terre',
+    name: 'Комплект Итальянское побережье',
     category: 'bed-linen',
     price: 5490,
     oldPrice: 6290,
-    rating: 4.9,
     description: 'Сатин 100% хлопок в пастельных тонах, вдохновлённых итальянским побережьем.',
     images: [
       {
@@ -32,11 +31,10 @@ export const products = [
   {
     id: 'set-alienor',
     slug: 'set-alienor',
-    name: 'Комплект Alienor',
+    name: 'Комплект Алиенор',
     category: 'bed-linen',
     price: 4890,
     oldPrice: 0,
-    rating: 4.7,
     description: 'Жаккардовый узор и гладкая наволочка для любителей классических интерьеров.',
     images: [
       {
@@ -50,11 +48,10 @@ export const products = [
   {
     id: 'throw-tweed',
     slug: 'throw-tweed',
-    name: 'Плед Tweed Soft',
+    name: 'Плед Мягкий твид',
     category: 'blankets',
     price: 3190,
     oldPrice: 3590,
-    rating: 4.6,
     description: 'Мягкий плед из микрофибры с лёгким объёмом и твидовым переплетением.',
     images: [
       {
@@ -68,11 +65,10 @@ export const products = [
   {
     id: 'towel-cloud',
     slug: 'towel-cloud',
-    name: 'Набор полотенец Cloud',
+    name: 'Набор полотенец Облако',
     category: 'bath',
     price: 2190,
     oldPrice: 2490,
-    rating: 4.5,
     description: 'Два махровых полотенца плотностью 500 г/м²: мягкие, впитывающие, быстро сохнут.',
     images: [
       {
@@ -86,10 +82,9 @@ export const products = [
   {
     id: 'kids-stars',
     slug: 'kids-stars',
-    name: 'Детский комплект Starry Night',
+    name: 'Детский комплект Звёздная ночь',
     category: 'kids',
     price: 3290,
-    rating: 4.8,
     description: 'Хлопковый комплект с лампочками-звёздами, дружелюбный к детской коже.',
     images: [
       {
@@ -103,10 +98,9 @@ export const products = [
   {
     id: 'candle-amber',
     slug: 'candle-amber',
-    name: 'Свеча Amber Home',
+    name: 'Свеча Янтарный дом',
     category: 'decor',
     price: 1190,
-    rating: 4.4,
     description: 'Тёплый аромат амбры и сандала, хлопковый фитиль, стеклянная банка.',
     images: [
       {

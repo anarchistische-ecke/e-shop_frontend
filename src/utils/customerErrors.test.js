@@ -6,9 +6,13 @@ import {
 } from './customerErrors';
 
 describe('customer error sanitizing', () => {
-  it('keeps short user-facing field messages intact', () => {
-    expect(sanitizeCustomerFieldMessage('Email is required')).toBe('Email is required');
+  it('keeps short Russian user-facing field messages intact', () => {
+    expect(sanitizeCustomerFieldMessage('Укажите электронную почту.')).toBe('Укажите электронную почту.');
     expect(isCustomerSafeMessage('Укажите телефон для доставки.')).toBe(true);
+  });
+
+  it('hides English backend messages from customer-facing copy', () => {
+    expect(sanitizeCustomerFieldMessage('Email is required')).toBe('Проверьте это поле.');
   });
 
   it('hides sensitive backend details from customer-facing messages', () => {

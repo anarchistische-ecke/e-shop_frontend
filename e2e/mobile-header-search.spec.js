@@ -22,7 +22,7 @@ test('mobile menu search link opens search results with mocked data', async ({ p
 
   await expect(page).toHaveURL(/\/search\?query=/);
   await expect(page.getByRole('heading', { name: /Найдено/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Плед Cloud/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Плед Облако/i })).toBeVisible();
 });
 
 test('mobile menu exposes nested categories from the catalog navigation', async ({ page }) => {

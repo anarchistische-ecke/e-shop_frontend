@@ -22,7 +22,7 @@ export const storefrontRouteConfig = [
   { id: 'user-agreement', path: '/polzovatelskoe-soglashenie', renderMode: 'ssr' },
   { id: 'ads-consent', path: '/soglasie-na-poluchenie-reklamy', renderMode: 'ssr' },
   { id: 'sales-terms', path: '/usloviya-prodazhi', renderMode: 'ssr' },
-  { id: 'cookies-policy', path: '/cookies', renderMode: 'ssr' },
+  { id: 'cookies-policy', path: '/kuki', renderMode: 'ssr' },
   { id: 'personal-data-consent', path: '/soglasie-na-obrabotku-pd', renderMode: 'ssr' },
   { id: 'manager-login', path: '/manager/login', renderMode: 'csr' },
   { id: 'legacy-admin-redirect', path: '/admin/*', renderMode: 'csr' }

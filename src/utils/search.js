@@ -207,12 +207,9 @@ export function searchProducts(products = [], query = '', options = {}) {
 
       if (!score) return null;
 
-      const ratingBoost = Number(product?.rating || 0) * 2;
-      const reviewBoost = Number(product?.reviewCount || product?.reviewsCount || 0) > 10 ? 3 : 0;
-
       return {
         product,
-        score: score + ratingBoost + reviewBoost,
+        score,
       };
     })
     .filter(Boolean)

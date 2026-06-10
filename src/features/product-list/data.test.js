@@ -20,7 +20,7 @@ describe('product directory data', () => {
 
   it('reuses the shared directory request and cache across calls', async () => {
     getCategories.mockResolvedValue([{ id: 'cat-1', name: 'Постельное белье' }]);
-    getBrands.mockResolvedValue([{ id: 'brand-1', name: 'Cozy Home' }]);
+    getBrands.mockResolvedValue([{ id: 'brand-1', name: 'Уютный дом' }]);
     getProducts.mockResolvedValue([
       { id: 'prod-1', name: 'Комплект сатин', isActive: true },
       { id: 'prod-2', name: 'Скрытый товар', isActive: false }

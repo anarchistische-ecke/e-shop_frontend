@@ -170,7 +170,7 @@ function EmbeddedPaymentPanel({
 
         <div className="mt-4 space-y-2 text-xs text-muted">
           <p>{secureNote}</p>
-          <p>После подтверждения банк или 3-D Secure при необходимости вернут вас на страницу заказа.</p>
+          <p>После подтверждения банк или дополнительная проверка при необходимости вернут вас на страницу заказа.</p>
         </div>
       </div>
 

@@ -36,9 +36,9 @@ describe('account helpers', () => {
       buildLoginRedirectPath({
         pathname: '/checkout',
         search: '?step=delivery',
-        hash: '#review'
+        hash: '#confirmation'
       })
-    ).toBe('/checkout?step=delivery#review');
+    ).toBe('/checkout?step=delivery#confirmation');
     expect(
       buildLoginRedirectPath({
         pathname: '//malicious.example.com',

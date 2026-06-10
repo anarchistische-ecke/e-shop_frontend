@@ -116,7 +116,7 @@ export function getCheckoutPaymentDescription(config = FALLBACK_PAYMENT_CONFIG) 
   return normalizePaymentConfig(config).checkoutDescription;
 }
 
-export function getReviewPaymentHint(config = FALLBACK_PAYMENT_CONFIG) {
+export function getConfirmationPaymentHint(config = FALLBACK_PAYMENT_CONFIG) {
   const paymentConfig = normalizePaymentConfig(config);
   if (paymentConfig.confirmationMode === 'EMBEDDED') {
     return paymentConfig.providerName === FALLBACK_PAYMENT_CONFIG.providerName

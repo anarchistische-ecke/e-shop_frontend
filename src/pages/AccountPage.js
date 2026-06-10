@@ -551,7 +551,7 @@ function AccountPage() {
                     type="email"
                     value={profile.email}
                     onChange={handleProfileChange('email')}
-                    placeholder="email@example.ru"
+                    placeholder="pochta@example.ru"
                   />
                 </div>
                 <div>
@@ -621,7 +621,7 @@ function AccountPage() {
           <Card className="reveal-up" padding="lg">
             <h2 className="text-xl sm:text-2xl font-semibold mb-3">Акции и промокоды</h2>
             <p className="text-sm text-muted">
-              Акции из Directus применяются на сервере при расчёте корзины. Промокод можно ввести в корзине перед оплатой.
+              Акции применяются на сервере при расчёте корзины. Промокод можно ввести в корзине перед оплатой.
             </p>
             {promotionCards.length ? (
               <div className="mt-5 grid gap-3 sm:grid-cols-2">

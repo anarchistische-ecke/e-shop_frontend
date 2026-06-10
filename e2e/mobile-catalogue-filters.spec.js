@@ -18,9 +18,9 @@ test('mobile catalogue filters narrow results without layout regressions', async
   await page.getByRole('button', { name: 'Со скидкой' }).click();
   await page.getByRole('button', { name: 'Показать товары' }).click();
 
-  await expect(page.getByText('Сатиновый комплект Sand')).toBeVisible();
+  await expect(page.getByText('Песочный сатиновый комплект')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Только в наличии' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Со скидкой' })).toBeVisible();
-  await expect(page.getByText('Плед Cloud')).toHaveCount(0);
-  await expect(page.getByText('Набор полотенец Moss')).toHaveCount(0);
+  await expect(page.getByText('Плед Облако')).toHaveCount(0);
+  await expect(page.getByText('Набор полотенец Лесной мох')).toHaveCount(0);
 });

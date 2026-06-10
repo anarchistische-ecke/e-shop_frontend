@@ -170,13 +170,6 @@ function SearchPanelBody({
                       <p className="truncate text-sm font-semibold text-ink">
                         {product.name}
                       </p>
-                      <p className="text-xs text-muted">
-                        {(Number(product.rating) || 0) > 0
-                          ? `★ ${Number(product.rating).toFixed(1)} · ${
-                              product.reviewCount || product.reviewsCount || 0
-                            } отзывов`
-                          : 'Пока без отзывов'}
-                      </p>
                     </div>
                     <p className="whitespace-nowrap text-sm font-semibold text-accent">
                       {previewPrice.toLocaleString('ru-RU')} ₽

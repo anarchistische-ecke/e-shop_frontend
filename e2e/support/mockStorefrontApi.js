@@ -143,19 +143,19 @@ const cmsHomePage = {
       sort: 2,
       eyebrow: 'С чего начать',
       title: 'Бестселлеры, которые быстро объясняют выбор',
-      body: '<p>Цена, материал, рейтинг и действие видны прямо на главной.</p>',
+      body: '<p>Цена, материал и действие видны прямо на главной.</p>',
       primaryCtaLabel: 'Все бестселлеры',
       primaryCtaUrl: '/category/popular',
       layoutVariant: 'cards',
       items: [
         {
-          title: 'Сатиновый комплект Sand',
+          title: 'Песочный сатиновый комплект',
           referenceKind: 'product_slug',
           referenceKey: 'satin-sand',
           sort: 1,
         },
         {
-          title: 'Плед Cloud',
+          title: 'Плед Облако',
           referenceKind: 'product_slug',
           referenceKey: 'throw-cloud',
           sort: 2,
@@ -172,25 +172,25 @@ const cmsHomePage = {
       layoutVariant: 'full',
       items: [
         {
-          label: 'Cool & crisp',
+          label: 'Прохлада и свежесть',
           title: 'Перкаль',
           description: 'Матовая хлопковая ткань для прохладного ощущения.',
           sort: 1,
         },
         {
-          label: 'Smooth & soft',
+          label: 'Гладко и мягко',
           title: 'Сатин',
           description: 'Гладкая поверхность с мягким блеском.',
           sort: 2,
         },
         {
-          label: 'Relaxed texture',
+          label: 'Свободная фактура',
           title: 'Лен',
           description: 'Живая фактура и свободная посадка.',
           sort: 3,
         },
         {
-          label: 'Bundle-ready',
+          label: 'Готовый комплект',
           title: 'Готовый комплект',
           description: 'Быстрый путь к собранной кровати.',
           sort: 4,
@@ -223,30 +223,30 @@ const cmsHomePage = {
         },
         {
           title: 'Оплата картой или СБП',
-          description: 'Защищённый checkout без сохранения данных карты.',
+          description: 'Безопасная оплата без сохранения данных карты.',
           sort: 4,
         },
       ],
     },
     {
-      anchorId: 'home-reviews',
+      anchorId: 'home-materials',
       sectionType: 'feature_list',
       sort: 5,
-      eyebrow: 'Отзывы и proof',
-      title: 'Любят за ощущение ткани и спокойный сервис',
-      body: '<p>Эти отзывы являются CMS-заглушками для будущего UGC и внешнего proof.</p>',
+      eyebrow: 'Материалы и сервис',
+      title: 'Выбирайте по ткани, цвету и сценарию использования',
+      body: '<p>Эти карточки являются заготовками для управляемого контента о материалах и сервисе.</p>',
       layoutVariant: 'cards',
       items: [
         {
-          label: 'Покупатель, Москва',
-          title: 'Сатин плотный, но не жаркий',
-          description: 'Комплект быстро расправляется на кровати.',
+          label: 'Сатин',
+          title: 'Плотная гладкая ткань',
+          description: 'Комплект быстро расправляется на кровати и держит спокойный вид.',
           sort: 1,
         },
         {
-          label: 'Покупатель, Краснодар',
-          title: 'Перед оплатой все понятно',
-          description: 'Условия доставки и оплаты видны до оформления.',
+          label: 'Оплата',
+          title: 'Условия видны заранее',
+          description: 'Доставка и оплата описаны до оформления.',
           sort: 2,
         },
       ],
@@ -430,7 +430,7 @@ async function mockStorefrontApi(page, overrides = {}) {
               if (!root) {
                 throw new Error('Missing widget container');
               }
-              root.innerHTML = '<div data-testid="mock-yookassa-widget" style="padding:16px;border:1px solid #d6cdc4;border-radius:16px;background:#fff;"><p style="margin:0 0 12px 0;font:600 14px sans-serif;">ТестКасса Secure Form</p><button type="button" data-testid="mock-yookassa-pay-button" style="min-height:44px;padding:10px 16px;border-radius:999px;background:#b65b4a;color:#fff;border:none;">Оплатить</button></div>';
+              root.innerHTML = '<div data-testid="mock-yookassa-widget" style="padding:16px;border:1px solid #d6cdc4;border-radius:16px;background:#fff;"><p style="margin:0 0 12px 0;font:600 14px sans-serif;">ТестКасса Защищённая форма</p><button type="button" data-testid="mock-yookassa-pay-button" style="min-height:44px;padding:10px 16px;border-radius:999px;background:#b65b4a;color:#fff;border:none;">Оплатить</button></div>';
               root.querySelector('[data-testid="mock-yookassa-pay-button"]').addEventListener('click', function() {
                 window.location.assign(config.return_url);
               });

@@ -12,7 +12,7 @@ describe('checkout validation', () => {
         phone: ''
       })
     ).toEqual({
-      email: 'Укажите email для чека и подтверждения заказа.',
+      email: 'Укажите электронную почту для чека и подтверждения заказа.',
       customerName: 'Укажите имя получателя.',
       phone: 'Укажите телефон для связи.'
     });
@@ -36,8 +36,8 @@ describe('checkout validation', () => {
       })
     ).toEqual({
       fieldErrors: {
-        customerName: 'Customer name is required',
-        homeAddress: 'Home address is required'
+        customerName: 'Проверьте это поле.',
+        homeAddress: 'Проверьте это поле.'
       },
       nextStep: 0
     });
@@ -54,7 +54,7 @@ describe('checkout validation', () => {
       })
     ).toEqual({
       fieldErrors: {
-        email: 'Email is required'
+        email: 'Проверьте это поле.'
       },
       nextStep: 0
     });
@@ -87,7 +87,7 @@ describe('checkout validation', () => {
       })
     ).toEqual({
       fieldErrors: {
-        homeAddress: 'Delivery address is required'
+        homeAddress: 'Проверьте это поле.'
       },
       nextStep: 1
     });

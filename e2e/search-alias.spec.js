@@ -10,5 +10,5 @@ test('legacy /category/search alias redirects to canonical /search params', asyn
 
   await expect(page).toHaveURL(/\/search\?query=.*scope=throws.*brand=luna-soft/);
   await expect(page.getByRole('heading', { name: /Найдено/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Плед Cloud/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Плед Облако/i })).toBeVisible();
 });

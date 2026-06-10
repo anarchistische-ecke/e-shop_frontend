@@ -27,9 +27,9 @@ export const LEGAL_DOCUMENTS = [
   },
   {
     fileName: 'cookies.html',
-    path: '/cookies',
-    title: 'Политика в отношении cookie',
-    summary: 'Информация об использовании cookie и иных технологий аналитики.',
+    path: '/kuki',
+    title: 'Политика в отношении куки',
+    summary: 'Информация об использовании куки и иных технологий аналитики.',
   },
   {
     fileName: 'sales-terms.html',

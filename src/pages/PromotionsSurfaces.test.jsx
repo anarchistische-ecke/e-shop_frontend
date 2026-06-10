@@ -116,8 +116,6 @@ describe('active promotion surfaces', () => {
           slug: 'linen-set',
           name: 'Комплект Linen',
           price: 4200,
-          rating: 5,
-          reviewCount: 12,
           category: 'popular',
           images: [{ url: 'https://cdn.example.test/linen.jpg', alt: 'Комплект Linen' }],
           variants: [{ id: 'variant-1', stock: 4, price: 4200 }],

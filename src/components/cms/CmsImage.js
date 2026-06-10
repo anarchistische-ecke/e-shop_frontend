@@ -23,7 +23,7 @@ function CmsImage({
   imageClassName = 'object-cover',
   sizes = '100vw',
   priority = false,
-  placeholderLabel = 'Изображение появится после загрузки в CMS',
+  placeholderLabel = 'Изображение появится после загрузки в систему управления контентом',
   preserveAspectRatio = true,
 }) {
   const desktopSource = buildCmsMediaSources(media, { sizes });

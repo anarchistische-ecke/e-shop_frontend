@@ -38,7 +38,6 @@ export function useProductListRouteState({ source = 'catalog', categorySlug = ''
       brand: '',
       minPrice: '',
       maxPrice: '',
-      rating: '',
       inStock: false,
       sale: false
     });

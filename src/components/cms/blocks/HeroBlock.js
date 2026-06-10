@@ -54,11 +54,9 @@ function findHeroProduct(products = []) {
   return [...products]
     .filter((product) => product?.isActive !== false)
     .sort((left, right) => {
-      const leftScore =
-        (Number(left.rating) || 0) * 100 + (Number(left.reviewCount || left.reviewsCount) || 0);
-      const rightScore =
-        (Number(right.rating) || 0) * 100 + (Number(right.reviewCount || right.reviewsCount) || 0);
-      return rightScore - leftScore;
+      const stockDelta = Number(right?.stock || right?.stockQuantity || 0) - Number(left?.stock || left?.stockQuantity || 0);
+      if (stockDelta !== 0) return stockDelta;
+      return String(left?.name || '').localeCompare(String(right?.name || ''), 'ru');
     })[0] || null;
 }
 
@@ -102,7 +100,7 @@ function readHeroFeaturedProductReference(items = []) {
   }) || null;
 }
 
-function getHeroProofItems(items = []) {
+function getHeroHighlightItems(items = []) {
   return (items || []).filter((item) => item !== readHeroFeaturedProductReference(items));
 }
 
@@ -130,7 +128,7 @@ function FeaturedProductLink({ product }) {
   );
 }
 
-function HomeHeroVisual({ section, page, fallbackProduct, proofItems = [] }) {
+function HomeHeroVisual({ section, page, fallbackProduct, highlightItems = [] }) {
   const hasCmsMedia = section.image || section.imageUrl || section.mobileImage || section.mobileImageUrl;
   const fallbackImage = resolveImageUrl(getPrimaryImageUrl(fallbackProduct)) || HOME_HERO_FALLBACK_IMAGE;
   const fallbackMedia = getPrimaryImageMedia(fallbackProduct);
@@ -161,7 +159,7 @@ function HomeHeroVisual({ section, page, fallbackProduct, proofItems = [] }) {
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-ink/32 via-transparent to-white/10" />
       <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-        {proofItems.slice(0, 2).map((item, index) => (
+        {highlightItems.slice(0, 2).map((item, index) => (
           <span
             key={`${item.title || item.label || 'home-hero-chip'}-${index}`}
             className="rounded-full border border-white/45 bg-white/88 px-3 py-1.5 text-xs font-semibold text-ink shadow-[0_10px_22px_rgba(43,39,34,0.14)] backdrop-blur"
@@ -185,7 +183,7 @@ function HomeHeroBlock({ page, section }) {
       )
     : null;
   const fallbackProduct = featuredProduct || findHeroProduct(products);
-  const proofItems = getHeroProofItems(section.items || []);
+  const highlightItems = getHeroHighlightItems(section.items || []);
   const accent = section.accent ? <span className="text-primary">{section.accent}</span> : null;
 
   return (
@@ -199,7 +197,7 @@ function HomeHeroBlock({ page, section }) {
           section={section}
           page={page}
           fallbackProduct={fallbackProduct}
-          proofItems={proofItems}
+          highlightItems={highlightItems}
         />
         <FeaturedProductLink product={fallbackProduct} />
       </div>
@@ -217,11 +215,11 @@ function HomeHeroBlock({ page, section }) {
 
         <CmsSectionActions section={section} className="pt-1" />
 
-        {proofItems.length > 0 ? (
+        {highlightItems.length > 0 ? (
           <div className="hidden grid-cols-1 gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-            {proofItems.slice(0, 3).map((item, index) => (
+            {highlightItems.slice(0, 3).map((item, index) => (
               <div
-                key={`${item.title || item.label || 'home-hero-proof'}-${index}`}
+                key={`${item.title || item.label || 'home-hero-highlight'}-${index}`}
                 className="rounded-2xl border border-ink/10 bg-[#f6f8f3] px-3 py-2.5"
               >
                 {item.label ? (

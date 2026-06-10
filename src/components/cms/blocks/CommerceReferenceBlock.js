@@ -291,7 +291,7 @@ function ProductReferenceList({ section, page }) {
 
     return (
         <ShopTheLook
-          title={section.title || 'Shop the look'}
+          title={section.title || 'Готовый образ'}
           description={stripHtml(section.body || section.description || '')}
           imageUrl={imageUrl}
           imageMedia={resolveMediaUrl(section.image || section.imageUrl) ? null : getPrimaryImageMedia(resolvedProducts[0])}

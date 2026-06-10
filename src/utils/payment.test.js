@@ -3,7 +3,7 @@ import {
   getCheckoutPaymentDescription,
   getOrderPaymentNotice,
   getPaymentSummaryLabel,
-  getReviewPaymentHint,
+  getConfirmationPaymentHint,
   hasEmbeddedPaymentSession,
   hasRedirectPaymentSession,
   normalizePaymentSession,
@@ -44,7 +44,7 @@ describe('payment utils', () => {
     });
   });
 
-  it('builds display copy for cart, checkout and review', () => {
+  it('builds display copy for cart, checkout and confirmation', () => {
     const paymentConfig = {
       providerName: 'ТестКасса',
       methodSummary: 'карта / СБП',
@@ -57,7 +57,7 @@ describe('payment utils', () => {
     expect(getCheckoutPaymentDescription(paymentConfig)).toBe(
       'Оплата на защищённой странице ТестКасса. Данные карты не хранятся в браузере магазина.'
     );
-    expect(getReviewPaymentHint(paymentConfig)).toBe(
+    expect(getConfirmationPaymentHint(paymentConfig)).toBe(
       'Или оплатите картой на следующем шаге через ТестКасса.'
     );
   });

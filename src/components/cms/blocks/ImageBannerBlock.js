@@ -19,7 +19,7 @@ function BannerMedia({ section, items = [] }) {
         <CmsImage
           media={primaryMedia}
           mobileMedia={mobileMedia}
-          alt={section.title || items[0]?.title || 'CMS banner'}
+          alt={section.title || items[0]?.title || 'Баннер'}
           frameClassName="aspect-[5/4]"
           sizes="(min-width: 1024px) 24rem, (min-width: 640px) 42vw, 92vw"
           preserveAspectRatio={false}
@@ -33,14 +33,14 @@ function BannerMedia({ section, items = [] }) {
     <div className="relative overflow-hidden rounded-[28px] border border-white/75 bg-white/88 shadow-[0_18px_38px_rgba(43,39,34,0.12)]">
       <div className="aspect-[5/4]">
         <div className="absolute left-6 top-6 rounded-full border border-white/65 bg-white/55 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-          CMS banner
+          Баннер
         </div>
         <div className="absolute inset-x-6 bottom-6 space-y-2 rounded-[22px] border border-white/60 bg-white/65 px-5 py-4 backdrop-blur">
           <p className="m-0 text-sm font-semibold text-ink">
             Для этого блока можно подключить отдельное изображение позже
           </p>
           <p className="m-0 text-sm leading-6 text-muted">
-            Пока что компонент рендерит редакторский текст и CTA без жёсткой зависимости от картинки.
+            Пока что компонент показывает редакторский текст и действие без жёсткой зависимости от картинки.
           </p>
         </div>
       </div>

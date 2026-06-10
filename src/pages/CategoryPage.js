@@ -28,7 +28,6 @@ import {
 import ProductPagination from '../features/product-list/ProductPagination';
 import { buildCategoryListingHref } from '../features/product-list/url';
 import {
-  getReviewCount,
   getStockCount,
   resolveCategoryToken
 } from '../features/product-list/selectors';
@@ -81,14 +80,11 @@ function CategoryCard({ product, fromPath, fromLabel }) {
   const discount = hasDiscount
     ? primaryVariant?.discountPercent || product.discountPercent || Math.round(((oldPrice - price) / oldPrice) * 100)
     : 0;
-  const rating = Number(product?.rating || 0);
-  const reviewCount = getReviewCount(product);
   const stockCount = getStockCount(product);
 
   const badges = [
     stockCount > 0 && stockCount <= 3 ? `Мало на складе: ${stockCount}` : '',
-    rating >= 4.8 ? 'Хит продаж' : '',
-    !oldPrice && rating >= 4.5 ? 'Новинка' : ''
+    !oldPrice ? 'Новинка' : ''
   ].filter(Boolean);
 
   const attributeLine =
@@ -145,17 +141,6 @@ function CategoryCard({ product, fromPath, fromLabel }) {
 
       <div className="mt-3 space-y-2">
         <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
-
-        <div className="flex items-center gap-2 text-xs text-muted">
-          {rating > 0 ? (
-            <>
-              <span className="text-primary">★ {rating.toFixed(1)}</span>
-              <span>({reviewCount})</span>
-            </>
-          ) : (
-            <span>Нет оценок</span>
-          )}
-        </div>
 
         <p className="line-clamp-1 text-xs text-muted">{attributeLine}</p>
 
@@ -275,10 +260,6 @@ function CategoryPage() {
       updateParams({ minPrice: '', maxPrice: '' });
       return;
     }
-    if (key === 'rating') {
-      updateParams({ rating: '' });
-      return;
-    }
     if (key === 'inStock') {
       updateParams({ inStock: false });
       return;
@@ -302,7 +283,6 @@ function CategoryPage() {
     onBrandChange: (brand) => updateParams({ brand }),
     onMinPriceChange: (minPrice) => updateParams({ minPrice }),
     onMaxPriceChange: (maxPrice) => updateParams({ maxPrice }),
-    onRatingChange: (rating) => updateParams({ rating }),
     onToggleInStock: () => updateParams({ inStock: !params.inStock }),
     onToggleSale: () => updateParams({ sale: !params.sale }),
     onClearAll: clearFilters
@@ -449,7 +429,7 @@ function CategoryPage() {
             Сортировка: <span className="font-semibold text-ink">{activeSortLabel}</span>
             {params.sort === 'bestMatch' ? (
               <span className="ml-2">
-                Рекомендуем на основе популярности, отзывов и разнообразия товаров.
+                Рекомендуем на основе наличия, цены и разнообразия товаров.
               </span>
             ) : null}
           </div>

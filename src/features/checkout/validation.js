@@ -8,10 +8,10 @@ export const CHECKOUT_VALIDATION_SCHEMA = {
     validate: ({ email }) => {
       const normalizedEmail = String(email || '').trim();
       if (!normalizedEmail) {
-        return 'Укажите email для чека и подтверждения заказа.';
+        return 'Укажите электронную почту для чека и подтверждения заказа.';
       }
       if (!isEmailValid(normalizedEmail)) {
-        return 'Проверьте формат email, например name@example.com.';
+        return 'Проверьте формат электронной почты, например pochta@example.ru.';
       }
       return '';
     }
