@@ -7,7 +7,7 @@ import Seo from '../components/Seo';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
 import { usePaymentConfig } from '../contexts/PaymentConfigContext';
-import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+import { METRIKA_GOALS, trackGoal } from '../utils/metrika';
 import { buildAbsoluteAppUrl } from '../utils/url';
 import {
   getCheckoutPaymentDescription,
@@ -86,6 +86,14 @@ function CartPage() {
     setPromoDraft(activePromoCode);
   }, [activePromoCode]);
 
+  useEffect(() => {
+    trackGoal(METRIKA_GOALS.VIEW_CART, {
+      cart_items: itemCount,
+      cart_total: Math.round(total),
+      active_promotion_bucket: activePromoCode ? 'promo_applied' : 'no_promo'
+    });
+  }, [activePromoCode, itemCount, total]);
+
   const setQuantityDraft = (itemId, value) => {
     setQuantityDrafts((prev) => ({ ...prev, [itemId]: value }));
   };
@@ -104,7 +112,7 @@ function CartPage() {
   };
 
   const handleCheckout = () => {
-    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_CTA_CLICK, {
+    trackGoal(METRIKA_GOALS.CHECKOUT_CTA_CLICK, {
       cart_items: itemCount,
       cart_total: Math.round(total)
     });
@@ -173,6 +181,11 @@ function CartPage() {
       });
       const link = buildAbsoluteAppUrl(`/order/${response.publicToken}`);
       setManagerLink(link);
+      trackGoal(METRIKA_GOALS.MANAGER_LINK_CREATED, {
+        cart_items: itemCount,
+        cart_total: Math.round(total),
+        send_email: Boolean(sendEmail)
+      });
       if (copyAfter && navigator.clipboard) {
         await navigator.clipboard.writeText(link);
         setManagerStatus({

@@ -11,7 +11,12 @@ import { buildAbsoluteAppUrl } from '../../utils/url';
 import { getCustomerSafeErrorMessage } from '../../utils/customerErrors';
 import { createNotification } from '../../utils/notifications';
 import { moneyToNumber } from '../../utils/product';
-import { METRIKA_GOALS, trackMetrikaGoal } from '../../utils/metrika';
+import {
+  getAttributionSnapshot,
+  METRIKA_GOALS,
+  trackCheckoutStep,
+  trackGoal
+} from '../../utils/metrika';
 import {
   hasEmbeddedPaymentSession,
   isEmbeddedPaymentMode,
@@ -241,7 +246,7 @@ export function useCheckoutState() {
 
   useEffect(() => {
     if (!itemsCount || beginCheckoutTrackedRef.current) return;
-    trackMetrikaGoal(METRIKA_GOALS.BEGIN_CHECKOUT, {
+    trackGoal(METRIKA_GOALS.BEGIN_CHECKOUT, {
       cart_items: itemsCount,
       cart_total: Math.round(total)
     });
@@ -251,16 +256,16 @@ export function useCheckoutState() {
   useEffect(() => {
     const step = CHECKOUT_STEPS[activeStep];
     if (!step) return;
-    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_VIEW, {
+    trackCheckoutStep(activeStep + 1, {
       step: step.key,
       cart_items: itemsCount,
       cart_total: Math.round(payableTotal)
-    });
-  }, [activeStep, itemsCount, payableTotal]);
+    }, items);
+  }, [activeStep, items, itemsCount, payableTotal]);
 
   useEffect(() => {
     if (activeStep !== CHECKOUT_STEPS.length - 1 || paymentStepTrackedRef.current) return;
-    trackMetrikaGoal(METRIKA_GOALS.ADD_PAYMENT_INFO, {
+    trackGoal(METRIKA_GOALS.ADD_PAYMENT_INFO, {
       delivery_type: 'MANAGER',
       cart_total: Math.round(payableTotal)
     });
@@ -336,7 +341,7 @@ export function useCheckoutState() {
     applyStepFieldErrors(fields, errors);
     const firstErrorField = fields.find((field) => Boolean(errors[field]));
     if (firstErrorField) {
-      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_FIELD_ERROR, {
+      trackGoal(METRIKA_GOALS.CHECKOUT_FIELD_ERROR, {
         step: stepKey,
         field: firstErrorField
       });
@@ -381,12 +386,12 @@ export function useCheckoutState() {
     setStatus(null);
     const result = validateStep('contact');
     if (!result.valid) {
-      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'contact', outcome: 'fail' });
+      trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'contact', outcome: 'fail' });
       setActiveStep(0);
       return;
     }
 
-    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'contact', outcome: 'success' });
+    trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'contact', outcome: 'success' });
     markCompleted('contact');
     setActiveStep(1);
   }, [markCompleted, validateStep]);
@@ -394,17 +399,17 @@ export function useCheckoutState() {
   const handleAddressNext = useCallback(() => {
     setStatus(null);
     if (!validateStep('contact').valid) {
-      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'fail', reason: 'contact' });
+      trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'fail', reason: 'contact' });
       setActiveStep(0);
       return;
     }
     if (!validateStep('address').valid) {
-      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'fail', reason: 'address' });
+      trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'fail', reason: 'address' });
       setActiveStep(1);
       return;
     }
 
-    trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'success' });
+    trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'success' });
     markCompleted('address');
     setActiveStep(2);
   }, [markCompleted, validateStep]);
@@ -449,7 +454,8 @@ export function useCheckoutState() {
       returnUrl: buildAbsoluteAppUrl('/order/{token}'),
       orderPageUrl: buildAbsoluteAppUrl('/order/{token}'),
       confirmationMode: isPaymentConfigLoaded ? paymentConfig.confirmationMode : undefined,
-      savePaymentMethod: isAuthenticated ? savePaymentMethod : false
+      savePaymentMethod: isAuthenticated ? savePaymentMethod : false,
+      analyticsAttribution: getAttributionSnapshot()
     };
 
     const signature = buildCheckoutAttemptSignature(payload);
@@ -463,6 +469,11 @@ export function useCheckoutState() {
     setSafeRetryState(null);
     setSubmitPhase('submitting');
     setIsSubmitting(true);
+    trackGoal(METRIKA_GOALS.CHECKOUT_SUBMIT, {
+      cart_items: itemsCount,
+      cart_total: Math.round(payableTotal),
+      retrying
+    });
 
     const timeoutController = createTimeoutController(CHECKOUT_REQUEST_TIMEOUT_MS);
 
@@ -483,7 +494,7 @@ export function useCheckoutState() {
         returnUrl: orderToken ? buildAbsoluteAppUrl(`/order/${orderToken}`) : ''
       });
       if (hasEmbeddedPaymentSession(paymentSession) && orderToken) {
-        trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
+        trackGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
           outcome: 'success',
           delivery_type: 'MANAGER',
           cart_total: Math.round(payableTotal)
@@ -500,7 +511,7 @@ export function useCheckoutState() {
         return;
       }
       if (confirmationUrl) {
-        trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
+        trackGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
           outcome: 'success',
           delivery_type: 'MANAGER',
           cart_total: Math.round(payableTotal)
@@ -511,7 +522,7 @@ export function useCheckoutState() {
         return;
       }
 
-      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
+      trackGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
         outcome: 'fail',
         reason: 'missing_confirmation_url'
       });
@@ -527,7 +538,7 @@ export function useCheckoutState() {
       }));
     } catch (err) {
       console.error('Checkout failed:', err);
-      trackMetrikaGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
+      trackGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
         outcome: 'fail',
         reason: isApiRequestError(err) ? `http_${err.status}` : isAbortError(err) ? 'timeout' : 'client_error'
       });

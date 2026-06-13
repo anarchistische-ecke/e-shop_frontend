@@ -16,7 +16,12 @@ import { resolveCartSessionAfterAuthChange } from '../utils/account';
 import { createNotification } from '../utils/notifications';
 import { getCustomerSafeErrorMessage } from '../utils/customerErrors';
 import { moneyToNumber, getPrimaryImageUrl, getPrimaryVariant } from '../utils/product';
-import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+import {
+  METRIKA_GOALS,
+  trackCartChange,
+  trackGoal,
+  trackParams
+} from '../utils/metrika';
 import { useProductDirectoryData } from '../features/product-list/data';
 
 export const CartContext = createContext();
@@ -101,6 +106,16 @@ function buildAddToCartErrorNotification(err, { reason = 'request_failed' } = {}
   });
 }
 
+function resolveCartStateBucket(items = []) {
+  const count = Array.isArray(items)
+    ? items.reduce((total, item) => total + normalizeCartQuantity(item.quantity || 1), 0)
+    : 0;
+  if (count <= 0) return 'empty';
+  if (count === 1) return 'one_item';
+  if (count <= 3) return 'two_to_three_items';
+  return 'four_plus_items';
+}
+
 export function CartProvider({ children }) {
   const { notify } = useNotifications();
   const { products } = useProductDirectoryData();
@@ -124,6 +139,7 @@ export function CartProvider({ children }) {
     () => enrichCartItems(rawItems, variantMap, pricing),
     [rawItems, variantMap, pricing]
   );
+  const cartStateBucket = useMemo(() => resolveCartStateBucket(items), [items]);
 
   const syncCart = useCallback(
     async (id) => {
@@ -168,6 +184,16 @@ export function CartProvider({ children }) {
     if (!cartId) return;
     syncCart(cartId);
   }, [cartId, syncCart]);
+
+  useEffect(() => {
+    trackParams({
+      cart_state_bucket: cartStateBucket,
+      cart_item_count: items.length,
+      cart_quantity:
+        items.reduce((total, item) => total + normalizeCartQuantity(item.quantity || 1), 0),
+      active_promotion_bucket: pricing?.promoCode ? 'promo_applied' : 'no_promo'
+    });
+  }, [cartStateBucket, items, pricing?.promoCode]);
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges(() => {
@@ -233,10 +259,11 @@ export function CartProvider({ children }) {
           unitPriceValue: moneyToNumber(selectedVariant?.price || product?.price),
           imageUrl: getPrimaryImageUrl(product, targetVariant) || getPrimaryImageUrl(product),
         });
-        trackMetrikaGoal(METRIKA_GOALS.ADD_TO_CART, {
-          product_id: product?.id,
-          variant_id: targetVariant,
-          quantity: quantityValue
+        trackCartChange('add', product, {
+          variant: selectedVariant,
+          variantId: targetVariant,
+          quantity: quantityValue,
+          cartStateBucket
         });
         return { ok: true };
       } catch (err) {
@@ -248,36 +275,47 @@ export function CartProvider({ children }) {
         return { ok: false, notification };
       }
     },
-    [cartId, notify, syncCart]
+    [cartId, cartStateBucket, notify, syncCart]
   );
 
   const removeItem = useCallback(
     async (cartItemId) => {
       if (!cartId) return;
+      const removedItem = items.find((item) => item.id === cartItemId);
       try {
         await removeCartItem(cartId, cartItemId);
         await syncCart(cartId);
-        trackMetrikaGoal(METRIKA_GOALS.REMOVE_FROM_CART, {
-          cart_item_id: cartItemId
+        trackCartChange('remove', removedItem || { id: cartItemId }, {
+          variantId: removedItem?.variantId,
+          quantity: removedItem?.quantity || 1,
+          cartStateBucket
         });
       } catch (err) {
         console.error('Failed to remove item from cart:', err);
       }
     },
-    [cartId, syncCart]
+    [cartId, cartStateBucket, items, syncCart]
   );
 
   const updateQuantity = useCallback(
     async (cartItemId, quantity) => {
       if (!cartId || quantity < 1) return;
+      const item = items.find((entry) => entry.id === cartItemId);
       try {
         await updateCartItem(cartId, cartItemId, quantity);
         await syncCart(cartId);
+        trackGoal(METRIKA_GOALS.CART_QUANTITY_CHANGE, {
+          cart_item_id: cartItemId,
+          product_id: item?.productInfo?.id,
+          variant_id: item?.variantId,
+          quantity,
+          cart_state_bucket: cartStateBucket
+        });
       } catch (err) {
         console.error('Failed to update item quantity:', err);
       }
     },
-    [cartId, syncCart]
+    [cartId, cartStateBucket, items, syncCart]
   );
 
   const refreshPricing = useCallback(async () => {
@@ -299,15 +337,25 @@ export function CartProvider({ children }) {
       const normalizedCode = String(code || '').trim();
       if (!normalizedCode) return { ok: false };
       try {
+        trackGoal(METRIKA_GOALS.PROMO_CODE_ATTEMPT, {
+          cart_state_bucket: cartStateBucket
+        });
         await applyCartPromoCode(cartId, normalizedCode);
         await syncCart(cartId);
+        trackGoal(METRIKA_GOALS.PROMO_CODE_SUCCESS, {
+          cart_state_bucket: cartStateBucket
+        });
         return { ok: true };
       } catch (err) {
         console.error('Failed to apply promo code:', err);
+        trackGoal(METRIKA_GOALS.PROMO_CODE_FAILURE, {
+          cart_state_bucket: cartStateBucket,
+          reason: err?.status || 'request_failed'
+        });
         return { ok: false, error: err };
       }
     },
-    [cartId, syncCart]
+    [cartId, cartStateBucket, syncCart]
   );
 
   const removePromoCode = useCallback(async () => {

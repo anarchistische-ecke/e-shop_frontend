@@ -305,6 +305,7 @@ export async function checkoutCart({
   orderPageUrl,
   confirmationMode,
   savePaymentMethod,
+  analyticsAttribution,
   idempotencyKey,
   signal
 } = {}) {
@@ -324,6 +325,7 @@ export async function checkoutCart({
       orderPageUrl,
       confirmationMode,
       savePaymentMethod,
+      analyticsAttribution,
       idempotencyKey
     })
   });
@@ -343,10 +345,10 @@ export async function getOrder(id) {
 export async function getPublicOrder(token) {
   return request(`/orders/public/${token}`);
 }
-export async function payPublicOrder({ token, receiptEmail, returnUrl, confirmationMode } = {}) {
+export async function payPublicOrder({ token, receiptEmail, returnUrl, confirmationMode, analyticsAttribution } = {}) {
   return request(`/orders/public/${token}/pay`, {
     method: 'POST',
-    body: JSON.stringify({ receiptEmail, returnUrl, confirmationMode })
+    body: JSON.stringify({ receiptEmail, returnUrl, confirmationMode, analyticsAttribution })
   });
 }
 export async function refreshPublicOrderPayment(token) {

@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card } from '../ui';
 import ProductCard from '../common/ProductCard';
+import { trackProductList } from '../../utils/metrika';
 
 function FeaturedProductsSkeleton() {
   return (
@@ -51,6 +52,14 @@ function FeaturedProducts({
 }) {
   const slides = useMemo(() => products.slice(0, 8), [products]);
 
+  useEffect(() => {
+    if (!slides.length) return;
+    trackProductList(slides, {
+      listName: `home_${String(title || 'featured').toLowerCase().replace(/\s+/g, '_')}`,
+      pageType: 'home'
+    });
+  }, [slides, title]);
+
   return (
     <section className="page-shell page-section">
       <div className="section-header">
@@ -83,13 +92,21 @@ function FeaturedProducts({
                   deferThumbnails
                   priority={index < 2}
                   imageSizes="(max-width: 767px) 48vw, 18rem"
+                  listName={`home_${String(title || 'featured').toLowerCase().replace(/\s+/g, '_')}`}
+                  position={index + 1}
                 />
               ))}
             </div>
 
             <div className="hidden md:grid page-grid--catalog">
-              {slides.slice(0, 4).map((product) => (
-                <ProductCard key={`${title}-desktop-${product.id}`} product={product} deferThumbnails />
+              {slides.slice(0, 4).map((product, index) => (
+                <ProductCard
+                  key={`${title}-desktop-${product.id}`}
+                  product={product}
+                  deferThumbnails
+                  listName={`home_${String(title || 'featured').toLowerCase().replace(/\s+/g, '_')}`}
+                  position={index + 1}
+                />
               ))}
             </div>
           </>

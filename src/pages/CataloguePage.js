@@ -16,6 +16,7 @@ import { useProductList } from '../features/product-list/useProductList';
 import { useProductListRouteState } from '../features/product-list/useProductListRouteState';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { normalizeSearchText } from '../utils/search';
+import { METRIKA_GOALS, trackGoal, trackProductList } from '../utils/metrika';
 
 function SearchIcon({ className = 'h-4 w-4' }) {
   return (
@@ -76,6 +77,23 @@ function CataloguePage() {
     ? `Результаты поиска по запросу «${params.query}». ${list.headingNote}`
     : `${list.headingNote} Постельное белье, пледы, полотенца и другой текстиль с доставкой по России.`;
 
+  useEffect(() => {
+    if (list.loading || !list.pagedProducts.length) return;
+    trackProductList(list.pagedProducts, {
+      listName: hasQuery ? 'catalog_search_results' : 'catalog_results',
+      pageType: 'catalog',
+      startPosition: (list.safePage - 1) * list.pageSize + 1
+    });
+  }, [hasQuery, list.loading, list.pageSize, list.pagedProducts, list.safePage]);
+
+  useEffect(() => {
+    if (list.loading || !hasQuery || list.totalItems !== 0) return;
+    trackGoal(METRIKA_GOALS.SEARCH_ZERO_RESULTS, {
+      search_query: params.query,
+      scope: params.scope || 'all'
+    });
+  }, [hasQuery, list.loading, list.totalItems, params.query, params.scope]);
+
   const clearFilterByKey = (key) => {
     if (key === 'scope') {
       updateParams({ scope: '' });
@@ -108,16 +126,35 @@ function CataloguePage() {
     priceBounds: list.priceBounds,
     params,
     activeFilterCount: list.activeFilters.length,
-    onBrandChange: (brand) => updateParams({ brand }),
-    onMinPriceChange: (minPrice) => updateParams({ minPrice }),
-    onMaxPriceChange: (maxPrice) => updateParams({ maxPrice }),
-    onToggleInStock: () => updateParams({ inStock: !params.inStock }),
-    onToggleSale: () => updateParams({ sale: !params.sale }),
+    onBrandChange: (brand) => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'brand', has_value: Boolean(brand) });
+      updateParams({ brand });
+    },
+    onMinPriceChange: (minPrice) => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'min_price', has_value: Boolean(minPrice) });
+      updateParams({ minPrice });
+    },
+    onMaxPriceChange: (maxPrice) => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'max_price', has_value: Boolean(maxPrice) });
+      updateParams({ maxPrice });
+    },
+    onToggleInStock: () => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'in_stock', enabled: !params.inStock });
+      updateParams({ inStock: !params.inStock });
+    },
+    onToggleSale: () => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'sale', enabled: !params.sale });
+      updateParams({ sale: !params.sale });
+    },
     onClearAll: clearFilters
   };
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
+    trackGoal(METRIKA_GOALS.SEARCH_SUBMIT, {
+      search_query: searchInput.trim(),
+      scope: params.scope || 'all'
+    });
     updateParams({
       query: searchInput.trim(),
       original: ''
@@ -204,7 +241,10 @@ function CataloguePage() {
             <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex-wrap lg:overflow-visible">
               <FilterChip
                 type="button"
-                onClick={() => updateParams({ scope: '' })}
+                onClick={() => {
+                  trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'scope', scope: 'all' });
+                  updateParams({ scope: '' });
+                }}
                 active={!params.scope}
                 className="whitespace-nowrap"
               >
@@ -217,7 +257,13 @@ function CataloguePage() {
                   <FilterChip
                     key={resolveCategoryToken(category)}
                     type="button"
-                    onClick={() => updateParams({ scope: isActive ? '' : token })}
+                    onClick={() => {
+                      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, {
+                        filter: 'scope',
+                        scope: isActive ? 'all' : token
+                      });
+                      updateParams({ scope: isActive ? '' : token });
+                    }}
                     active={isActive}
                     className="whitespace-nowrap"
                   >
@@ -243,7 +289,13 @@ function CataloguePage() {
               <Select
                 id="catalog-sort"
                 value={params.sort}
-                onChange={(event) => updateParams({ sort: event.target.value })}
+                onChange={(event) => {
+                  trackGoal(METRIKA_GOALS.SEARCH_SORT_CHANGE, {
+                    sort: event.target.value,
+                    page_type: 'catalog'
+                  });
+                  updateParams({ sort: event.target.value });
+                }}
                 className="control-inline w-full pr-6 text-sm font-medium text-ink"
               >
                 {PRODUCT_LIST_SORT_OPTIONS.map((option) => (
@@ -347,8 +399,13 @@ function CataloguePage() {
           ) : list.totalItems > 0 ? (
             <>
               <div className="page-grid--catalog">
-                {list.pagedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                {list.pagedProducts.map((product, index) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    listName={hasQuery ? 'catalog_search_results' : 'catalog_results'}
+                    position={(list.safePage - 1) * list.pageSize + index + 1}
+                  />
                 ))}
               </div>
 

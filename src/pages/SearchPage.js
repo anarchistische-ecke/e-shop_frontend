@@ -11,6 +11,7 @@ import { useProductList } from '../features/product-list/useProductList';
 import { useProductListRouteState } from '../features/product-list/useProductListRouteState';
 import { buildAutocompleteData, normalizeSearchText } from '../utils/search';
 import { resolveCategoryToken } from '../features/product-list/selectors';
+import { METRIKA_GOALS, trackGoal, trackProductList } from '../utils/metrika';
 
 function SearchPage() {
   const resultsRef = useRef(null);
@@ -52,8 +53,29 @@ function SearchPage() {
     PRODUCT_LIST_SORT_OPTIONS.find((option) => option.value === params.sort)?.label ||
     'Лучшее совпадение';
 
+  useEffect(() => {
+    if (list.loading || !visibleProducts.length) return;
+    trackProductList(visibleProducts, {
+      listName: 'search_results',
+      pageType: 'search',
+      startPosition: (list.safePage - 1) * list.pageSize + 1
+    });
+  }, [list.loading, list.pageSize, list.safePage, visibleProducts]);
+
+  useEffect(() => {
+    if (list.loading || !hasQuery || list.totalItems !== 0) return;
+    trackGoal(METRIKA_GOALS.SEARCH_ZERO_RESULTS, {
+      search_query: params.query,
+      scope: params.scope || 'all'
+    });
+  }, [hasQuery, list.loading, list.totalItems, params.query, params.scope]);
+
   const handleSearchSubmit = (event) => {
     event.preventDefault();
+    trackGoal(METRIKA_GOALS.SEARCH_SUBMIT, {
+      search_query: searchInput.trim(),
+      scope: params.scope || 'all'
+    });
     updateParams({
       query: searchInput.trim(),
       original: ''
@@ -147,7 +169,13 @@ function SearchPage() {
                     id="search-scope-select"
                     data-testid="search-page-scope-select"
                     value={params.scope}
-                    onChange={(event) => updateParams({ scope: event.target.value })}
+                    onChange={(event) => {
+                      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, {
+                        filter: 'scope',
+                        scope: event.target.value || 'all'
+                      });
+                      updateParams({ scope: event.target.value });
+                    }}
                     className="bg-white"
                     aria-label="Раздел каталога для поиска"
                   >
@@ -165,7 +193,10 @@ function SearchPage() {
                 <div className="mt-2 hidden flex-wrap gap-2 md:flex">
                   <FilterChip
                     type="button"
-                    onClick={() => updateParams({ scope: '' })}
+                    onClick={() => {
+                      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'scope', scope: 'all' });
+                      updateParams({ scope: '' });
+                    }}
                     active={!params.scope}
                     className="whitespace-nowrap"
                   >
@@ -178,7 +209,13 @@ function SearchPage() {
                       <FilterChip
                         key={resolveCategoryToken(category)}
                         type="button"
-                        onClick={() => updateParams({ scope: isActive ? '' : token })}
+                        onClick={() => {
+                          trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, {
+                            filter: 'scope',
+                            scope: isActive ? 'all' : token
+                          });
+                          updateParams({ scope: isActive ? '' : token });
+                        }}
                         active={isActive}
                         className="whitespace-nowrap"
                       >
@@ -195,7 +232,13 @@ function SearchPage() {
               >
                 <FilterChip
                   type="button"
-                  onClick={() => updateParams({ inStock: !params.inStock })}
+                  onClick={() => {
+                    trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, {
+                      filter: 'in_stock',
+                      enabled: !params.inStock
+                    });
+                    updateParams({ inStock: !params.inStock });
+                  }}
                   active={params.inStock}
                   className="justify-center"
                 >
@@ -221,7 +264,13 @@ function SearchPage() {
                   <span className="text-ink/55">↕</span>
                   <Select
                     value={params.sort}
-                    onChange={(event) => updateParams({ sort: event.target.value })}
+                    onChange={(event) => {
+                      trackGoal(METRIKA_GOALS.SEARCH_SORT_CHANGE, {
+                        sort: event.target.value,
+                        page_type: 'search'
+                      });
+                      updateParams({ sort: event.target.value });
+                    }}
                     className="control-inline w-full pr-6 text-sm font-medium text-ink"
                     aria-label="Сортировка результатов поиска"
                   >
@@ -298,13 +347,17 @@ function SearchPage() {
                     <FilterChip
                       key={`${suggestion.label}-${suggestion.scopeToken}`}
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        trackGoal(METRIKA_GOALS.SEARCH_SUGGESTION_CLICK, {
+                          search_query: suggestion.label,
+                          scope: suggestion.scopeToken || params.scope || 'all'
+                        });
                         updateParams({
                           query: suggestion.label,
                           scope: suggestion.scopeToken || params.scope,
                           original: ''
-                        })
-                      }
+                        });
+                      }}
                       className="whitespace-nowrap"
                     >
                       {suggestion.label}
@@ -317,8 +370,13 @@ function SearchPage() {
             {visibleProducts.length > 0 ? (
               <>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {visibleProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                  {visibleProducts.map((product, index) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      listName="search_results"
+                      position={(list.safePage - 1) * list.pageSize + index + 1}
+                    />
                   ))}
                 </div>
 

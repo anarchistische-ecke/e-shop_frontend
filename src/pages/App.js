@@ -3,8 +3,9 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ScrollToTop from '../components/ScrollToTop';
-import { trackMetrikaHit } from '../utils/metrika';
+import { trackPageView } from '../utils/metrika';
 import { useRenderContext } from '../ssr/RenderContext';
+import { matchStorefrontRoute } from '../ssr/routeConfig';
 
 function isChromeHiddenRoutePath(path = '') {
   return path === '/manager/login' || path.startsWith('/admin');
@@ -48,7 +49,15 @@ function App({ routes = [] }) {
       return;
     }
     const path = `${location.pathname}${location.search}${location.hash}`;
-    trackMetrikaHit(path, typeof document !== 'undefined' ? document.title : undefined);
+    const { route, params } = matchStorefrontRoute(location.pathname);
+    trackPageView(path, typeof document !== 'undefined' ? document.title : undefined, {
+      route_id: route?.id || 'not-found',
+      page_type: route?.id || 'not-found',
+      canonical_path: location.pathname,
+      product_id: params?.id,
+      category_slug: params?.slug,
+      search_query: new URLSearchParams(location.search).get('q') || ''
+    });
   }, [isChromeHiddenRoute, location.pathname, location.search, location.hash]);
 
   return (

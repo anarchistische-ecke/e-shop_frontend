@@ -11,6 +11,7 @@ import {
   normalizeProductImages,
 } from '../utils/product';
 import { buildProductPath } from '../utils/url';
+import { trackProductClick } from '../utils/metrika';
 
 function getStockCount(product) {
   if (!product) return 0;
@@ -29,7 +30,9 @@ function ProductCard({
   product,
   deferThumbnails = false,
   priority = false,
-  imageSizes = '(min-width: 1024px) 18rem, (min-width: 640px) 42vw, 82vw'
+  imageSizes = '(min-width: 1024px) 18rem, (min-width: 640px) 42vw, 82vw',
+  listName = 'product_list',
+  position
 }) {
   const location = useLocation();
   const primaryVariant = getPrimaryVariant(product);
@@ -103,6 +106,14 @@ function ProductCard({
     isLowStock ? `Мало на складе: ${stockCount}` : '',
     product?.category === 'new' ? 'Новинка' : '',
   ].filter(Boolean);
+  const handleProductClick = () => {
+    trackProductClick(product, {
+      variant: primaryVariant,
+      variantId: primaryVariant?.id,
+      listName,
+      position
+    });
+  };
 
   return (
     <Card
@@ -119,6 +130,7 @@ function ProductCard({
         tabIndex={-1}
         aria-hidden="true"
         className="block"
+        onClick={handleProductClick}
       >
         <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
           <div className="relative pt-[74%]">
@@ -191,6 +203,7 @@ function ProductCard({
           to={buildProductPath(product)}
           state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
           className="block"
+          onClick={handleProductClick}
         >
           <p className="min-h-[2.75rem] line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
         </Link>

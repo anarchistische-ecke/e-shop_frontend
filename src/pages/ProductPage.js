@@ -20,6 +20,12 @@ import {
 } from '../utils/product';
 import { buildProductPath, getCanonicalUrl } from '../utils/url';
 import { useSsrData } from '../ssr/SsrDataContext';
+import {
+  METRIKA_GOALS,
+  trackGoal,
+  trackProductDetail,
+  trackProductList
+} from '../utils/metrika';
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -238,6 +244,7 @@ function ProductPage() {
   const cartInputRef = useRef({ quantity: 1, variantId: null });
   const variantMenuRef = useRef(null);
   const galleryGestureRef = useRef(null);
+  const detailTrackedRef = useRef('');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -630,11 +637,35 @@ function ProductPage() {
     }
   }, [availableStock]);
 
+  useEffect(() => {
+    if (!product?.id) return;
+    const trackingKey = `${product.id}:${selectedVariant?.id || ''}`;
+    if (detailTrackedRef.current === trackingKey) return;
+    trackProductDetail(product, {
+      variant: selectedVariant,
+      variantId: selectedVariant?.id
+    });
+    detailTrackedRef.current = trackingKey;
+  }, [product, selectedVariant]);
+
+  useEffect(() => {
+    if (!relatedProducts.length) return;
+    trackProductList(relatedProducts, {
+      listName: 'pdp_related_products',
+      pageType: 'product'
+    });
+  }, [relatedProducts]);
+
   const selectImageByIndex = (index) => {
     if (!orderedImages.length) return;
     const safeIndex = (index + orderedImages.length) % orderedImages.length;
     const nextImage = orderedImages[safeIndex];
     setActiveImageIndex(safeIndex);
+    trackGoal(METRIKA_GOALS.PRODUCT_GALLERY_INTERACTION, {
+      product_id: product?.id,
+      image_index: safeIndex + 1,
+      action: 'select'
+    });
 
     if (nextImage?.variantId && selectedVariant?.id !== nextImage.variantId) {
       const variant = (product?.variants || []).find((item) => item.id === nextImage.variantId);
@@ -646,6 +677,11 @@ function ProductPage() {
 
   const openImageZoom = () => {
     setIsImageZoomOpen(true);
+    trackGoal(METRIKA_GOALS.PRODUCT_GALLERY_INTERACTION, {
+      product_id: product?.id,
+      image_index: activeImageIndex + 1,
+      action: 'zoom_open'
+    });
     if (!showZoomHint) return;
     setShowZoomHint(false);
     if (typeof window !== 'undefined') {
@@ -679,6 +715,11 @@ function ProductPage() {
 
     if (absX > 42 && absX > absY * 1.2) {
       gesture.didSwipe = true;
+      trackGoal(METRIKA_GOALS.PRODUCT_GALLERY_INTERACTION, {
+        product_id: product?.id,
+        image_index: activeImageIndex + 1,
+        action: deltaX < 0 ? 'swipe_next' : 'swipe_prev'
+      });
       selectImageByIndex(activeImageIndex + (deltaX < 0 ? 1 : -1));
     }
   };
@@ -703,6 +744,11 @@ function ProductPage() {
       ...prev,
       [key]: !prev[key],
     }));
+    trackGoal(METRIKA_GOALS.PRODUCT_SPEC_INTERACTION, {
+      product_id: product?.id,
+      section: key,
+      action: openAccordions[key] ? 'collapse' : 'expand'
+    });
   };
 
   const openDetailsAccordion = () => {
@@ -725,6 +771,11 @@ function ProductPage() {
 
     setIsVariantTransitioning(true);
     setSelectedVariant(variant);
+    trackGoal(METRIKA_GOALS.PRODUCT_VARIANT_CHANGE, {
+      product_id: product?.id,
+      variant_id: variant.id,
+      stock: getStockValue(variant)
+    });
 
     const scopedIndex = orderedImages.findIndex((image) => image.variantId === variant.id);
     if (scopedIndex >= 0) {
@@ -748,6 +799,10 @@ function ProductPage() {
   const openInfoSheet = (nextSheetType) => {
     setSheetType(nextSheetType);
     setIsInfoSheetOpen(true);
+    trackGoal(METRIKA_GOALS.PRODUCT_INFO_OPEN, {
+      product_id: product?.id,
+      sheet_type: nextSheetType
+    });
   };
 
   const addSelectedVariantToCart = async () => {
@@ -785,6 +840,11 @@ function ProductPage() {
 
   const handleAddBundle = async () => {
     if (!product || availableStock <= 0 || isCartActionPending || !hasBundleSelection) return;
+    trackGoal(METRIKA_GOALS.BUNDLE_SELECT, {
+      product_id: product.id,
+      selected_count: bundleItems.filter((item) => bundleSelections[item.id]).length,
+      bundle_total: Math.round(bundleTotal)
+    });
     setPendingAction('bundle');
     try {
       const didAddPrimary = await addSelectedVariantToCart();
@@ -1474,8 +1534,13 @@ function ProductPage() {
               </Button>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-              {relatedProducts.map((item) => (
-                <ProductCard key={item.id} product={item} />
+              {relatedProducts.map((item, index) => (
+                <ProductCard
+                  key={item.id}
+                  product={item}
+                  listName="pdp_related_products"
+                  position={index + 1}
+                />
               ))}
             </div>
           </section>
