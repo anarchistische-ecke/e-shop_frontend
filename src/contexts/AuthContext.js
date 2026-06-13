@@ -113,26 +113,6 @@ export function AuthProvider({ children }) {
     refreshProfile().catch((err) => console.warn('Failed to refresh profile', err));
   }, [tokenPayload, profile, refreshProfile]);
 
-  useEffect(() => {
-    if (!isReady) return;
-    if (!tokenPayload) {
-      clearAnalyticsUser();
-      return;
-    }
-
-    const roles = Array.from(collectRoles(tokenPayload)).map((role) =>
-      role.replace(/^ROLE_/, '').toLowerCase()
-    );
-    const customerSegment =
-      roles.includes('admin') ? 'admin' : roles.includes('manager') ? 'manager' : 'customer';
-    setAnalyticsUser(tokenPayload.sub || profile?.id || tokenPayload.preferred_username, {
-      customer_segment: customerSegment,
-      auth_state: 'authenticated',
-      has_customer_profile: Boolean(profile?.id),
-      has_strong_auth: hasStrongAuth()
-    });
-  }, [hasStrongAuth, isReady, profile?.id, tokenPayload]);
-
   const login = useCallback(async ({ token, profile: nextProfile } = {}) => {
     if (!token) return;
     setSession({ token, profile: nextProfile || null });
@@ -170,6 +150,26 @@ export function AuthProvider({ children }) {
   const hasStrongAuth = useCallback(() => {
     return isEmailVerified(tokenPayload) && hasMfa(tokenPayload);
   }, [tokenPayload]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    if (!tokenPayload) {
+      clearAnalyticsUser();
+      return;
+    }
+
+    const roles = Array.from(collectRoles(tokenPayload)).map((role) =>
+      role.replace(/^ROLE_/, '').toLowerCase()
+    );
+    const customerSegment =
+      roles.includes('admin') ? 'admin' : roles.includes('manager') ? 'manager' : 'customer';
+    setAnalyticsUser(tokenPayload.sub || profile?.id || tokenPayload.preferred_username, {
+      customer_segment: customerSegment,
+      auth_state: 'authenticated',
+      has_customer_profile: Boolean(profile?.id),
+      has_strong_auth: hasStrongAuth()
+    });
+  }, [hasStrongAuth, isReady, profile?.id, tokenPayload]);
 
   const tokenParsed = useMemo(
     () => buildTokenProfile({ profile, payload: tokenPayload }),
