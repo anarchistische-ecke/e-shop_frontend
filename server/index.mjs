@@ -81,6 +81,15 @@ function renderResourceHints(ssrData = {}) {
   return [...preconnectTags, preloadTag].filter(Boolean).join('');
 }
 
+function renderMetrikaNoscript(runtimeConfig = {}) {
+  const counterId = Number(runtimeConfig.metrikaCounterId || 0);
+  if (!Number.isFinite(counterId) || counterId <= 0) {
+    return '';
+  }
+
+  return `<noscript><div><img src="https://mc.yandex.ru/watch/${counterId}" style="position:absolute; left:-9999px;" alt="" /></div></noscript>`;
+}
+
 function injectRenderedApp(template, { appHtml, helmet, ssrData, runtimeConfig }) {
   const stateScripts = [
     `<script>window.__APP_CONFIG__=${serializeForScript(runtimeConfig)};</script>`,
@@ -90,7 +99,7 @@ function injectRenderedApp(template, { appHtml, helmet, ssrData, runtimeConfig }
   return template
     .replace('<!--app-head-->', `${renderResourceHints(ssrData)}${renderHelmetTags(helmet)}`)
     .replace('<!--app-html-->', appHtml)
-    .replace('<!--app-state-->', stateScripts);
+    .replace('<!--app-state-->', `${renderMetrikaNoscript(runtimeConfig)}${stateScripts}`);
 }
 
 function resolveCanonicalOrigin() {

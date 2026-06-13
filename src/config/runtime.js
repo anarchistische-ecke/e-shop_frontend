@@ -114,6 +114,27 @@ export function getRuntimeConfig() {
     keycloakClientId: hasWindowConfig('keycloakClientId')
       ? normalizeString(readWindowConfig('keycloakClientId'))
       : readEnv('REACT_APP_KEYCLOAK_CLIENT_ID'),
+    metrikaCounterId: hasWindowConfig('metrikaCounterId')
+      ? normalizeString(readWindowConfig('metrikaCounterId'))
+      : readEnv('REACT_APP_YANDEX_METRIKA_ID'),
+    metrikaEcommerce: hasWindowConfig('metrikaEcommerce')
+      ? normalizeString(readWindowConfig('metrikaEcommerce'))
+      : readEnv('REACT_APP_YANDEX_METRIKA_ECOMMERCE', 'dataLayer'),
+    metrikaClickmap: hasWindowConfig('metrikaClickmap')
+      ? readWindowConfig('metrikaClickmap')
+      : readEnv('REACT_APP_YANDEX_METRIKA_CLICKMAP'),
+    metrikaTrackLinks: hasWindowConfig('metrikaTrackLinks')
+      ? readWindowConfig('metrikaTrackLinks')
+      : readEnv('REACT_APP_YANDEX_METRIKA_TRACK_LINKS'),
+    metrikaAccurateTrackBounce: hasWindowConfig('metrikaAccurateTrackBounce')
+      ? readWindowConfig('metrikaAccurateTrackBounce')
+      : readEnv('REACT_APP_YANDEX_METRIKA_ACCURATE_BOUNCE'),
+    metrikaWebvisor: hasWindowConfig('metrikaWebvisor')
+      ? readWindowConfig('metrikaWebvisor')
+      : readEnv('REACT_APP_YANDEX_METRIKA_WEBVISOR'),
+    metrikaDebug: hasWindowConfig('metrikaDebug')
+      ? readWindowConfig('metrikaDebug')
+      : readEnv('REACT_APP_YANDEX_METRIKA_DEBUG'),
     siteUrl:
       normalizeString(readWindowConfig('siteUrl')) ||
       readEnv('REACT_APP_SITE_URL') ||

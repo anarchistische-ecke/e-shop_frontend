@@ -8,7 +8,12 @@ import { usePaymentConfig } from '../contexts/PaymentConfigContext';
 import EmbeddedPaymentPanel from '../features/payment/EmbeddedPaymentPanel';
 import { moneyToNumber } from '../utils/product';
 import { useAuth } from '../contexts/AuthContext';
-import { METRIKA_GOALS, trackMetrikaGoal } from '../utils/metrika';
+import {
+  getAttributionSnapshot,
+  METRIKA_GOALS,
+  trackEcommerce,
+  trackGoal
+} from '../utils/metrika';
 import { createNotification } from '../utils/notifications';
 import {
   hasEmbeddedPaymentSession,
@@ -68,6 +73,7 @@ function OrderPage() {
 
   const refreshTimerRef = useRef(null);
   const purchaseTrackedRef = useRef(false);
+  const managerLinkOpenedTrackedRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -162,6 +168,16 @@ function OrderPage() {
     };
   }, [order]);
 
+  useEffect(() => {
+    if (!order || managerLinkOpenedTrackedRef.current) return;
+    if (!order.managerSubject && !order.managerName && !order.createdByManager) return;
+    trackGoal(METRIKA_GOALS.MANAGER_LINK_OPENED, {
+      order_id: order.id,
+      order_status: order.status || 'PENDING'
+    });
+    managerLinkOpenedTrackedRef.current = true;
+  }, [order]);
+
   const total = useMemo(() => {
     if (!order) return 0;
     return moneyToNumber(order.totalAmount || order.total);
@@ -176,10 +192,25 @@ function OrderPage() {
     const nextStatus = order.status || 'PENDING';
     if (nextStatus !== 'PAID' && nextStatus !== 'DELIVERED') return;
 
-    trackMetrikaGoal(METRIKA_GOALS.PURCHASE, {
+    const orderItems = Array.isArray(order.items) ? order.items : [];
+    trackEcommerce('purchase', {
+      orderId: order.id,
+      revenue: moneyToNumber(order.totalAmount || order.total),
+      currencyCode: 'RUB',
+      coupon: order.promoCode || order.discountCode || '',
+      products: orderItems.map((item) => ({
+        id: item.variantId || item.productId || item.id,
+        name: item.productName || item.name,
+        variantName: item.variantName || item.sku,
+        price: item.unitPrice || item.unitPriceAmount,
+        quantity: item.quantity,
+        discount: item.discountAmount
+      }))
+    });
+    trackGoal(METRIKA_GOALS.PURCHASE, {
       order_id: order.id,
       total: Math.round(moneyToNumber(order.totalAmount || order.total)),
-      items: Array.isArray(order.items) ? order.items.length : 0,
+      items: orderItems.length,
     });
     purchaseTrackedRef.current = true;
   }, [order]);
@@ -212,6 +243,11 @@ function OrderPage() {
         receiptEmail: receiptEmail.trim(),
         returnUrl: orderReturnUrl,
         confirmationMode: isPaymentConfigLoaded ? paymentConfig.confirmationMode : undefined,
+        analyticsAttribution: getAttributionSnapshot()
+      });
+      trackGoal(METRIKA_GOALS.MANAGER_LINK_PAYMENT_STARTED, {
+        order_id: order?.id,
+        payment_mode: paymentConfig.confirmationMode || ''
       });
 
       const nextPaymentSession = normalizePaymentSession(response, {

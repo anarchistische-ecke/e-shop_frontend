@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../../ProductCard';
 import ShopTheLook from '../../home/ShopTheLook';
@@ -16,6 +16,7 @@ import {
 import { useProductDirectoryData } from '../../../features/product-list/data';
 import { buildCategoryListingHref } from '../../../features/product-list/url';
 import { getPrimaryImageMedia, getPrimaryImageUrl, resolveImageUrl } from '../../../utils/product';
+import { trackProductList } from '../../../utils/metrika';
 
 const COLLECTION_REFERENCE_KINDS = new Set([
   'collection',
@@ -279,6 +280,18 @@ function ProductReferenceList({ section, page }) {
         .filter(Boolean),
     [products, references]
   );
+  const listName = `cms_${String(section?.key || section?.slug || section?.title || page?.slug || 'products')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')}`;
+
+  useEffect(() => {
+    if (!resolvedProducts.length) return;
+    trackProductList(resolvedProducts, {
+      listName,
+      pageType: page?.slug || 'cms'
+    });
+  }, [listName, page?.slug, resolvedProducts]);
 
   if (!resolvedProducts.length && !loading) {
     return <FeatureListBlock section={section} />;
@@ -304,12 +317,14 @@ function ProductReferenceList({ section, page }) {
     <CommerceSectionShell section={section}>
       {resolvedProducts.length ? (
         <div className={getReferenceListClass(section, 'product')}>
-          {resolvedProducts.map((product) => (
+          {resolvedProducts.map((product, index) => (
             <div key={product.id || product.slug} className={getReferenceItemClass(section)}>
               <ProductCard
                 product={product}
                 deferThumbnails={page?.template === 'home'}
                 imageSizes="(max-width: 767px) 48vw, (min-width: 1024px) 22rem, 46vw"
+                listName={listName}
+                position={index + 1}
               />
             </div>
           ))}

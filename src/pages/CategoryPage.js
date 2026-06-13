@@ -36,8 +36,14 @@ import { useProductListRouteState } from '../features/product-list/useProductLis
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { normalizeSearchText } from '../utils/search';
 import { buildProductPath } from '../utils/url';
+import {
+  METRIKA_GOALS,
+  trackGoal,
+  trackProductClick,
+  trackProductList
+} from '../utils/metrika';
 
-function CategoryCard({ product, fromPath, fromLabel }) {
+function CategoryCard({ product, fromPath, fromLabel, listName, position }) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const hoverTimerRef = useRef(null);
@@ -107,6 +113,14 @@ function CategoryCard({ product, fromPath, fromLabel }) {
       className="group block rounded-[24px]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={() => {
+        trackProductClick(product, {
+          variant: primaryVariant,
+          variantId: primaryVariant?.id,
+          listName,
+          position
+        });
+      }}
     >
       <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
         <div className="relative pt-[74%]">
@@ -251,6 +265,15 @@ function CategoryPage() {
     [canonicalPath, heading, list.activeCategory?.name]
   );
 
+  useEffect(() => {
+    if (list.loading || !list.pagedProducts.length) return;
+    trackProductList(list.pagedProducts, {
+      listName: `category_${slug || 'unknown'}`,
+      pageType: 'category',
+      startPosition: (list.safePage - 1) * list.pageSize + 1
+    });
+  }, [list.loading, list.pageSize, list.pagedProducts, list.safePage, slug]);
+
   const clearFilterByKey = (key) => {
     if (key === 'brand') {
       updateParams({ brand: '' });
@@ -280,11 +303,26 @@ function CategoryPage() {
     priceBounds: list.priceBounds,
     params,
     activeFilterCount: list.activeFilters.length,
-    onBrandChange: (brand) => updateParams({ brand }),
-    onMinPriceChange: (minPrice) => updateParams({ minPrice }),
-    onMaxPriceChange: (maxPrice) => updateParams({ maxPrice }),
-    onToggleInStock: () => updateParams({ inStock: !params.inStock }),
-    onToggleSale: () => updateParams({ sale: !params.sale }),
+    onBrandChange: (brand) => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'brand', page_type: 'category', has_value: Boolean(brand) });
+      updateParams({ brand });
+    },
+    onMinPriceChange: (minPrice) => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'min_price', page_type: 'category', has_value: Boolean(minPrice) });
+      updateParams({ minPrice });
+    },
+    onMaxPriceChange: (maxPrice) => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'max_price', page_type: 'category', has_value: Boolean(maxPrice) });
+      updateParams({ maxPrice });
+    },
+    onToggleInStock: () => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'in_stock', page_type: 'category', enabled: !params.inStock });
+      updateParams({ inStock: !params.inStock });
+    },
+    onToggleSale: () => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'sale', page_type: 'category', enabled: !params.sale });
+      updateParams({ sale: !params.sale });
+    },
     onClearAll: clearFilters
   };
 
@@ -350,7 +388,13 @@ function CategoryPage() {
               <Select
                 id="category-sort"
                 value={params.sort}
-                onChange={(event) => updateParams({ sort: event.target.value })}
+                onChange={(event) => {
+                  trackGoal(METRIKA_GOALS.SEARCH_SORT_CHANGE, {
+                    sort: event.target.value,
+                    page_type: 'category'
+                  });
+                  updateParams({ sort: event.target.value });
+                }}
                 className="control-inline min-w-0 w-full bg-transparent pr-6 text-sm font-medium text-ink focus:outline-none sm:min-w-[200px]"
                 aria-label="Сортировка товаров"
               >
@@ -502,12 +546,14 @@ function CategoryPage() {
           ) : list.totalItems > 0 ? (
             <>
               <div className={gridClassName}>
-                {list.pagedProducts.map((product) => (
+                {list.pagedProducts.map((product, index) => (
                   <CategoryCard
                     key={product.id}
                     product={product}
                     fromPath={fromPath}
                     fromLabel={heading}
+                    listName={`category_${slug || 'unknown'}`}
+                    position={(list.safePage - 1) * list.pageSize + index + 1}
                   />
                 ))}
               </div>

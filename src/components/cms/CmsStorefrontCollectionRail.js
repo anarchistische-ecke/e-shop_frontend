@@ -1,17 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCmsCollection } from '../../contexts/CmsContentContext';
 import ResponsiveImage from '../media/ResponsiveImage';
 import { Card } from '../ui';
 import { moneyToNumber, resolveImageUrl } from '../../utils/product';
 import { getCmsLayoutVariant } from './cmsBlockShared';
+import { METRIKA_GOALS, trackEcommerce, trackGoal } from '../../utils/metrika';
 
 function formatPrice(price) {
   const value = moneyToNumber(price);
   return value > 0 ? `${value.toLocaleString('ru-RU')} ₽` : '';
 }
 
-function CollectionProductCard({ entry }) {
+function CollectionProductCard({ entry, promotion }) {
   const imageUrl = resolveImageUrl(entry?.image?.url || '');
   const title = entry?.presentation?.marketingTitle || entry?.title || 'Товар';
   const summary = entry?.presentation?.introBody || entry?.summary || '';
@@ -26,6 +27,14 @@ function CollectionProductCard({ entry }) {
       padding="sm"
       interactive
       className="group block h-full rounded-[24px]"
+      onClick={() => {
+        trackEcommerce('promoClick', { promotions: [promotion] });
+        trackGoal(METRIKA_GOALS.PROMO_CLICK, {
+          promo_id: promotion.id,
+          promo_name: promotion.name,
+          position: promotion.position
+        });
+      }}
     >
       <div className="flex h-full flex-col gap-4">
         <div className="relative overflow-hidden rounded-[20px] border border-ink/10 bg-sand/40">
@@ -65,7 +74,7 @@ function CollectionProductCard({ entry }) {
   );
 }
 
-function CollectionCategoryCard({ entry }) {
+function CollectionCategoryCard({ entry, promotion }) {
   const imageUrl = resolveImageUrl(entry?.image?.url || '');
   const title = entry?.presentation?.marketingTitle || entry?.title || 'Категория';
   const summary = entry?.presentation?.introBody || entry?.summary || '';
@@ -79,6 +88,14 @@ function CollectionCategoryCard({ entry }) {
       padding="sm"
       interactive
       className="group block h-full rounded-[24px]"
+      onClick={() => {
+        trackEcommerce('promoClick', { promotions: [promotion] });
+        trackGoal(METRIKA_GOALS.PROMO_CLICK, {
+          promo_id: promotion.id,
+          promo_name: promotion.name,
+          position: promotion.position
+        });
+      }}
     >
       <div className="flex h-full flex-col gap-4">
         <div className="relative overflow-hidden rounded-[20px] border border-ink/10 bg-sand/35">
@@ -111,10 +128,10 @@ function CollectionCategoryCard({ entry }) {
   );
 }
 
-export function CollectionEntryCard({ entry }) {
+export function CollectionEntryCard({ entry, promotion }) {
   return entry?.entityKind === 'category'
-    ? <CollectionCategoryCard entry={entry} />
-    : <CollectionProductCard entry={entry} />;
+    ? <CollectionCategoryCard entry={entry} promotion={promotion} />
+    : <CollectionProductCard entry={entry} promotion={promotion} />;
 }
 
 function collectionLayoutClass(layoutVariant) {
@@ -135,12 +152,31 @@ function collectionItemClass(layoutVariant) {
 
 function CmsCollectionRailSection({ collectionKey, layoutVariant = 'cards' }) {
   const { collection, isCollectionLoading, collectionError } = useCmsCollection(collectionKey);
+  const collectionItems = Array.isArray(collection?.items) ? collection.items : [];
+  const hero = collection?.hero || null;
+  const title = hero?.title || collection?.title || 'Подборка';
+  const description = hero?.body || collection?.description || '';
+  const promotions = useMemo(
+    () =>
+      collectionItems.map((entry, index) => ({
+        id: `${collection?.key || collectionKey}:${entry.entityKind}:${entry.entityKey}`,
+        name: entry?.presentation?.marketingTitle || entry?.title || title,
+        creative: resolveImageUrl(entry?.image?.url || ''),
+        position: index + 1
+      })),
+    [collection?.key, collectionItems, collectionKey, title]
+  );
 
-  if (collection && Array.isArray(collection.items) && collection.items.length > 0) {
-    const hero = collection?.hero || null;
-    const title = hero?.title || collection?.title || 'Подборка';
-    const description = hero?.body || collection?.description || '';
+  useEffect(() => {
+    if (!promotions.length) return;
+    trackEcommerce('promoView', { promotions });
+    trackGoal(METRIKA_GOALS.PROMO_VIEW, {
+      promo_collection: collection?.key || collectionKey,
+      promo_count: promotions.length
+    });
+  }, [collection?.key, collectionKey, promotions]);
 
+  if (collection && collectionItems.length > 0) {
     return (
       <section className="space-y-4">
         <div className="space-y-2">
@@ -163,9 +199,9 @@ function CmsCollectionRailSection({ collectionKey, layoutVariant = 'cards' }) {
         </div>
 
         <div className={collectionLayoutClass(layoutVariant)}>
-          {collection.items.map((entry) => (
+          {collectionItems.map((entry, index) => (
             <div key={`${collection.key}-${entry.entityKind}-${entry.entityKey}`} className={collectionItemClass(layoutVariant)}>
-              <CollectionEntryCard entry={entry} />
+              <CollectionEntryCard entry={entry} promotion={promotions[index]} />
             </div>
           ))}
         </div>
