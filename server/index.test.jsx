@@ -324,6 +324,12 @@ describe('storefront SSR server', () => {
     expect(catalogResponse.text).toContain('Каталог домашнего текстиля | Постельное Белье-ЮГ');
     expect(catalogResponse.text).toContain('Сатиновый комплект Sand');
     expect(catalogResponse.text).toContain('href="https://yug-postel.ru/catalog"');
+    expect(catalogResponse.text).toContain('itemType="https://schema.org/OfferCatalog"');
+
+    const filteredCatalogResponse = await request(app).get('/catalog?brand=cozy-home&sort=priceAsc&page=2');
+    expect(filteredCatalogResponse.status).toBe(200);
+    expect(filteredCatalogResponse.text).toContain('noindex,follow');
+    expect(filteredCatalogResponse.text).toContain('href="https://yug-postel.ru/catalog"');
 
     const categoryResponse = await request(app).get('/category/popular');
     expect(categoryResponse.status).toBe(200);
@@ -337,6 +343,9 @@ describe('storefront SSR server', () => {
       'href="https://yug-postel.ru/product/prod-satin-sand/satin-sand"'
     );
     expect(productResponse.text).toContain('application/ld+json');
+    expect(productResponse.text).toContain('BreadcrumbList');
+    expect(productResponse.text).toContain('itemType="https://schema.org/Product"');
+    expect(productResponse.text).toContain('itemType="https://schema.org/Offer"');
     expect(productResponse.text).toContain('"kind":"product"');
 
     const legalInfoResponse = await request(app).get('/info/legal');
@@ -370,6 +379,30 @@ describe('storefront SSR server', () => {
       .redirects(0);
     expect(legacyNestedRedirect.status).toBe(301);
     expect(legacyNestedRedirect.headers.location).toBe('/category/foo?view=grid');
+
+    const legacySearchRedirect = await request(app)
+      .get('/category/search?query=%D0%9F%D0%BB%D0%B5%D0%B4')
+      .redirects(0);
+    expect(legacySearchRedirect.status).toBe(301);
+    expect(legacySearchRedirect.headers.location).toBe('/search?query=%D0%9F%D0%BB%D0%B5%D0%B4');
+
+    const trailingSlashRedirect = await request(app).get('/catalog/').redirects(0);
+    expect(trailingSlashRedirect.status).toBe(301);
+    expect(trailingSlashRedirect.headers.location).toBe('/catalog');
+  });
+
+  it('redirects non-canonical product URLs to the canonical product slug', async () => {
+    const shortProductRedirect = await request(app)
+      .get('/product/prod-satin-sand')
+      .redirects(0);
+    expect(shortProductRedirect.status).toBe(301);
+    expect(shortProductRedirect.headers.location).toBe('/product/prod-satin-sand/satin-sand');
+
+    const staleProductRedirect = await request(app)
+      .get('/product/prod-satin-sand/wrong-slug')
+      .redirects(0);
+    expect(staleProductRedirect.status).toBe(301);
+    expect(staleProductRedirect.headers.location).toBe('/product/prod-satin-sand/satin-sand');
   });
 
   it('returns CSR shells without embedded route data for private or transactional routes', async () => {
@@ -380,10 +413,29 @@ describe('storefront SSR server', () => {
       expect(response.headers['cache-control']).toBe('no-store');
       expect(response.text).toContain('Загружаем страницу…');
       expect(response.text).toContain('"renderMode":"csr"');
+      expect(response.text).toContain(pathname === '/search' ? 'noindex,follow' : 'noindex,nofollow');
       expect(response.text).not.toContain('"directory"');
       expect(response.text).not.toContain('"cms"');
       expect(response.text).not.toContain('"kind":"product"');
     }
+  });
+
+  it('serves Yandex-first robots.txt and runtime sitemap assets', async () => {
+    const robotsResponse = await request(app).get('/robots.txt');
+    expect(robotsResponse.status).toBe(200);
+    expect(robotsResponse.text).toContain('User-agent: Yandex');
+    expect(robotsResponse.text).toContain('Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&ymclid&gclid&fbclid&ref');
+    expect(robotsResponse.text).toContain('Sitemap: https://yug-postel.ru/sitemap.xml');
+    expect(robotsResponse.text).not.toContain('Disallow: /search');
+
+    const sitemapResponse = await request(app).get('/sitemap.xml');
+    expect(sitemapResponse.status).toBe(200);
+    expect(sitemapResponse.text).toContain('<loc>https://yug-postel.ru/</loc>');
+    expect(sitemapResponse.text).toContain('<loc>https://yug-postel.ru/catalog</loc>');
+    expect(sitemapResponse.text).toContain('<loc>https://yug-postel.ru/category/popular</loc>');
+    expect(sitemapResponse.text).toContain('<loc>https://yug-postel.ru/product/prod-satin-sand/satin-sand</loc>');
+    expect(sitemapResponse.text).not.toContain('/search');
+    expect(sitemapResponse.text).not.toContain('/checkout');
   });
 
   it('renders the not-found route as a 404 response', async () => {

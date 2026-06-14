@@ -4,6 +4,14 @@ import { Card } from '../ui';
 import { getCmsBlockComponent } from './blockRegistry';
 import { getBlockKey, getCmsLayoutVariant } from './cmsBlockShared';
 import { useCmsSiteSettings } from '../../contexts/CmsContentContext';
+import {
+  buildBreadcrumbJsonLd,
+  buildFaqPageJsonLd,
+  buildJsonLdGraph,
+  buildOrganizationJsonLd,
+  buildWebPageJsonLd,
+  buildWebSiteJsonLd
+} from '../../seo/schema';
 
 function CmsPageRenderer({ page }) {
   const { siteSettings } = useCmsSiteSettings();
@@ -11,14 +19,40 @@ function CmsPageRenderer({ page }) {
   const canonicalPath = page?.path || '/';
   const shareImage = page?.seoImage?.url || siteSettings?.defaultOgImage?.url || '';
   const isHomeTemplate = page?.template === 'home' || page?.slug === 'home' || page?.path === '/';
+  const pageTitle = page?.seoTitle || page?.title || '';
+  const pageDescription = page?.seoDescription || page?.summary || '';
+  const breadcrumbs = buildBreadcrumbJsonLd(
+    isHomeTemplate
+      ? []
+      : [
+          { name: 'Главная', path: '/' },
+          { name: page?.title || pageTitle || 'Страница', path: canonicalPath }
+        ]
+  );
+  const jsonLd = buildJsonLdGraph([
+    isHomeTemplate ? buildOrganizationJsonLd({ siteSettings }) : null,
+    isHomeTemplate ? buildWebSiteJsonLd({ siteSettings }) : null,
+    buildWebPageJsonLd({
+      title: pageTitle,
+      description: pageDescription,
+      path: canonicalPath,
+      image: shareImage,
+      breadcrumbs,
+      siteSettings
+    }),
+    breadcrumbs,
+    buildFaqPageJsonLd(page)
+  ]);
 
   return (
     <>
       <Seo
-        title={page?.seoTitle || page?.title || ''}
-        description={page?.seoDescription || page?.summary || ''}
+        title={pageTitle}
+        description={pageDescription}
         canonicalPath={canonicalPath}
         image={shareImage}
+        imageAlt={pageTitle}
+        jsonLd={jsonLd}
       />
 
       <section className={isHomeTemplate ? 'py-6 sm:py-8' : 'py-10 sm:py-12'}>

@@ -9,6 +9,8 @@ import {
   buildClientRuntimeConfig,
   loadSsrRequestData
 } from './ssr-data.mjs';
+import { createSeoAssetsHandlers } from './seo-assets.mjs';
+import { buildProductPath } from '../src/utils/url.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -137,6 +139,19 @@ function resolveLegacyHomeTarget(req) {
   return `${pathname}${search}`;
 }
 
+function resolveLegacySearchTarget(req) {
+  const queryIndex = req.originalUrl.indexOf('?');
+  const search = queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : '';
+  return `/search${search}`;
+}
+
+function resolveTrailingSlashTarget(req) {
+  const pathname = req.path.replace(/\/+$/, '') || '/';
+  const queryIndex = req.originalUrl.indexOf('?');
+  const search = queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : '';
+  return `${pathname}${search}`;
+}
+
 function resolveHtmlCacheControl(route, statusCode) {
   if (route.renderMode === 'ssr' && statusCode === 200) {
     return 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
@@ -217,6 +232,20 @@ export async function createStorefrontServer(options = {}) {
       return;
     }
 
+    if (isProduction && resolveRequestOrigin(req) !== canonicalOrigin) {
+      res.redirect(301, `${canonicalOrigin}${req.originalUrl}`);
+      return;
+    }
+
+    next();
+  });
+
+  app.use((req, res, next) => {
+    if (req.path.length > 1 && req.path.endsWith('/') && !path.extname(req.path)) {
+      res.redirect(301, resolveTrailingSlashTarget(req));
+      return;
+    }
+
     next();
   });
 
@@ -226,8 +255,18 @@ export async function createStorefrontServer(options = {}) {
       return;
     }
 
+    if (req.path === '/category/search') {
+      res.redirect(301, resolveLegacySearchTarget(req));
+      return;
+    }
+
     next();
   });
+
+  const seoAssets = createSeoAssetsHandlers({ origin: resolveCanonicalOrigin() });
+  app.get('/robots.txt', seoAssets.robotsHandler);
+  app.get('/sitemap.xml', seoAssets.sitemapHandler);
+  app.use(seoAssets.indexNowKeyHandler);
 
   if (isDevelopment && !viteServer && !options.renderModule) {
     const { createServer } = await import('vite');
@@ -272,6 +311,15 @@ export async function createStorefrontServer(options = {}) {
         params,
         requestOrigin
       });
+      if (route.id === 'product' && ssrData.routeData?.product) {
+        const canonicalProductPath = buildProductPath(ssrData.routeData.product);
+        if (canonicalProductPath && canonicalProductPath !== req.path) {
+          const queryIndex = req.originalUrl.indexOf('?');
+          const search = queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : '';
+          res.redirect(301, `${canonicalProductPath}${search}`);
+          return;
+        }
+      }
       const renderModule =
         options.renderModule ||
         cachedRenderModule ||

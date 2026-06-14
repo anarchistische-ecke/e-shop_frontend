@@ -9,6 +9,7 @@ import CmsManagedPage from '../components/cms/CmsManagedPage';
 import ResponsiveImage from '../components/media/ResponsiveImage';
 import { Button, Card } from '../components/ui';
 import { getActivePromotions } from '../api';
+import { DEFAULT_CMS_SITE_SETTINGS } from '../data/cms/defaults';
 import { useProductDirectoryData } from '../features/product-list/data';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
 import {
@@ -18,6 +19,12 @@ import {
   resolveImageUrl,
 } from '../utils/product';
 import { buildProductPath } from '../utils/url';
+import {
+  buildJsonLdGraph,
+  buildOrganizationJsonLd,
+  buildWebPageJsonLd,
+  buildWebSiteJsonLd
+} from '../seo/schema';
 
 function getProductStock(product) {
   if (!product) return 0;
@@ -255,6 +262,23 @@ function HomeFallbackPage() {
   const heroImage = getPrimaryImageUrl(featuredProduct);
   const heroImageMedia = getPrimaryImageMedia(featuredProduct);
   const heroShareImage = heroImage ? resolveImageUrl(heroImage) : '';
+  const seoTitle = 'Домашний текстиль для уютного дома';
+  const seoDescription = `${heroConfig.subtitle || homeHeroDefaults.subtitle} Доставка по России, честные условия покупки и собственное производство.`;
+  const homeJsonLd = useMemo(
+    () =>
+      buildJsonLdGraph([
+        buildOrganizationJsonLd({ siteSettings: DEFAULT_CMS_SITE_SETTINGS }),
+        buildWebSiteJsonLd({ siteSettings: DEFAULT_CMS_SITE_SETTINGS }),
+        buildWebPageJsonLd({
+          title: seoTitle,
+          description: seoDescription,
+          path: '/',
+          image: heroShareImage,
+          siteSettings: DEFAULT_CMS_SITE_SETTINGS
+        })
+      ]),
+    [heroShareImage, seoDescription, seoTitle]
+  );
 
   const heroHighlights = [
     {
@@ -334,10 +358,12 @@ function HomeFallbackPage() {
   return (
     <>
       <Seo
-        title="Домашний текстиль для уютного дома"
-        description={`${heroConfig.subtitle || homeHeroDefaults.subtitle} Доставка по России, честные условия покупки и собственное производство.`}
+        title={seoTitle}
+        description={seoDescription}
         canonicalPath="/"
         image={heroShareImage}
+        imageAlt={featuredProduct?.name || seoTitle}
+        jsonLd={homeJsonLd}
       />
 
       <div className="home">
