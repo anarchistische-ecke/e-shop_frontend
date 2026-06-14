@@ -10,7 +10,6 @@ import { CmsRichText } from '../components/cms/cmsBlockShared';
 import ProductCard from '../components/ProductCard';
 import ProductMediaViewer from '../components/product/ProductMediaViewer';
 import { Button, Card, Modal } from '../components/ui';
-import { legalTokens } from '../data/legal/constants';
 import { useProductDirectoryData } from '../features/product-list/data';
 import {
   getPrimaryVariant,
@@ -18,7 +17,7 @@ import {
   moneyToNumber,
   normalizeProductImages,
 } from '../utils/product';
-import { buildProductPath, getCanonicalUrl } from '../utils/url';
+import { buildProductPath } from '../utils/url';
 import { useSsrData } from '../ssr/SsrDataContext';
 import {
   METRIKA_GOALS,
@@ -26,6 +25,13 @@ import {
   trackProductDetail,
   trackProductList
 } from '../utils/metrika';
+import {
+  buildBreadcrumbJsonLd,
+  buildJsonLdGraph,
+  buildProductJsonLd,
+  buildProductMicrodata,
+  buildWebPageJsonLd
+} from '../seo/schema';
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -543,10 +549,6 @@ function ProductPage() {
   const careText = product?.care || 'Деликатная стирка при 30°. Следуйте рекомендациям на ярлыке изделия.';
   const hasDetailsContent = specificationSections.length > 0 || fallbackSpecs.length > 0;
   const canonicalProductPath = useMemo(() => buildProductPath(product), [product]);
-  const canonicalProductUrl = useMemo(
-    () => getCanonicalUrl(canonicalProductPath, { origin: legalTokens.SITE_URL }) || canonicalProductPath,
-    [canonicalProductPath]
-  );
   const presentationPage = useMemo(
     () => ({
       title: marketingTitle || product?.name || 'Товар',
@@ -578,58 +580,86 @@ function ProductPage() {
     return `${summary} ${availabilityMeta.label}.`;
   }, [availabilityMeta.label, highlights, product, productPresentation?.seoDescription]);
   const seoImage = productPresentation?.seoImage?.url || activeImage?.url || orderedImages[0]?.url || '';
-  const seoImageUrl = useMemo(() => {
-    if (!seoImage || seoImage.startsWith('data:')) {
-      return '';
-    }
-
-    return getCanonicalUrl(seoImage, { origin: legalTokens.SITE_URL }) || seoImage;
-  }, [seoImage]);
+  const productBreadcrumbs = useMemo(
+    () =>
+      buildBreadcrumbJsonLd([
+        { name: 'Главная', path: '/' },
+        { name: 'Каталог', path: '/catalog' },
+        activeCategory
+          ? { name: activeCategory.name, path: `/category/${resolveCategoryToken(activeCategory)}` }
+          : null,
+        { name: marketingTitle || product?.name || 'Товар', path: canonicalProductPath }
+      ].filter(Boolean)),
+    [activeCategory, canonicalProductPath, marketingTitle, product?.name]
+  );
+  const productStructuredData = useMemo(
+    () =>
+      buildProductJsonLd({
+        product,
+        variant: selectedVariant,
+        categoryName: activeCategory?.name || '',
+        title: marketingTitle || product?.name || '',
+        description: seoDescription,
+        path: canonicalProductPath,
+        image: seoImage,
+        price,
+        stock: availableStock
+      }),
+    [
+      activeCategory?.name,
+      availableStock,
+      canonicalProductPath,
+      marketingTitle,
+      price,
+      product,
+      selectedVariant,
+      seoDescription,
+      seoImage
+    ]
+  );
   const productJsonLd = useMemo(() => {
-    if (!product?.name) {
-      return null;
-    }
-
-    const offer = {
-      '@type': 'Offer',
-      priceCurrency: 'RUB',
-      price: Number(price || 0).toFixed(2),
-      availability:
-        availableStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      itemCondition: 'https://schema.org/NewCondition',
-      url: canonicalProductUrl,
-    };
-    const brandName =
-      typeof product.brand === 'string' ? product.brand : product.brand?.name || '';
-    return {
-      '@context': 'https://schema.org',
-      '@type': 'Product',
-      name: marketingTitle || product.name,
+    const webPage = buildWebPageJsonLd({
+      title: seoTitle,
       description: seoDescription,
-      url: canonicalProductUrl,
-      sku: selectedVariant?.sku || product.sku || selectedVariant?.id || product.id,
-      category: activeCategory?.name || undefined,
-      image: seoImageUrl ? [seoImageUrl] : undefined,
-      brand: brandName
-        ? {
-            '@type': 'Brand',
-            name: brandName,
-          }
-        : undefined,
-      offers: offer,
-    };
+      path: canonicalProductPath,
+      image: seoImage,
+      breadcrumbs: productBreadcrumbs,
+      type: 'ItemPage'
+    });
+
+    return buildJsonLdGraph([webPage, productBreadcrumbs, productStructuredData]);
   }, [
-    activeCategory?.name,
-    availableStock,
-    canonicalProductUrl,
-    price,
-    marketingTitle,
-    product,
+    canonicalProductPath,
+    productBreadcrumbs,
+    productStructuredData,
     seoDescription,
-    seoImageUrl,
-    selectedVariant?.id,
-    selectedVariant?.sku,
+    seoImage,
+    seoTitle
   ]);
+  const productMicrodata = useMemo(
+    () =>
+      buildProductMicrodata(product, {
+        variant: selectedVariant,
+        categoryName: activeCategory?.name || '',
+        title: marketingTitle || product?.name || '',
+        description: seoDescription,
+        path: canonicalProductPath,
+        image: seoImage,
+        price,
+        stock: availableStock
+      }),
+    [
+      activeCategory?.name,
+      availableStock,
+      canonicalProductPath,
+      marketingTitle,
+      price,
+      product,
+      selectedVariant,
+      seoDescription,
+      seoImage
+    ]
+  );
 
   useEffect(() => {
     if (availableStock > 0) {
@@ -924,15 +954,43 @@ function ProductPage() {
   }
 
   return (
-    <div className="product-page pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-0 lg:pb-16">
+    <div
+      className="product-page pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-0 lg:pb-16"
+      itemScope={Boolean(productMicrodata) || undefined}
+      itemType={productMicrodata ? 'https://schema.org/Product' : undefined}
+    >
       <Seo
         title={seoTitle}
         description={seoDescription}
         canonicalPath={canonicalProductPath}
         image={seoImage}
+        imageAlt={marketingTitle || product.name}
         type="product"
         jsonLd={productJsonLd}
       />
+      {productMicrodata ? (
+        <>
+          <meta itemProp="name" content={productMicrodata.name} />
+          <meta itemProp="description" content={productMicrodata.description} />
+          {productMicrodata.image ? <link itemProp="image" href={productMicrodata.image} /> : null}
+          {productMicrodata.sku ? <meta itemProp="sku" content={productMicrodata.sku} /> : null}
+          {productMicrodata.brand ? (
+            <span itemProp="brand" itemScope itemType="https://schema.org/Brand">
+              <meta itemProp="name" content={productMicrodata.brand} />
+            </span>
+          ) : null}
+          {productMicrodata.offer ? (
+            <span itemProp="offers" itemScope itemType="https://schema.org/Offer">
+              <meta itemProp="price" content={productMicrodata.offer.price} />
+              <meta itemProp="priceCurrency" content={productMicrodata.offer.priceCurrency} />
+              <link itemProp="availability" href={productMicrodata.offer.availability} />
+              <link itemProp="itemCondition" href={productMicrodata.offer.itemCondition} />
+              <link itemProp="url" href={productMicrodata.offer.url} />
+              {productMicrodata.offer.sku ? <meta itemProp="sku" content={productMicrodata.offer.sku} /> : null}
+            </span>
+          ) : null}
+        </>
+      ) : null}
       <div className="page-shell page-shell--wide pt-4 sm:pt-6">
         <nav className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-ink/55 sm:mb-5" aria-label="Хлебные крошки">
           {location.state?.fromPath ? (

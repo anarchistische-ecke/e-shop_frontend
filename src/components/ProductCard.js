@@ -12,6 +12,7 @@ import {
 } from '../utils/product';
 import { buildProductPath } from '../utils/url';
 import { trackProductClick } from '../utils/metrika';
+import { buildOfferMicrodata } from '../seo/schema';
 
 function getStockCount(product) {
   if (!product) return 0;
@@ -32,7 +33,8 @@ function ProductCard({
   priority = false,
   imageSizes = '(min-width: 1024px) 18rem, (min-width: 640px) 42vw, 82vw',
   listName = 'product_list',
-  position
+  position,
+  withOfferCatalogMicrodata = false
 }) {
   const location = useLocation();
   const primaryVariant = getPrimaryVariant(product);
@@ -80,6 +82,16 @@ function ProductCard({
   const activeImage = images[activeImageIndex]?.url || images[0]?.url || '';
   const activeMedia = images[activeImageIndex]?.media || images[0]?.media || product?.primaryMedia || null;
   const shouldRenderThumbnails = images.length > 1 && (!deferThumbnails || isHovered || activeImageIndex > 0);
+  const offerMicrodata = useMemo(
+    () =>
+      withOfferCatalogMicrodata
+        ? buildOfferMicrodata(product, {
+            position,
+            image: activeImage
+          })
+        : null,
+    [activeImage, position, product, withOfferCatalogMicrodata]
+  );
 
   const stockCount = getStockCount(product);
   const isLowStock = stockCount > 0 && stockCount <= 3;
@@ -123,7 +135,21 @@ function ProductCard({
       className="product-card group h-full flex flex-col"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      itemProp={offerMicrodata ? 'itemListElement' : undefined}
+      itemScope={Boolean(offerMicrodata) || undefined}
+      itemType={offerMicrodata ? 'https://schema.org/Offer' : undefined}
     >
+      {offerMicrodata ? (
+        <>
+          <meta itemProp="name" content={offerMicrodata.name} />
+          <meta itemProp="description" content={offerMicrodata.description} />
+          <link itemProp="url" href={offerMicrodata.url} />
+          <link itemProp="image" href={offerMicrodata.image} />
+          <link itemProp="availability" href={offerMicrodata.availability} />
+          <meta itemProp="price" content={offerMicrodata.price} />
+          <meta itemProp="priceCurrency" content={offerMicrodata.priceCurrency} />
+        </>
+      ) : null}
       <Link
         to={buildProductPath(product)}
         state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}

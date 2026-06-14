@@ -10,13 +10,24 @@ import {
   ProductFiltersTrigger
 } from '../features/product-list/ProductFilters';
 import ProductPagination from '../features/product-list/ProductPagination';
-import { buildCatalogSearchHref } from '../features/product-list/url';
 import { resolveCategoryToken } from '../features/product-list/selectors';
 import { useProductList } from '../features/product-list/useProductList';
 import { useProductListRouteState } from '../features/product-list/useProductListRouteState';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { normalizeSearchText } from '../utils/search';
+import { getPrimaryImageUrl } from '../utils/product';
 import { METRIKA_GOALS, trackGoal, trackProductList } from '../utils/metrika';
+import {
+  buildBreadcrumbJsonLd,
+  buildJsonLdGraph,
+  buildOfferCatalogJsonLd,
+  buildWebPageJsonLd
+} from '../seo/schema';
+import {
+  getListingCanonicalPath,
+  getListingRobots,
+  hasListingSeoVariant
+} from '../seo/listing';
 
 function SearchIcon({ className = 'h-4 w-4' }) {
   return (
@@ -66,9 +77,13 @@ function CataloguePage() {
     PRODUCT_LIST_SORT_OPTIONS.find((option) => option.value === params.sort)?.label ||
     'Лучшее совпадение';
   const hasQuery = Boolean(normalizeSearchText(params.query));
-  const canonicalPath = useMemo(
-    () => buildCatalogSearchHref({ ...params, original: '' }),
+  const isListingVariant = useMemo(
+    () => hasListingSeoVariant(params, { source: 'catalog' }),
     [params]
+  );
+  const canonicalPath = useMemo(
+    () => getListingCanonicalPath({ source: 'catalog' }),
+    []
   );
   const seoTitle = hasQuery
     ? `Поиск по каталогу: ${params.query || 'результаты'}`
@@ -76,6 +91,33 @@ function CataloguePage() {
   const seoDescription = hasQuery
     ? `Результаты поиска по запросу «${params.query}». ${list.headingNote}`
     : `${list.headingNote} Постельное белье, пледы, полотенца и другой текстиль с доставкой по России.`;
+  const catalogBreadcrumbs = useMemo(
+    () =>
+      buildBreadcrumbJsonLd([
+        { name: 'Главная', path: '/' },
+        { name: 'Каталог', path: canonicalPath }
+      ]),
+    [canonicalPath]
+  );
+  const catalogJsonLd = useMemo(() => {
+    const webPage = buildWebPageJsonLd({
+      title: seoTitle,
+      description: seoDescription,
+      path: canonicalPath,
+      breadcrumbs: catalogBreadcrumbs
+    });
+    const catalog = !isListingVariant
+      ? buildOfferCatalogJsonLd({
+          name: 'Каталог товаров',
+          description: seoDescription,
+          image: getPrimaryImageUrl(list.pagedProducts[0]) || '',
+          products: list.pagedProducts
+        })
+      : null;
+
+    return buildJsonLdGraph([webPage, catalogBreadcrumbs, catalog]);
+  }, [canonicalPath, catalogBreadcrumbs, isListingVariant, list.pagedProducts, seoDescription, seoTitle]);
+  const catalogMicrodataImage = getPrimaryImageUrl(list.pagedProducts[0]) || '';
 
   useEffect(() => {
     if (list.loading || !list.pagedProducts.length) return;
@@ -167,7 +209,8 @@ function CataloguePage() {
         title={seoTitle}
         description={seoDescription}
         canonicalPath={canonicalPath}
-        robots={hasQuery ? 'noindex,follow' : undefined}
+        robots={getListingRobots(params, { source: 'catalog' })}
+        jsonLd={catalogJsonLd}
       />
       <div className="page-shell">
         <nav
@@ -368,7 +411,20 @@ function CataloguePage() {
           </Card>
         ) : null}
 
-        <section ref={resultsRef} data-testid="catalogue-results" className="mt-5 lg:mt-4">
+        <section
+          ref={resultsRef}
+          data-testid="catalogue-results"
+          className="mt-5 lg:mt-4"
+          itemScope={!isListingVariant || undefined}
+          itemType={!isListingVariant ? 'https://schema.org/OfferCatalog' : undefined}
+        >
+          {!isListingVariant ? (
+            <>
+              <meta itemProp="name" content="Каталог товаров" />
+              <meta itemProp="description" content={seoDescription} />
+              {catalogMicrodataImage ? <link itemProp="image" href={catalogMicrodataImage} /> : null}
+            </>
+          ) : null}
           <div className="mb-3 text-sm text-muted">
             {list.loading ? 'Загружаем каталог…' : `${list.totalItems} товаров в выдаче`}
             {hasQuery ? ` · Запрос: “${params.query}”` : ''}
@@ -405,6 +461,7 @@ function CataloguePage() {
                     product={product}
                     listName={hasQuery ? 'catalog_search_results' : 'catalog_results'}
                     position={(list.safePage - 1) * list.pageSize + index + 1}
+                    withOfferCatalogMicrodata={!isListingVariant}
                   />
                 ))}
               </div>

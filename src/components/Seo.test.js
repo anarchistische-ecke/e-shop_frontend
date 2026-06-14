@@ -27,10 +27,13 @@ describe('Seo', () => {
           title="Тестовая карточка"
           description="Описание товара"
           canonicalPath="/product/prod-1/linen-soft"
+          image="/media/product.jpg"
+          imageAlt="Фото товара"
           jsonLd={{
             '@context': 'https://schema.org',
             '@type': 'Product',
             name: 'Комплект </script> Linen',
+            emptyField: '',
           }}
         />
       </HelmetProvider>
@@ -45,6 +48,8 @@ describe('Seo', () => {
     expect(helmetContext.helmet.meta.toString()).toContain(
       'index,follow'
     );
+    expect(helmetContext.helmet.meta.toString()).toContain('Фото товара');
+    expect(helmetContext.helmet.script.toString()).not.toContain('emptyField');
     expect(helmetContext.helmet.script.toString()).toContain('\\u003c/script\\u003e');
   });
 });

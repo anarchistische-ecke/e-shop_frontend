@@ -26,7 +26,6 @@ import {
   ProductFiltersTrigger
 } from '../features/product-list/ProductFilters';
 import ProductPagination from '../features/product-list/ProductPagination';
-import { buildCategoryListingHref } from '../features/product-list/url';
 import {
   getStockCount,
   resolveCategoryToken
@@ -42,8 +41,20 @@ import {
   trackProductClick,
   trackProductList
 } from '../utils/metrika';
+import {
+  buildBreadcrumbJsonLd,
+  buildJsonLdGraph,
+  buildOfferCatalogJsonLd,
+  buildOfferMicrodata,
+  buildWebPageJsonLd
+} from '../seo/schema';
+import {
+  getListingCanonicalPath,
+  getListingRobots,
+  hasListingSeoVariant
+} from '../seo/listing';
 
-function CategoryCard({ product, fromPath, fromLabel, listName, position }) {
+function CategoryCard({ product, fromPath, fromLabel, listName, position, withOfferCatalogMicrodata = false }) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const hoverTimerRef = useRef(null);
@@ -87,6 +98,16 @@ function CategoryCard({ product, fromPath, fromLabel, listName, position }) {
     ? primaryVariant?.discountPercent || product.discountPercent || Math.round(((oldPrice - price) / oldPrice) * 100)
     : 0;
   const stockCount = getStockCount(product);
+  const offerMicrodata = useMemo(
+    () =>
+      withOfferCatalogMicrodata
+        ? buildOfferMicrodata(product, {
+            position,
+            image: currentImage
+          })
+        : null,
+    [currentImage, position, product, withOfferCatalogMicrodata]
+  );
 
   const badges = [
     stockCount > 0 && stockCount <= 3 ? `Мало на складе: ${stockCount}` : '',
@@ -121,7 +142,21 @@ function CategoryCard({ product, fromPath, fromLabel, listName, position }) {
           position
         });
       }}
+      itemProp={offerMicrodata ? 'itemListElement' : undefined}
+      itemScope={Boolean(offerMicrodata) || undefined}
+      itemType={offerMicrodata ? 'https://schema.org/Offer' : undefined}
     >
+      {offerMicrodata ? (
+        <>
+          <meta itemProp="name" content={offerMicrodata.name} />
+          <meta itemProp="description" content={offerMicrodata.description} />
+          <link itemProp="url" href={offerMicrodata.url} />
+          <link itemProp="image" href={offerMicrodata.image} />
+          <link itemProp="availability" href={offerMicrodata.availability} />
+          <meta itemProp="price" content={offerMicrodata.price} />
+          <meta itemProp="priceCurrency" content={offerMicrodata.priceCurrency} />
+        </>
+      ) : null}
       <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
         <div className="relative pt-[74%]">
           {currentImage ? (
@@ -231,9 +266,13 @@ function CategoryPage() {
     }
     return list.headingNote;
   }, [list.activeCategory?.presentation?.marketingSubtitle, list.headingNote, slug]);
-  const canonicalPath = useMemo(
-    () => buildCategoryListingHref(slug, params),
+  const isListingVariant = useMemo(
+    () => hasListingSeoVariant(params, { source: 'category', categorySlug: slug }),
     [params, slug]
+  );
+  const canonicalPath = useMemo(
+    () => getListingCanonicalPath({ source: 'category', categorySlug: slug }),
+    [slug]
   );
   const seoTitle = useMemo(() => {
     if (list.activeCategory?.presentation?.seoTitle) {
@@ -256,6 +295,11 @@ function CategoryPage() {
     headingNote ||
     `${heading}. Подборка товаров для дома с удобной доставкой по России.`;
   const categoryPresentation = list.activeCategory?.presentation || null;
+  const categoryCatalogImage =
+    categoryPresentation?.seoImage?.url ||
+    list.activeCategory?.imageUrl ||
+    getPrimaryImageUrl(list.pagedProducts[0]) ||
+    '';
   const categoryPresentationPage = useMemo(
     () => ({
       title: heading,
@@ -264,6 +308,44 @@ function CategoryPage() {
     }),
     [canonicalPath, heading, list.activeCategory?.name]
   );
+  const categoryBreadcrumbs = useMemo(
+    () =>
+      buildBreadcrumbJsonLd([
+        { name: 'Главная', path: '/' },
+        { name: 'Каталог', path: '/catalog' },
+        { name: heading, path: canonicalPath }
+      ]),
+    [canonicalPath, heading]
+  );
+  const categoryJsonLd = useMemo(() => {
+    const webPage = buildWebPageJsonLd({
+      title: seoTitle,
+      description: seoDescription,
+      path: canonicalPath,
+      image: categoryPresentation?.seoImage?.url || list.activeCategory?.imageUrl || '',
+      breadcrumbs: categoryBreadcrumbs
+    });
+    const catalog = !isListingVariant
+      ? buildOfferCatalogJsonLd({
+          name: heading,
+          description: seoDescription,
+          image: categoryPresentation?.seoImage?.url || list.activeCategory?.imageUrl || '',
+          products: list.pagedProducts
+        })
+      : null;
+
+    return buildJsonLdGraph([webPage, categoryBreadcrumbs, catalog]);
+  }, [
+    canonicalPath,
+    categoryBreadcrumbs,
+    categoryPresentation?.seoImage?.url,
+    heading,
+    isListingVariant,
+    list.activeCategory?.imageUrl,
+    list.pagedProducts,
+    seoDescription,
+    seoTitle
+  ]);
 
   useEffect(() => {
     if (list.loading || !list.pagedProducts.length) return;
@@ -333,6 +415,9 @@ function CategoryPage() {
         description={seoDescription}
         canonicalPath={canonicalPath}
         image={categoryPresentation?.seoImage?.url || list.activeCategory?.imageUrl || ''}
+        imageAlt={heading}
+        robots={getListingRobots(params, { source: 'category', categorySlug: slug })}
+        jsonLd={categoryJsonLd}
       />
       <div className="page-shell">
         <nav
@@ -523,7 +608,20 @@ function CategoryPage() {
           className="mt-6"
         />
 
-        <div ref={resultsRef} data-testid="category-results" className="mt-5 lg:mt-4">
+        <div
+          ref={resultsRef}
+          data-testid="category-results"
+          className="mt-5 lg:mt-4"
+          itemScope={!isListingVariant || undefined}
+          itemType={!isListingVariant ? 'https://schema.org/OfferCatalog' : undefined}
+        >
+          {!isListingVariant ? (
+            <>
+              <meta itemProp="name" content={heading} />
+              <meta itemProp="description" content={seoDescription} />
+              {categoryCatalogImage ? <link itemProp="image" href={categoryCatalogImage} /> : null}
+            </>
+          ) : null}
           {list.loading ? (
             <div className={gridClassName}>
               {Array.from({ length: list.pageSize }).map((_, index) => (
@@ -554,6 +652,7 @@ function CategoryPage() {
                     fromLabel={heading}
                     listName={`category_${slug || 'unknown'}`}
                     position={(list.safePage - 1) * list.pageSize + index + 1}
+                    withOfferCatalogMicrodata={!isListingVariant}
                   />
                 ))}
               </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { legalTokens } from '../data/legal/constants';
+import { pruneStructuredData } from '../seo/schema';
 import { getCanonicalUrl } from '../utils/url';
 
 const DEFAULT_DESCRIPTION =
@@ -44,7 +45,9 @@ function normalizeImageUrl(image) {
 }
 
 function buildJsonLdNodes(jsonLd) {
-  const payload = Array.isArray(jsonLd) ? jsonLd.filter(Boolean) : jsonLd ? [jsonLd] : [];
+  const payload = (Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [])
+    .map(pruneStructuredData)
+    .filter((item) => item && Object.keys(item).length > 0);
   if (payload.length === 0) {
     return null;
   }
@@ -63,6 +66,7 @@ function Seo({
   description = DEFAULT_DESCRIPTION,
   canonicalPath = '/',
   image = '',
+  imageAlt = '',
   type = 'website',
   robots = DEFAULT_ROBOTS,
   jsonLd = null
@@ -88,7 +92,9 @@ function Seo({
       <meta name="twitter:title" content={pageTitle} />
       <meta name="twitter:description" content={pageDescription} />
       {imageUrl ? <meta property="og:image" content={imageUrl} /> : null}
+      {imageUrl && normalizeText(imageAlt) ? <meta property="og:image:alt" content={normalizeText(imageAlt)} /> : null}
       {imageUrl ? <meta name="twitter:image" content={imageUrl} /> : null}
+      {imageUrl && normalizeText(imageAlt) ? <meta name="twitter:image:alt" content={normalizeText(imageAlt)} /> : null}
       {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
       {buildJsonLdNodes(jsonLd)}
     </Helmet>

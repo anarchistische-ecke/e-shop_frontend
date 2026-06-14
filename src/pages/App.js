@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
+import Seo from '../components/Seo';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ScrollToTop from '../components/ScrollToTop';
@@ -32,7 +33,12 @@ function RouteEntryRenderer({ route }) {
   const isChromeHiddenRoute = isChromeHiddenRoutePath(route.path);
 
   if (isServerClientRoute) {
-    return <ClientRouteShell isChromeHiddenRoute={isChromeHiddenRoute} />;
+    return (
+      <>
+        {route.seo ? <Seo {...route.seo} /> : null}
+        <ClientRouteShell isChromeHiddenRoute={isChromeHiddenRoute} />
+      </>
+    );
   }
 
   return route.renderElement();

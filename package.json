@@ -28,6 +28,7 @@
     "dev": "node server/index.mjs",
     "build": "vite build && vite build --ssr src/entry-server.jsx --outDir dist/server && npm run verify:ssr-bundle",
     "verify:ssr-bundle": "node scripts/verify-ssr-bundle.mjs",
+    "indexnow:submit": "node scripts/submit-indexnow.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
