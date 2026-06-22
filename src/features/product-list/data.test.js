@@ -16,6 +16,7 @@ describe('product directory data', () => {
   beforeEach(() => {
     __resetProductDirectoryCacheForTests();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it('reuses the shared directory request and cache across calls', async () => {
@@ -67,5 +68,22 @@ describe('product directory data', () => {
     expect(refreshed.products).toEqual([
       { id: 'prod-2', name: 'Полотенце', isActive: true }
     ]);
+  });
+
+  it('refreshes an expired directory snapshot', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-22T10:00:00Z'));
+    getCategories.mockResolvedValue([]);
+    getBrands.mockResolvedValue([]);
+    getProducts
+      .mockResolvedValueOnce([{ id: 'prod-1', name: 'First', isActive: true }])
+      .mockResolvedValueOnce([{ id: 'prod-2', name: 'Second', isActive: true }]);
+
+    await loadProductDirectoryData();
+    vi.setSystemTime(new Date('2026-06-22T10:00:31Z'));
+    const refreshed = await loadProductDirectoryData();
+
+    expect(getProducts).toHaveBeenCalledTimes(2);
+    expect(refreshed.products).toEqual([{ id: 'prod-2', name: 'Second', isActive: true }]);
   });
 });

@@ -300,9 +300,7 @@ describe('storefront SSR server', () => {
     const response = await request(app).get('/');
 
     expect(response.status).toBe(200);
-    expect(response.headers['cache-control']).toBe(
-      'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
-    );
+    expect(response.headers['cache-control']).toBe('no-store');
     expect(response.text).toContain(
       'Домашний текстиль для уютного дома | Постельное Белье-ЮГ'
     );
@@ -430,6 +428,7 @@ describe('storefront SSR server', () => {
 
     const sitemapResponse = await request(app).get('/sitemap.xml');
     expect(sitemapResponse.status).toBe(200);
+    expect(sitemapResponse.headers['cache-control']).toBe('no-store');
     expect(sitemapResponse.text).toContain('<loc>https://yug-postel.ru/</loc>');
     expect(sitemapResponse.text).toContain('<loc>https://yug-postel.ru/catalog</loc>');
     expect(sitemapResponse.text).toContain('<loc>https://yug-postel.ru/category/popular</loc>');

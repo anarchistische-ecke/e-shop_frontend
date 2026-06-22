@@ -567,6 +567,38 @@ export function useCmsPage(slug, { preview = false, enabled = true } = {}) {
     };
   }, [cachedPage, context.cachePage, enabled, isKnownMissingPage, normalizedSlug, preview]);
 
+  useEffect(() => {
+    if (!enabled || !normalizedSlug || preview || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    let active = true;
+    const revalidate = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      cmsClient
+        .getPage(normalizedSlug, { force: true, cacheTtlMs: 0 })
+        .then((payload) => {
+          if (!active) return;
+          const normalizedPage = normalizePage(payload);
+          setPage(normalizedPage);
+          context.cachePage(normalizedSlug, normalizedPage);
+          setPageError(null);
+          setIsFallbackActive(!normalizedPage);
+        })
+        .catch((error) => {
+          if (active) setPageError(error);
+        });
+    };
+
+    window.addEventListener('focus', revalidate);
+    return () => {
+      active = false;
+      window.removeEventListener('focus', revalidate);
+    };
+  }, [context.cachePage, enabled, normalizedSlug, preview]);
+
   return {
     page,
     isPageLoading,
@@ -667,6 +699,38 @@ export function useCmsCollection(key, { preview = false, enabled = true } = {}) 
     normalizedKey,
     preview
   ]);
+
+  useEffect(() => {
+    if (!enabled || !normalizedKey || preview || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    let active = true;
+    const revalidate = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      cmsClient
+        .getCollection(normalizedKey, { force: true, cacheTtlMs: 0 })
+        .then((payload) => {
+          if (!active) return;
+          const normalizedCollection = normalizeCollection(payload);
+          setCollection(normalizedCollection);
+          context.cacheCollection(normalizedKey, normalizedCollection);
+          setCollectionError(null);
+          setIsFallbackActive(!normalizedCollection);
+        })
+        .catch((error) => {
+          if (active) setCollectionError(error);
+        });
+    };
+
+    window.addEventListener('focus', revalidate);
+    return () => {
+      active = false;
+      window.removeEventListener('focus', revalidate);
+    };
+  }, [context.cacheCollection, enabled, normalizedKey, preview]);
 
   return {
     collection,

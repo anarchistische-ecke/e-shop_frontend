@@ -5,7 +5,7 @@ vi.mock('../auth/session.js', () => ({
   getAccessToken: vi.fn(async () => null)
 }));
 
-import { checkoutCart } from './index.js';
+import { checkoutCart, getProducts } from './index.js';
 
 const originalFetch = globalThis.fetch;
 
@@ -40,5 +40,60 @@ describe('checkoutCart', () => {
     expect(JSON.parse(options.body)).toMatchObject({
       idempotencyKey: 'checkout-key-1'
     });
+  });
+});
+
+describe('getProducts', () => {
+  it.each([49, 97, 193])('loads all %s products across backend pages', async (productCount) => {
+    const products = Array.from({ length: productCount }, (_, index) => ({
+      id: `product-${index + 1}`,
+      name: `Product ${index + 1}`,
+      isActive: true
+    }));
+
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = new URL(String(input));
+      const page = Number(url.searchParams.get('page') || 0);
+      const size = Number(url.searchParams.get('size') || 96);
+      const data = products.slice(page * size, (page + 1) * size);
+      return new Response(JSON.stringify(data), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Page': String(page),
+          'X-Total-Pages': String(Math.ceil(products.length / size))
+        }
+      });
+    });
+
+    await expect(getProducts()).resolves.toEqual(products);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(Math.ceil(productCount / 96));
+  });
+
+  it('falls back to a short final page when pagination headers are unavailable', async () => {
+    const products = Array.from({ length: 97 }, (_, index) => ({ id: `product-${index + 1}` }));
+    globalThis.fetch = vi.fn(async (input) => {
+      const url = new URL(String(input));
+      const page = Number(url.searchParams.get('page') || 0);
+      const data = products.slice(page * 96, (page + 1) * 96);
+      return new Response(JSON.stringify(data), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    });
+
+    await expect(getProducts()).resolves.toEqual(products);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects repeated full pages instead of looping forever', async () => {
+    const page = Array.from({ length: 96 }, (_, index) => ({ id: `product-${index + 1}` }));
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify(page), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    }));
+
+    await expect(getProducts()).rejects.toThrow('did not advance');
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
 });
