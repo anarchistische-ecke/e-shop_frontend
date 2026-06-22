@@ -38,6 +38,7 @@ function broadcastLogout(reason = 'logout') {
 }
 
 async function request(url, options = {}) {
+  const { includeResponseMetadata = false, ...fetchOptions } = options;
   let token = null;
   try {
     token = await getAccessToken();
@@ -45,14 +46,14 @@ async function request(url, options = {}) {
     console.warn('Failed to read access token', err);
   }
   const isFormData =
-    typeof FormData !== 'undefined' && options.body instanceof FormData;
+    typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData;
   const headers = {
     ...(isFormData ? {} : { 'Content-Type': JSON_TYPE }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers || {})
+    ...(fetchOptions.headers || {})
   };
   const targetUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `${API_BASE}${url}`;
-  const response = await fetch(targetUrl, { ...options, headers });
+  const response = await fetch(targetUrl, { ...fetchOptions, headers });
   if (response.status === 401) {
     broadcastLogout('unauthorized');
     throw new Error('Unauthorized');
@@ -87,7 +88,9 @@ async function request(url, options = {}) {
       url: targetUrl
     });
   }
-  if (response.status === 204) return null;
+  if (response.status === 204) {
+    return includeResponseMetadata ? { data: null, headers: response.headers, status: response.status } : null;
+  }
   const contentType = response.headers.get('content-type');
   if (contentType && contentType.includes('application/json')) {
     const text = await response.text();
@@ -95,7 +98,10 @@ async function request(url, options = {}) {
       return null;
     }
     try {
-      return JSON.parse(text);
+      const data = JSON.parse(text);
+      return includeResponseMetadata
+        ? { data, headers: response.headers, status: response.status }
+        : data;
     } catch (err) {
       console.error(`Failed to parse JSON from ${targetUrl}`, err, text.slice(0, 500));
       throw new Error(`Failed to parse JSON from ${targetUrl}: ${err.message}`);
@@ -152,12 +158,56 @@ export async function deleteBrand(brandId) {
 }
 
 export async function getProducts(params = {}) {
-  const query = new URLSearchParams();
-  if (params.category) query.append('category', params.category);
-  if (params.brand) query.append('brand', params.brand);
-  if (params.includeInactive) query.append('includeInactive', 'true');
-  const qs = query.toString();
-  return request(`/products${qs ? `?${qs}` : ''}`);
+  const pageSize = 96;
+  const maxPages = 1000;
+  const productsById = new Map();
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const query = new URLSearchParams();
+    if (params.category) query.append('category', params.category);
+    if (params.brand) query.append('brand', params.brand);
+    if (params.includeInactive) query.append('includeInactive', 'true');
+    query.append('page', String(page));
+    query.append('size', String(pageSize));
+
+    const response = await request(`/products?${query.toString()}`, {
+      cache: 'no-store',
+      includeResponseMetadata: true
+    });
+    const pageProducts = Array.isArray(response?.data) ? response.data : [];
+    const declaredPageHeader = response?.headers?.get?.('x-page');
+    const declaredTotalPagesHeader = response?.headers?.get?.('x-total-pages');
+    const declaredPage = declaredPageHeader === null || declaredPageHeader === undefined || declaredPageHeader === ''
+      ? Number.NaN
+      : Number(declaredPageHeader);
+    const declaredTotalPages =
+      declaredTotalPagesHeader === null || declaredTotalPagesHeader === undefined || declaredTotalPagesHeader === ''
+        ? Number.NaN
+        : Number(declaredTotalPagesHeader);
+
+    if (Number.isFinite(declaredPage) && declaredPage !== page) {
+      throw new Error(`Product pagination returned page ${declaredPage} while page ${page} was requested`);
+    }
+
+    const sizeBeforePage = productsById.size;
+    pageProducts.forEach((product) => {
+      const key = String(product?.id || '').trim();
+      if (key) {
+        productsById.set(key, product);
+      }
+    });
+
+    const reachedDeclaredEnd =
+      Number.isFinite(declaredTotalPages) && declaredTotalPages >= 0 && page + 1 >= declaredTotalPages;
+    if (reachedDeclaredEnd || pageProducts.length < pageSize) {
+      return Array.from(productsById.values());
+    }
+    if (productsById.size === sizeBeforePage) {
+      throw new Error(`Product pagination did not advance after page ${page}`);
+    }
+  }
+
+  throw new Error(`Product pagination exceeded the safety limit of ${maxPages} pages`);
 }
 export async function getProduct(id, params = {}) {
   const qs = params.includeInactive ? '?includeInactive=true' : '';
@@ -410,7 +460,7 @@ export async function getManagerDashboard({ limit = 8 } = {}) {
 // CMS content façade
 export async function getCmsSiteSettings({ preview = false, signal } = {}) {
   const path = preview ? '/content/preview/site-settings' : '/content/site-settings';
-  return request(path, { signal });
+  return request(path, { signal, cache: 'no-store' });
 }
 
 export async function getCmsNavigation({ placement, preview = false, signal } = {}) {
@@ -420,7 +470,7 @@ export async function getCmsNavigation({ placement, preview = false, signal } = 
     query.append('placement', placement);
   }
   const qs = query.toString();
-  return request(`${path}${qs ? `?${qs}` : ''}`, { signal });
+  return request(`${path}${qs ? `?${qs}` : ''}`, { signal, cache: 'no-store' });
 }
 
 export async function getCmsPage(slug, { preview = false, signal } = {}) {
@@ -428,7 +478,7 @@ export async function getCmsPage(slug, { preview = false, signal } = {}) {
     throw new Error('CMS page slug is required');
   }
   const path = preview ? '/content/preview/pages' : '/content/pages';
-  return request(`${path}/${encodeURIComponent(slug)}`, { signal });
+  return request(`${path}/${encodeURIComponent(slug)}`, { signal, cache: 'no-store' });
 }
 
 export async function getCmsCollection(key, { preview = false, signal } = {}) {
@@ -436,5 +486,5 @@ export async function getCmsCollection(key, { preview = false, signal } = {}) {
     throw new Error('CMS collection key is required');
   }
   const path = preview ? '/content/preview/collections' : '/content/collections';
-  return request(`${path}/${encodeURIComponent(key)}`, { signal });
+  return request(`${path}/${encodeURIComponent(key)}`, { signal, cache: 'no-store' });
 }

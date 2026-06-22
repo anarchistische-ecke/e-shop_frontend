@@ -152,7 +152,21 @@ function resolveTrailingSlashTarget(req) {
   return `${pathname}${search}`;
 }
 
+const IMMEDIATELY_FRESH_ROUTE_IDS = new Set([
+  'home',
+  'catalog',
+  'category',
+  'product',
+  'about',
+  'payment-info',
+  'delivery-info',
+  'production-info'
+]);
+
 function resolveHtmlCacheControl(route, statusCode) {
+  if (statusCode === 200 && IMMEDIATELY_FRESH_ROUTE_IDS.has(route.id)) {
+    return 'no-store';
+  }
   if (route.renderMode === 'ssr' && statusCode === 200) {
     return 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
   }

@@ -3,7 +3,7 @@ import { legalTokens } from '../src/data/legal/constants.js';
 import { readEnv } from '../src/config/runtime.js';
 import { buildProductPath } from '../src/utils/url.js';
 
-const DEFAULT_CACHE_TTL_MS = 300000;
+const DEFAULT_CACHE_TTL_MS = 0;
 const TRACKING_CLEAN_PARAMS = [
   'utm_source',
   'utm_medium',
@@ -41,7 +41,7 @@ function normalizeText(value, fallback = '') {
 
 function parsePositiveNumber(value, fallback) {
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
 function normalizeOrigin(origin = '') {
@@ -157,17 +157,16 @@ export function createSeoAssetsHandlers({ origin = legalTokens.SITE_URL } = {}) 
 
   async function getSitemapXml() {
     const now = Date.now();
-    if (sitemapCache && sitemapCache.expiresAt > now) {
+    if (ttlMs > 0 && sitemapCache && sitemapCache.expiresAt > now) {
       return sitemapCache.xml;
     }
 
     try {
       const entries = await loadSitemapEntries(canonicalOrigin);
       const xml = renderSitemapXml(entries);
-      sitemapCache = {
-        xml,
-        expiresAt: now + ttlMs
-      };
+      sitemapCache = ttlMs > 0
+        ? { xml, expiresAt: now + ttlMs }
+        : null;
       return xml;
     } catch (error) {
       if (sitemapCache?.xml) {
@@ -183,7 +182,7 @@ export function createSeoAssetsHandlers({ origin = legalTokens.SITE_URL } = {}) 
       res
         .status(200)
         .setHeader('Content-Type', 'application/xml; charset=utf-8')
-        .setHeader('Cache-Control', 'public, max-age=300')
+        .setHeader('Cache-Control', 'no-store')
         .end(xml);
     } catch (error) {
       next(error);

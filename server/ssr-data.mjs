@@ -113,9 +113,11 @@ async function readThroughCache(key, loader, ttlMs = DEFAULT_CACHE_TTL_MS) {
 
 async function loadSharedCmsData() {
   const [siteSettingsResult, footerNavigationResult] = await Promise.allSettled([
-    readThroughCache('cms:site-settings', () => getCmsSiteSettings()),
-    readThroughCache('cms:navigation:footer', () =>
-      getCmsNavigation({ placement: 'footer' })
+    readThroughCache('cms:site-settings', () => getCmsSiteSettings(), 0),
+    readThroughCache(
+      'cms:navigation:footer',
+      () => getCmsNavigation({ placement: 'footer' }),
+      0
     )
   ]);
 
@@ -147,7 +149,7 @@ async function loadDirectoryData() {
           ? products.filter((product) => product?.isActive !== false)
           : []
       };
-    });
+    }, 0);
   } catch (error) {
     return null;
   }
@@ -223,7 +225,7 @@ async function loadHomeDirectoryData(page) {
 
 async function loadCmsPageSeed(slug) {
   try {
-    const page = await readThroughCache(`cms:page:${slug}`, () => getCmsPage(slug));
+    const page = await readThroughCache(`cms:page:${slug}`, () => getCmsPage(slug), 0);
     return { slug, page, shouldUseFallback: false };
   } catch (error) {
     return {
@@ -297,7 +299,7 @@ async function loadCmsCollectionsSeed(page) {
 
   const results = await Promise.allSettled(
     collectionKeys.map((key) =>
-      readThroughCache(`cms:collection:${key}`, () => getCmsCollection(key))
+      readThroughCache(`cms:collection:${key}`, () => getCmsCollection(key), 0)
         .then((collection) => ({ key, collection }))
     )
   );
@@ -325,7 +327,7 @@ async function loadProductSeed(productId) {
     const product = await readThroughCache(
       `product:${productId}`,
       () => getProduct(productId),
-      parsePositiveNumber(readEnv('SSR_PRODUCT_CACHE_TTL_MS', '30000'), 30000)
+      0
     );
 
     if (!product || product?.isActive === false) {

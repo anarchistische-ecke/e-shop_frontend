@@ -7,12 +7,27 @@ import React, {
   useState
 } from 'react';
 import { getBrands, getCategories, getProducts } from '../../api';
+import { readEnv } from '../../config/runtime.js';
 
 let cachedDirectoryData = null;
 let cachedDirectoryError = null;
 let directoryRequest = null;
+let cachedDirectoryAt = 0;
+
+const parsedDirectoryCacheTtlMs = Number(readEnv('REACT_APP_CATALOGUE_CACHE_TTL_MS', '30000'));
+const DIRECTORY_CACHE_TTL_MS = Number.isFinite(parsedDirectoryCacheTtlMs) && parsedDirectoryCacheTtlMs >= 0
+  ? parsedDirectoryCacheTtlMs
+  : 30000;
 
 const CatalogueDataContext = createContext(null);
+
+function isDirectoryCacheFresh() {
+  return Boolean(
+    cachedDirectoryData &&
+      cachedDirectoryAt > 0 &&
+      Date.now() - cachedDirectoryAt < DIRECTORY_CACHE_TTL_MS
+  );
+}
 
 function normalizeDirectoryPayload([categoriesResponse, brandsResponse, productsResponse]) {
   const categories = Array.isArray(categoriesResponse) ? categoriesResponse : [];
@@ -51,6 +66,7 @@ function primeProductDirectoryData(data) {
 
   cachedDirectoryData = normalized;
   cachedDirectoryError = null;
+  cachedDirectoryAt = Date.now();
   return normalized;
 }
 
@@ -78,11 +94,15 @@ function applyDirectoryState(setState, data) {
 }
 
 export function loadProductDirectoryData({ force = false, requireFull = false } = {}) {
-  if (!force && cachedDirectoryData && !(requireFull && cachedDirectoryData.compact)) {
+  if (
+    !force &&
+    isDirectoryCacheFresh() &&
+    !(requireFull && cachedDirectoryData.compact)
+  ) {
     return Promise.resolve(cachedDirectoryData);
   }
 
-  if (!force && directoryRequest) {
+  if (directoryRequest) {
     return directoryRequest;
   }
 
@@ -90,6 +110,7 @@ export function loadProductDirectoryData({ force = false, requireFull = false } 
     .then((responses) => {
       cachedDirectoryData = normalizeDirectoryPayload(responses);
       cachedDirectoryError = null;
+      cachedDirectoryAt = Date.now();
       return cachedDirectoryData;
     })
     .catch((error) => {
@@ -128,7 +149,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null, requi
         }));
         throw error;
       });
-  }, []);
+  }, [requireFull]);
 
   useEffect(() => {
     if (!enabled) {
@@ -161,6 +182,32 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null, requi
       active = false;
     };
   }, [enabled, refresh, requireFull, seededData]);
+
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const refreshIfStale = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      if (!isDirectoryCacheFresh() || (requireFull && cachedDirectoryData?.compact)) {
+        refresh({ force: true }).catch(() => {});
+      }
+    };
+
+    window.addEventListener('focus', refreshIfStale);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', refreshIfStale);
+    }
+    return () => {
+      window.removeEventListener('focus', refreshIfStale);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', refreshIfStale);
+      }
+    };
+  }, [enabled, refresh, requireFull]);
 
   return useMemo(
     () => ({
@@ -205,4 +252,5 @@ export function __resetProductDirectoryCacheForTests() {
   cachedDirectoryData = null;
   cachedDirectoryError = null;
   directoryRequest = null;
+  cachedDirectoryAt = 0;
 }
