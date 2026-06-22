@@ -100,4 +100,18 @@ describe('ResponsiveImage', () => {
 
     view.unmount();
   });
+
+  it('forwards its ref to the rendered image', () => {
+    const imageRef = React.createRef();
+    const view = render(
+      <ResponsiveImage
+        ref={imageRef}
+        media={{ originalUrl: 'https://storage.example.com/product.jpg' }}
+      />
+    );
+
+    expect(imageRef.current).toBe(view.container.querySelector('img'));
+
+    view.unmount();
+  });
 });

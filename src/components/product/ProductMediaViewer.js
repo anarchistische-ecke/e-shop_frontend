@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import ResponsiveImage from '../media/ResponsiveImage';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
@@ -910,8 +911,9 @@ function ProductMediaViewer({
                 }
         }
       >
-        <img
+        <ResponsiveImage
           ref={isCurrent ? imageRef : undefined}
+          media={item.media}
           src={item.url}
           alt={item.alt || productName || 'Фото товара'}
           data-testid={isCurrent ? 'product-media-image' : undefined}
