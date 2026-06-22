@@ -40,7 +40,7 @@ export function getResponsiveImageFallback(media, fallbackSrc = '') {
   );
 }
 
-function ResponsiveImage({
+const ResponsiveImage = React.forwardRef(function ResponsiveImage({
   media,
   mobileMedia = null,
   mobileMediaQuery = '(max-width: 767px)',
@@ -58,7 +58,7 @@ function ResponsiveImage({
   draggable,
   onError,
   ...rest
-}) {
+}, forwardedRef) {
   const [useOriginalFallback, setUseOriginalFallback] = useState(false);
   const fallbackSrc = getResponsiveImageFallback(media, src);
   const originalFallbackSrc = resolveImageUrl(
@@ -122,6 +122,7 @@ function ResponsiveImage({
       {!useOriginalFallback && avifSrcSet ? <source type="image/avif" srcSet={avifSrcSet} sizes={sizes} /> : null}
       {!useOriginalFallback && webpSrcSet ? <source type="image/webp" srcSet={webpSrcSet} sizes={sizes} /> : null}
       <img
+        ref={forwardedRef}
         src={renderedSrc}
         srcSet={!useOriginalFallback && jpegSrcSet ? jpegSrcSet : undefined}
         sizes={!useOriginalFallback && jpegSrcSet ? sizes : undefined}
@@ -138,6 +139,6 @@ function ResponsiveImage({
       />
     </picture>
   );
-}
+});
 
 export default ResponsiveImage;

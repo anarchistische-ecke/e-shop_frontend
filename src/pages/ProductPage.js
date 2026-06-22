@@ -8,6 +8,7 @@ import { CataloguePresentationBlocks } from '../components/cms/CataloguePresenta
 import CmsStorefrontCollectionRail from '../components/cms/CmsStorefrontCollectionRail';
 import { CmsRichText } from '../components/cms/cmsBlockShared';
 import ProductCard from '../components/ProductCard';
+import ResponsiveImage from '../components/media/ResponsiveImage';
 import ProductMediaViewer from '../components/product/ProductMediaViewer';
 import { Button, Card, Modal } from '../components/ui';
 import { useProductDirectoryData } from '../features/product-list/data';
@@ -1032,7 +1033,8 @@ function ProductPage() {
                     onClick={handleMobileGalleryClick}
                     aria-label="Увеличить изображение"
                   >
-                    <img
+                    <ResponsiveImage
+                      media={activeImage?.media}
                       src={mainImage}
                       alt={activeImage?.alt || product.name}
                       className="absolute inset-0 h-full w-full object-cover"
@@ -1082,7 +1084,8 @@ function ProductPage() {
                     onClick={() => openImageZoomAtIndex(0)}
                     aria-label="Увеличить изображение"
                   >
-                    <img
+                    <ResponsiveImage
+                      media={galleryItems[0].media}
                       src={galleryItems[0].url}
                       alt={galleryItems[0].alt || product.name}
                       className="absolute inset-0 h-full w-full object-cover"
@@ -1114,7 +1117,8 @@ function ProductPage() {
                         aria-label={`Увеличить изображение ${imageIndex + 1}`}
                       >
                         {image ? (
-                          <img
+                          <ResponsiveImage
+                            media={image.media}
                             src={image.url}
                             alt={image.alt || `${product.name}, изображение ${imageIndex + 1}`}
                             className="absolute inset-0 h-full w-full object-cover transition duration-300 hover:scale-[1.02]"
@@ -1294,7 +1298,13 @@ function ProductPage() {
                               aria-pressed={isActive}
                               disabled={isCartActionPending}
                             >
-                              <img src={image.url} alt={image.alt || variant.name || ''} className="h-full w-full object-cover" draggable={false} />
+                              <ResponsiveImage
+                                media={image.media}
+                                src={image.url}
+                                alt={image.alt || variant.name || ''}
+                                className="h-full w-full object-cover"
+                                draggable={false}
+                              />
                             </button>
                           );
                         })}
