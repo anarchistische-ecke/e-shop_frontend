@@ -36,6 +36,43 @@ function serializeCart(state) {
   };
 }
 
+function serializeCartPricing(state, catalogProducts) {
+  const items = state.items.map((item) => {
+    const resolved = findVariant(catalogProducts, item.variantId);
+    const unitPrice = Number(resolved?.variant?.price ?? item.unitPrice ?? 0);
+    const originalUnitPrice = Number(resolved?.variant?.oldPrice ?? unitPrice);
+    const quantity = Number(item.quantity) || 1;
+    return {
+      variantId: item.variantId,
+      quantity,
+      unitPrice,
+      originalUnitPrice,
+      lineTotal: unitPrice * quantity,
+      originalLineTotal: originalUnitPrice * quantity,
+      saleApplied: originalUnitPrice > unitPrice,
+    };
+  });
+  const originalSubtotal = items.reduce((sum, item) => sum + item.originalLineTotal, 0);
+  const saleSubtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
+  const productSaleDiscount = Math.max(0, originalSubtotal - saleSubtotal);
+
+  return {
+    items,
+    originalSubtotal,
+    saleSubtotal,
+    productSaleDiscount,
+    cartDiscount: 0,
+    promoCodeDiscount: 0,
+    thresholdDiscount: 0,
+    finalTotal: saleSubtotal,
+    promoCode: '',
+    promoCodeApplied: false,
+    promoCodeStatus: null,
+    appliedCartDiscountType: null,
+    appliedCartDiscountLabel: null,
+  };
+}
+
 function fulfillJson(route, payload, status = 200) {
   return route.fulfill({
     status,
@@ -332,6 +369,9 @@ async function mockStorefrontApi(page, overrides = {}) {
     addItemRequests: 0,
     checkoutRequests: 0,
     checkoutPayloads: [],
+    managerLinkRequests: 0,
+    managerLinkPayloads: [],
+    publicPayRequests: 0,
   };
   const paymentProviderConfig = {
     ...clone(paymentProvider),
@@ -462,6 +502,10 @@ async function mockStorefrontApi(page, overrides = {}) {
       return fulfillJson(route, serializeCart(cartState));
     }
 
+    if (pathname === `/carts/${cartState.id}/pricing` && method === 'GET') {
+      return fulfillJson(route, serializeCartPricing(cartState, storefrontProducts));
+    }
+
     if (pathname === `/carts/${cartState.id}/items` && method === 'POST') {
       stats.addItemRequests += 1;
       if (overrides.addItemDelayMs) {
@@ -515,11 +559,24 @@ async function mockStorefrontApi(page, overrides = {}) {
       return fulfillJson(route, clone(checkoutResponse));
     }
 
+    if (pathname === '/orders/manager-link' && method === 'POST') {
+      stats.managerLinkRequests += 1;
+      stats.managerLinkPayloads.push(request.postDataJSON());
+      cartState.items = [];
+      return fulfillJson(route, {
+        orderId: publicOrderPayload.id,
+        publicToken: publicOrderPayload.publicToken,
+        orderUrl: `http://localhost:3000/order/${publicOrderPayload.publicToken}`,
+        emailSent: Boolean(request.postDataJSON().sendEmail),
+      }, 201);
+    }
+
     if (pathname === `/orders/public/${publicOrderPayload.publicToken}` && method === 'GET') {
       return fulfillJson(route, clone(publicOrderPayload));
     }
 
     if (pathname === `/orders/public/${publicOrderPayload.publicToken}/pay` && method === 'POST') {
+      stats.publicPayRequests += 1;
       return fulfillJson(route, clone(payResponse));
     }
 

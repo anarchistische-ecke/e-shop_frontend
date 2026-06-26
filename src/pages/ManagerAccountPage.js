@@ -100,7 +100,7 @@ function ManagerAccountPage() {
             <Card className="reveal-up" padding="md">
               <p className="text-xs uppercase tracking-[0.3em] text-muted">Быстрые действия</p>
               <div className="mt-4 space-y-2">
-                <Button as={Link} to="/cart" block>
+                <Button as={Link} to="/manager/payment-link" block>
                   Создать ссылку на оплату
                 </Button>
                 <Button as={Link} to="/catalog" block variant="secondary">
@@ -237,10 +237,10 @@ function ManagerAccountPage() {
               <Card className="reveal-up" padding="md">
                 <h3 className="text-lg font-semibold mb-2">Ссылки на оплату</h3>
                 <p className="text-sm text-muted">
-                  Создавайте ссылку в корзине и отправляйте клиенту удобным способом.
+                  Собирайте корзину клиента и отправляйте ссылку удобным способом.
                 </p>
-                <Button as={Link} to="/cart" className="mt-4">
-                  Перейти в корзину менеджера
+                <Button as={Link} to="/manager/payment-link" className="mt-4">
+                  Открыть создание ссылки
                 </Button>
               </Card>
               <Card className="reveal-up" padding="md">

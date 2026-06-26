@@ -49,8 +49,8 @@ async function mockManagerDashboard(page) {
   });
 }
 
-test.beforeEach(async ({ page }) => {
-  await mockStorefrontApi(page);
+test.beforeEach(async ({ page }, testInfo) => {
+  testInfo.storefrontApi = await mockStorefrontApi(page);
 });
 
 test('manager login is the standalone staff entry point', async ({ page }) => {
@@ -82,4 +82,41 @@ test('manager account exposes Directus CMS actions', async ({ page }) => {
     'href',
     'http://localhost:8055/admin'
   );
+});
+
+test('manager creates payment link from storefront cart and customer can start payment', async ({ page, context }, testInfo) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:3000' });
+  await seedManagerSession(page);
+  const { stats } = testInfo.storefrontApi;
+
+  await page.goto('/product/prod-satin-sand');
+  await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
+  await page.getByRole('button', { name: 'Добавить в корзину' }).click();
+  await expect(page.getByText('Добавлено в корзину')).toBeVisible();
+
+  await page.goto('/manager/payment-link');
+  await expect(page.getByRole('heading', { name: 'Ссылка на оплату' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Песочный сатиновый комплект' })).toBeVisible();
+
+  await page.getByLabel('Имя клиента').fill('Иван Петров');
+  await page.getByLabel('Телефон клиента').fill('+79990000000');
+  await page.getByLabel('Адрес доставки').fill('Москва, Тестовая улица, 1');
+  await page.getByLabel('Электронная почта клиента').fill('buyer@example.com');
+  await page.getByRole('button', { name: 'Создать и скопировать' }).click();
+
+  await expect(page.getByText(/Ссылка создана/)).toBeVisible();
+  await expect(page.getByText('/order/order-e2e-token', { exact: true })).toBeVisible();
+  await expect(page.getByText('Корзина для клиента пуста')).toBeVisible();
+  expect(stats.managerLinkRequests).toBe(1);
+  expect(stats.managerLinkPayloads[0]).toMatchObject({
+    receiptEmail: 'buyer@example.com',
+    customerName: 'Иван Петров',
+    sendEmail: false,
+  });
+  expect(stats.managerLinkPayloads[0].idempotencyKey).toBeTruthy();
+
+  await page.goto('/order/order-e2e-token');
+  await expect(page.getByRole('heading', { name: /Заказ №order-e2/i })).toBeVisible();
+  await page.getByRole('button', { name: /Оплатить|Открыть оплату|Продолжить оплату/i }).click();
+  await expect.poll(() => stats.publicPayRequests).toBe(1);
 });

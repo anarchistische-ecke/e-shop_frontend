@@ -41,6 +41,7 @@ describe('header utils', () => {
 
   it('resolves wayfinding labels and account links', () => {
     expect(resolveWayfindingLabel('/checkout')).toBe('Оформление');
+    expect(resolveWayfindingLabel('/manager/payment-link')).toBe('Ссылка на оплату');
     expect(resolveWayfindingLabel('/search', '?query=плед')).toBe('Поиск');
     expect(resolveWayfindingLabel('/category/search?query=плед')).toBe('Поиск');
     expect(resolveWayfindingLabel('/catalog', '?query=плед')).toBe('Поиск');
@@ -54,7 +55,7 @@ describe('header utils', () => {
       { to: '/account#overview', label: 'Сводка' },
       { to: '/account#orders', label: 'Заказы' },
       { to: '/account#cms', label: 'CMS витрины' },
-      { to: '/cart', label: 'Ссылка на оплату' }
+      { to: '/manager/payment-link', label: 'Ссылка на оплату' }
     ]);
   });
 
@@ -75,6 +76,7 @@ describe('header utils', () => {
       'search'
     );
     expect(resolveMobileBottomNavKey({ pathname: '/cart' })).toBe('cart');
+    expect(resolveMobileBottomNavKey({ pathname: '/manager/payment-link' })).toBe('cart');
     expect(resolveMobileBottomNavKey({ pathname: '/account' })).toBe('account');
     expect(
       resolveMobileBottomNavKey({

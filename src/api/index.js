@@ -380,10 +380,10 @@ export async function checkoutCart({
     })
   });
 }
-export async function createManagerOrderLink({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl, sendEmail } = {}) {
+export async function createManagerOrderLink({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl, sendEmail, idempotencyKey } = {}) {
   return request('/orders/manager-link', {
     method: 'POST',
-    body: JSON.stringify({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl, sendEmail })
+    body: JSON.stringify({ cartId, receiptEmail, customerName, phone, homeAddress, orderPageUrl, sendEmail, idempotencyKey })
   });
 }
 export async function getOrders() {
