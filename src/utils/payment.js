@@ -78,14 +78,15 @@ export function normalizePaymentConfig(config = {}) {
 }
 
 export function normalizePaymentSession(session = {}, { returnUrl } = {}) {
+  const safeSession = session && typeof session === 'object' ? session : {};
   return {
     paymentId:
-      safeString(session.paymentId) ||
-      safeString(session.id),
-    confirmationUrl: safeString(session.confirmationUrl),
-    confirmationType: normalizeConfirmationMode(session.confirmationType),
-    confirmationToken: safeString(session.confirmationToken),
-    returnUrl: safeString(returnUrl) || safeString(session.returnUrl)
+      safeString(safeSession.paymentId) ||
+      safeString(safeSession.id),
+    confirmationUrl: safeString(safeSession.confirmationUrl),
+    confirmationType: normalizeConfirmationMode(safeSession.confirmationType),
+    confirmationToken: safeString(safeSession.confirmationToken),
+    returnUrl: safeString(returnUrl) || safeString(safeSession.returnUrl)
   };
 }
 

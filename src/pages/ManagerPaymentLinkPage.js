@@ -1,40 +1,84 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { CartContext } from '../contexts/CartContext';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { isApiRequestError } from '../api';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import { createManagerOrderLink, isApiRequestError } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
-import { moneyToNumber } from '../utils/product';
+import { Button, Card, Input } from '../components/ui';
+import { CartContext } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { usePaymentConfig } from '../contexts/PaymentConfigContext';
-import { METRIKA_GOALS, trackGoal } from '../utils/metrika';
-import {
-  getCheckoutPaymentDescription,
-  getPaymentSummaryLabel
-} from '../utils/payment';
-import { CART_SESSION_STRATEGY } from '../utils/account';
-import { Button, Card, Input } from '../components/ui';
+import { createIdempotencyKey } from '../features/checkout/utils';
 import { readEnv } from '../config/runtime';
+import { METRIKA_GOALS, trackGoal } from '../utils/metrika';
+import { getCheckoutPaymentDescription, getPaymentSummaryLabel } from '../utils/payment';
+import { moneyToNumber } from '../utils/product';
+import { buildAbsoluteAppUrl } from '../utils/url';
 
-function CartPage() {
+function normalizeValue(value) {
+  return String(value || '').trim();
+}
+
+function buildManagerLinkSignature({
+  cartId,
+  receiptEmail,
+  customerName,
+  phone,
+  homeAddress,
+  orderPageUrl,
+  sendEmail
+} = {}) {
+  return [
+    cartId || '',
+    normalizeValue(receiptEmail),
+    normalizeValue(customerName),
+    normalizeValue(phone),
+    normalizeValue(homeAddress),
+    normalizeValue(orderPageUrl),
+    sendEmail ? '1' : '0'
+  ].join('|');
+}
+
+function resolveManagerLinkAttempt({ cartId, signature, existingAttempt }) {
+  if (existingAttempt?.key && existingAttempt.signature === signature) {
+    return existingAttempt;
+  }
+  return {
+    cartId: cartId || '',
+    signature,
+    key: createIdempotencyKey(`manager-${cartId || 'cart'}`)
+  };
+}
+
+function ManagerPaymentLinkPage() {
   const {
     items,
+    cartId,
     pricing,
     removeItem,
     updateQuantity,
     clearCart,
+    startNewCart,
     applyPromoCode,
     removePromoCode
   } = useContext(CartContext);
-  const navigate = useNavigate();
-  const { isAuthenticated, hasRole } = useAuth();
+  const { isAuthenticated, isReady, hasRole, hasStrongAuth } = useAuth();
   const { paymentConfig } = usePaymentConfig();
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [createdLink, setCreatedLink] = useState('');
+  const [status, setStatus] = useState(null);
+  const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [quantityDrafts, setQuantityDrafts] = useState({});
   const [promoDraft, setPromoDraft] = useState('');
   const [promoStatus, setPromoStatus] = useState(null);
   const [isPromoSubmitting, setIsPromoSubmitting] = useState(false);
+  const [linkAttempt, setLinkAttempt] = useState({ cartId: '', signature: '', key: '' });
+
   const managerRole = readEnv('REACT_APP_KEYCLOAK_MANAGER_ROLE', 'manager') || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
+  const hasStrongSession = isAuthenticated && hasStrongAuth();
 
   const fallbackTotal = items.reduce(
     (sum, item) => sum + (item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity,
@@ -49,15 +93,25 @@ function CartPage() {
   const total = pricing ? moneyToNumber(pricing.finalTotal) : fallbackTotal;
   const activePromoCode = pricing?.promoCode || '';
   const isPromoCodeApplied = Boolean(pricing?.promoCodeApplied);
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
+  const paymentDescription = getCheckoutPaymentDescription(paymentConfig);
+
   const promoWasValidButNotChosen =
     activePromoCode &&
     pricing?.promoCodeStatus === 'VALID' &&
     pricing?.appliedCartDiscountType !== 'PROMO_CODE' &&
     promoCodeDiscount > 0 &&
     thresholdDiscount >= promoCodeDiscount;
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
-  const paymentDescription = getCheckoutPaymentDescription(paymentConfig);
+
+  const lastLinkLabel = useMemo(() => {
+    if (!createdLink) return '';
+    try {
+      return new URL(createdLink).pathname;
+    } catch (err) {
+      return createdLink;
+    }
+  }, [createdLink]);
 
   useEffect(() => {
     setQuantityDrafts((prev) => {
@@ -78,16 +132,12 @@ function CartPage() {
     setPromoDraft(activePromoCode);
   }, [activePromoCode]);
 
-  useEffect(() => {
-    trackGoal(METRIKA_GOALS.VIEW_CART, {
-      cart_items: itemCount,
-      cart_total: Math.round(total),
-      active_promotion_bucket: activePromoCode ? 'promo_applied' : 'no_promo'
-    });
-  }, [activePromoCode, itemCount, total]);
+  if (!isReady) {
+    return null;
+  }
 
-  if (isManager) {
-    return <Navigate to="/manager/payment-link" replace />;
+  if (!isManager || !hasStrongSession) {
+    return <Navigate to="/manager/login" replace state={{ from: '/manager/payment-link' }} />;
   }
 
   const setQuantityDraft = (itemId, value) => {
@@ -101,18 +151,9 @@ function CartPage() {
       setQuantityDraft(item.id, String(item.quantity));
       return;
     }
-    if (parsed === item.quantity) {
-      return;
+    if (parsed !== item.quantity) {
+      updateQuantity(item.id, parsed);
     }
-    updateQuantity(item.id, parsed);
-  };
-
-  const handleCheckout = () => {
-    trackGoal(METRIKA_GOALS.CHECKOUT_CTA_CLICK, {
-      cart_items: itemCount,
-      cart_total: Math.round(total)
-    });
-    navigate('/checkout');
   };
 
   const handleApplyPromoCode = async (event) => {
@@ -130,9 +171,8 @@ function CartPage() {
       setPromoStatus({ type: 'success', message: 'Промокод проверен и учтён в расчёте.' });
       return;
     }
-    const error = result?.error;
-    const message = isApiRequestError(error)
-      ? error.message
+    const message = isApiRequestError(result?.error)
+      ? result.error.message
       : 'Промокод не применён. Проверьте условия акции.';
     setPromoStatus({ type: 'error', message });
   };
@@ -150,33 +190,162 @@ function CartPage() {
     setPromoStatus({ type: 'error', message: 'Не удалось удалить промокод.' });
   };
 
+  const handleCreateLink = async ({ sendEmail, copyAfter = false } = {}) => {
+    const receiptEmail = customerEmail.trim();
+    const contactName = customerName.trim();
+    const phone = customerPhone.trim();
+    const homeAddress = customerAddress.trim();
+    if (!items.length) {
+      setStatus({ type: 'error', message: 'Добавьте товары перед созданием ссылки.' });
+      return;
+    }
+    if (!receiptEmail || !contactName || !phone || !homeAddress) {
+      setStatus({
+        type: 'error',
+        message: 'Укажите имя, телефон, адрес и электронную почту клиента.'
+      });
+      return;
+    }
+    if (!cartId) {
+      setStatus({ type: 'error', message: 'Корзина ещё не готова. Обновите страницу и попробуйте снова.' });
+      return;
+    }
+
+    const orderPageUrl = buildAbsoluteAppUrl('/order/{token}');
+    const payload = {
+      cartId,
+      receiptEmail,
+      customerName: contactName,
+      phone,
+      homeAddress,
+      orderPageUrl,
+      sendEmail: Boolean(sendEmail)
+    };
+    const signature = buildManagerLinkSignature(payload);
+    const nextAttempt = resolveManagerLinkAttempt({
+      cartId,
+      signature,
+      existingAttempt: linkAttempt
+    });
+
+    setLinkAttempt(nextAttempt);
+    setIsCreatingLink(true);
+    setStatus(null);
+    try {
+      const response = await createManagerOrderLink({
+        ...payload,
+        idempotencyKey: nextAttempt.key
+      });
+      const link = response?.orderUrl || buildAbsoluteAppUrl(`/order/${response.publicToken}`);
+      setCreatedLink(link);
+      trackGoal(METRIKA_GOALS.MANAGER_LINK_CREATED, {
+        cart_items: itemCount,
+        cart_total: Math.round(total),
+        send_email: Boolean(sendEmail)
+      });
+
+      let copied = false;
+      if (copyAfter && navigator.clipboard) {
+        try {
+          await navigator.clipboard.writeText(link);
+          copied = true;
+        } catch (copyError) {
+          console.warn('Failed to copy manager link automatically:', copyError);
+        }
+      }
+
+      await startNewCart();
+      setCustomerEmail('');
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerAddress('');
+      setLinkAttempt({ cartId: '', signature: '', key: '' });
+      setStatus({
+        type: copyAfter && !copied ? 'warning' : 'success',
+        message: sendEmail
+          ? 'Ссылка создана и отправлена клиенту. Для следующего клиента открыта новая корзина.'
+          : copyAfter && copied
+          ? 'Ссылка создана и скопирована. Для следующего клиента открыта новая корзина.'
+          : copyAfter
+          ? 'Ссылка создана. Не удалось скопировать автоматически, скопируйте её вручную. Для следующего клиента открыта новая корзина.'
+          : 'Ссылка создана. Для следующего клиента открыта новая корзина.'
+      });
+    } catch (err) {
+      console.error('Failed to create manager order link:', err);
+      const message = isApiRequestError(err)
+        ? err.message
+        : 'Не удалось создать ссылку. Попробуйте ещё раз.';
+      setStatus({ type: 'error', message });
+    } finally {
+      setIsCreatingLink(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!createdLink) return;
+    try {
+      await navigator.clipboard.writeText(createdLink);
+      setStatus({ type: 'success', message: 'Ссылка скопирована.' });
+    } catch (err) {
+      console.error('Failed to copy manager link:', err);
+      setStatus({ type: 'error', message: 'Не удалось скопировать ссылку.' });
+    }
+  };
+
   return (
-    <div className="cart-page page-section">
+    <div className="manager-payment-link-page page-section">
       <Seo
-        title="Корзина"
-        description="Проверьте товары в корзине, итоговую стоимость и переходите к оформлению заказа."
-        canonicalPath="/cart"
+        title="Ссылка на оплату"
+        description="Рабочее место менеджера для создания ссылки на оплату заказа."
+        canonicalPath="/manager/payment-link"
         robots="noindex,nofollow"
       />
       <div className="page-shell">
         <div className="section-header mb-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-accent">Корзина</p>
-            <h1 className="text-2xl sm:text-3xl font-semibold">Ваши товары для уюта</h1>
-            <p className="text-sm text-muted mt-1">Проверьте состав заказа и добавьте подарок к комплекту.</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-accent">Менеджер</p>
+            <h1 className="text-2xl sm:text-3xl font-semibold">Ссылка на оплату</h1>
+            <p className="text-sm text-muted mt-1">Выберите товары в каталоге, проверьте корзину и отправьте клиенту ссылку.</p>
           </div>
-          <Button as={Link} to="/category/popular" variant="ghost" size="sm">
-            Продолжить покупки →
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button as={Link} to="/catalog" variant="secondary" size="sm">
+              Каталог
+            </Button>
+            <Button as={Link} to="/account#orders" variant="ghost" size="sm">
+              Заказы
+            </Button>
+          </div>
         </div>
+
+        {status ? <NotificationBanner notification={status} className="mb-5" /> : null}
+
+        {createdLink ? (
+          <Card variant="soft" padding="md" className="mb-6 border-primary/25">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm text-muted">Последняя ссылка</p>
+                <p className="break-all text-base font-semibold">{createdLink}</p>
+                {lastLinkLabel ? <p className="mt-1 text-xs text-muted">{lastLinkLabel}</p> : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="secondary" onClick={handleCopyLink}>
+                  Скопировать
+                </Button>
+                <Button as="a" href={createdLink} target="_blank" rel="noreferrer">
+                  Открыть
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ) : null}
 
         {items.length === 0 ? (
           <Card className="text-center p-8">
-            <p className="text-lg font-semibold mb-2">Корзина пока пуста</p>
+            <p className="text-lg font-semibold mb-2">Корзина для клиента пуста</p>
             <p className="text-sm text-muted mb-4">
-              Выберите товары в каталоге и добавьте их в корзину — мы подготовим всё к доставке.
+              Добавьте товары из каталога, затем вернитесь сюда для создания ссылки.
             </p>
-            <Button as={Link} to="/category/popular">
+            <Button as={Link} to="/catalog">
               Перейти в каталог
             </Button>
           </Card>
@@ -192,7 +361,11 @@ function CartPage() {
                 >
                   <div className="h-24 w-24 rounded-2xl overflow-hidden bg-sand/60 border border-white/70 flex-shrink-0">
                     {item.productInfo?.imageUrl ? (
-                      <img src={item.productInfo.imageUrl} alt={item.productInfo?.name || 'Товар'} className="w-full h-full object-cover" />
+                      <img
+                        src={item.productInfo.imageUrl}
+                        alt={item.productInfo?.name || 'Товар'}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-xs text-muted px-2 text-center">
                         Нет фото
@@ -225,13 +398,9 @@ function CartPage() {
                           className="rounded-xl border border-transparent text-lg leading-none hover:border-ink/15"
                           aria-label={`Уменьшить количество: ${item.productInfo?.name || 'Товар'}`}
                         >
-                          −
+                          -
                         </Button>
-                        <label className="sr-only" htmlFor={`cart-item-qty-${item.id}`}>
-                          Количество товара {item.productInfo?.name || 'Товар'}
-                        </label>
                         <Input
-                          id={`cart-item-qty-${item.id}`}
                           type="text"
                           inputMode="numeric"
                           pattern="[0-9]*"
@@ -267,14 +436,6 @@ function CartPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="!min-h-11 !px-2 text-xs text-primary hover:text-primary"
-                      >
-                        Добавить ещё одну
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
                         onClick={() => removeItem(item.id)}
                         className="!min-h-11 !px-2 text-xs text-muted hover:text-primary"
                       >
@@ -288,7 +449,71 @@ function CartPage() {
 
             <div className="w-full lg:max-w-sm space-y-4">
               <Card padding="md">
-                <h3 className="text-xl font-semibold mb-4">Сводка заказа</h3>
+                <h2 className="text-xl font-semibold mb-4">Клиент и ссылка</h2>
+                <div className="space-y-3">
+                  <label className="block text-sm">
+                    <span className="text-muted">Имя клиента</span>
+                    <Input
+                      type="text"
+                      className="mt-2"
+                      placeholder="Иван Иванов"
+                      value={customerName}
+                      onChange={(event) => setCustomerName(event.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-muted">Телефон клиента</span>
+                    <Input
+                      type="tel"
+                      className="mt-2"
+                      placeholder="+7 900 000-00-00"
+                      value={customerPhone}
+                      onChange={(event) => setCustomerPhone(event.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-muted">Адрес доставки</span>
+                    <Input
+                      type="text"
+                      className="mt-2"
+                      placeholder="Город, улица, дом, квартира"
+                      value={customerAddress}
+                      onChange={(event) => setCustomerAddress(event.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-muted">Электронная почта клиента</span>
+                    <Input
+                      type="email"
+                      className="mt-2"
+                      placeholder="pochta@example.ru"
+                      value={customerEmail}
+                      onChange={(event) => setCustomerEmail(event.target.value)}
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <Button
+                    block
+                    onClick={() => handleCreateLink({ sendEmail: true })}
+                    disabled={isCreatingLink}
+                  >
+                    {isCreatingLink ? 'Создаём...' : 'Отправить ссылку'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    block
+                    onClick={() => handleCreateLink({ sendEmail: false, copyAfter: true })}
+                    disabled={isCreatingLink}
+                  >
+                    {isCreatingLink ? 'Готовим...' : 'Создать и скопировать'}
+                  </Button>
+                </div>
+              </Card>
+
+              <Card padding="md">
+                <h2 className="text-xl font-semibold mb-4">Сводка заказа</h2>
                 <div className="flex justify-between mb-2 text-sm">
                   <span>Товары без скидок ({itemCount})</span>
                   <span>{originalSubtotal.toLocaleString('ru-RU')} ₽</span>
@@ -296,7 +521,7 @@ function CartPage() {
                 {productSaleDiscount > 0 ? (
                   <div className="flex justify-between mb-2 text-sm text-primary">
                     <span>Скидки на товары</span>
-                    <span>−{productSaleDiscount.toLocaleString('ru-RU')} ₽</span>
+                    <span>-{productSaleDiscount.toLocaleString('ru-RU')} ₽</span>
                   </div>
                 ) : null}
                 {saleSubtotal !== originalSubtotal ? (
@@ -306,12 +531,12 @@ function CartPage() {
                   </div>
                 ) : null}
                 <form onSubmit={handleApplyPromoCode} className="my-4 rounded-2xl border border-ink/10 bg-sand/40 p-3">
-                  <label className="text-sm font-semibold" htmlFor="cart-promo-code">
+                  <label className="text-sm font-semibold" htmlFor="manager-cart-promo-code">
                     Акции и промокоды
                   </label>
                   <div className="mt-2 flex gap-2">
                     <Input
-                      id="cart-promo-code"
+                      id="manager-cart-promo-code"
                       value={promoDraft}
                       onChange={(event) => setPromoDraft(event.target.value.toUpperCase())}
                       placeholder="ПРОМО"
@@ -319,7 +544,7 @@ function CartPage() {
                       disabled={isPromoSubmitting}
                     />
                     <Button type="submit" disabled={isPromoSubmitting}>
-                      {isPromoSubmitting ? 'Проверяем…' : 'Применить'}
+                      {isPromoSubmitting ? 'Проверяем...' : 'Применить'}
                     </Button>
                   </div>
                   {activePromoCode ? (
@@ -351,12 +576,12 @@ function CartPage() {
                 {cartDiscount > 0 ? (
                   <div className="flex justify-between mb-2 text-sm text-primary">
                     <span>{pricing?.appliedCartDiscountLabel || 'Скидка по корзине'}</span>
-                    <span>−{cartDiscount.toLocaleString('ru-RU')} ₽</span>
+                    <span>-{cartDiscount.toLocaleString('ru-RU')} ₽</span>
                   </div>
                 ) : thresholdDiscount > 0 ? (
                   <div className="flex justify-between mb-2 text-sm text-muted">
                     <span>Доступна скидка по сумме корзины</span>
-                    <span>до −{thresholdDiscount.toLocaleString('ru-RU')} ₽</span>
+                    <span>до -{thresholdDiscount.toLocaleString('ru-RU')} ₽</span>
                   </div>
                 ) : null}
                 <div className="flex justify-between mb-2 text-sm">
@@ -372,22 +597,15 @@ function CartPage() {
                   <span>Итого</span>
                   <span>{total.toLocaleString('ru-RU')} ₽</span>
                 </div>
-                <Button block className="mb-2" onClick={handleCheckout}>
-                  Оформить заказ
-                </Button>
-                {!isAuthenticated && (
-                  <div className="mb-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-ink/90">
-                    {CART_SESSION_STRATEGY.guestCheckoutMessage}
-                  </div>
-                )}
-                <Button variant="secondary" block onClick={clearCart}>
+                <Button variant="ghost" block onClick={clearCart}>
                   Очистить корзину
                 </Button>
               </Card>
+
               <Card padding="sm" className="text-sm space-y-2">
-                <p className="font-semibold">Почему с нами спокойно</p>
-                <p className="text-muted">После оплаты менеджер согласует варианты доставки и финальную стоимость.</p>
-                <p className="text-muted">{paymentDescription} Поддержка ежедневно с 9:00 до 21:00.</p>
+                <p className="font-semibold">Что увидит клиент</p>
+                <p className="text-muted">{paymentDescription}</p>
+                <p className="text-muted">Доставка не входит в оплату товаров и согласуется менеджером отдельно.</p>
               </Card>
             </div>
           </div>
@@ -397,4 +615,4 @@ function CartPage() {
   );
 }
 
-export default CartPage;
+export default ManagerPaymentLinkPage;

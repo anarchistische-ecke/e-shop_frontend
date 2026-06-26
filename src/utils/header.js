@@ -20,6 +20,7 @@ export function resolveWayfindingLabel(pathname = '', search = '') {
   if (pathname.startsWith('/product/')) return 'Карточка товара';
   if (pathname.startsWith('/cart')) return 'Корзина';
   if (pathname.startsWith('/checkout')) return 'Оформление';
+  if (pathname.startsWith('/manager/payment-link')) return 'Ссылка на оплату';
   if (pathname.startsWith('/account')) return 'Личный кабинет';
   return 'Раздел магазина';
 }
@@ -50,6 +51,7 @@ export function resolveMobileBottomNavKey({
   }
   if (pathname.startsWith('/category/')) return 'catalog';
   if (pathname.startsWith('/account') || pathname === '/login') return 'account';
+  if (pathname.startsWith('/manager/payment-link')) return 'cart';
   if (pathname.startsWith('/cart')) return 'cart';
   return '';
 }
@@ -78,7 +80,7 @@ export function buildAccountLinks(isManager) {
       { to: '/account#overview', label: 'Сводка' },
       { to: '/account#orders', label: 'Заказы' },
       { to: '/account#cms', label: 'CMS витрины' },
-      { to: '/cart', label: 'Ссылка на оплату' }
+      { to: '/manager/payment-link', label: 'Ссылка на оплату' }
     ];
   }
 

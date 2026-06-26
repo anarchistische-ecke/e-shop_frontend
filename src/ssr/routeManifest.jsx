@@ -27,6 +27,7 @@ const CartPage = lazy(() => import('../pages/CartPage'));
 const CheckoutPage = lazy(() => import('../pages/CheckoutPage'));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const ManagerLoginPage = lazy(() => import('../pages/ManagerLoginPage'));
+const ManagerPaymentLinkPage = lazy(() => import('../pages/ManagerPaymentLinkPage'));
 const OrderPage = lazy(() => import('../pages/OrderPage'));
 const SearchPage = lazy(() => import('../pages/SearchPage'));
 const SearchRedirectPage = lazy(() => import('../pages/SearchRedirectPage'));
@@ -77,6 +78,7 @@ const routeRenderers = {
   'cookies-policy': () => CsrRoute(<CookiesPolicyPage />),
   'personal-data-consent': () => CsrRoute(<PersonalDataConsentPage />),
   'manager-login': () => CsrRoute(<ManagerLoginPage />, { isStandaloneRoute: true }),
+  'manager-payment-link': () => CsrRoute(<ManagerPaymentLinkPage />),
   'legacy-admin-redirect': () => <Navigate to="/manager/login" replace />,
   'not-found': () => <NotFound />
 };

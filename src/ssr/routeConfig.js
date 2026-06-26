@@ -55,6 +55,12 @@ export const routeSeoConfig = {
     canonicalPath: '/manager/login',
     robots: 'noindex,nofollow'
   },
+  'manager-payment-link': {
+    title: 'Ссылка на оплату',
+    description: 'Создание ссылки на оплату заказа менеджером.',
+    canonicalPath: '/manager/payment-link',
+    robots: 'noindex,nofollow'
+  },
   'legacy-admin-redirect': {
     title: 'Администрирование',
     description: 'Служебный раздел сайта.',
@@ -94,6 +100,7 @@ export const storefrontRouteConfig = [
   { id: 'cookies-policy', path: '/kuki', renderMode: 'ssr' },
   { id: 'personal-data-consent', path: '/soglasie-na-obrabotku-pd', renderMode: 'ssr' },
   { id: 'manager-login', path: '/manager/login', renderMode: 'csr', seo: routeSeoConfig['manager-login'] },
+  { id: 'manager-payment-link', path: '/manager/payment-link', renderMode: 'csr', seo: routeSeoConfig['manager-payment-link'] },
   { id: 'legacy-admin-redirect', path: '/admin/*', renderMode: 'csr', seo: routeSeoConfig['legacy-admin-redirect'] }
 ];
 

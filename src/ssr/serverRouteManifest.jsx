@@ -70,6 +70,7 @@ const routeRenderers = {
   'cookies-policy': () => RouteBoundary(<CookiesPolicyPage />),
   'personal-data-consent': () => RouteBoundary(<PersonalDataConsentPage />),
   'manager-login': () => RouteBoundary(<ManagerLoginPage />, { isStandaloneRoute: true }),
+  'manager-payment-link': () => <RouteFallback />,
   'legacy-admin-redirect': () => <Navigate to="/manager/login" replace />,
   'not-found': () => <NotFound />
 };

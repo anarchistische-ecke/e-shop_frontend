@@ -383,6 +383,26 @@ export function CartProvider({ children }) {
     }
   }, [cartId, items, syncCart]);
 
+  const startNewCart = useCallback(async () => {
+    try {
+      const cart = await createCart();
+      const nextCartId = cart?.id || null;
+      if (!nextCartId) {
+        return null;
+      }
+      localStorage.setItem('cartId', nextCartId);
+      setCartId(nextCartId);
+      setRawItems([]);
+      setPricing(null);
+      setLastAddedItem(null);
+      await syncCart(nextCartId);
+      return nextCartId;
+    } catch (err) {
+      console.error('Failed to start a new cart:', err);
+      return null;
+    }
+  }, [syncCart]);
+
   const dismissLastAddedItem = useCallback(() => {
     setLastAddedItem(null);
   }, []);
@@ -398,6 +418,7 @@ export function CartProvider({ children }) {
     applyPromoCode,
     removePromoCode,
     clearCart,
+    startNewCart,
     lastAddedItem,
     dismissLastAddedItem
   };

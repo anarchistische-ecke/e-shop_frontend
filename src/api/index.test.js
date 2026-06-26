@@ -5,7 +5,7 @@ vi.mock('../auth/session.js', () => ({
   getAccessToken: vi.fn(async () => null)
 }));
 
-import { checkoutCart, getProducts } from './index.js';
+import { checkoutCart, createManagerOrderLink, getProducts } from './index.js';
 
 const originalFetch = globalThis.fetch;
 
@@ -39,6 +39,39 @@ describe('checkoutCart', () => {
     expect(options.headers).not.toHaveProperty('Idempotency-Key');
     expect(JSON.parse(options.body)).toMatchObject({
       idempotencyKey: 'checkout-key-1'
+    });
+  });
+});
+
+describe('createManagerOrderLink', () => {
+  it('sends manager link idempotency in the JSON body', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({
+      orderId: 'order-1',
+      publicToken: 'public-token',
+      orderUrl: 'https://example.test/order/public-token',
+      emailSent: false
+    }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    }));
+
+    await createManagerOrderLink({
+      cartId: 'cart-1',
+      receiptEmail: 'customer@example.test',
+      customerName: 'Customer',
+      phone: '+79990000000',
+      homeAddress: 'Address',
+      orderPageUrl: 'https://example.test/order/{token}',
+      sendEmail: false,
+      idempotencyKey: 'manager-link-key-1'
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    const [, options] = globalThis.fetch.mock.calls[0];
+    expect(JSON.parse(options.body)).toMatchObject({
+      cartId: 'cart-1',
+      sendEmail: false,
+      idempotencyKey: 'manager-link-key-1'
     });
   });
 });

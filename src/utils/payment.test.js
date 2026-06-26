@@ -88,6 +88,18 @@ describe('payment utils', () => {
     expect(hasRedirectPaymentSession(redirectSession)).toBe(true);
   });
 
+  it('treats missing payment sessions as empty', () => {
+    expect(normalizePaymentSession(null)).toEqual({
+      paymentId: '',
+      confirmationUrl: '',
+      confirmationType: 'REDIRECT',
+      confirmationToken: '',
+      returnUrl: ''
+    });
+    expect(hasEmbeddedPaymentSession(null)).toBe(false);
+    expect(hasRedirectPaymentSession(null)).toBe(false);
+  });
+
   it('returns different order recovery copy for pending and processing orders', () => {
     const pendingNotice = getOrderPaymentNotice(
       { providerName: 'YooKassa', resumePaymentLabel: 'Продолжить оплату через YooKassa' },
