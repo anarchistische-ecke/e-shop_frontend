@@ -43,10 +43,22 @@ export const routeSeoConfig = {
     canonicalPath: '/account',
     robots: 'noindex,nofollow'
   },
+  favorites: {
+    title: 'Избранное',
+    description: 'Избранные товары покупателя.',
+    canonicalPath: '/favorites',
+    robots: 'noindex,nofollow'
+  },
   order: {
     title: 'Статус заказа',
     description: 'Страница заказа покупателя.',
     canonicalPath: '/order',
+    robots: 'noindex,nofollow'
+  },
+  pay: {
+    title: 'Оплата заказа',
+    description: 'Безопасная страница оплаты заказа.',
+    canonicalPath: '/pay',
     robots: 'noindex,nofollow'
   },
   'manager-login': {
@@ -86,8 +98,10 @@ export const storefrontRouteConfig = [
   { id: 'checkout', path: '/checkout', renderMode: 'csr', seo: routeSeoConfig.checkout },
   { id: 'login', path: '/login', renderMode: 'csr', seo: routeSeoConfig.login },
   { id: 'account', path: '/account', renderMode: 'csr', seo: routeSeoConfig.account },
+  { id: 'favorites', path: '/favorites', renderMode: 'csr', seo: routeSeoConfig.favorites },
   { id: 'about', path: '/about', renderMode: 'ssr' },
   { id: 'order', path: '/order/:token', renderMode: 'csr', seo: routeSeoConfig.order },
+  { id: 'pay', path: '/pay/:token', renderMode: 'csr', seo: routeSeoConfig.pay },
   { id: 'payment-info', path: '/info/payment', renderMode: 'ssr' },
   { id: 'delivery-info', path: '/info/delivery', renderMode: 'ssr' },
   { id: 'production-info', path: '/info/production', renderMode: 'ssr' },

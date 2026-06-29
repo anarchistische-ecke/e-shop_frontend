@@ -16,5 +16,6 @@ export const FIELD_TO_STEP = {
   homeAddress: CHECKOUT_STEP_INDEX.address
 };
 
-export const CHECKOUT_DRAFT_VERSION = 2;
+export const CHECKOUT_DRAFT_VERSION = 3;
+export const CHECKOUT_DRAFT_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 export const CHECKOUT_REQUEST_TIMEOUT_MS = 30000;

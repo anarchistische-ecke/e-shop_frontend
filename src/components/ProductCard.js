@@ -2,8 +2,10 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import NotificationBanner from './NotificationBanner';
 import { CartContext } from '../contexts/CartContext';
+import { WishlistContext } from '../contexts/WishlistContext';
 import ResponsiveImage from './media/ResponsiveImage';
 import { Button, Card } from './ui';
+import { HeartIcon } from './header/icons';
 import {
   getPrimaryVariant,
   getProductPrice,
@@ -37,6 +39,7 @@ function ProductCard({
   withOfferCatalogMicrodata = false
 }) {
   const location = useLocation();
+  const { isWishlisted, toggle } = useContext(WishlistContext);
   const primaryVariant = getPrimaryVariant(product);
 
   const currentPrice = primaryVariant?.price
@@ -126,6 +129,12 @@ function ProductCard({
       position
     });
   };
+  const isFavorite = isWishlisted(product);
+  const handleWishlistClick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggle(product);
+  };
 
   return (
     <Card
@@ -150,50 +159,65 @@ function ProductCard({
           <meta itemProp="priceCurrency" content={offerMicrodata.priceCurrency} />
         </>
       ) : null}
-      <Link
-        to={buildProductPath(product)}
-        state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="block"
-        onClick={handleProductClick}
-      >
-        <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
-          <div className="relative pt-[74%]">
-            {activeImage ? (
-              <ResponsiveImage
-                media={activeMedia}
-                src={activeImage}
-                alt={product.name}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                sizes={imageSizes}
-                priority={priority}
-                loading={priority ? 'eager' : 'lazy'}
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">
-                Нет фото
-              </div>
-            )}
-          </div>
+      <div className="relative">
+        <Link
+          to={buildProductPath(product)}
+          state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="block"
+          onClick={handleProductClick}
+        >
+          <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
+            <div className="relative pt-[74%]">
+              {activeImage ? (
+                <ResponsiveImage
+                  media={activeMedia}
+                  src={activeImage}
+                  alt={product.name}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  sizes={imageSizes}
+                  priority={priority}
+                  loading={priority ? 'eager' : 'lazy'}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">
+                  Нет фото
+                </div>
+              )}
+            </div>
 
-          <div className="absolute inset-x-2 top-2 flex flex-wrap gap-2">
-            {hasDiscount && (
-              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                −{discount}%
-              </span>
-            )}
-            {badges.slice(0, 2).map((badge) => (
-              <span
-                key={`${product.id}-${badge}`}
-                className="rounded-full border border-ink/15 bg-white/90 px-2.5 py-1 text-[11px] text-ink/75"
-              >
-                {badge}
-              </span>
-            ))}
+            <div className="absolute inset-x-2 top-2 flex flex-wrap gap-2 pr-12">
+              {hasDiscount && (
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                  −{discount}%
+                </span>
+              )}
+              {badges.slice(0, 2).map((badge) => (
+                <span
+                  key={`${product.id}-${badge}`}
+                  className="rounded-full border border-ink/15 bg-white/90 px-2.5 py-1 text-[11px] text-ink/75"
+                >
+                  {badge}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      </Link>
+        </Link>
+        <button
+          type="button"
+          className={`focus-ring-soft absolute right-2 top-2 inline-flex h-10 w-10 items-center justify-center rounded-full border shadow-[0_10px_22px_rgba(43,39,34,0.12)] transition ${
+            isFavorite
+              ? 'border-primary/25 bg-primary text-white'
+              : 'border-white/80 bg-white/92 text-ink/70 hover:text-primary'
+          }`}
+          onClick={handleWishlistClick}
+          aria-label={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+          aria-pressed={isFavorite}
+        >
+          <HeartIcon className="h-5 w-5" filled={isFavorite} />
+        </button>
+      </div>
 
       <div className="mt-2 min-h-[34px]">
         {shouldRenderThumbnails && (

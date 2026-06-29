@@ -70,7 +70,7 @@ function CheckoutPage() {
     <div className="checkout-page page-section pb-28 lg:pb-10">
       <Seo
         title="Оформление заказа"
-        description="Быстрое оформление заказа с контактами, адресом, оплатой товаров и возможностью купить без регистрации."
+        description="Быстрое оформление заказа с контактами, адресом, оплатой товаров и обновлениями по заказу."
         canonicalPath="/checkout"
         robots="noindex,nofollow"
       />

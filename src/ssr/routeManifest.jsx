@@ -25,6 +25,7 @@ const UserAgreementPage = lazy(() => import('../pages/legal/UserAgreementPage'))
 const AccountPage = lazy(() => import('../pages/AccountPage'));
 const CartPage = lazy(() => import('../pages/CartPage'));
 const CheckoutPage = lazy(() => import('../pages/CheckoutPage'));
+const FavoritesPage = lazy(() => import('../pages/FavoritesPage'));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const ManagerLoginPage = lazy(() => import('../pages/ManagerLoginPage'));
 const ManagerPaymentLinkPage = lazy(() => import('../pages/ManagerPaymentLinkPage'));
@@ -64,8 +65,10 @@ const routeRenderers = {
   checkout: () => CsrRoute(<CheckoutPage />),
   login: () => CsrRoute(<LoginPage />),
   account: () => CsrRoute(<AccountPage />),
+  favorites: () => CsrRoute(<FavoritesPage />),
   about: () => CsrRoute(<AboutPage />),
   order: () => CsrRoute(<OrderPage />),
+  pay: () => CsrRoute(<OrderPage />),
   'payment-info': () => CsrRoute(<PaymentInfoPage />),
   'delivery-info': () => CsrRoute(<DeliveryInfoPage />),
   'production-info': () => CsrRoute(<ProductionInfoPage />),

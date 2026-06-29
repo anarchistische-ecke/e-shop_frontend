@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
+import { WishlistContext } from '../contexts/WishlistContext';
 import { getProduct } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
@@ -11,6 +12,7 @@ import ProductCard from '../components/ProductCard';
 import ResponsiveImage from '../components/media/ResponsiveImage';
 import ProductMediaViewer from '../components/product/ProductMediaViewer';
 import { Button, Card, Modal } from '../components/ui';
+import { HeartIcon } from '../components/header/icons';
 import { useProductDirectoryData } from '../features/product-list/data';
 import {
   getPrimaryVariant,
@@ -127,6 +129,34 @@ function getAvailabilityMeta(stock, { selected = false } = {}) {
   };
 }
 
+function normalizeOptionToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+}
+
+function getVariantColorKey(variant) {
+  const explicitValue = variant?.colorCode || variant?.colorLabel || variant?.colorHex;
+  return normalizeOptionToken(explicitValue) || 'default-color';
+}
+
+function getVariantColorLabel(variant) {
+  return variant?.colorLabel || variant?.colorCode || 'Цвет';
+}
+
+function getVariantSizeKey(variant) {
+  return normalizeOptionToken(variant?.sizeCode || variant?.sizeLabel || variant?.name || variant?.sku || variant?.id);
+}
+
+function getVariantSizeLabel(variant) {
+  return variant?.sizeLabel || variant?.name || variant?.sku || 'Вариант';
+}
+
+function hasStructuredColor(variant) {
+  return Boolean(variant?.colorCode || variant?.colorLabel || variant?.colorHex);
+}
+
 function detectScaleImage(images = []) {
   const scalePattern = /human|model|hand|interior|room|lifestyle|body|context|size|scale|on-body|в\s*интерьере|в\s*масштабе/i;
   return images.some((image) => {
@@ -221,6 +251,7 @@ function ProductPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { addItem } = useContext(CartContext);
+  const { isWishlisted, toggle: toggleWishlist } = useContext(WishlistContext);
   const { routeData } = useSsrData();
   const { categories, products: directoryProducts } = useProductDirectoryData({ requireFull: true });
   const hasProductRouteSeed =
@@ -233,7 +264,7 @@ function ProductPage() {
   const [selectedVariant, setSelectedVariant] = useState(() =>
     resolveInitialSelectedVariant(initialProduct)
   );
-  const [openAccordions, setOpenAccordions] = useState({ description: true });
+  const [openAccordions, setOpenAccordions] = useState({ bundle: true, description: true });
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [bundleSelections, setBundleSelections] = useState({});
   const [quantity, setQuantity] = useState(1);
@@ -276,7 +307,7 @@ function ProductPage() {
     }, [cartStatus, quantity, selectedVariant?.id]);
 
   useEffect(() => {
-    setOpenAccordions({ description: true });
+    setOpenAccordions({ bundle: true, description: true });
     setActiveImageIndex(0);
     setBundleSelections({});
     setQuantity(1);
@@ -405,6 +436,60 @@ function ProductPage() {
     () => (Array.isArray(product?.variants) ? product.variants : Array.from(product?.variants || [])),
     [product]
   );
+  const hasColorOptions = useMemo(
+    () => productVariants.some(hasStructuredColor),
+    [productVariants]
+  );
+  const selectedColorKey = selectedVariant ? getVariantColorKey(selectedVariant) : '';
+  const selectedSizeKey = selectedVariant ? getVariantSizeKey(selectedVariant) : '';
+  const colorOptions = useMemo(() => {
+    const map = new Map();
+    productVariants.forEach((variant) => {
+      const key = getVariantColorKey(variant);
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          label: getVariantColorLabel(variant),
+          hex: variant?.colorHex || '',
+          variants: []
+        });
+      }
+      map.get(key).variants.push(variant);
+    });
+    return Array.from(map.values()).map((option) => ({
+      ...option,
+      available: option.variants.some((variant) => getStockValue(variant) > 0)
+    }));
+  }, [productVariants]);
+  const sizeOptions = useMemo(() => {
+    const source =
+      hasColorOptions && selectedColorKey
+        ? productVariants.filter((variant) => getVariantColorKey(variant) === selectedColorKey)
+        : productVariants;
+    const map = new Map();
+    source.forEach((variant) => {
+      const key = getVariantSizeKey(variant);
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          label: getVariantSizeLabel(variant),
+          variant,
+          stock: getStockValue(variant)
+        });
+        return;
+      }
+      const current = map.get(key);
+      if (current.stock <= 0 && getStockValue(variant) > 0) {
+        map.set(key, {
+          key,
+          label: getVariantSizeLabel(variant),
+          variant,
+          stock: getStockValue(variant)
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [hasColorOptions, productVariants, selectedColorKey]);
 
   const variantNameById = useMemo(() => {
     const map = {};
@@ -453,7 +538,7 @@ function ProductPage() {
   }, [categories, product]);
   const productPresentation = product?.presentation || null;
   const marketingTitle = productPresentation?.marketingTitle || product?.name || '';
-  const introBody = productPresentation?.introBody || product?.description || '';
+  const descriptionBody = product?.description || productPresentation?.introBody || '';
 
   const fallbackSpecs = [
     product?.size ? `Размер: ${product.size}` : 'Размеры соответствуют стандартам категории',
@@ -546,7 +631,14 @@ function ProductPage() {
   );
   const hasBundleSelection = bundleItems.some((item) => bundleSelections[item.id]);
   const isCartActionPending = Boolean(pendingAction);
-  const canPurchaseSelectedVariant = availableStock > 0 && !isCartActionPending;
+  const canPurchaseSelectedVariant = Boolean(selectedVariant) && availableStock > 0 && !isCartActionPending;
+  const variantSelectionHint =
+    !selectedVariant
+      ? 'Выберите цвет и размер, чтобы добавить товар в корзину.'
+      : availableStock <= 0
+      ? 'Выбранная комбинация сейчас недоступна. Выберите другой размер или цвет.'
+      : '';
+  const isProductFavorite = isWishlisted(product);
   const careText = product?.care || 'Деликатная стирка при 30°. Следуйте рекомендациям на ярлыке изделия.';
   const hasDetailsContent = specificationSections.length > 0 || fallbackSpecs.length > 0;
   const canonicalProductPath = useMemo(() => buildProductPath(product), [product]);
@@ -827,6 +919,31 @@ function ProductPage() {
     setIsVariantMenuOpen(false);
   };
 
+  const handleColorSelect = (colorKey) => {
+    if (!colorKey || colorKey === selectedColorKey) return;
+    const candidates = productVariants.filter((variant) => getVariantColorKey(variant) === colorKey);
+    if (!candidates.length) return;
+    const preservedSize = selectedSizeKey
+      ? candidates.find(
+          (variant) => getVariantSizeKey(variant) === selectedSizeKey && getStockValue(variant) > 0
+        )
+      : null;
+    const nextVariant =
+      preservedSize ||
+      candidates.find((variant) => getStockValue(variant) > 0) ||
+      candidates[0];
+    handleVariantChange(nextVariant);
+  };
+
+  const handleSizeSelect = (option) => {
+    if (!option?.variant || option.stock <= 0) return;
+    handleVariantChange(option.variant);
+  };
+
+  const handleWishlistToggle = () => {
+    toggleWishlist(product);
+  };
+
   const openInfoSheet = (nextSheetType) => {
     setSheetType(nextSheetType);
     setIsInfoSheetOpen(true);
@@ -837,7 +954,14 @@ function ProductPage() {
   };
 
   const addSelectedVariantToCart = async () => {
-    if (!product || availableStock <= 0) return false;
+    if (!product || !selectedVariant || availableStock <= 0) {
+      setCartStatus({
+        type: 'warning',
+        title: 'Выберите доступный вариант',
+        message: variantSelectionHint || 'Перед добавлением нужен доступный цвет и размер.'
+      });
+      return false;
+    }
     setCartStatus(null);
     const result = await addItem(product, selectedVariant?.id || null, quantity);
     if (result?.ok === false) {
@@ -1153,9 +1277,22 @@ function ProductPage() {
               }`}
             >
               <div className="border-b border-ink/10 pb-5">
-                <h1 className="max-w-xl text-2xl font-medium leading-tight tracking-normal text-ink sm:text-3xl lg:text-3xl">
-                  {marketingTitle || product.name}
-                </h1>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                  <h1 className="max-w-xl text-2xl font-medium leading-tight tracking-normal text-ink sm:text-3xl lg:text-3xl">
+                    {marketingTitle || product.name}
+                  </h1>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className={`!rounded-full ${isProductFavorite ? 'text-primary' : ''}`}
+                    onClick={handleWishlistToggle}
+                    aria-label={isProductFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+                    aria-pressed={isProductFavorite}
+                  >
+                    <HeartIcon className="h-5 w-5" filled={isProductFavorite} />
+                  </Button>
+                </div>
                 {productPresentation?.marketingSubtitle ? (
                   <p className="mt-3 text-sm leading-relaxed text-ink/65">
                     {productPresentation.marketingSubtitle}
@@ -1204,80 +1341,80 @@ function ProductPage() {
 
               {productVariants.length > 0 && (
                 <div className="border-b border-ink/10 py-5">
-                  <p className="text-xs uppercase tracking-[0.18em] text-ink/50">
-                    Размер
-                  </p>
-                  <div ref={variantMenuRef} className="relative mt-2">
-                    <button
-                      type="button"
-                      aria-label="Выберите вариант"
-                      aria-haspopup="listbox"
-                      aria-expanded={isVariantMenuOpen}
-                      className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-2xl border border-ink/12 bg-white/85 px-4 py-2 text-left text-sm text-ink shadow-[0_10px_22px_rgba(43,39,34,0.08)] transition hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                      onClick={() => setIsVariantMenuOpen((prev) => !prev)}
-                      disabled={isCartActionPending}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate">
-                          {selectedVariant?.name || selectedVariant?.sku || selectedVariant?.id || 'Выберите вариант'}
-                        </span>
-                        {selectedVariant ? (
-                          <span className="mt-0.5 block text-xs text-ink/55">
-                            {formatRub(moneyToNumber(selectedVariant.price))}
-                            {' · '}
-                            {availableStock <= 0
-                              ? 'Нет в наличии'
-                              : availableStock <= 3
-                              ? `Осталось ${availableStock} шт.`
-                              : 'В наличии'}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className={`text-lg leading-none text-primary transition-transform ${isVariantMenuOpen ? 'rotate-180' : ''}`}>
-                        ↓
-                      </span>
-                    </button>
-
-                    {isVariantMenuOpen && (
-                      <div
-                        role="listbox"
-                        aria-label="Варианты товара"
-                        className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-20 max-h-72 overflow-y-auto rounded-2xl border border-ink/10 bg-white p-1 shadow-[0_24px_50px_rgba(43,39,34,0.18)]"
-                      >
-                        {productVariants.map((variant) => {
-                          const isActive = selectedVariant?.id === variant.id;
-                          const variantStock = getStockValue(variant);
-                          const variantStatus =
-                            variantStock <= 0
-                              ? 'Нет в наличии'
-                              : variantStock <= 3
-                              ? `Осталось ${variantStock} шт.`
-                              : 'В наличии';
+                  {hasColorOptions && colorOptions.length > 0 ? (
+                    <div>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs uppercase tracking-[0.18em] text-ink/50">Цвет</p>
+                        <p className="text-xs text-muted">
+                          {selectedVariant ? getVariantColorLabel(selectedVariant) : 'Выберите цвет'}
+                        </p>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {colorOptions.map((option) => {
+                          const isActive = option.key === selectedColorKey;
                           return (
                             <button
-                              key={variant.id}
+                              key={option.key}
                               type="button"
-                              role="option"
-                              aria-selected={isActive}
-                              className={`flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition ${
+                              className={`focus-ring-soft inline-flex min-h-[44px] items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition ${
                                 isActive
-                                  ? 'bg-primary/10 text-primary'
-                                  : variantStock <= 0
-                                  ? 'text-red-700 hover:bg-red-50'
-                                  : 'text-ink hover:bg-secondary/70'
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : option.available
+                                  ? 'border-ink/12 bg-white/85 text-ink hover:border-primary/35'
+                                  : 'border-ink/10 bg-sand/35 text-muted line-through opacity-60'
                               }`}
-                              onClick={() => handleVariantSelect(variant)}
+                              onClick={() => handleColorSelect(option.key)}
+                              disabled={!option.available || isCartActionPending}
+                              aria-pressed={isActive}
                             >
-                              <span className="min-w-0">
-                                <span className="block font-medium">{variant.name || variant.sku || variant.id}</span>
-                                <span className="mt-0.5 block text-xs opacity-75">{variantStatus}</span>
-                              </span>
-                              <span className="flex-shrink-0 text-xs">{formatRub(moneyToNumber(variant.price))}</span>
+                              <span
+                                className="inline-flex h-5 w-5 rounded-full border border-ink/15"
+                                style={{ backgroundColor: option.hex || '#f5eee3' }}
+                                aria-hidden="true"
+                              />
+                              <span>{option.label}</span>
                             </button>
                           );
                         })}
                       </div>
-                    )}
+                    </div>
+                  ) : null}
+
+                  <div className={hasColorOptions ? 'mt-5' : ''}>
+                    <p className="text-xs uppercase tracking-[0.18em] text-ink/50">
+                      Размер
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {sizeOptions.map((option) => {
+                        const isActive = option.key === selectedSizeKey;
+                        const isDisabled = option.stock <= 0 || isCartActionPending;
+                        return (
+                          <button
+                            key={option.key}
+                            type="button"
+                            className={`focus-ring-soft min-h-[46px] rounded-2xl border px-4 py-2 text-left text-sm transition ${
+                              isActive
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : isDisabled
+                                ? 'border-ink/10 bg-sand/35 text-muted line-through opacity-60'
+                                : 'border-ink/12 bg-white/85 text-ink hover:border-primary/35'
+                            }`}
+                            onClick={() => handleSizeSelect(option)}
+                            disabled={isDisabled}
+                            aria-pressed={isActive}
+                          >
+                            <span className="block font-medium">{option.label}</span>
+                            <span className="mt-0.5 block text-xs opacity-75">
+                              {option.stock <= 0
+                                ? 'Нет в наличии'
+                                : option.stock <= 3
+                                ? `Осталось ${option.stock} шт.`
+                                : 'В наличии'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {variantImageSwatches.length > 0 && (
@@ -1311,6 +1448,12 @@ function ProductPage() {
                       </div>
                     </div>
                   )}
+
+                  {variantSelectionHint ? (
+                    <p className="mt-3 rounded-2xl border border-primary/15 bg-primary/5 px-3 py-2 text-xs text-ink/75">
+                      {variantSelectionHint}
+                    </p>
+                  ) : null}
                 </div>
               )}
 
@@ -1357,6 +1500,11 @@ function ProductPage() {
                   >
                     {pendingAction === 'buy' ? 'Переходим к оформлению…' : 'Купить сейчас'}
                   </Button>
+                </div>
+
+                <div className="mt-3 rounded-2xl border border-ink/10 bg-sand/35 px-3 py-2 text-xs leading-relaxed text-ink/70">
+                  Возврат в течение 14 дней после получения. Онлайн-оплата проходит через YooKassa,
+                  электронный чек 54-ФЗ придёт на email из заказа.
                 </div>
 
                 {cartStatus ? <NotificationBanner notification={cartStatus} className="mt-3" /> : null}
@@ -1491,13 +1639,29 @@ function ProductPage() {
 
               <section className="divide-y-0" aria-label="Информация о товаре">
                 <ProductAccordionItem
+                  id="pdp-bundle"
+                  title="Что входит в комплект"
+                  isOpen={Boolean(openAccordions.bundle)}
+                  onToggle={() => toggleAccordion('bundle')}
+                >
+                  <p>Комплектация, размер и выбранный вариант указаны в карточке товара и составе заказа.</p>
+                  {highlights.length > 0 ? (
+                    <ul className="mt-3 list-disc space-y-1 pl-5">
+                      {highlights.filter(Boolean).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </ProductAccordionItem>
+
+                <ProductAccordionItem
                   id="pdp-description"
                   title="Описание"
                   isOpen={Boolean(openAccordions.description)}
                   onToggle={() => toggleAccordion('description')}
                 >
-                  {introBody ? (
-                    <CmsRichText html={introBody} className="text-sm leading-relaxed text-ink/78" />
+                  {descriptionBody ? (
+                    <CmsRichText html={descriptionBody} className="text-sm leading-relaxed text-ink/78" />
                   ) : (
                     <p>Описание отсутствует.</p>
                   )}
@@ -1553,7 +1717,7 @@ function ProductPage() {
                 {careText ? (
                   <ProductAccordionItem
                     id="pdp-care"
-                    title="Уход"
+                    title="Состав и уход"
                     isOpen={Boolean(openAccordions.care)}
                     onToggle={() => toggleAccordion('care')}
                   >
@@ -1563,14 +1727,14 @@ function ProductPage() {
 
                 <ProductAccordionItem
                   id="pdp-delivery-payment"
-                  title="Доставка и оплата"
+                  title="Доставка и возврат"
                   isOpen={Boolean(openAccordions.service)}
                   onToggle={() => toggleAccordion('service')}
                 >
                   <div className="space-y-3">
                     <p>Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.</p>
                     <p>При онлайн-оплате вы оплачиваете только товары. Доставка оплачивается отдельно после согласования.</p>
-                    <p>Оплата подтверждается на защищённом шаге оформления заказа или на странице заказа.</p>
+                    <p>Возврат возможен в течение 14 дней после получения. Оплата подтверждается на защищённом шаге оформления заказа или на странице заказа.</p>
                     <div className="flex flex-wrap gap-3 pt-1 text-xs">
                       <Link to="/info/payment" className="underline underline-offset-4">Оплата</Link>
                       <Link to="/info/delivery" className="underline underline-offset-4">Доставка</Link>

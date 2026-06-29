@@ -4,6 +4,7 @@ import { CartProvider } from '../contexts/CartContext';
 import { CmsContentProvider } from '../contexts/CmsContentContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import { PaymentConfigProvider } from '../contexts/PaymentConfigContext';
+import { WishlistProvider } from '../contexts/WishlistContext';
 import { CatalogueDataProvider } from '../features/product-list/data';
 import App from '../pages/App';
 import '../styles/cms.css';
@@ -17,9 +18,11 @@ function StorefrontApp({ initialData = {}, routes = [] }) {
         <CmsContentProvider initialData={initialData.cms}>
           <PaymentConfigProvider initialConfig={initialData.paymentConfig}>
             <CatalogueDataProvider initialData={initialData.directory}>
-              <CartProvider>
-                <App routes={routes} />
-              </CartProvider>
+              <WishlistProvider>
+                <CartProvider>
+                  <App routes={routes} />
+                </CartProvider>
+              </WishlistProvider>
             </CatalogueDataProvider>
           </PaymentConfigProvider>
         </CmsContentProvider>

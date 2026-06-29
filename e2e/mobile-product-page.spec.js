@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { mockStorefrontApi } = require('./support/mockStorefrontApi');
+const { products } = require('./fixtures/storefront');
 
 test('buy now submits once on a slow mobile connection', async ({ page }) => {
   const { cartState, stats } = await mockStorefrontApi(page, { addItemDelayMs: 700 });
@@ -79,19 +80,28 @@ test('mobile gallery swipes between images and still opens zoom on tap', async (
 });
 
 test('out-of-stock variant disables purchase CTAs and hides fake notify form', async ({ page }) => {
-  await mockStorefrontApi(page);
+  await mockStorefrontApi(page, {
+    products: products.map((product) =>
+      product.id === 'prod-satin-sand'
+        ? {
+            ...product,
+            variants: product.variants.map((variant) => ({
+              ...variant,
+              stock: 0,
+            })),
+          }
+        : product
+    ),
+  });
 
   await page.goto('/product/prod-satin-sand');
   await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
-
-  await page.getByLabel('Выберите вариант').click();
-  await page.getByRole('option', { name: /240×260/ }).click();
 
   await expect(page.getByText('Нет в наличии для выбранного варианта').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Добавить в корзину' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Купить сейчас' })).toBeDisabled();
   await expect(page.getByText('Этот вариант сейчас недоступен')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Выбрать доступный вариант' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /240×260 Нет в наличии/ })).toBeDisabled();
   await expect(page.getByLabel('Электронная почта для уведомления')).toHaveCount(0);
 });
 
@@ -109,14 +119,14 @@ test.describe('desktop product page variant selector', () => {
     await page.goto('/product/prod-satin-sand');
     await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
 
-    const sizeButton = page.getByTestId('product-purchase-card').getByLabel('Выберите вариант');
-    await expect(sizeButton).toBeVisible();
-    await sizeButton.click();
+    const purchaseCard = page.getByTestId('product-purchase-card');
+    const selectedSize = purchaseCard.getByRole('button', { name: /200×220 В наличии/ });
+    const unavailableSize = purchaseCard.getByRole('button', { name: /240×260 Нет в наличии/ });
 
-    await expect(page.getByRole('listbox', { name: 'Варианты товара' })).toBeVisible();
-    await page.getByRole('option', { name: /240×260/ }).click();
-
-    await expect(sizeButton).toContainText('240×260');
-    await expect(page.getByText('Нет в наличии для выбранного варианта').first()).toBeVisible();
+    await expect(selectedSize).toBeVisible();
+    await expect(selectedSize).toHaveAttribute('aria-pressed', 'true');
+    await expect(unavailableSize).toBeVisible();
+    await expect(unavailableSize).toBeDisabled();
+    await expect(page.getByRole('listbox', { name: 'Варианты товара' })).toHaveCount(0);
   });
 });

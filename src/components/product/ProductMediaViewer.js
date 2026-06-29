@@ -916,6 +916,10 @@ function ProductMediaViewer({
           media={item.media}
           src={item.url}
           alt={item.alt || productName || 'Фото товара'}
+          width={item.width || item.media?.width || 1200}
+          height={item.height || item.media?.height || 1200}
+          loading="eager"
+          priority={isCurrent}
           data-testid={isCurrent ? 'product-media-image' : undefined}
           data-scale={isCurrent ? transform.scale.toFixed(2) : undefined}
           data-translate-x={isCurrent ? Math.round(transform.x) : undefined}

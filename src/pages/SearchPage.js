@@ -58,7 +58,7 @@ function SearchPage() {
     trackProductList(visibleProducts, {
       listName: 'search_results',
       pageType: 'search',
-      startPosition: (list.safePage - 1) * list.pageSize + 1
+      startPosition: 1
     });
   }, [list.loading, list.pageSize, list.safePage, visibleProducts]);
 
@@ -375,7 +375,7 @@ function SearchPage() {
                       key={product.id}
                       product={product}
                       listName="search_results"
-                      position={(list.safePage - 1) * list.pageSize + index + 1}
+                      position={index + 1}
                     />
                   ))}
                 </div>

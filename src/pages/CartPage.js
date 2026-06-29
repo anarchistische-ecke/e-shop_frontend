@@ -33,6 +33,7 @@ function CartPage() {
   const [promoDraft, setPromoDraft] = useState('');
   const [promoStatus, setPromoStatus] = useState(null);
   const [isPromoSubmitting, setIsPromoSubmitting] = useState(false);
+  const [isPromoExpanded, setIsPromoExpanded] = useState(false);
   const managerRole = readEnv('REACT_APP_KEYCLOAK_MANAGER_ROLE', 'manager') || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
 
@@ -58,6 +59,12 @@ function CartPage() {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
   const paymentDescription = getCheckoutPaymentDescription(paymentConfig);
+  const availabilityWarnings = items.filter((item) => {
+    const line = item.pricingLine;
+    if (!line) return false;
+    return line.quantityAvailable === false || (line.availabilityStatus && line.availabilityStatus !== 'AVAILABLE');
+  });
+  const hasAvailabilityWarnings = availabilityWarnings.length > 0;
 
   useEffect(() => {
     setQuantityDrafts((prev) => {
@@ -76,6 +83,9 @@ function CartPage() {
 
   useEffect(() => {
     setPromoDraft(activePromoCode);
+    if (activePromoCode) {
+      setIsPromoExpanded(true);
+    }
   }, [activePromoCode]);
 
   useEffect(() => {
@@ -108,6 +118,14 @@ function CartPage() {
   };
 
   const handleCheckout = () => {
+    if (hasAvailabilityWarnings) {
+      setPromoStatus({
+        type: 'warning',
+        title: 'Проверьте наличие товаров',
+        message: 'Перед оформлением уменьшите количество или удалите позиции, которые сейчас недоступны.'
+      });
+      return;
+    }
     trackGoal(METRIKA_GOALS.CHECKOUT_CTA_CLICK, {
       cart_items: itemCount,
       cart_total: Math.round(total)
@@ -212,6 +230,15 @@ function CartPage() {
                         </span>
                       ) : null}
                     </div>
+                    {item.pricingLine?.availabilityMessage ? (
+                      <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        {item.pricingLine.availabilityMessage}
+                      </p>
+                    ) : item.pricingLine?.quantityAvailable === false ? (
+                      <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        Проверьте наличие: этот товар требует обновления количества.
+                      </p>
+                    ) : null}
                     <div className="col-span-2 flex flex-wrap items-center gap-2 mt-3 text-sm sm:col-span-1">
                       <div className="flex items-center gap-1 rounded-2xl border border-ink/10 bg-white/85 p-1">
                         <Button
@@ -305,49 +332,63 @@ function CartPage() {
                     <span>{saleSubtotal.toLocaleString('ru-RU')} ₽</span>
                   </div>
                 ) : null}
-                <form onSubmit={handleApplyPromoCode} className="my-4 rounded-2xl border border-ink/10 bg-sand/40 p-3">
-                  <label className="text-sm font-semibold" htmlFor="cart-promo-code">
-                    Акции и промокоды
-                  </label>
-                  <div className="mt-2 flex gap-2">
-                    <Input
-                      id="cart-promo-code"
-                      value={promoDraft}
-                      onChange={(event) => setPromoDraft(event.target.value.toUpperCase())}
-                      placeholder="ПРОМО"
-                      autoComplete="off"
-                      disabled={isPromoSubmitting}
-                    />
-                    <Button type="submit" disabled={isPromoSubmitting}>
-                      {isPromoSubmitting ? 'Проверяем…' : 'Применить'}
+                <div className="my-4 rounded-2xl border border-ink/10 bg-sand/40 p-3">
+                  {isPromoExpanded ? (
+                    <form onSubmit={handleApplyPromoCode}>
+                      <label className="text-sm font-semibold" htmlFor="cart-promo-code">
+                        Акции и промокоды
+                      </label>
+                      <div className="mt-2 flex gap-2">
+                        <Input
+                          id="cart-promo-code"
+                          value={promoDraft}
+                          onChange={(event) => setPromoDraft(event.target.value.toUpperCase())}
+                          placeholder="ПРОМО"
+                          autoComplete="off"
+                          disabled={isPromoSubmitting}
+                        />
+                        <Button type="submit" disabled={isPromoSubmitting}>
+                          {isPromoSubmitting ? 'Проверяем…' : 'Применить'}
+                        </Button>
+                      </div>
+                      {activePromoCode ? (
+                        <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
+                          <span>
+                            {isPromoCodeApplied
+                              ? `Применён промокод ${activePromoCode}`
+                              : `Промокод ${activePromoCode} сохранён, но не выбран как лучшая скидка`}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="!px-1 text-xs"
+                            onClick={handleRemovePromoCode}
+                            disabled={isPromoSubmitting}
+                          >
+                            Удалить
+                          </Button>
+                        </div>
+                      ) : null}
+                      {promoWasValidButNotChosen ? (
+                        <p className="mt-2 text-xs text-muted">
+                          Скидка по сумме корзины сейчас выгоднее промокода.
+                        </p>
+                      ) : null}
+                    </form>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="!min-h-0 !px-0 !py-0 text-primary"
+                      onClick={() => setIsPromoExpanded(true)}
+                    >
+                      У меня есть промокод
                     </Button>
-                  </div>
-                  {activePromoCode ? (
-                    <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
-                      <span>
-                        {isPromoCodeApplied
-                          ? `Применён промокод ${activePromoCode}`
-                          : `Промокод ${activePromoCode} сохранён, но не выбран как лучшая скидка`}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="!px-1 text-xs"
-                        onClick={handleRemovePromoCode}
-                        disabled={isPromoSubmitting}
-                      >
-                        Удалить
-                      </Button>
-                    </div>
-                  ) : null}
-                  {promoWasValidButNotChosen ? (
-                    <p className="mt-2 text-xs text-muted">
-                      Скидка по сумме корзины сейчас выгоднее промокода.
-                    </p>
-                  ) : null}
+                  )}
                   {promoStatus ? <NotificationBanner notification={promoStatus} compact className="mt-3" /> : null}
-                </form>
+                </div>
                 {cartDiscount > 0 ? (
                   <div className="flex justify-between mb-2 text-sm text-primary">
                     <span>{pricing?.appliedCartDiscountLabel || 'Скидка по корзине'}</span>
@@ -372,8 +413,19 @@ function CartPage() {
                   <span>Итого</span>
                   <span>{total.toLocaleString('ru-RU')} ₽</span>
                 </div>
-                <Button block className="mb-2" onClick={handleCheckout}>
-                  Оформить заказ
+                {hasAvailabilityWarnings ? (
+                  <NotificationBanner
+                    notification={{
+                      type: 'warning',
+                      title: 'Нужно обновить корзину',
+                      message: 'Некоторые позиции закончились или превышают доступное количество.'
+                    }}
+                    compact
+                    className="mb-3"
+                  />
+                ) : null}
+                <Button block className="mb-2" onClick={handleCheckout} disabled={hasAvailabilityWarnings}>
+                  {hasAvailabilityWarnings ? 'Обновите корзину' : 'Оформить заказ'}
                 </Button>
                 {!isAuthenticated && (
                   <div className="mb-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-ink/90">

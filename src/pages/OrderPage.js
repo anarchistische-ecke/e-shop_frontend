@@ -48,14 +48,20 @@ function SuccessIcon() {
   );
 }
 
+function detectInAppBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  return /Instagram|FBAN|FBAV|Telegram|VK|MicroMessenger|Line/i.test(navigator.userAgent || '');
+}
+
 function OrderPage() {
   const location = useLocation();
+  const isPaymentRoute = location.pathname.startsWith('/pay/');
   const { token } = useParams();
   const { tokenParsed } = useAuth();
   const { paymentConfig, isPaymentConfigLoaded } = usePaymentConfig();
   const initialPaymentSessionRef = useRef(
     normalizePaymentSession(location.state?.paymentSession, {
-      returnUrl: token ? buildAbsoluteAppUrl(`/order/${token}`) : ''
+      returnUrl: token ? buildAbsoluteAppUrl(isPaymentRoute ? `/pay/${token}` : `/order/${token}`) : ''
     })
   );
 
@@ -65,6 +71,7 @@ function OrderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
   const [paymentSession, setPaymentSession] = useState(() =>
     hasEmbeddedPaymentSession(initialPaymentSessionRef.current)
       ? initialPaymentSessionRef.current
@@ -74,6 +81,10 @@ function OrderPage() {
   const refreshTimerRef = useRef(null);
   const purchaseTrackedRef = useRef(false);
   const managerLinkOpenedTrackedRef = useRef(false);
+
+  useEffect(() => {
+    setIsInAppBrowser(detectInAppBrowser());
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -183,8 +194,8 @@ function OrderPage() {
     return moneyToNumber(order.totalAmount || order.total);
   }, [order]);
   const orderReturnUrl = useMemo(
-    () => buildAbsoluteAppUrl(`/order/${token}`),
-    [token]
+    () => buildAbsoluteAppUrl(isPaymentRoute ? `/pay/${token}` : `/order/${token}`),
+    [isPaymentRoute, token]
   );
 
   useEffect(() => {
@@ -295,9 +306,9 @@ function OrderPage() {
     return (
       <div className="page-shell page-section text-center text-muted">
         <Seo
-          title="Страница заказа"
+          title={isPaymentRoute ? 'Оплата заказа' : 'Страница заказа'}
           description="Загружаем актуальный статус заказа и оплату."
-          canonicalPath={token ? `/order/${token}` : '/order'}
+          canonicalPath={token ? (isPaymentRoute ? `/pay/${token}` : `/order/${token}`) : '/order'}
           robots="noindex,nofollow"
         />
         Загружаем заказ…
@@ -309,12 +320,14 @@ function OrderPage() {
     return (
       <div className="page-shell page-section text-center">
         <Seo
-          title="Заказ не найден"
+          title={isPaymentRoute ? 'Оплата недоступна' : 'Заказ не найден'}
           description="Проверьте ссылку на страницу заказа и попробуйте открыть её ещё раз."
-          canonicalPath={token ? `/order/${token}` : '/order'}
+          canonicalPath={token ? (isPaymentRoute ? `/pay/${token}` : `/order/${token}`) : '/order'}
           robots="noindex,nofollow"
         />
-        <p className="text-muted mb-4">Заказ не найден.</p>
+        <p className="text-muted mb-4">
+          Заказ не найден или ссылка уже недоступна. Напишите в поддержку: postel-yug@yandex.ru.
+        </p>
         <Button as={Link} to="/" variant="ghost">Вернуться на главную</Button>
       </div>
     );
@@ -356,6 +369,14 @@ function OrderPage() {
 
   const managerDeliveryNotice = 'Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.';
   const paidManagerMessage = 'Наш менеджер свяжется с вами в ближайшее время.';
+  const managerContext = [
+    order.managerName,
+    order.managerSubject,
+    order.createdByManager ? 'заказ подготовил менеджер' : ''
+  ].filter(Boolean).join(' · ');
+  const payButtonLabel = isPaymentRoute
+    ? `Оплатить ${total.toLocaleString('ru-RU')} ₽`
+    : paymentNotice?.ctaLabel || 'Перейти к оплате';
 
   const statusRank = {
     PENDING: 0,
@@ -371,9 +392,9 @@ function OrderPage() {
   return (
     <div className="order-page page-section">
       <Seo
-        title={`Заказ ${String(order.id).slice(0, 8)}...`}
+        title={isPaymentRoute ? `Оплата заказа ${String(order.id).slice(0, 8)}...` : `Заказ ${String(order.id).slice(0, 8)}...`}
         description={`Статус заказа: ${statusLabel}. Здесь можно проверить оплату, доставку и состав заказа.`}
-        canonicalPath={token ? `/order/${token}` : '/order'}
+        canonicalPath={token ? (isPaymentRoute ? `/pay/${token}` : `/order/${token}`) : '/order'}
         robots="noindex,nofollow"
       />
       <div className="page-shell">
@@ -381,7 +402,7 @@ function OrderPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-muted">Заказ</p>
             <h1 className="text-2xl sm:text-3xl font-semibold">
-              Заказ №{String(order.id).slice(0, 8)}
+              {isPaymentRoute ? 'Оплата заказа' : `Заказ №${String(order.id).slice(0, 8)}`}
             </h1>
             <p className="text-sm text-muted mt-1">{statusLabel}</p>
           </div>
@@ -416,6 +437,24 @@ function OrderPage() {
         </Card>
 
         {status ? <NotificationBanner notification={status} className="mb-6" /> : null}
+
+        {isPaymentRoute && isInAppBrowser ? (
+          <NotificationBanner
+            notification={{
+              type: 'warning',
+              title: 'Откройте оплату во внешнем браузере',
+              message: 'Встроенные браузеры Instagram, Telegram и VK иногда блокируют банковскую форму. Откройте ссылку в Safari, Chrome или Яндекс Браузере.'
+            }}
+            className="mb-6"
+          />
+        ) : null}
+
+        {isPaymentRoute && managerContext ? (
+          <Card variant="quiet" padding="sm" className="mb-6 text-sm">
+            <p className="font-semibold">Контекст менеджера</p>
+            <p className="mt-1 text-muted">{managerContext}</p>
+          </Card>
+        ) : null}
 
         <div className="page-grid--sidebar gap-8">
           <div className="space-y-6">
@@ -517,16 +556,22 @@ function OrderPage() {
                   {paymentRecoveryNotice ? (
                     <NotificationBanner notification={paymentRecoveryNotice} compact />
                   ) : null}
-                  <label className="block text-sm">
-                    <span className="text-muted">Электронная почта для чека</span>
-                    <Input
-                      type="email"
-                      value={receiptEmail}
-                      onChange={(event) => setReceiptEmail(event.target.value)}
-                      placeholder="pochta@example.ru"
-                      className="mt-2"
-                    />
-                  </label>
+                  {order.receiptEmail ? (
+                    <p className="rounded-2xl border border-ink/10 bg-white/80 px-3 py-3 text-xs text-muted">
+                      Чек и обновления отправим на {order.receiptEmail}.
+                    </p>
+                  ) : (
+                    <label className="block text-sm">
+                      <span className="text-muted">Электронная почта для чека</span>
+                      <Input
+                        type="email"
+                        value={receiptEmail}
+                        onChange={(event) => setReceiptEmail(event.target.value)}
+                        placeholder="pochta@example.ru"
+                        className="mt-2"
+                      />
+                    </label>
+                  )}
 
                   {showEmbeddedPayment ? (
                     <EmbeddedPaymentPanel
@@ -541,7 +586,7 @@ function OrderPage() {
                       <Button block onClick={handlePay} disabled={isPaying}>
                         {isPaying
                           ? `Открываем ${paymentConfig.providerName}…`
-                          : paymentNotice.ctaLabel}
+                          : payButtonLabel}
                       </Button>
                       {canRefresh && (
                         <Button
@@ -561,8 +606,15 @@ function OrderPage() {
                   </p>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                  Оплата получена. {paidManagerMessage}
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    Оплата получена. {paidManagerMessage}
+                  </div>
+                  {isPaymentRoute ? (
+                    <Button as={Link} to="/login" variant="secondary" block>
+                      Войти и видеть историю заказов
+                    </Button>
+                  ) : null}
                 </div>
               )}
             </Card>
@@ -574,6 +626,15 @@ function OrderPage() {
           </aside>
         </div>
       </div>
+      {isPaymentRoute && canPay && !showEmbeddedPayment ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/80 bg-white/92 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shadow-[0_-18px_36px_rgba(43,39,34,0.12)] backdrop-blur lg:hidden">
+          <div className="page-shell py-2.5">
+            <Button block onClick={handlePay} disabled={isPaying}>
+              {isPaying ? `Открываем ${paymentConfig.providerName}…` : payButtonLabel}
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

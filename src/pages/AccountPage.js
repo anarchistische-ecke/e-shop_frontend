@@ -1,14 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
+  createCustomerRmaRequest,
   getActivePromotions,
   getCustomerOrders,
+  getCustomerRmaRequests,
   updateCustomerProfile
 } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
-import { Button, Card, Input, Select, Tabs } from '../components/ui';
+import { Button, Card, Input, Modal, Select, Tabs, Textarea } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
+import { CartContext } from '../contexts/CartContext';
 import { moneyToNumber } from '../utils/product';
 import {
   ACCOUNT_DEFAULT_SECTION,
@@ -156,6 +159,15 @@ const formatOrderStatus = (status) => {
 function AccountPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const cartContext = useContext(CartContext) || {};
+  const addVariantItem = cartContext.addVariantItem || (async () => ({
+    ok: false,
+    notification: {
+      type: 'error',
+      title: 'Корзина недоступна',
+      message: 'Обновите страницу и попробуйте ещё раз.'
+    }
+  }));
   const { isAuthenticated, isReady, tokenParsed, logout, refreshProfile, hasRole, hasStrongAuth } = useAuth();
   const customerRole = readEnv('REACT_APP_KEYCLOAK_CUSTOMER_ROLE', 'customer') || 'customer';
   const managerRole = readEnv('REACT_APP_KEYCLOAK_MANAGER_ROLE', 'manager') || 'manager';
@@ -177,6 +189,15 @@ function AccountPage() {
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
   const [activePromotions, setActivePromotions] = useState({ promotions: [], promoCodes: [] });
+  const [orderActionStatus, setOrderActionStatus] = useState(null);
+  const [rmaOrder, setRmaOrder] = useState(null);
+  const [rmaItems, setRmaItems] = useState({});
+  const [rmaReason, setRmaReason] = useState('');
+  const [rmaResolution, setRmaResolution] = useState('Возврат средств');
+  const [rmaRequests, setRmaRequests] = useState([]);
+  const [rmaStatus, setRmaStatus] = useState(null);
+  const [isRmaLoading, setIsRmaLoading] = useState(false);
+  const [isRmaSubmitting, setIsRmaSubmitting] = useState(false);
 
   const routeState = useMemo(() => {
     const nextState = resolveAccountLocationState({
@@ -409,6 +430,20 @@ function AccountPage() {
       : date.toLocaleDateString('ru-RU');
   };
 
+  const getOrderStatusUpdatedLabel = (order) => {
+    const rawDate =
+      order?.statusUpdatedAt ||
+      order?.updatedAt ||
+      order?.paidAt ||
+      order?.deliveredAt ||
+      order?.createdAt ||
+      order?.orderDate;
+    if (!rawDate) return 'Дата статуса уточняется';
+    const date = new Date(rawDate);
+    if (Number.isNaN(date.getTime())) return 'Дата статуса уточняется';
+    return date.toLocaleString('ru-RU');
+  };
+
   const getOrderDeliveryLabel = (order) => {
     if (!order) return 'Уточним после подтверждения заказа';
     if (order.homeAddress) return order.homeAddress;
@@ -422,6 +457,148 @@ function AccountPage() {
     const numeric = Number(amount);
     if (!Number.isFinite(numeric)) return '';
     return `${(numeric / 100).toLocaleString('ru-RU')} ${currency}`;
+  };
+
+  const handleReorder = async (order) => {
+    const orderItems = Array.isArray(order?.items) ? order.items : [];
+    const purchasableItems = orderItems.filter((item) => item.variantId);
+    if (!purchasableItems.length) {
+      setOrderActionStatus({
+        type: 'warning',
+        title: 'Не удалось повторить заказ',
+        message: 'В заказе нет вариантов товаров, которые можно добавить в корзину.'
+      });
+      return;
+    }
+
+    setOrderActionStatus(null);
+    for (const item of purchasableItems) {
+      const result = await addVariantItem(item.variantId, item.quantity || 1, { notifyOnError: false });
+      if (result?.ok === false) {
+        setOrderActionStatus(result.notification || {
+          type: 'error',
+          title: 'Не удалось повторить заказ',
+          message: 'Один из товаров закончился или недоступен.'
+        });
+        return;
+      }
+    }
+
+    setOrderActionStatus({
+      type: 'success',
+      title: 'Товары добавлены в корзину',
+      message: 'Проверьте актуальное наличие и оформите заказ.'
+    });
+  };
+
+  const loadRmaRequests = async (orderId) => {
+    if (!orderId) return;
+    setIsRmaLoading(true);
+    try {
+      const data = await getCustomerRmaRequests(orderId);
+      setRmaRequests(Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load RMA requests:', err);
+      setRmaRequests([]);
+    } finally {
+      setIsRmaLoading(false);
+    }
+  };
+
+  const openRmaModal = (order) => {
+    const nextItems = {};
+    (Array.isArray(order?.items) ? order.items : []).forEach((item) => {
+      if (!item.id) return;
+      nextItems[item.id] = {
+        selected: false,
+        quantity: Math.min(1, Math.max(1, Number(item.quantity || 1))),
+        max: Math.max(1, Number(item.quantity || 1))
+      };
+    });
+    setRmaOrder(order);
+    setRmaItems(nextItems);
+    setRmaReason('');
+    setRmaResolution('Возврат средств');
+    setRmaStatus(null);
+    setRmaRequests([]);
+    loadRmaRequests(order?.id);
+  };
+
+  const closeRmaModal = () => {
+    if (isRmaSubmitting) return;
+    setRmaOrder(null);
+    setRmaStatus(null);
+  };
+
+  const toggleRmaItem = (itemId) => {
+    setRmaItems((current) => ({
+      ...current,
+      [itemId]: {
+        ...current[itemId],
+        selected: !current[itemId]?.selected
+      }
+    }));
+  };
+
+  const updateRmaQuantity = (itemId, value) => {
+    const parsed = Number.parseInt(value, 10);
+    setRmaItems((current) => {
+      const entry = current[itemId];
+      if (!entry) return current;
+      const quantity = Number.isFinite(parsed)
+        ? Math.max(1, Math.min(entry.max, parsed))
+        : 1;
+      return {
+        ...current,
+        [itemId]: {
+          ...entry,
+          quantity
+        }
+      };
+    });
+  };
+
+  const handleSubmitRma = async () => {
+    const selectedItems = Object.entries(rmaItems)
+      .filter(([, entry]) => entry.selected)
+      .map(([orderItemId, entry]) => ({
+        orderItemId,
+        quantity: entry.quantity
+      }));
+
+    if (!rmaOrder?.id || selectedItems.length === 0) {
+      setRmaStatus({
+        type: 'warning',
+        title: 'Выберите товары',
+        message: 'Отметьте хотя бы одну позицию для возврата.'
+      });
+      return;
+    }
+
+    setIsRmaSubmitting(true);
+    setRmaStatus(null);
+    try {
+      await createCustomerRmaRequest(rmaOrder.id, {
+        reason: rmaReason.trim(),
+        desiredResolution: rmaResolution,
+        items: selectedItems
+      });
+      setRmaStatus({
+        type: 'success',
+        title: 'Заявка на возврат создана',
+        message: 'Менеджер проверит заявку и свяжется с вами.'
+      });
+      await loadRmaRequests(rmaOrder.id);
+    } catch (err) {
+      console.error('Failed to create RMA request:', err);
+      setRmaStatus({
+        type: 'error',
+        title: 'Не удалось создать заявку',
+        message: err?.message || 'Проверьте выбранные товары и попробуйте ещё раз.'
+      });
+    } finally {
+      setIsRmaSubmitting(false);
+    }
   };
 
   const promotionCards = [
@@ -647,6 +824,9 @@ function AccountPage() {
               <h2 className="text-xl sm:text-2xl font-semibold">Мои заказы</h2>
               <span className="text-xs text-muted">{orders.length} заказов</span>
             </div>
+            {orderActionStatus ? (
+              <NotificationBanner notification={orderActionStatus} className="mb-4" />
+            ) : null}
             {isOrdersLoading ? (
               <p className="text-sm text-muted">Загружаем историю заказов…</p>
             ) : ordersError ? (
@@ -673,16 +853,27 @@ function AccountPage() {
                         <p className="mt-1 text-sm text-muted">
                           {getOrderDateLabel(selectedOrder, { withTime: true })} · {formatOrderStatus(selectedOrder.status)}
                         </p>
+                        <p className="mt-1 text-xs text-muted">
+                          Статус обновлён: {getOrderStatusUpdatedLabel(selectedOrder)}
+                        </p>
                       </div>
-                      {selectedOrder.publicToken ? (
-                        <Button as={Link} to={buildAccountOrderPath(selectedOrder)} variant="secondary" size="sm">
-                          Открыть страницу заказа
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {selectedOrder.publicToken ? (
+                          <Button as={Link} to={buildAccountOrderPath(selectedOrder)} variant="secondary" size="sm">
+                            Открыть страницу заказа
+                          </Button>
+                        ) : (
+                          <span className="max-w-xs text-xs text-muted">
+                            Детали доступны здесь, в личном кабинете.
+                          </span>
+                        )}
+                        <Button type="button" variant="secondary" size="sm" onClick={() => handleReorder(selectedOrder)}>
+                          Повторить заказ
                         </Button>
-                      ) : (
-                        <span className="max-w-xs text-xs text-muted">
-                          Для этого заказа нет публичной ссылки, поэтому актуальные детали доступны здесь, в личном кабинете.
-                        </span>
-                      )}
+                        <Button type="button" variant="ghost" size="sm" onClick={() => openRmaModal(selectedOrder)}>
+                          Оформить возврат
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -792,6 +983,9 @@ function AccountPage() {
                       <div>
                         <p className="text-sm font-semibold">Заказ {String(order.id).slice(0, 8)}...</p>
                         <p className="text-xs text-muted">{dateStr} · {formatOrderStatus(order.status)}</p>
+                        <p className="mt-0.5 text-[11px] text-muted">
+                          Статус обновлён: {getOrderStatusUpdatedLabel(order)}
+                        </p>
                       </div>
                       <div className="text-sm text-right">
                         <p className="font-semibold">{totalAmount.toLocaleString('ru-RU')} ₽</p>
@@ -808,6 +1002,24 @@ function AccountPage() {
                           {!order.publicToken ? (
                             <span className="text-[11px] text-muted">Детали доступны в кабинете</span>
                           ) : null}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="!min-h-0 !px-0 !py-0 text-xs text-primary"
+                            onClick={() => handleReorder(order)}
+                          >
+                            Повторить заказ
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="!min-h-0 !px-0 !py-0 text-xs text-muted"
+                            onClick={() => openRmaModal(order)}
+                          >
+                            Возврат
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -989,6 +1201,113 @@ function AccountPage() {
           </section>
         </div>
       </div>
+      <Modal
+        open={Boolean(rmaOrder)}
+        onClose={closeRmaModal}
+        placement="sheet"
+        size="md"
+        title="Заявка на возврат"
+        description={rmaOrder ? `Заказ ${String(rmaOrder.id).slice(0, 8)}...` : 'Возврат'}
+      >
+        {rmaStatus ? <NotificationBanner notification={rmaStatus} className="mb-4" /> : null}
+
+        {isRmaLoading ? (
+          <p className="text-sm text-muted">Загружаем существующие заявки…</p>
+        ) : rmaRequests.length > 0 ? (
+          <div className="mb-4 rounded-2xl border border-ink/10 bg-sand/35 px-3 py-3 text-sm">
+            <p className="font-semibold">Ранее созданные заявки</p>
+            <div className="mt-2 space-y-2">
+              {rmaRequests.map((request) => (
+                <div key={request.id} className="rounded-xl bg-white/85 px-3 py-2">
+                  <p className="font-medium">{request.rmaNumber || String(request.id).slice(0, 8)}</p>
+                  <p className="text-xs text-muted">
+                    {request.status || 'REQUESTED'} · {(request.items || []).length} позиций
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-sm font-semibold">Товары</p>
+            <div className="space-y-2">
+              {(Array.isArray(rmaOrder?.items) ? rmaOrder.items : []).map((item, index) => {
+                const itemKey = item.id || `${item.variantId || 'item'}-${index}`;
+                const entry = rmaItems[item.id] || {};
+                const canSelect = Boolean(item.id);
+                return (
+                  <div
+                    key={itemKey}
+                    className="grid grid-cols-[auto_minmax(0,1fr)_88px] items-center gap-3 rounded-2xl border border-ink/10 bg-white/90 px-3 py-3 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(entry.selected)}
+                      onChange={() => toggleRmaItem(item.id)}
+                      disabled={!canSelect || isRmaSubmitting}
+                      aria-label={`Выбрать ${item.productName || item.variantName || 'товар'} для возврата`}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">
+                        {item.productName || item.variantName || item.sku || 'Товар'}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {item.variantName || item.sku || 'Вариант уточняется'} · куплено {item.quantity || 0} шт.
+                      </p>
+                    </div>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={entry.max || item.quantity || 1}
+                      value={entry.quantity || 1}
+                      onChange={(event) => updateRmaQuantity(item.id, event.target.value)}
+                      disabled={!entry.selected || isRmaSubmitting}
+                      aria-label="Количество к возврату"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className="block text-sm">
+            <span className="text-muted">Причина</span>
+            <Textarea
+              value={rmaReason}
+              onChange={(event) => setRmaReason(event.target.value)}
+              rows={3}
+              placeholder="Например: не подошёл размер или оттенок"
+              className="mt-2"
+              disabled={isRmaSubmitting}
+            />
+          </label>
+
+          <label className="block text-sm">
+            <span className="text-muted">Желаемое решение</span>
+            <Select
+              value={rmaResolution}
+              onChange={(event) => setRmaResolution(event.target.value)}
+              className="mt-2"
+              disabled={isRmaSubmitting}
+            >
+              <option value="Возврат средств">Возврат средств</option>
+              <option value="Обмен">Обмен</option>
+              <option value="Связаться со мной">Связаться со мной</option>
+            </Select>
+          </label>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button type="button" onClick={handleSubmitRma} disabled={isRmaSubmitting}>
+              {isRmaSubmitting ? 'Отправляем…' : 'Отправить заявку'}
+            </Button>
+            <Button type="button" variant="secondary" onClick={closeRmaModal} disabled={isRmaSubmitting}>
+              Закрыть
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

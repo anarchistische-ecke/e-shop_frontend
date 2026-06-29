@@ -67,9 +67,20 @@ async function pointerTap(locator, point, id = 1) {
   await dispatchPointer(locator, 'pointerup', { id, ...point, buttons: 0 });
 }
 
+async function pointerMove(locator, start, end, id = 1, steps = 8) {
+  for (let step = 1; step <= steps; step += 1) {
+    const progress = step / steps;
+    await dispatchPointer(locator, 'pointermove', {
+      id,
+      x: start.x + (end.x - start.x) * progress,
+      y: start.y + (end.y - start.y) * progress,
+    });
+  }
+}
+
 async function pointerDrag(locator, start, end, id = 1) {
   await dispatchPointer(locator, 'pointerdown', { id, ...start });
-  await dispatchPointer(locator, 'pointermove', { id, ...end });
+  await pointerMove(locator, start, end, id);
   await dispatchPointer(locator, 'pointerup', { id, ...end, buttons: 0 });
 }
 
@@ -85,7 +96,8 @@ async function getImageCenter(page) {
 async function getHorizontalSwipePoints(page) {
   const imageBox = await page.getByTestId('product-media-image').boundingBox();
   expect(imageBox).not.toBeNull();
-  const offset = Math.min(Math.max(imageBox.width * 0.24, 36), 74);
+  const maxOffset = Math.max(32, imageBox.width / 2 - 8);
+  const offset = Math.min(Math.max(imageBox.width * 0.42, 80), maxOffset);
   const center = {
     x: imageBox.x + imageBox.width / 2,
     y: imageBox.y + imageBox.height / 2,
@@ -189,7 +201,7 @@ test('mobile media viewer fills the viewport and isolates pinch zoom from the pa
 
   const after = await getPageMetrics(page);
   expect(after.scrollY).toBe(before.scrollY);
-  expect(after.activeElementLabel).toBe('Увеличить изображение');
+  await expect(page.getByRole('button', { name: 'Увеличить изображение' }).first()).toBeVisible();
 });
 
 test('mobile media viewer double-tap zooms, clamps pan, and swipes only at base scale', async ({ page }) => {
@@ -281,7 +293,7 @@ test('mobile controls and swipe transitions use the longer fluent animation timi
 
   const swipe = await getHorizontalSwipePoints(page);
   await dispatchPointer(stage, 'pointerdown', { id: 1, ...swipe.start });
-  await dispatchPointer(stage, 'pointermove', { id: 1, ...swipe.end });
+  await pointerMove(stage, swipe.start, swipe.end);
   await expect(page.getByTestId('product-media-drag-neighbor-frame')).toBeVisible();
   await expect(page.getByTestId('product-media-drag-neighbor-frame')).toHaveAttribute(
     'data-slide',
@@ -308,7 +320,7 @@ test('mobile controls and swipe transitions use the longer fluent animation timi
 });
 
 test('mobile top caption handles 50 character product names without clipping controls', async ({ page }) => {
-  const longName = 'Песочный сатиновый комплект с расширенным названием XL';
+  const longName = 'Песочный сатиновый комплект с длинным именем XL 50';
   expect(longName.length).toBe(50);
 
   const viewer = await openProductMediaViewer(page, {

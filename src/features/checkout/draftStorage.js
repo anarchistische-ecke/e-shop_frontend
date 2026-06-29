@@ -1,12 +1,12 @@
-import { CHECKOUT_DRAFT_VERSION } from './constants';
+import { CHECKOUT_DRAFT_TTL_MS, CHECKOUT_DRAFT_VERSION } from './constants';
 
 const STORAGE_PREFIX = 'checkout-draft:v1:';
 
-function getSessionStorage() {
-  if (typeof window === 'undefined' || !window.sessionStorage) {
+function getDraftStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) {
     return null;
   }
-  return window.sessionStorage;
+  return window.localStorage;
 }
 
 export function buildCheckoutDraftKey(cartId) {
@@ -14,15 +14,21 @@ export function buildCheckoutDraftKey(cartId) {
 }
 
 export function loadCheckoutDraft(cartId) {
-  const storage = getSessionStorage();
+  const storage = getDraftStorage();
   if (!storage || !cartId) return null;
 
   try {
-    const rawValue = storage.getItem(buildCheckoutDraftKey(cartId));
+    const draftKey = buildCheckoutDraftKey(cartId);
+    const rawValue = storage.getItem(draftKey);
     if (!rawValue) return null;
     const payload = JSON.parse(rawValue);
     if (payload?.version !== CHECKOUT_DRAFT_VERSION) {
-      storage.removeItem(buildCheckoutDraftKey(cartId));
+      storage.removeItem(draftKey);
+      return null;
+    }
+    const savedAt = Number(payload?.savedAt || 0);
+    if (!Number.isFinite(savedAt) || Date.now() - savedAt > CHECKOUT_DRAFT_TTL_MS) {
+      storage.removeItem(draftKey);
       return null;
     }
     return payload;
@@ -33,7 +39,7 @@ export function loadCheckoutDraft(cartId) {
 }
 
 export function saveCheckoutDraft(cartId, draft) {
-  const storage = getSessionStorage();
+  const storage = getDraftStorage();
   if (!storage || !cartId) return;
   storage.setItem(
     buildCheckoutDraftKey(cartId),
@@ -46,7 +52,7 @@ export function saveCheckoutDraft(cartId, draft) {
 }
 
 export function clearCheckoutDraft(cartId) {
-  const storage = getSessionStorage();
+  const storage = getDraftStorage();
   if (!storage || !cartId) return;
   storage.removeItem(buildCheckoutDraftKey(cartId));
 }

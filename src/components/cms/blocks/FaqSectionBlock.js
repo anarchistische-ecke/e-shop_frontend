@@ -57,7 +57,7 @@ function FaqSectionBlock({ section }) {
       ) : (
         <Card padding="lg" className="rounded-[24px] border border-dashed border-ink/12 bg-white/74">
           <p className="m-0 text-sm leading-6 text-muted">
-            Для этого FAQ-блока пока не привязаны вопросы. Как только редакторы добавят FAQ-элементы,
+            Для этого блока вопросов и ответов пока не привязаны вопросы. Как только редакторы добавят вопросы,
             они появятся здесь автоматически.
           </p>
         </Card>
