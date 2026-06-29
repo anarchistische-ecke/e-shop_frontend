@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCmsNavigation, useCmsSiteSettings } from '../contexts/CmsContentContext';
+import { WishlistContext } from '../contexts/WishlistContext';
 import { DEFAULT_HEADER_NAVIGATION } from '../data/cms/defaults';
 import { Button } from './ui';
 import AccountMenu from './header/AccountMenu';
 import BottomNavBar from './header/BottomNavBar';
 import CartButton from './header/CartButton';
 import DesktopMegaMenu from './header/DesktopMegaMenu';
+import FavoritesButton from './header/FavoritesButton';
 import HeaderBrand from './header/HeaderBrand';
 import LastAddedCartNotice from './header/LastAddedCartNotice';
 import MobileMenu from './header/MobileMenu';
@@ -47,6 +49,7 @@ function HeaderUtilityLink({ item }) {
 
 function Header() {
   const header = useHeaderState();
+  const { count: wishlistCount } = useContext(WishlistContext);
   const [isUtilityCollapsed, setIsUtilityCollapsed] = useState(false);
   const { siteSettings } = useCmsSiteSettings();
   const { navigation: headerNavigation } = useCmsNavigation({
@@ -146,6 +149,7 @@ function Header() {
                   </Button>
 
                   <CartButton totalItems={header.totalItems} />
+                  <FavoritesButton totalItems={wishlistCount} />
 
                   <AccountMenu
                     accountLinks={header.accountLinks}
@@ -180,6 +184,7 @@ function Header() {
         searchTerm={header.searchTerm}
         siteName={siteSettings.siteName}
         utilityNavigation={headerNavigation}
+        wishlistCount={wishlistCount}
       />
 
       <BottomNavBar

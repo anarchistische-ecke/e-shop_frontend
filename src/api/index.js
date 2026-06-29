@@ -449,6 +449,15 @@ export async function updateCustomerSubscription(marketingOptIn) {
 export async function getCustomerOrders() {
   return request('/orders/me');
 }
+export async function getCustomerRmaRequests(orderId) {
+  return request(`/orders/me/${encodeURIComponent(orderId)}/rma-requests`);
+}
+export async function createCustomerRmaRequest(orderId, payload) {
+  return request(`/orders/me/${encodeURIComponent(orderId)}/rma-requests`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
 export async function getManagerProfile() {
   return request('/managers/me');
 }

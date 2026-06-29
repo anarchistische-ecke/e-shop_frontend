@@ -25,7 +25,7 @@ function ContactStep({
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">1</span>
           <div>
             <h2 className="text-2xl font-semibold">Контакты</h2>
-            <p className="text-sm text-muted">Нужны имя, телефон и электронная почта для заказа и связи менеджера.</p>
+            <p className="text-sm text-muted">Нужны имя, телефон и электронная почта для чека и обновлений по заказу.</p>
           </div>
         </div>
         {!active ? (

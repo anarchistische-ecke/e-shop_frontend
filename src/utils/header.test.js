@@ -41,6 +41,8 @@ describe('header utils', () => {
 
   it('resolves wayfinding labels and account links', () => {
     expect(resolveWayfindingLabel('/checkout')).toBe('Оформление');
+    expect(resolveWayfindingLabel('/pay/token-1')).toBe('Оплата заказа');
+    expect(resolveWayfindingLabel('/favorites')).toBe('Избранное');
     expect(resolveWayfindingLabel('/manager/payment-link')).toBe('Ссылка на оплату');
     expect(resolveWayfindingLabel('/search', '?query=плед')).toBe('Поиск');
     expect(resolveWayfindingLabel('/category/search?query=плед')).toBe('Поиск');
@@ -66,6 +68,7 @@ describe('header utils', () => {
     expect(shouldShowMobileBottomNav('/login')).toBe(true);
     expect(shouldShowMobileBottomNav('/product/1/test')).toBe(false);
     expect(shouldShowMobileBottomNav('/checkout')).toBe(false);
+    expect(shouldShowMobileBottomNav('/pay/token-1')).toBe(false);
 
     expect(resolveMobileBottomNavKey({ pathname: '/' })).toBe('home');
     expect(resolveMobileBottomNavKey({ pathname: '/search', search: '?query=плед' })).toBe(

@@ -93,6 +93,23 @@ export function CartIcon({ className = 'h-5 w-5' }) {
   );
 }
 
+export function HeartIcon({ className = 'h-5 w-5', filled = false }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20.5 5.8a5.2 5.2 0 0 0-7.4 0L12 6.9l-1.1-1.1a5.2 5.2 0 0 0-7.4 7.4L12 21l8.5-7.8a5.2 5.2 0 0 0 0-7.4z" />
+    </svg>
+  );
+}
+
 export function UserIcon({ className = 'h-5 w-5' }) {
   return (
     <svg

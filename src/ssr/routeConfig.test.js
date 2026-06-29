@@ -35,6 +35,14 @@ describe('storefront route config', () => {
       id: 'checkout',
       renderMode: 'csr'
     });
+    expect(matchStorefrontRoute('/favorites').route).toMatchObject({
+      id: 'favorites',
+      renderMode: 'csr'
+    });
+    expect(matchStorefrontRoute('/pay/public-token').route).toMatchObject({
+      id: 'pay',
+      renderMode: 'csr'
+    });
     expect(matchStorefrontRoute('/manager/payment-link').route).toMatchObject({
       id: 'manager-payment-link',
       renderMode: 'csr'

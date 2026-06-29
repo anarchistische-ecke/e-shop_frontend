@@ -291,7 +291,7 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
   const pagedProducts = useMemo(
     () =>
       sortedProducts.slice(
-        (safePage - 1) * PRODUCT_LIST_PAGE_SIZE,
+        0,
         safePage * PRODUCT_LIST_PAGE_SIZE
       ),
     [safePage, sortedProducts]

@@ -81,6 +81,37 @@ function fulfillJson(route, payload, status = 200) {
   });
 }
 
+function createCustomerProfile(overrides = {}) {
+  return {
+    id: 'customer-e2e-1',
+    firstName: 'Иван',
+    lastName: 'Петров',
+    email: 'buyer@example.com',
+    phone: '+79990000000',
+    birthDate: '',
+    gender: 'female',
+    marketingOptIn: false,
+    ...overrides,
+  };
+}
+
+function createCustomerOrder(overrides = {}) {
+  return {
+    ...clone(publicOrder),
+    status: 'PAID',
+    createdAt: '2026-06-20T10:00:00.000Z',
+    updatedAt: '2026-06-20T10:15:00.000Z',
+    statusUpdatedAt: '2026-06-20T10:15:00.000Z',
+    paymentSummary: {
+      status: 'COMPLETED',
+      refundedAmount: { amount: 0, currency: 'RUB' },
+      refundableAmount: { amount: 420000, currency: 'RUB' },
+      refunds: [],
+    },
+    ...overrides,
+  };
+}
+
 const cmsSiteSettings = {
   siteName: 'Постельное Белье-ЮГ',
   brandDescription: 'Домашний текстиль с понятной доставкой и оплатой.',
@@ -367,11 +398,17 @@ async function mockStorefrontApi(page, overrides = {}) {
   const storefrontProducts = clone(overrides.products || products);
   const stats = {
     addItemRequests: 0,
+    addItemPayloads: [],
     checkoutRequests: 0,
     checkoutPayloads: [],
     managerLinkRequests: 0,
     managerLinkPayloads: [],
     publicPayRequests: 0,
+    publicPayPayloads: [],
+    customerOrdersRequests: 0,
+    customerRmaListRequests: 0,
+    customerRmaCreateRequests: 0,
+    customerRmaPayloads: [],
   };
   const paymentProviderConfig = {
     ...clone(paymentProvider),
@@ -395,10 +432,21 @@ async function mockStorefrontApi(page, overrides = {}) {
       confirmationUrl: 'https://payments.example.test/retry',
       confirmationToken: '',
     };
+  let customerProfile = createCustomerProfile(overrides.customerProfile);
+  const customerOrders = clone(overrides.customerOrders || [createCustomerOrder()]);
+  const rmaRequestsByOrderId = new Map();
+  customerOrders.forEach((order) => {
+    rmaRequestsByOrderId.set(String(order.id), clone(overrides.rmaRequestsByOrderId?.[order.id] || []));
+  });
 
   await page.addInitScript(() => {
+    const initializationFlag = '__mock_storefront_api_initialized__';
+    if (window.name && window.name.includes(initializationFlag)) {
+      return;
+    }
     window.localStorage.clear();
     window.sessionStorage.clear();
+    window.name = window.name ? `${window.name}|${initializationFlag}` : initializationFlag;
   });
 
   await page.route('**/*', async (route) => {
@@ -441,6 +489,19 @@ async function mockStorefrontApi(page, overrides = {}) {
 
     if (pathname === '/promotions/active' && method === 'GET') {
       return fulfillJson(route, { promotions: [], promoCodes: [] });
+    }
+
+    if (pathname === '/customers/me' && method === 'GET') {
+      return fulfillJson(route, clone(customerProfile));
+    }
+
+    if (pathname === '/customers/me' && method === 'PUT') {
+      const body = request.postDataJSON();
+      customerProfile = {
+        ...customerProfile,
+        ...body,
+      };
+      return fulfillJson(route, clone(customerProfile));
     }
 
     if (pathname === '/categories' && method === 'GET') {
@@ -512,6 +573,7 @@ async function mockStorefrontApi(page, overrides = {}) {
         await new Promise((resolve) => setTimeout(resolve, overrides.addItemDelayMs));
       }
       const body = request.postDataJSON();
+      stats.addItemPayloads.push(body);
       const quantity = Number(body.quantity) || 1;
       const variantId = body.variantId;
       const resolved = findVariant(storefrontProducts, variantId);
@@ -559,6 +621,52 @@ async function mockStorefrontApi(page, overrides = {}) {
       return fulfillJson(route, clone(checkoutResponse));
     }
 
+    if (pathname === '/orders/me' && method === 'GET') {
+      stats.customerOrdersRequests += 1;
+      return fulfillJson(route, clone(customerOrders));
+    }
+
+    if (/^\/orders\/me\/[^/]+\/rma-requests$/.test(pathname)) {
+      const orderId = decodeURIComponent(pathname.split('/')[3]);
+      const existingRequests = rmaRequestsByOrderId.get(orderId) || [];
+
+      if (method === 'GET') {
+        stats.customerRmaListRequests += 1;
+        return fulfillJson(route, { items: clone(existingRequests) });
+      }
+
+      if (method === 'POST') {
+        stats.customerRmaCreateRequests += 1;
+        const body = request.postDataJSON();
+        stats.customerRmaPayloads.push(body);
+        const nextRequest = {
+          id: `rma-e2e-${existingRequests.length + 1}`,
+          rmaNumber: `RMA-E2E-${String(existingRequests.length + 1).padStart(3, '0')}`,
+          orderId,
+          customerEmail: customerProfile.email,
+          status: 'REQUESTED',
+          reason: body.reason || '',
+          desiredResolution: body.desiredResolution || '',
+          managerComment: '',
+          decidedBy: '',
+          decidedAt: null,
+          decisionVersion: 0,
+          items: (Array.isArray(body.items) ? body.items : []).map((item, index) => ({
+            id: `rma-e2e-${existingRequests.length + 1}-item-${index + 1}`,
+            orderItemId: item.orderItemId,
+            quantity: item.quantity,
+            createdAt: '2026-06-20T11:00:00.000Z',
+            updatedAt: '2026-06-20T11:00:00.000Z',
+          })),
+          createdAt: '2026-06-20T11:00:00.000Z',
+          updatedAt: '2026-06-20T11:00:00.000Z',
+        };
+        existingRequests.unshift(nextRequest);
+        rmaRequestsByOrderId.set(orderId, existingRequests);
+        return fulfillJson(route, clone(nextRequest), 201);
+      }
+    }
+
     if (pathname === '/orders/manager-link' && method === 'POST') {
       stats.managerLinkRequests += 1;
       stats.managerLinkPayloads.push(request.postDataJSON());
@@ -577,6 +685,7 @@ async function mockStorefrontApi(page, overrides = {}) {
 
     if (pathname === `/orders/public/${publicOrderPayload.publicToken}/pay` && method === 'POST') {
       stats.publicPayRequests += 1;
+      stats.publicPayPayloads.push(request.postDataJSON());
       return fulfillJson(route, clone(payResponse));
     }
 
@@ -591,5 +700,7 @@ async function mockStorefrontApi(page, overrides = {}) {
 }
 
 module.exports = {
+  createCustomerOrder,
+  createCustomerProfile,
   mockStorefrontApi,
 };

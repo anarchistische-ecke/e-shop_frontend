@@ -110,7 +110,8 @@ function MobileMenu({
   onTrackCategoryClick,
   searchTerm,
   siteName,
-  utilityNavigation = []
+  utilityNavigation = [],
+  wishlistCount = 0
 }) {
   const panelRef = useRef(null);
   const closeButtonRef = useRef(null);
@@ -220,6 +221,13 @@ function MobileMenu({
                   className="focus-ring-soft inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-3 text-sm font-semibold text-ink"
                 >
                   Новинки
+                </Link>
+                <Link
+                  to="/favorites"
+                  onClick={onClose}
+                  className="focus-ring-soft inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-ink/10 bg-white px-3 text-sm font-semibold text-ink"
+                >
+                  Избранное{wishlistCount > 0 ? ` · ${wishlistCount}` : ''}
                 </Link>
               </div>
             </nav>

@@ -174,6 +174,7 @@ const publicOrder = {
   items: [
     {
       id: 'order-item-1',
+      variantId: 'var-satin-sand-200',
       productName: 'Песочный сатиновый комплект',
       variantName: '200×220',
       quantity: 1,

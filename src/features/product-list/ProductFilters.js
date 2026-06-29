@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, FilterToggle, Input, Modal, Select } from '../../components/ui';
 
 function ProductFilterFields({
@@ -101,6 +101,7 @@ export function ProductFiltersPanel({
   onToggleInStock,
   onToggleSale,
   onClearAll,
+  onApplyFilters,
   isFilterOpen,
   onOpenFilters,
   onCloseFilters,
@@ -134,6 +135,7 @@ export function ProductFiltersPanel({
         onMaxPriceChange={onMaxPriceChange}
         onToggleInStock={onToggleInStock}
         onToggleSale={onToggleSale}
+        onApplyFilters={onApplyFilters}
         onClearAll={onClearAll}
         isFilterOpen={isFilterOpen}
         onCloseFilters={onCloseFilters}
@@ -199,12 +201,53 @@ export function ProductFiltersSheet({
   onMaxPriceChange,
   onToggleInStock,
   onToggleSale,
+  onApplyFilters,
   onClearAll,
   isFilterOpen,
   onCloseFilters,
   title = 'Уточните выбор',
   description = 'Фильтры'
 }) {
+  const [draftParams, setDraftParams] = useState(params);
+
+  useEffect(() => {
+    if (isFilterOpen) {
+      setDraftParams(params);
+    }
+  }, [isFilterOpen, params]);
+
+  const updateDraft = (patch) => {
+    setDraftParams((current) => ({
+      ...current,
+      ...patch
+    }));
+  };
+
+  const applyDraft = () => {
+    if (onApplyFilters) {
+      onApplyFilters(draftParams);
+      onCloseFilters();
+      return;
+    }
+    if (draftParams.brand !== params.brand) onBrandChange(draftParams.brand);
+    if (draftParams.minPrice !== params.minPrice) onMinPriceChange(draftParams.minPrice);
+    if (draftParams.maxPrice !== params.maxPrice) onMaxPriceChange(draftParams.maxPrice);
+    if (Boolean(draftParams.inStock) !== Boolean(params.inStock)) onToggleInStock();
+    if (Boolean(draftParams.sale) !== Boolean(params.sale)) onToggleSale();
+    onCloseFilters();
+  };
+
+  const clearDraft = () => {
+    setDraftParams({
+      ...params,
+      brand: '',
+      minPrice: '',
+      maxPrice: '',
+      inStock: false,
+      sale: false
+    });
+  };
+
   return (
     <Modal
       panelId="product-filters-sheet"
@@ -220,22 +263,22 @@ export function ProductFiltersSheet({
         <ProductFilterFields
           brands={brands}
           priceBounds={priceBounds}
-          params={params}
-          onBrandChange={onBrandChange}
-          onMinPriceChange={onMinPriceChange}
-          onMaxPriceChange={onMaxPriceChange}
-          onToggleInStock={onToggleInStock}
-          onToggleSale={onToggleSale}
+          params={draftParams}
+          onBrandChange={(brand) => updateDraft({ brand })}
+          onMinPriceChange={(minPrice) => updateDraft({ minPrice })}
+          onMaxPriceChange={(maxPrice) => updateDraft({ maxPrice })}
+          onToggleInStock={() => updateDraft({ inStock: !draftParams.inStock })}
+          onToggleSale={() => updateDraft({ sale: !draftParams.sale })}
         />
       </div>
 
       <div className={`mt-4 grid gap-2 ${activeFilterCount > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {activeFilterCount > 0 ? (
-          <Button type="button" variant="secondary" block onClick={onClearAll}>
+          <Button type="button" variant="secondary" block onClick={clearDraft}>
             Сбросить всё
           </Button>
         ) : null}
-        <Button type="button" block onClick={onCloseFilters}>
+        <Button type="button" block onClick={applyDraft}>
           Показать товары
         </Button>
       </div>

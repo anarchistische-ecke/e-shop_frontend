@@ -124,7 +124,7 @@ function CataloguePage() {
     trackProductList(list.pagedProducts, {
       listName: hasQuery ? 'catalog_search_results' : 'catalog_results',
       pageType: 'catalog',
-      startPosition: (list.safePage - 1) * list.pageSize + 1
+      startPosition: 1
     });
   }, [hasQuery, list.loading, list.pageSize, list.pagedProducts, list.safePage]);
 
@@ -187,6 +187,16 @@ function CataloguePage() {
     onToggleSale: () => {
       trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'sale', enabled: !params.sale });
       updateParams({ sale: !params.sale });
+    },
+    onApplyFilters: (draft) => {
+      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'mobile_sheet_apply' });
+      updateParams({
+        brand: draft.brand || '',
+        minPrice: draft.minPrice || '',
+        maxPrice: draft.maxPrice || '',
+        inStock: Boolean(draft.inStock),
+        sale: Boolean(draft.sale)
+      });
     },
     onClearAll: clearFilters
   };
@@ -378,6 +388,16 @@ function CataloguePage() {
           description="Фильтры каталога"
         />
 
+        {!isFilterOpen ? (
+          <Button
+            type="button"
+            className="fixed bottom-[calc(var(--mobile-bottom-nav-offset,0px)+1rem)] right-4 z-40 !rounded-2xl shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
+            onClick={() => setIsFilterOpen(true)}
+          >
+            Фильтры{list.activeFilters.length > 0 ? ` · ${list.activeFilters.length}` : ''}
+          </Button>
+        ) : null}
+
         {list.activeFilters.length > 0 ? (
           <Card
             as="section"
@@ -460,7 +480,7 @@ function CataloguePage() {
                     key={product.id}
                     product={product}
                     listName={hasQuery ? 'catalog_search_results' : 'catalog_results'}
-                    position={(list.safePage - 1) * list.pageSize + index + 1}
+                    position={index + 1}
                     withOfferCatalogMicrodata={!isListingVariant}
                   />
                 ))}

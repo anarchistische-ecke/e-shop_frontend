@@ -20,6 +20,8 @@ export function resolveWayfindingLabel(pathname = '', search = '') {
   if (pathname.startsWith('/product/')) return 'Карточка товара';
   if (pathname.startsWith('/cart')) return 'Корзина';
   if (pathname.startsWith('/checkout')) return 'Оформление';
+  if (pathname.startsWith('/pay/')) return 'Оплата заказа';
+  if (pathname.startsWith('/favorites')) return 'Избранное';
   if (pathname.startsWith('/manager/payment-link')) return 'Ссылка на оплату';
   if (pathname.startsWith('/account')) return 'Личный кабинет';
   return 'Раздел магазина';
@@ -32,6 +34,7 @@ export function shouldShowMobileBottomNav(pathname = '') {
   if (pathname.startsWith('/product/')) return false;
   if (pathname.startsWith('/checkout')) return false;
   if (pathname.startsWith('/order/')) return false;
+  if (pathname.startsWith('/pay/')) return false;
   return true;
 }
 

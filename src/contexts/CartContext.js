@@ -278,6 +278,51 @@ export function CartProvider({ children }) {
     [cartId, cartStateBucket, notify, syncCart]
   );
 
+  const addVariantItem = useCallback(
+    async (variantId, quantity = 1, { notifyOnError = true } = {}) => {
+      const targetVariant = String(variantId || '').trim();
+      if (!targetVariant) {
+        const notification = buildAddToCartErrorNotification(null, { reason: 'missing_variant' });
+        if (notifyOnError) {
+          notify(notification);
+        }
+        return { ok: false, notification };
+      }
+
+      let id = cartId;
+      try {
+        if (!id) {
+          const cart = await createCart();
+          id = cart.id;
+          localStorage.setItem('cartId', id);
+          setCartId(id);
+        }
+        const quantityValue = normalizeCartQuantity(quantity);
+        await addItemToCart(id, targetVariant, quantityValue);
+        await syncCart(id);
+        const variantMeta = variantMap[targetVariant];
+        setLastAddedItem({
+          id: `${targetVariant}-${Date.now()}`,
+          productId: variantMeta?.productId || targetVariant,
+          name: variantMeta?.productName || 'Товар',
+          variantName: variantMeta?.variantName || targetVariant,
+          quantity: quantityValue,
+          unitPriceValue: moneyToNumber(variantMeta?.variantPrice),
+          imageUrl: variantMeta?.imageUrl || ''
+        });
+        return { ok: true };
+      } catch (err) {
+        console.error('Failed to add variant to cart:', err);
+        const notification = buildAddToCartErrorNotification(err);
+        if (notifyOnError) {
+          notify(notification);
+        }
+        return { ok: false, notification };
+      }
+    },
+    [cartId, notify, syncCart, variantMap]
+  );
+
   const removeItem = useCallback(
     async (cartItemId) => {
       if (!cartId) return;
@@ -412,6 +457,7 @@ export function CartProvider({ children }) {
     cartId,
     pricing,
     addItem,
+    addVariantItem,
     removeItem,
     updateQuantity,
     refreshPricing,
