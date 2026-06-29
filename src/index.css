@@ -122,7 +122,7 @@ body {
     textarea
   ):not(.control-inline) {
     @apply rounded-2xl border text-sm text-ink transition duration-200;
-    min-height: 44px;
+    min-height: 48px;
     line-height: 1.35;
     padding: 0.62rem 0.9rem;
     border-color: rgba(var(--field-border), 0.18);
@@ -284,7 +284,7 @@ body {
    custom colour palette. */
 @layer components {
   .site-content-layer {
-    min-height: 100vh;
+    min-height: var(--viewport-block);
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
@@ -367,10 +367,10 @@ body {
     @apply grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center;
   }
   .page-grid--catalog {
-    @apply grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+    @apply grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 lg:gap-5 xl:gap-6;
   }
   .touch-link {
-    @apply focus-ring-soft inline-flex min-h-[44px] items-center;
+    @apply focus-ring-soft inline-flex min-h-[48px] items-center;
   }
   .ui-button,
   .button,
@@ -379,7 +379,7 @@ body {
     @apply touch-target inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:pointer-events-none disabled:opacity-55 disabled:shadow-none;
   }
   .ui-button--sm {
-    @apply min-h-[44px] px-4 py-2.5 text-sm;
+    @apply min-h-[48px] px-4 py-2.5 text-sm;
   }
   .ui-button--md {
     @apply min-h-[48px] px-5 py-3 text-sm;
@@ -388,7 +388,7 @@ body {
     @apply min-h-[52px] px-6 py-3.5 text-base;
   }
   .ui-button--icon {
-    @apply h-11 w-11 rounded-2xl p-0;
+    @apply h-12 w-12 rounded-2xl p-0;
   }
   .ui-button--primary,
   .button {
@@ -452,7 +452,7 @@ body {
     @apply inline-flex min-h-[48px] w-full flex-wrap gap-1 rounded-[22px] border border-ink/10 bg-secondary/55 p-1;
   }
   .ui-tabs__trigger {
-    @apply touch-target inline-flex min-w-[44px] items-center justify-center rounded-2xl px-4 py-2 text-sm text-ink/75 transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+    @apply touch-target inline-flex min-w-[48px] items-center justify-center rounded-2xl px-4 py-2 text-sm text-ink/75 transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
   .ui-tabs__trigger--active {
     @apply bg-white text-ink shadow-[0_10px_20px_rgba(43,39,34,0.12)];
@@ -462,6 +462,8 @@ body {
   }
   .ui-modal__overlay {
     @apply fixed inset-0 z-[100] bg-black/45 backdrop-blur-[2px];
+    inline-size: var(--viewport-inline);
+    block-size: var(--viewport-block);
   }
   .ui-modal__overlay--center {
     @apply p-3 sm:p-4;
@@ -476,7 +478,7 @@ body {
     @apply items-center justify-center;
   }
   .ui-modal__viewport--sheet {
-    @apply items-end md:items-stretch md:justify-end;
+    @apply items-end lg:items-stretch lg:justify-end;
   }
   .ui-modal__panel {
     @apply relative w-full border border-white/80 shadow-[0_24px_70px_rgba(43,39,34,0.26)];
@@ -486,7 +488,13 @@ body {
     @apply rounded-[24px] p-4 sm:p-5 md:rounded-[28px] md:p-6;
   }
   .ui-modal__panel--sheet {
-    @apply max-h-[88vh] overflow-y-auto rounded-t-3xl p-4 slide-up-panel sm:p-5 md:h-full md:max-h-none md:max-w-md md:rounded-l-[26px] md:rounded-t-none md:p-6;
+    @apply overflow-y-auto rounded-t-3xl p-4 slide-up-panel sm:p-5 lg:h-full lg:max-h-none lg:max-w-md lg:rounded-l-[26px] lg:rounded-t-none lg:p-6;
+    height: 75vh;
+    max-height: 75vh;
+    height: 75dvh;
+    max-height: 75dvh;
+    padding-bottom: max(1rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem));
+    overscroll-behavior: contain;
   }
   .ui-modal__panel--sm {
     @apply max-w-md;
@@ -697,8 +705,8 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: 44px;
-    min-block-size: 44px;
+    min-inline-size: 48px;
+    min-block-size: 48px;
     border: 1px solid rgba(255, 255, 255, 0.72);
     border-radius: 1rem;
     background: rgba(255, 255, 255, 0.9);
@@ -717,12 +725,12 @@ body {
       transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   .product-media-viewer__button {
-    inline-size: 44px;
-    block-size: 44px;
+    inline-size: 48px;
+    block-size: 48px;
   }
   .product-media-viewer__reset {
-    inline-size: 44px;
-    block-size: 44px;
+    inline-size: 48px;
+    block-size: 48px;
     padding: 0;
   }
   .product-media-viewer__button:hover,
@@ -748,8 +756,8 @@ body {
     position: absolute;
     top: 50%;
     z-index: 2;
-    inline-size: 46px;
-    block-size: 46px;
+    inline-size: 48px;
+    block-size: 48px;
     padding: 0;
     opacity: 1;
     transform: translate3d(0, -50%, 0) scale(1);
@@ -770,7 +778,7 @@ body {
     align-items: center;
     justify-content: center;
     min-inline-size: 3.25rem;
-    min-block-size: 44px;
+    min-block-size: 48px;
     border: 1px solid rgba(255, 255, 255, 0.72);
     border-radius: 1rem;
     background: rgba(255, 255, 255, 0.88);
@@ -890,6 +898,15 @@ body {
   .manager-auth-alert--error {
     @apply border-red-300 bg-red-50 text-red-700;
   }
+
+  @supports selector(body:has(input:focus)) {
+    body:has(input:focus) .checkout-mobile-action,
+    body:has(textarea:focus) .checkout-mobile-action,
+    body:has(select:focus) .checkout-mobile-action {
+      transform: translateY(100%);
+      pointer-events: none;
+    }
+  }
 }
 
 @media (min-width: 1024px) {
@@ -897,7 +914,7 @@ body {
     margin: clamp(0.65rem, 1vw, 1rem);
     width: auto;
     max-width: none;
-    min-height: calc(100vh - clamp(1.3rem, 2vw, 2rem));
+    min-height: calc(var(--viewport-block) - clamp(1.3rem, 2vw, 2rem));
     border: 1px solid rgba(255, 255, 255, 0.78);
     border-radius: 36px;
     overflow: clip;
@@ -944,8 +961,8 @@ body {
     animation: slideUp 0.35s ease-out both;
   }
   .touch-target {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 48px;
+    min-height: 48px;
   }
   .skeleton {
     @apply bg-ink/10;

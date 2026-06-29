@@ -376,7 +376,7 @@ function CategoryPage() {
 
   const gridClassName =
     viewMode === 'compact'
-      ? 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+      ? 'grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 lg:gap-5'
       : 'page-grid--catalog';
 
   const fromPath = `${location.pathname}${location.search}`;
@@ -432,7 +432,7 @@ function CategoryPage() {
       <div className="page-shell">
         <nav
           data-testid="category-breadcrumbs"
-          className="text-xs text-muted flex flex-wrap items-center gap-2"
+          className="hidden flex-wrap items-center gap-2 text-xs text-muted md:flex"
         >
           {location.state?.fromPath ? (
             <Button
@@ -440,7 +440,7 @@ function CategoryPage() {
               variant="ghost"
               size="sm"
               onClick={() => navigate(-1)}
-              className="!min-h-0 !px-0 !py-0 text-primary hover:text-accent"
+              className="text-primary hover:text-accent"
             >
               ← Назад
             </Button>
@@ -475,7 +475,7 @@ function CategoryPage() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-            <div className="inline-flex min-h-[44px] w-full items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_10px_24px_rgba(43,39,34,0.07)] sm:w-auto">
+            <div className="inline-flex min-h-[48px] w-full items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_10px_24px_rgba(43,39,34,0.07)] sm:w-auto">
               <span className="text-ink/55">↕</span>
               <label htmlFor="category-sort" className="text-ink/65">
                 Сорт:
@@ -583,7 +583,7 @@ function CategoryPage() {
         {!isFilterOpen ? (
           <Button
             type="button"
-            className="fixed bottom-[calc(var(--mobile-bottom-nav-offset,0px)+1rem)] right-4 z-40 !rounded-2xl shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
+            className="fixed bottom-[calc(var(--mobile-bottom-nav-offset,0px)+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 !rounded-full px-5 shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
             onClick={() => setIsFilterOpen(true)}
           >
             Фильтры{list.activeFilters.length > 0 ? ` · ${list.activeFilters.length}` : ''}

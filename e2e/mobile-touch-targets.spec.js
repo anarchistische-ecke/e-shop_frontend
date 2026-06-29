@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   await mockStorefrontApi(page);
 });
 
-async function expectMinTouchTarget(locator, { minWidth = 44, minHeight = 44 } = {}) {
+async function expectMinTouchTarget(locator, { minWidth = 48, minHeight = 48 } = {}) {
   await expect(locator).toBeVisible();
   const box = await locator.boundingBox();
   expect(box).not.toBeNull();
@@ -13,7 +13,7 @@ async function expectMinTouchTarget(locator, { minWidth = 44, minHeight = 44 } =
   expect(box.height).toBeGreaterThanOrEqual(minHeight);
 }
 
-test('mobile primary controls keep a minimum 44x44 touch target', async ({ page }) => {
+test('mobile primary controls keep a minimum 48x48 touch target', async ({ page }) => {
   await page.goto('/');
 
   await expectMinTouchTarget(
