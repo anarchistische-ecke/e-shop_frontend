@@ -8,6 +8,7 @@ const useWebServer = process.env.PLAYWRIGHT_USE_WEBSERVER !== 'false';
 const stagingAuthState = process.env.PLAYWRIGHT_STAGING_AUTH_STATE || 'test-results/.auth/staging-customer.json';
 const focusedValidationSpecs = [
   /.*preprod-ux\.spec\.js/,
+  /.*responsive-adaptability\.spec\.js/,
   /.*visual-regression\.spec\.js/,
 ];
 const stagingSmokeSpecs = [/.*staging-smoke\.spec\.js/];

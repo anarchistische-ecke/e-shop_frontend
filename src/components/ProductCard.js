@@ -33,7 +33,7 @@ function ProductCard({
   product,
   deferThumbnails = false,
   priority = false,
-  imageSizes = '(min-width: 1024px) 18rem, (min-width: 640px) 42vw, 82vw',
+  imageSizes = '(min-width: 1024px) 22vw, (min-width: 768px) 31vw, 46vw',
   listName = 'product_list',
   position,
   withOfferCatalogMicrodata = false
@@ -175,7 +175,7 @@ function ProductCard({
                   media={activeMedia}
                   src={activeImage}
                   alt={product.name}
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 md:group-hover:scale-[1.03]"
                   sizes={imageSizes}
                   priority={priority}
                   loading={priority ? 'eager' : 'lazy'}
@@ -206,7 +206,7 @@ function ProductCard({
         </Link>
         <button
           type="button"
-          className={`focus-ring-soft absolute right-2 top-2 inline-flex h-10 w-10 items-center justify-center rounded-full border shadow-[0_10px_22px_rgba(43,39,34,0.12)] transition ${
+          className={`focus-ring-soft absolute right-2 top-2 inline-flex h-12 w-12 items-center justify-center rounded-full border shadow-[0_10px_22px_rgba(43,39,34,0.12)] transition ${
             isFavorite
               ? 'border-primary/25 bg-primary text-white'
               : 'border-white/80 bg-white/92 text-ink/70 hover:text-primary'
@@ -226,7 +226,7 @@ function ProductCard({
               <button
                 key={image.id || `${product.id}-thumb-${index}`}
                 type="button"
-                className={`h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg border ${
+                className={`h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg border ${
                   index === activeImageIndex
                     ? 'border-primary/55 ring-2 ring-primary/20'
                     : 'border-ink/15'

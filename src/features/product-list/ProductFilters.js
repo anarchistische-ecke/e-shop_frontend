@@ -209,6 +209,7 @@ export function ProductFiltersSheet({
   description = 'Фильтры'
 }) {
   const [draftParams, setDraftParams] = useState(params);
+  const [isFieldFocused, setIsFieldFocused] = useState(false);
 
   useEffect(() => {
     if (isFilterOpen) {
@@ -258,8 +259,21 @@ export function ProductFiltersSheet({
       title={title}
       description={description}
       className="lg:hidden"
+      panelClassName="h-[75dvh] max-h-[75dvh]"
     >
-      <div className="space-y-3">
+      <div
+        className="space-y-3"
+        onFocusCapture={(event) => {
+          if (event.target?.matches?.('input, select, textarea')) {
+            setIsFieldFocused(true);
+          }
+        }}
+        onBlurCapture={(event) => {
+          if (event.target?.matches?.('input, select, textarea')) {
+            window.setTimeout(() => setIsFieldFocused(false), 0);
+          }
+        }}
+      >
         <ProductFilterFields
           brands={brands}
           priceBounds={priceBounds}
@@ -272,7 +286,12 @@ export function ProductFiltersSheet({
         />
       </div>
 
-      <div className={`mt-4 grid gap-2 ${activeFilterCount > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      <div
+        data-testid="product-filters-sheet-actions"
+        className={`sticky bottom-0 mt-4 grid gap-2 border-t border-ink/10 bg-white/95 pt-3 transition-opacity ${
+          activeFilterCount > 0 ? 'grid-cols-2' : 'grid-cols-1'
+        } ${isFieldFocused ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
+      >
         {activeFilterCount > 0 ? (
           <Button type="button" variant="secondary" block onClick={clearDraft}>
             Сбросить всё

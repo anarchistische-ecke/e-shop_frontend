@@ -206,7 +206,7 @@ function ProductInfoCard({ icon, title, summary, caption, onOpen }) {
   return (
     <button
       type="button"
-      className="group flex w-full items-start gap-3 border-b border-ink/10 py-3 text-left transition hover:border-primary/30"
+      className="group flex min-h-[64px] w-full items-start gap-3 border-b border-ink/10 py-3 text-left transition hover:border-primary/30"
       onClick={onOpen}
     >
       <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center text-primary">
@@ -229,7 +229,7 @@ function ProductAccordionItem({ id, title, isOpen, onToggle, children }) {
     <div className="border-b border-ink/10">
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-medium text-ink"
+        className="flex min-h-[48px] w-full items-center justify-between gap-4 py-4 text-left text-sm font-medium text-ink"
         aria-expanded={isOpen}
         aria-controls={`${id}-panel`}
         onClick={onToggle}
@@ -277,17 +277,51 @@ function ProductPage() {
   const [isVariantMenuOpen, setIsVariantMenuOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState('');
   const [cartStatus, setCartStatus] = useState(null);
+  const [showMobileCartBar, setShowMobileCartBar] = useState(true);
 
   const transitionTimerRef = useRef(null);
   const cartInputRef = useRef({ quantity: 1, variantId: null });
   const variantMenuRef = useRef(null);
   const galleryGestureRef = useRef(null);
   const detailTrackedRef = useRef('');
+  const primaryAddToCartRef = useRef(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setShowZoomHint(window.localStorage.getItem('pdp-zoom-hint-seen') !== '1');
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !primaryAddToCartRef.current) {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const updateVisibility = (entry) => {
+      if (!mediaQuery.matches) {
+        setShowMobileCartBar(false);
+        return;
+      }
+      setShowMobileCartBar(!entry?.isIntersecting);
+    };
+    const observer = new IntersectionObserver(
+      ([entry]) => updateVisibility(entry),
+      {
+        root: null,
+        threshold: 0.35,
+        rootMargin: '0px 0px -72px 0px'
+      }
+    );
+    observer.observe(primaryAddToCartRef.current);
+    const handleMediaChange = () => updateVisibility();
+    mediaQuery.addEventListener?.('change', handleMediaChange);
+    handleMediaChange();
+
+    return () => {
+      observer.disconnect();
+      mediaQuery.removeEventListener?.('change', handleMediaChange);
+    };
+  }, [product?.id, selectedVariant?.id]);
 
   useEffect(() => {
     const nextInputs = {
@@ -1117,7 +1151,7 @@ function ProductPage() {
         </>
       ) : null}
       <div className="page-shell page-shell--wide pt-4 sm:pt-6">
-        <nav className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-ink/55 sm:mb-5" aria-label="Хлебные крошки">
+        <nav className="mb-4 hidden flex-wrap items-center gap-2 text-[11px] text-ink/55 sm:mb-5 md:flex" aria-label="Хлебные крошки">
           {location.state?.fromPath ? (
             <Link to={location.state.fromPath} className="underline-offset-4 hover:underline">
               ← {location.state.fromLabel || 'Назад к результатам'}
@@ -1146,7 +1180,7 @@ function ProductPage() {
             }`}
           >
             <div className="lg:hidden">
-              <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-sand/45 shadow-[0_18px_42px_rgba(43,39,34,0.12)]">
+              <div className="relative mx-[calc(var(--page-inline)*-1)] overflow-hidden border-y border-white/80 bg-sand/45 shadow-[0_18px_42px_rgba(43,39,34,0.12)] sm:mx-0 sm:rounded-[28px] sm:border">
                 {mainImage ? (
                   <button
                     type="button"
@@ -1189,12 +1223,17 @@ function ProductPage() {
                     key={image ? image.id || index : index}
                     type="button"
                     onClick={() => selectImageByIndex(index)}
-                    className={`h-1.5 rounded-full transition-all ${
-                      index === activeImageIndex ? 'w-7 bg-primary' : 'w-7 bg-ink/15'
-                    }`}
+                    className="focus-ring-soft flex h-12 w-10 items-center justify-center rounded-full"
                     aria-label={`Показать изображение ${index + 1}`}
                     aria-current={index === activeImageIndex ? 'true' : undefined}
-                  />
+                  >
+                    <span
+                      className={`h-1.5 rounded-full transition-all ${
+                        index === activeImageIndex ? 'w-7 bg-primary' : 'w-7 bg-ink/15'
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </button>
                 ))}
               </div>
             </div>
@@ -1356,7 +1395,7 @@ function ProductPage() {
                             <button
                               key={option.key}
                               type="button"
-                              className={`focus-ring-soft inline-flex min-h-[44px] items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition ${
+                              className={`focus-ring-soft inline-flex min-h-[48px] items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition ${
                                 isActive
                                   ? 'border-primary bg-primary/10 text-primary'
                                   : option.available
@@ -1459,7 +1498,7 @@ function ProductPage() {
 
               <div className="border-b border-ink/10 py-5">
                 <p className="text-xs uppercase tracking-[0.18em] text-ink/50">Количество</p>
-                <div className="mt-2 inline-grid min-h-[44px] grid-cols-[44px_52px_44px] overflow-hidden rounded-2xl border border-ink/12 bg-white/85 text-sm shadow-[0_10px_22px_rgba(43,39,34,0.08)]">
+                <div className="mt-2 inline-grid min-h-[48px] grid-cols-[48px_56px_48px] overflow-hidden rounded-2xl border border-ink/12 bg-white/85 text-sm shadow-[0_10px_22px_rgba(43,39,34,0.08)]">
                   <button
                     type="button"
                     className="border-r border-ink/10 text-lg text-ink/70 transition hover:bg-secondary/70 hover:text-primary disabled:opacity-40"
@@ -1483,6 +1522,7 @@ function ProductPage() {
 
                 <div className="mt-5 grid gap-2">
                   <Button
+                    ref={primaryAddToCartRef}
                     block
                     className="!rounded-2xl"
                     onClick={handleAddToCart}
@@ -1765,7 +1805,7 @@ function ProductPage() {
                 Смотреть больше
               </Button>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
               {relatedProducts.map((item, index) => (
                 <ProductCard
                   key={item.id}
@@ -1781,7 +1821,10 @@ function ProductPage() {
 
       <div
         data-testid="product-mobile-cart-bar"
-        className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/80 bg-white/90 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shadow-[0_-18px_36px_rgba(43,39,34,0.1)] backdrop-blur lg:hidden"
+        className={`fixed bottom-0 left-0 right-0 z-30 border-t border-white/80 bg-white/90 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] shadow-[0_-18px_36px_rgba(43,39,34,0.1)] backdrop-blur transition-transform duration-200 lg:hidden ${
+          showMobileCartBar ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        aria-hidden={!showMobileCartBar}
       >
         <div className="page-shell py-2.5">
           {cartStatus ? <NotificationBanner notification={cartStatus} compact className="mb-3" /> : null}

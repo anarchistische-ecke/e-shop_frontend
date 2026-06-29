@@ -24,6 +24,10 @@ function CheckoutSummary({
   const productSaleDiscount = pricing ? moneyToNumber(pricing.productSaleDiscount) : 0;
   const cartDiscount = pricing ? moneyToNumber(pricing.cartDiscount) : 0;
   const cartDiscountLabel = pricing?.appliedCartDiscountLabel || 'Скидка по корзине';
+  const isPaymentStep = /Шаг 3/.test(mobileAction.subtitle || '');
+  const mobileButtonLabel = isPaymentStep && !mobileAction.subtitle.includes('Безопасная проверка')
+    ? `Оплатить ${formatRub(payableTotal)}`
+    : mobileAction.label;
 
   return (
     <>
@@ -131,7 +135,7 @@ function CheckoutSummary({
         />
       </aside>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] lg:hidden">
+      <div className="checkout-mobile-action fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] transition-transform duration-200 lg:hidden">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
           <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.16em] text-muted">{mobileAction.subtitle}</div>
@@ -142,7 +146,7 @@ function CheckoutSummary({
             onClick={mobileAction.action}
             disabled={mobileAction.disabled}
           >
-            {mobileAction.label}
+            {mobileButtonLabel}
           </Button>
         </div>
       </div>

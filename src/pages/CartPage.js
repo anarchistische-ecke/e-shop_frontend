@@ -262,7 +262,7 @@ function CartPage() {
                           type="text"
                           inputMode="numeric"
                           pattern="[0-9]*"
-                          className="!h-11 !w-14 !rounded-xl !px-2 !py-1 text-center text-sm font-semibold"
+                          className="!h-12 !w-14 !rounded-xl !px-2 !py-1 text-center text-sm font-semibold"
                           value={quantityDrafts[item.id] ?? String(item.quantity)}
                           onChange={(event) => {
                             const next = event.target.value.replace(/[^\d]/g, '');
@@ -295,7 +295,7 @@ function CartPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="!min-h-11 !px-2 text-xs text-primary hover:text-primary"
+                        className="text-xs text-primary hover:text-primary"
                       >
                         Добавить ещё одну
                       </Button>
@@ -303,7 +303,7 @@ function CartPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeItem(item.id)}
-                        className="!min-h-11 !px-2 text-xs text-muted hover:text-primary"
+                        className="text-xs text-muted hover:text-primary"
                       >
                         Удалить
                       </Button>
@@ -313,7 +313,7 @@ function CartPage() {
               ))}
             </div>
 
-            <div className="w-full lg:max-w-sm space-y-4">
+            <div className="w-full space-y-4 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] lg:max-w-sm lg:self-start">
               <Card padding="md">
                 <h3 className="text-xl font-semibold mb-4">Сводка заказа</h3>
                 <div className="flex justify-between mb-2 text-sm">
@@ -381,7 +381,7 @@ function CartPage() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="!min-h-0 !px-0 !py-0 text-primary"
+                      className="justify-start text-primary"
                       onClick={() => setIsPromoExpanded(true)}
                     >
                       У меня есть промокод

@@ -25,7 +25,7 @@ export function FilterToggle({ active = false, className = '', ...props }) {
       variant={active ? 'subtle' : 'secondary'}
       size="sm"
       className={cn(
-        'h-auto min-h-[44px] justify-start rounded-xl px-3 py-2 text-left text-sm shadow-none',
+        'h-auto min-h-[48px] justify-start rounded-xl px-3 py-2 text-left text-sm shadow-none',
         active
           ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
           : 'border-ink/10 bg-white text-ink/75 hover:border-primary/35 hover:text-primary',
@@ -42,7 +42,7 @@ export function PaginationButton({ active = false, className = '', ...props }) {
       variant={active ? 'primary' : 'secondary'}
       size="sm"
       className={cn(
-        'h-10 w-10 rounded-full p-0',
+        'h-12 w-12 rounded-full p-0',
         active ? 'shadow-sm' : 'shadow-none',
         className
       )}

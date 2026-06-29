@@ -225,7 +225,7 @@ function CataloguePage() {
       <div className="page-shell">
         <nav
           data-testid="catalogue-breadcrumbs"
-          className="flex flex-wrap items-center gap-2 text-xs text-muted"
+          className="hidden flex-wrap items-center gap-2 text-xs text-muted md:flex"
         >
           <Link to="/" className="transition hover:text-primary">Главная</Link>
           <span className="text-ink/40">›</span>
@@ -255,7 +255,7 @@ function CataloguePage() {
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Например: сатин 200x220, плед, подушки"
-                className="bg-white pl-11 pr-24 shadow-[0_8px_20px_rgba(43,39,34,0.07)]"
+                className="bg-white pl-11 pr-32 shadow-[0_8px_20px_rgba(43,39,34,0.07)]"
               />
               {searchInput ? (
                 <Button
@@ -266,7 +266,7 @@ function CataloguePage() {
                     setSearchInput('');
                     updateParams({ query: '', original: '' });
                   }}
-                  className="absolute right-12 top-1/2 -translate-y-1/2"
+                  className="absolute right-16 top-1/2 -translate-y-1/2"
                   aria-label="Очистить поиск"
                 >
                   ×
@@ -331,12 +331,12 @@ function CataloguePage() {
         <Card
           as="section"
           variant="quiet"
-          className="mt-4 lg:mt-3"
+            className="mt-4 lg:mt-3"
           padding="sm"
           data-testid="catalogue-filters-card"
         >
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-            <div className="inline-grid min-h-[44px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_8px_18px_rgba(43,39,34,0.06)]">
+            <div className="inline-grid min-h-[48px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_8px_18px_rgba(43,39,34,0.06)]">
               <span className="text-ink/55">↕</span>
               <label htmlFor="catalog-sort" className="sr-only">Сортировка товаров</label>
               <Select
@@ -391,7 +391,7 @@ function CataloguePage() {
         {!isFilterOpen ? (
           <Button
             type="button"
-            className="fixed bottom-[calc(var(--mobile-bottom-nav-offset,0px)+1rem)] right-4 z-40 !rounded-2xl shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
+            className="fixed bottom-[calc(var(--mobile-bottom-nav-offset,0px)+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 !rounded-full px-5 shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
             onClick={() => setIsFilterOpen(true)}
           >
             Фильтры{list.activeFilters.length > 0 ? ` · ${list.activeFilters.length}` : ''}
