@@ -1,23 +1,29 @@
 import React, { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import NotificationBanner from '../components/NotificationBanner';
+import QuickViewSheet from '../components/commerce/QuickViewSheet';
 import ProductCard from '../components/ProductCard';
 import Seo from '../components/Seo';
 import { Button, Card } from '../components/ui';
 import { CartContext } from '../contexts/CartContext';
 import { WishlistContext } from '../contexts/WishlistContext';
 import { getPrimaryVariant } from '../utils/product';
-import { buildProductPath } from '../utils/url';
 
 function getVariants(product) {
   return Array.isArray(product?.variants) ? product.variants : Array.from(product?.variants || []);
 }
 
+function getStockValue(entity) {
+  return Number(entity?.stock ?? entity?.stockQuantity ?? 0);
+}
+
 function FavoritesPage() {
-  const { items, count, remove, clear } = useContext(WishlistContext);
+  const { items, count, add, remove, clear } = useContext(WishlistContext);
   const { addItem } = useContext(CartContext);
   const [status, setStatus] = useState(null);
   const [pendingId, setPendingId] = useState('');
+  const [quickViewProduct, setQuickViewProduct] = useState(null);
+  const [undoProduct, setUndoProduct] = useState(null);
 
   const handleAddSingleVariant = async (product) => {
     const variants = getVariants(product);
@@ -42,6 +48,26 @@ function FavoritesPage() {
     } finally {
       setPendingId('');
     }
+  };
+
+  const handleRemove = (product) => {
+    setUndoProduct(product);
+    remove(product);
+    setStatus({
+      type: 'info',
+      title: 'Товар убран из избранного',
+      message: product?.name || 'Можно вернуть действие.'
+    });
+  };
+
+  const handleUndoRemove = () => {
+    if (!undoProduct) return;
+    add(undoProduct);
+    setUndoProduct(null);
+    setStatus({
+      type: 'success',
+      message: 'Товар снова в избранном.'
+    });
   };
 
   return (
@@ -76,7 +102,16 @@ function FavoritesPage() {
           ) : null}
         </div>
 
-        {status ? <NotificationBanner notification={status} className="mb-5" /> : null}
+        {status ? (
+          <div className="mb-5">
+            <NotificationBanner notification={status} />
+            {undoProduct ? (
+              <Button type="button" variant="secondary" size="sm" className="mt-2" onClick={handleUndoRemove}>
+                Вернуть
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
 
         {items.length === 0 ? (
           <Card padding="lg" className="text-center">
@@ -97,6 +132,7 @@ function FavoritesPage() {
                   product={product}
                   listName="favorites"
                   position={index + 1}
+                  onQuickView={setQuickViewProduct}
                 />
               ))}
             </div>
@@ -106,6 +142,8 @@ function FavoritesPage() {
                 {items.map((product) => {
                   const variants = getVariants(product);
                   const canAddDirectly = variants.length === 1 && getPrimaryVariant(product)?.id;
+                  const primaryVariant = getPrimaryVariant(product);
+                  const inStock = getStockValue(primaryVariant) > 0;
                   return (
                     <div
                       key={`favorite-action-${product.id}`}
@@ -114,10 +152,14 @@ function FavoritesPage() {
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{product.name}</p>
                         <p className="text-xs text-muted">
-                          {canAddDirectly ? 'Можно добавить сразу' : 'Нужно выбрать вариант'}
+                          {canAddDirectly
+                            ? inStock
+                              ? 'Можно добавить сразу'
+                              : 'Нет в наличии'
+                            : 'Нужно выбрать вариант'}
                         </p>
                       </div>
-                      {canAddDirectly ? (
+                      {canAddDirectly && inStock ? (
                         <Button
                           type="button"
                           size="sm"
@@ -127,8 +169,8 @@ function FavoritesPage() {
                           {pendingId === product.id ? 'Добавляем…' : 'В корзину'}
                         </Button>
                       ) : (
-                        <Button as={Link} to={buildProductPath(product)} size="sm" variant="secondary">
-                          Выбрать
+                        <Button type="button" size="sm" variant="secondary" onClick={() => setQuickViewProduct(product)}>
+                          {canAddDirectly ? 'Сообщить' : 'Выбрать'}
                         </Button>
                       )}
                       <Button
@@ -136,7 +178,7 @@ function FavoritesPage() {
                         variant="ghost"
                         size="sm"
                         className="!min-h-0 !px-1 text-xs text-muted"
-                        onClick={() => remove(product)}
+                        onClick={() => handleRemove(product)}
                       >
                         Убрать
                       </Button>
@@ -148,6 +190,11 @@ function FavoritesPage() {
           </div>
         )}
       </div>
+      <QuickViewSheet
+        open={Boolean(quickViewProduct)}
+        product={quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+      />
     </div>
   );
 }

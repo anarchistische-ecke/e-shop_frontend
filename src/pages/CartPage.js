@@ -15,6 +15,8 @@ import {
 import { CART_SESSION_STRATEGY } from '../utils/account';
 import { Button, Card, Input } from '../components/ui';
 import { readEnv } from '../config/runtime';
+import QuickViewSheet from '../components/commerce/QuickViewSheet';
+import { useProductDirectoryData } from '../features/product-list/data';
 
 function CartPage() {
   const {
@@ -34,6 +36,8 @@ function CartPage() {
   const [promoStatus, setPromoStatus] = useState(null);
   const [isPromoSubmitting, setIsPromoSubmitting] = useState(false);
   const [isPromoExpanded, setIsPromoExpanded] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const { products } = useProductDirectoryData({ requireFull: true });
   const managerRole = readEnv('REACT_APP_KEYCLOAK_MANAGER_ROLE', 'manager') || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
 
@@ -168,6 +172,17 @@ function CartPage() {
     setPromoStatus({ type: 'error', message: 'Не удалось удалить промокод.' });
   };
 
+  const findProductForCartItem = (item) => {
+    if (!item) return null;
+    return products.find((product) => {
+      if (String(product?.id || '') === String(item.productInfo?.id || '')) {
+        return true;
+      }
+      const variants = Array.isArray(product?.variants) ? product.variants : Array.from(product?.variants || []);
+      return variants.some((variant) => String(variant?.id || '') === String(item.variantId || ''));
+    }) || null;
+  };
+
   return (
     <div className="cart-page page-section">
       <Seo
@@ -298,6 +313,14 @@ function CartPage() {
                         className="text-xs text-primary hover:text-primary"
                       >
                         Добавить ещё одну
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingItem(item)}
+                        className="text-xs text-primary hover:text-primary"
+                      >
+                        Изменить вариант
                       </Button>
                       <Button
                         variant="ghost"
@@ -445,6 +468,18 @@ function CartPage() {
           </div>
         )}
       </div>
+      <QuickViewSheet
+        open={Boolean(editingItem)}
+        product={findProductForCartItem(editingItem)}
+        title="Изменить вариант"
+        submitLabel="Заменить в корзине"
+        onAddSuccess={() => {
+          if (editingItem?.id) {
+            removeItem(editingItem.id);
+          }
+        }}
+        onClose={() => setEditingItem(null)}
+      />
     </div>
   );
 }

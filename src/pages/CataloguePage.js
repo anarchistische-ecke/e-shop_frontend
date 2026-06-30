@@ -391,7 +391,7 @@ function CataloguePage() {
         {!isFilterOpen ? (
           <Button
             type="button"
-            className="fixed bottom-[calc(var(--mobile-bottom-nav-offset,0px)+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 !rounded-full px-5 shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
+            className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 !rounded-full px-5 shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
             onClick={() => setIsFilterOpen(true)}
           >
             Фильтры{list.activeFilters.length > 0 ? ` · ${list.activeFilters.length}` : ''}

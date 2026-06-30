@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
-import { Button, Card } from '../components/ui';
+import { Button, Card, Input } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
-import { isKeycloakConfigured, login as keycloakLogin } from '../auth/keycloak';
 import { buildAbsoluteAppUrl } from '../utils/url';
 import { CART_SESSION_STRATEGY } from '../utils/account';
+import { requestMagicLink } from '../api';
 
 function LoginPage() {
   const location = useLocation();
@@ -19,26 +19,60 @@ function LoginPage() {
     return path;
   };
 
+  const [email, setEmail] = useState('');
   const [status, setStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const keycloakReady = isKeycloakConfigured();
+  const [cooldown, setCooldown] = useState(0);
   const safeRedirectTarget = safeRedirectPath(redirectTo);
   const returnsToCheckout = safeRedirectTarget.startsWith('/checkout');
 
-  const handleKeycloakLogin = async () => {
+  useEffect(() => {
+    if (cooldown <= 0) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+  const maskedEmail = useMemo(() => {
+    const [name = '', domain = ''] = normalizedEmail.split('@');
+    if (!name || !domain) return normalizedEmail;
+    const visible = name.length <= 2 ? name[0] || '' : `${name.slice(0, 2)}***`;
+    return `${visible}@${domain}`;
+  }, [normalizedEmail]);
+
+  const handleMagicLink = async (event) => {
+    event.preventDefault();
     setStatus(null);
-    if (!keycloakReady) {
-      setStatus({ type: 'error', message: 'Сервис входа временно недоступен. Попробуйте позже.' });
+    if (!isEmailValid) {
+      setStatus({ type: 'error', message: 'Введите корректную электронную почту.' });
+      return;
+    }
+    if (cooldown > 0) {
       return;
     }
     setIsSubmitting(true);
     try {
-      await keycloakLogin({
+      await requestMagicLink({
+        email: normalizedEmail,
         redirectUri: buildAbsoluteAppUrl(safeRedirectTarget)
       });
+      setCooldown(60);
+      setStatus({
+        type: 'success',
+        title: 'Ссылка отправлена',
+        message: `Проверьте почту ${maskedEmail}. Ссылка действует 15 минут.`
+      });
     } catch (err) {
-      console.error('Login redirect failed:', err);
-      setStatus({ type: 'error', message: 'Не удалось открыть страницу входа.' });
+      console.error('Magic link request failed:', err);
+      setStatus({
+        type: 'error',
+        title: 'Не удалось отправить ссылку',
+        message: err?.message || 'Попробуйте ещё раз позже.'
+      });
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -97,24 +131,46 @@ function LoginPage() {
           </div>
 
           {status ? <NotificationBanner notification={status} className="mb-6" /> : null}
-          {!keycloakReady ? (
-            <NotificationBanner
-              notification={{
-                type: 'error',
-                title: 'Сервис входа временно недоступен',
-                message: 'Попробуйте позже.'
-              }}
-              className="mb-6"
-            />
-          ) : null}
-
-          <Button
-            block
-            onClick={handleKeycloakLogin}
-            disabled={isSubmitting || !keycloakReady}
-          >
-            {isSubmitting ? 'Перенаправляем…' : 'Войти или зарегистрироваться'}
-          </Button>
+          <form onSubmit={handleMagicLink} className="space-y-3">
+            <label className="block text-sm">
+              <span className="text-muted">Электронная почта</span>
+              <Input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (status?.type === 'error') setStatus(null);
+                }}
+                placeholder="pochta@example.ru"
+                className="mt-2 !min-h-[52px]"
+                disabled={isSubmitting}
+              />
+            </label>
+            <Button
+              type="submit"
+              block
+              className="!min-h-[52px]"
+              disabled={isSubmitting || cooldown > 0}
+            >
+              {isSubmitting
+                ? 'Отправляем...'
+                : cooldown > 0
+                ? `Повторно через ${cooldown} с`
+                : 'Получить ссылку для входа'}
+            </Button>
+            {status?.type === 'success' ? (
+              <Button
+                as="a"
+                href={`mailto:${normalizedEmail}`}
+                variant="secondary"
+                block
+              >
+                Открыть почту
+              </Button>
+            ) : null}
+          </form>
         </Card>
       </div>
     </div>

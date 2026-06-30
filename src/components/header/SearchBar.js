@@ -2,11 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, FilterChip, Input } from '../ui';
 import CategoryGlyph from '../navigation/CategoryGlyph';
-import { buildSearchHref } from '../../features/product-list/url';
 import { getPrimaryImageUrl, getProductPrice } from '../../utils/product';
 import { normalizeSearchText } from '../../utils/search';
 import { resolveCategoryToken } from '../../utils/header';
 import { buildProductPath } from '../../utils/url';
+import { buildSearchHref } from '../../features/product-list/url';
 import { SearchIcon } from './icons';
 
 function SearchPanelBody({
@@ -191,6 +191,7 @@ function SearchPanelBody({
 
 function SearchBar({
   autocompleteData,
+  isSearchOpen = false,
   isSearchPanelVisible,
   onChange,
   onClear,
@@ -206,26 +207,78 @@ function SearchBar({
   searchTerm,
   scopeOptions
 }) {
-  const searchSuggestionsId = 'header-search-suggestions';
-  const mobileSearchHref = buildSearchHref({
-    query: searchTerm.trim(),
-    scope: searchScope
-  });
-  const mobileSearchLabel = searchTerm.trim() || 'Поиск товаров и категорий';
+  const mobileSearchSuggestionsId = 'header-search-suggestions-mobile';
+  const desktopSearchSuggestionsId = 'header-search-suggestions';
 
   return (
-    <>
-      <Link
-        to={mobileSearchHref}
-        className="focus-ring-soft flex min-h-[48px] items-center gap-3 rounded-[18px] border border-ink/15 bg-white px-4 py-2 text-left shadow-[0_8px_18px_rgba(43,39,34,0.08)] lg:hidden"
-        aria-label="Открыть страницу поиска"
-      >
-        <SearchIcon className="h-4 w-4 shrink-0 text-ink/55" />
-        <span className="min-w-0 truncate text-sm text-ink/72">{mobileSearchLabel}</span>
-      </Link>
+    <div ref={searchRef} className="contents">
+      {isSearchOpen ? (
+        <div
+          className="relative z-[100] lg:hidden"
+        >
+          <form onSubmit={onSubmit} className="relative">
+            <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
+            <Input
+              ref={searchInputRef}
+              type="search"
+              inputMode="search"
+              value={searchTerm}
+              onChange={onChange}
+              onFocus={onFocus}
+              placeholder="Поиск товаров и категорий"
+              className="w-full bg-white pl-11 pr-24 shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
+              aria-label="Поиск товаров"
+              aria-expanded={isSearchPanelVisible}
+              aria-controls={isSearchPanelVisible ? mobileSearchSuggestionsId : undefined}
+              aria-autocomplete="list"
+              autoComplete="off"
+              enterKeyHint="search"
+            />
+            {searchTerm ? (
+              <button
+                type="button"
+                onClick={onClear}
+                className="absolute right-12 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-lg text-ink/60"
+                aria-label="Очистить поиск"
+              >
+                ×
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-1 top-1/2 flex h-10 min-w-10 -translate-y-1/2 items-center justify-center rounded-xl px-2 text-xs font-semibold text-muted"
+            >
+              Готово
+            </button>
+          </form>
+
+          {isSearchPanelVisible ? (
+            <div
+              id={mobileSearchSuggestionsId}
+              data-testid="header-search-suggestions-mobile"
+              className="absolute left-0 right-0 top-[calc(100%+0.5rem)] max-h-[calc(100dvh-var(--site-header-height,6rem)-1rem)] overflow-y-auto rounded-[22px] border border-ink/10 bg-white p-3 shadow-[0_20px_46px_rgba(43,39,34,0.18)]"
+            >
+              <SearchPanelBody
+                autocompleteData={autocompleteData}
+                onNavigateSearch={onNavigateSearch}
+                onSetSearchScope={onSetSearchScope}
+                onTrackSearchSuggestion={onTrackSearchSuggestion}
+                onSuggestionLinkClick={onClose}
+                scopeOptions={scopeOptions.slice(0, 4)}
+                searchScope={searchScope}
+                searchTerm={searchTerm}
+              />
+            </div>
+          ) : searchTerm.trim().length > 0 ? (
+            <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] rounded-[22px] border border-ink/10 bg-white p-4 text-sm text-muted shadow-[0_20px_46px_rgba(43,39,34,0.14)]">
+              Введите минимум 2 символа.
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div
-        ref={searchRef}
         className={`relative hidden lg:col-span-1 lg:col-start-2 lg:block ${
           isSearchPanelVisible ? 'z-[100]' : 'z-20'
         }`}
@@ -242,7 +295,7 @@ function SearchBar({
             className="bg-white pl-11 pr-12 shadow-[0_10px_24px_rgba(43,39,34,0.08)]"
             aria-label="Поиск товаров"
             aria-expanded={isSearchPanelVisible}
-            aria-controls={isSearchPanelVisible ? searchSuggestionsId : undefined}
+            aria-controls={isSearchPanelVisible ? desktopSearchSuggestionsId : undefined}
             aria-autocomplete="list"
             autoComplete="off"
             enterKeyHint="search"
@@ -272,7 +325,7 @@ function SearchBar({
 
             <div className="relative">
               <div
-                id={searchSuggestionsId}
+                id={desktopSearchSuggestionsId}
                 data-testid="header-search-suggestions"
                 className="absolute left-0 right-0 top-[calc(100%+0.55rem)] z-[110] rounded-[24px] border border-ink/10 bg-white p-4 shadow-[0_24px_56px_rgba(43,39,34,0.18)]"
               >
@@ -291,7 +344,7 @@ function SearchBar({
           </>
         ) : null}
       </div>
-    </>
+    </div>
   );
 }
 

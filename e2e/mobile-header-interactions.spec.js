@@ -5,22 +5,21 @@ test.beforeEach(async ({ page }) => {
   await mockStorefrontApi(page);
 });
 
-test('mobile header search entry opens the dedicated search page', async ({ page }) => {
+test('mobile header search entry opens inline search', async ({ page }) => {
   await page.goto('/');
 
-  const searchEntry = page.getByRole('link', { name: 'Открыть страницу поиска' });
-  await searchEntry.click();
+  await page.getByRole('button', { name: 'Поиск' }).click();
 
-  await expect(page).toHaveURL(/\/search$/);
-  await expect(page.getByLabel('Что ищем')).toBeFocused();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('searchbox', { name: 'Поиск товаров' })).toBeFocused();
 });
 
-test('search page submit navigates to search results on mobile', async ({ page }) => {
+test('inline search submit navigates to search results on mobile', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('link', { name: 'Открыть страницу поиска' }).click();
+  await page.getByRole('button', { name: 'Поиск' }).click();
 
-  const searchInput = page.getByLabel('Что ищем');
+  const searchInput = page.getByRole('searchbox', { name: 'Поиск товаров' });
   await searchInput.fill('Плед');
   await searchInput.press('Enter');
 
@@ -29,19 +28,17 @@ test('search page submit navigates to search results on mobile', async ({ page }
   await expect(page.getByRole('heading', { name: /Найдено/i })).toBeVisible();
 });
 
-test('search page can navigate directly to a category on mobile', async ({ page }) => {
+test('inline search can navigate directly to a category on mobile', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('link', { name: 'Открыть страницу поиска' }).click();
+  await page.getByRole('button', { name: 'Поиск' }).click();
 
-  const searchInput = page.getByLabel('Что ищем');
+  const searchInput = page.getByRole('searchbox', { name: 'Поиск товаров' });
   await searchInput.fill('Плед');
-  await searchInput.press('Enter');
 
-  const scopeChip = page.getByRole('button', { name: 'Пледы' }).first();
-  await expect(scopeChip).toBeVisible();
-  await scopeChip.click();
+  const categorySuggestion = page.getByRole('link', { name: /Пледы/i }).first();
+  await expect(categorySuggestion).toBeVisible();
+  await categorySuggestion.click();
 
-  await expect(page).toHaveURL(/\/search\?query=.*scope=throws/);
-  await expect(page.getByText('Запрос:')).toBeVisible();
+  await expect(page).toHaveURL(/\/category\/throws$/);
 });

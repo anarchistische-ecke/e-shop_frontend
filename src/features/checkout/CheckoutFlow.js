@@ -3,6 +3,7 @@ import CheckoutStepper from './CheckoutStepper';
 import CheckoutSummary from './CheckoutSummary';
 import ContactStep from './ContactStep';
 import AddressStep from './AddressStep';
+import DeliveryStep from './DeliveryStep';
 import ConfirmationStep from './ConfirmationStep';
 import { CHECKOUT_STEPS } from './constants';
 
@@ -66,6 +67,7 @@ function CheckoutFlow({ checkout }) {
           <AddressStep
             active={checkout.activeStep === 1}
             homeAddress={checkout.homeAddress}
+            addressParts={checkout.addressParts}
             deliveryNotice={checkout.deliveryNotice}
             fieldErrors={checkout.fieldErrors}
             onHomeAddressChange={(value) => {
@@ -74,13 +76,28 @@ function CheckoutFlow({ checkout }) {
               checkout.clearFieldError('homeAddress');
               checkout.setHomeAddress(value);
             }}
+            onAddressPartChange={(field, value) => {
+              checkout.clearStatus();
+              checkout.clearRecoveryState();
+              checkout.clearFieldError('homeAddress');
+              checkout.updateAddressPart(field, value);
+            }}
             onContinue={checkout.handleAddressNext}
             onEdit={() => checkout.setActiveStep(1)}
             disabled={checkout.isSubmitting}
           />
 
-          <ConfirmationStep
+          <DeliveryStep
             active={checkout.activeStep === 2}
+            deliveryLabel={checkout.deliveryLabel}
+            deliveryNotice={checkout.deliveryNotice}
+            onContinue={checkout.handleDeliveryNext}
+            onEdit={() => checkout.setActiveStep(2)}
+            disabled={checkout.isSubmitting}
+          />
+
+          <ConfirmationStep
+            active={checkout.activeStep === 3}
             email={checkout.email}
             customerName={checkout.customerName}
             phone={checkout.phone}
@@ -92,7 +109,8 @@ function CheckoutFlow({ checkout }) {
             submitLabel={checkout.submitLabel}
             onEditContact={() => checkout.setActiveStep(0)}
             onEditAddress={() => checkout.setActiveStep(1)}
-            onOpen={() => checkout.setActiveStep(2)}
+            onEditDelivery={() => checkout.setActiveStep(2)}
+            onOpen={() => checkout.setActiveStep(3)}
             onSubmit={checkout.handleSubmit}
             onSafeRetry={checkout.handleSafeRetry}
           />

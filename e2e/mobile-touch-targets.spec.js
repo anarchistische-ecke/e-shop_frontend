@@ -16,15 +16,11 @@ async function expectMinTouchTarget(locator, { minWidth = 48, minHeight = 48 } =
 test('mobile primary controls keep a minimum 48x48 touch target', async ({ page }) => {
   await page.goto('/');
 
-  await expectMinTouchTarget(
-    page
-      .getByRole('navigation', { name: 'Быстрая навигация' })
-      .getByRole('button', { name: 'Каталог' })
-  );
-  await expectMinTouchTarget(page.getByRole('link', { name: 'Открыть страницу поиска' }));
-  await expectMinTouchTarget(
-    page.getByRole('navigation', { name: 'Быстрая навигация' }).getByRole('link', { name: 'Корзина' })
-  );
+  await expectMinTouchTarget(page.getByRole('button', { name: 'Меню' }));
+  await expectMinTouchTarget(page.getByRole('link', { name: /Домой/i }));
+  await expectMinTouchTarget(page.getByRole('button', { name: 'Поиск' }));
+  await expectMinTouchTarget(page.getByRole('link', { name: 'Избранное' }));
+  await expectMinTouchTarget(page.getByRole('button', { name: 'Корзина' }));
 
   await page.goto('/catalog');
   await expectMinTouchTarget(page.getByRole('button', { name: 'Все фильтры' }));

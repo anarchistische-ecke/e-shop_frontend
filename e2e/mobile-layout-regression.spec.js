@@ -63,10 +63,7 @@ async function expectNoOverlaps(locator) {
 test('mobile catalog menu takes over the viewport instead of clipping under the header', async ({ page }) => {
   await page.goto('/');
 
-  await page
-    .getByRole('navigation', { name: 'Быстрая навигация' })
-    .getByRole('button', { name: 'Каталог' })
-    .click();
+  await page.getByRole('button', { name: 'Меню' }).click();
 
   const mobileMenu = page.getByTestId('mobile-nav-panel');
   await expect(mobileMenu).toBeVisible();
@@ -81,49 +78,41 @@ test('mobile catalog menu takes over the viewport instead of clipping under the 
   expect(Math.round(panelBox.width)).toBe(Math.round(viewport.width));
 });
 
-test('mobile bottom nav items stay evenly distributed and header avoids redundant shortcuts', async ({ page }) => {
+test('mobile header actions stay evenly distributed without horizontal overflow', async ({ page }) => {
   await page.goto('/');
 
-  const navList = page.getByTestId('bottom-nav-list');
-  await expect(navList).toBeVisible();
+  const header = page.locator('header').first();
+  await expect(header.getByRole('button', { name: 'Меню' })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 
-  const navMetrics = await navList.evaluate((node) => {
-    const items = Array.from(node.children).map((child) => {
-      const childRect = child.getBoundingClientRect();
-      const interactive = child.querySelector('a,button');
-      const interactiveRect = interactive?.getBoundingClientRect();
+  const headerMetrics = await header.evaluate((node) => {
+    const controls = Array.from(node.querySelectorAll('a,button')).filter((control) => {
+      const label = (control.textContent || '').trim();
+      const rect = control.getBoundingClientRect();
+      return rect.width > 0 && ['Меню', 'Домой', 'Поиск', 'Избранное', 'Корзина'].some((value) => label.includes(value));
+    });
+    const items = controls.map((control) => {
+      const rect = control.getBoundingClientRect();
       return {
-        width: Math.round(childRect.width),
-        left: Math.round(childRect.left),
-        right: Math.round(childRect.right),
-        interactiveWidth: interactiveRect ? Math.round(interactiveRect.width) : 0
+        width: Math.round(rect.width),
+        left: Math.round(rect.left),
+        right: Math.round(rect.right)
       };
     });
 
     return {
       widths: items.map((item) => item.width),
-      interactiveWidths: items.map((item) => item.interactiveWidth),
       lefts: items.map((item) => item.left),
       rights: items.map((item) => item.right)
     };
   });
 
-  expect(Math.max(...navMetrics.widths) - Math.min(...navMetrics.widths)).toBeLessThanOrEqual(2);
-  expect(
-    Math.max(...navMetrics.interactiveWidths) - Math.min(...navMetrics.interactiveWidths)
-  ).toBeLessThanOrEqual(2);
+  expect(headerMetrics.widths.length).toBeGreaterThanOrEqual(5);
+  expect(Math.max(...headerMetrics.widths) - Math.min(...headerMetrics.widths)).toBeLessThanOrEqual(4);
 
-  for (let index = 1; index < navMetrics.lefts.length; index += 1) {
-    expect(navMetrics.lefts[index]).toBeGreaterThanOrEqual(navMetrics.rights[index - 1] - 1);
+  for (let index = 1; index < headerMetrics.lefts.length; index += 1) {
+    expect(headerMetrics.lefts[index]).toBeGreaterThanOrEqual(headerMetrics.rights[index - 1] - 1);
   }
-
-  const header = page.locator('header').first();
-  await expect(
-    header.getByRole('button', { name: /Каталог/i })
-  ).toHaveCount(0);
-  await expect(header.getByLabel('Корзина')).toBeHidden();
-  await expect(header.getByLabel('Войти')).toBeHidden();
-  await expect(header.getByText('Весь каталог')).toBeHidden();
 });
 
 test('mobile search page controls stay inside the card without overlap', async ({ page }) => {

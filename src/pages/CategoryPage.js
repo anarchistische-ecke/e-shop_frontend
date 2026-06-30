@@ -53,8 +53,17 @@ import {
   getListingRobots,
   hasListingSeoVariant
 } from '../seo/listing';
+import QuickViewSheet from '../components/commerce/QuickViewSheet';
 
-function CategoryCard({ product, fromPath, fromLabel, listName, position, withOfferCatalogMicrodata = false }) {
+function CategoryCard({
+  product,
+  fromPath,
+  fromLabel,
+  listName,
+  position,
+  withOfferCatalogMicrodata = false,
+  onQuickView
+}) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const hoverTimerRef = useRef(null);
@@ -125,23 +134,12 @@ function CategoryCard({ product, fromPath, fromLabel, listName, position, withOf
 
   return (
     <Card
-      as={Link}
-      to={buildProductPath(product)}
-      state={{ fromPath, fromLabel }}
       variant="quiet"
       padding="sm"
       interactive
-      className="group block rounded-[24px]"
+      className="group relative block rounded-[24px]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => {
-        trackProductClick(product, {
-          variant: primaryVariant,
-          variantId: primaryVariant?.id,
-          listName,
-          position
-        });
-      }}
       itemProp={offerMicrodata ? 'itemListElement' : undefined}
       itemScope={Boolean(offerMicrodata) || undefined}
       itemType={offerMicrodata ? 'https://schema.org/Offer' : undefined}
@@ -157,39 +155,67 @@ function CategoryCard({ product, fromPath, fromLabel, listName, position, withOf
           <meta itemProp="priceCurrency" content={offerMicrodata.priceCurrency} />
         </>
       ) : null}
-      <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
-        <div className="relative pt-[74%]">
-          {currentImage ? (
-            <img
-              src={currentImage}
-              alt={product.name}
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-              loading="lazy"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">Нет фото</div>
-          )}
-        </div>
+      <Link
+        to={buildProductPath(product)}
+        state={{ fromPath, fromLabel }}
+        className="block"
+        onClick={() => {
+          trackProductClick(product, {
+            variant: primaryVariant,
+            variantId: primaryVariant?.id,
+            listName,
+            position
+          });
+        }}
+      >
+        <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
+          <div className="relative pt-[74%]">
+            {currentImage ? (
+              <img
+                src={currentImage}
+                alt={product.name}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                loading="lazy"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">Нет фото</div>
+            )}
+          </div>
 
-        <div className="absolute inset-x-2 top-2 flex flex-wrap items-start gap-2">
-          {hasDiscount ? (
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-              −{discount}%
-            </span>
-          ) : null}
-          {badges.slice(0, 2).map((badge) => (
-            <span
-              key={`${product.id}-${badge}`}
-              className="rounded-full border border-ink/15 bg-white/90 px-2.5 py-1 text-[11px] text-ink/75"
-            >
-              {badge}
-            </span>
-          ))}
+          <div className="absolute inset-x-2 top-2 flex flex-wrap items-start gap-2">
+            {hasDiscount ? (
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                −{discount}%
+              </span>
+            ) : null}
+            {badges.slice(0, 2).map((badge) => (
+              <span
+                key={`${product.id}-${badge}`}
+                className="rounded-full border border-ink/15 bg-white/90 px-2.5 py-1 text-[11px] text-ink/75"
+              >
+                {badge}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      </Link>
 
       <div className="mt-3 space-y-2">
-        <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
+        <Link
+          to={buildProductPath(product)}
+          state={{ fromPath, fromLabel }}
+          className="block"
+          onClick={() => {
+            trackProductClick(product, {
+              variant: primaryVariant,
+              variantId: primaryVariant?.id,
+              listName,
+              position
+            });
+          }}
+        >
+          <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
+        </Link>
 
         <p className="line-clamp-1 text-xs text-muted">{attributeLine}</p>
 
@@ -200,7 +226,14 @@ function CategoryCard({ product, fromPath, fromLabel, listName, position, withOf
               <span className="text-xs text-muted line-through">{oldPrice.toLocaleString('ru-RU')} ₽</span>
             ) : null}
           </div>
-          <span className="text-xs text-primary">Открыть →</span>
+          <button
+            type="button"
+            className="inline-flex min-h-[36px] items-center rounded-xl border border-primary/20 bg-primary/10 px-2 text-xs font-semibold text-primary md:hidden"
+            onClick={() => onQuickView?.(product)}
+          >
+            Быстро
+          </button>
+          <span className="hidden text-xs text-primary md:inline">Открыть →</span>
         </div>
       </div>
     </Card>
@@ -213,6 +246,7 @@ function CategoryPage() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('grid');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [quickViewProduct, setQuickViewProduct] = useState(null);
   const resultsRef = useRef(null);
 
   const { params, updateParams, clearFilters } = useProductListRouteState({
@@ -583,7 +617,7 @@ function CategoryPage() {
         {!isFilterOpen ? (
           <Button
             type="button"
-            className="fixed bottom-[calc(var(--mobile-bottom-nav-offset,0px)+env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 !rounded-full px-5 shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
+            className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 !rounded-full px-5 shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
             onClick={() => setIsFilterOpen(true)}
           >
             Фильтры{list.activeFilters.length > 0 ? ` · ${list.activeFilters.length}` : ''}
@@ -673,6 +707,7 @@ function CategoryPage() {
                     listName={`category_${slug || 'unknown'}`}
                     position={index + 1}
                     withOfferCatalogMicrodata={!isListingVariant}
+                    onQuickView={setQuickViewProduct}
                   />
                 ))}
               </div>
@@ -704,6 +739,11 @@ function CategoryPage() {
           )}
         </div>
       </div>
+      <QuickViewSheet
+        open={Boolean(quickViewProduct)}
+        product={quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+      />
     </div>
   );
 }

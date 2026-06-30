@@ -99,8 +99,7 @@ function App({ routes = [] }) {
             isChromeHiddenRoute
               ? undefined
               : {
-                  paddingTop: 'var(--site-header-height, 7rem)',
-                  paddingBottom: 'var(--mobile-bottom-nav-offset, 0px)'
+                  paddingTop: 'var(--site-header-height, 7rem)'
                 }
           }
         >

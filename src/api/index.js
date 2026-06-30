@@ -114,6 +114,14 @@ async function request(url, options = {}) {
 export async function getCategories() {
   return request('/categories');
 }
+
+export async function requestMagicLink({ email, redirectUri }) {
+  return request('/auth/magic-link', {
+    method: 'POST',
+    body: JSON.stringify({ email, redirectUri })
+  });
+}
+
 export async function createCategory(category) {
   return request('/categories', {
     method: 'POST',

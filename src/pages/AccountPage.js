@@ -151,10 +151,168 @@ const ORDER_STATUS_LABELS = {
   REFUNDED: 'Возврат выполнен',
 };
 
-const formatOrderStatus = (status) => {
-  if (!status) return 'В обработке';
-  return ORDER_STATUS_LABELS[status] || status;
+const ORDER_STATUS_META = {
+  PENDING: {
+    label: 'Ожидает оплаты',
+    businessLabel: 'Нужно оплатить',
+    tone: 'amber',
+    progress: 0
+  },
+  PROCESSING: {
+    label: 'В обработке',
+    businessLabel: 'Менеджер проверяет заказ',
+    tone: 'sky',
+    progress: 1
+  },
+  PAID: {
+    label: 'Оплачен',
+    businessLabel: 'Передан менеджеру',
+    tone: 'emerald',
+    progress: 2
+  },
+  DELIVERED: {
+    label: 'Доставлен',
+    businessLabel: 'Получен',
+    tone: 'emerald',
+    progress: 4
+  },
+  CANCELLED: {
+    label: 'Отменён',
+    businessLabel: 'Заказ отменён',
+    tone: 'neutral',
+    progress: 0
+  },
+  REFUNDED: {
+    label: 'Возврат выполнен',
+    businessLabel: 'Возврат закрыт',
+    tone: 'rose',
+    progress: 4
+  }
 };
+
+const ORDER_STATUS_TONE_CLASSES = {
+  amber: 'border-amber-200 bg-amber-50 text-amber-800',
+  sky: 'border-sky-200 bg-sky-50 text-sky-800',
+  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  rose: 'border-rose-200 bg-rose-50 text-rose-800',
+  neutral: 'border-ink/10 bg-secondary text-ink/70'
+};
+
+function getOrderStatusMeta(status) {
+  const normalized = status || 'PROCESSING';
+  return (
+    ORDER_STATUS_META[normalized] || {
+      label: ORDER_STATUS_LABELS[normalized] || normalized,
+      businessLabel: 'Статус уточняется',
+      tone: 'neutral',
+      progress: 1
+    }
+  );
+}
+
+const formatOrderStatus = (status) => {
+  return getOrderStatusMeta(status).label;
+};
+
+function getOrderTrackingInfo(order) {
+  if (!order) {
+    return { url: '', number: '', carrier: '', label: '' };
+  }
+
+  const delivery = order.delivery || {};
+  const shipping = order.shipping || {};
+  const number =
+    order.trackingNumber ||
+    order.tracking_number ||
+    order.deliveryTrackingNumber ||
+    delivery.trackingNumber ||
+    delivery.tracking_number ||
+    shipping.trackingNumber ||
+    '';
+  const url =
+    order.trackingUrl ||
+    order.tracking_url ||
+    order.deliveryTrackingUrl ||
+    delivery.trackingUrl ||
+    delivery.tracking_url ||
+    shipping.trackingUrl ||
+    '';
+  const carrier =
+    order.carrierName ||
+    order.deliveryCarrier ||
+    delivery.carrier ||
+    shipping.carrier ||
+    '';
+
+  return {
+    url,
+    number,
+    carrier,
+    label: number ? `Трек ${number}` : 'Отследить доставку'
+  };
+}
+
+function getOrderTimeline(order) {
+  const status = order?.status || 'PROCESSING';
+  const meta = getOrderStatusMeta(status);
+  const tracking = getOrderTrackingInfo(order);
+
+  if (status === 'CANCELLED') {
+    return [
+      { key: 'created', title: 'Создан', done: true },
+      { key: 'cancelled', title: 'Отменён', done: true },
+      { key: 'support', title: 'Поддержка', done: false }
+    ];
+  }
+
+  if (status === 'REFUNDED') {
+    return [
+      { key: 'created', title: 'Создан', done: true },
+      { key: 'paid', title: 'Оплата', done: true },
+      { key: 'return', title: 'Возврат', done: true }
+    ];
+  }
+
+  return [
+    { key: 'created', title: 'Создан', done: true },
+    { key: 'paid', title: 'Оплата', done: meta.progress >= 2 },
+    { key: 'manager', title: 'Менеджер', done: meta.progress >= 2 },
+    { key: 'delivery', title: tracking.number || tracking.url ? 'В пути' : 'Доставка', done: meta.progress >= 4 }
+  ];
+}
+
+function OrderStatusBadge({ order }) {
+  const meta = getOrderStatusMeta(order?.status);
+  return (
+    <span
+      className={`inline-flex min-h-[28px] items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+        ORDER_STATUS_TONE_CLASSES[meta.tone] || ORDER_STATUS_TONE_CLASSES.neutral
+      }`}
+    >
+      {meta.businessLabel}
+    </span>
+  );
+}
+
+function OrderTimeline({ order }) {
+  return (
+    <ol className="grid grid-cols-4 gap-1.5" aria-label="Статус заказа">
+      {getOrderTimeline(order).map((step) => (
+        <li key={step.key} className="min-w-0">
+          <span
+            className={`block h-1.5 rounded-full ${
+              step.done ? 'bg-primary' : 'bg-ink/10'
+            }`}
+            aria-hidden="true"
+          />
+          <span className={`mt-1 block truncate text-[10px] ${step.done ? 'text-ink' : 'text-muted'}`}>
+            {step.title}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 function AccountPage() {
   const location = useLocation();
@@ -215,6 +373,17 @@ function AccountPage() {
   const activeSection = routeState.section;
   const selectedOrderId =
     activeSection === ACCOUNT_ORDERS_SECTION ? routeState.orderId : '';
+  const selectedOrder = useMemo(
+    () => findAccountOrderById(orders, selectedOrderId),
+    [orders, selectedOrderId]
+  );
+  const selectedOrderNotFound =
+    activeSection === ACCOUNT_ORDERS_SECTION &&
+    Boolean(selectedOrderId) &&
+    !isOrdersLoading &&
+    !ordersError &&
+    orders.length > 0 &&
+    !selectedOrder;
 
   const loadOrders = useCallback(async () => {
     setIsOrdersLoading(true);
@@ -346,17 +515,7 @@ function AccountPage() {
     tokenParsed?.phoneNumber ||
     'Добавьте телефон';
   const activeLabel = SECTION_LABELS[activeSection] || 'Профиль';
-  const selectedOrder = useMemo(
-    () => findAccountOrderById(orders, selectedOrderId),
-    [orders, selectedOrderId]
-  );
-  const selectedOrderNotFound =
-    activeSection === ACCOUNT_ORDERS_SECTION &&
-    Boolean(selectedOrderId) &&
-    !isOrdersLoading &&
-    !ordersError &&
-    orders.length > 0 &&
-    !selectedOrder;
+  const selectedOrderTracking = getOrderTrackingInfo(selectedOrder);
 
   const handleProfileChange = (field) => (event) => {
     setProfile((prev) => ({ ...prev, [field]: event.target.value }));
@@ -851,10 +1010,14 @@ function AccountPage() {
                           Заказ {String(selectedOrder.id).slice(0, 8)}...
                         </h3>
                         <p className="mt-1 text-sm text-muted">
-                          {getOrderDateLabel(selectedOrder, { withTime: true })} · {formatOrderStatus(selectedOrder.status)}
+                          {getOrderDateLabel(selectedOrder, { withTime: true })}
                         </p>
-                        <p className="mt-1 text-xs text-muted">
-                          Статус обновлён: {getOrderStatusUpdatedLabel(selectedOrder)}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <OrderStatusBadge order={selectedOrder} />
+                          <span className="text-xs text-muted">{formatOrderStatus(selectedOrder.status)}</span>
+                        </div>
+                        <p className="mt-2 text-xs text-muted">
+                          Обновлено: {getOrderStatusUpdatedLabel(selectedOrder)}
                         </p>
                       </div>
                       <div className="flex flex-wrap justify-end gap-2">
@@ -874,6 +1037,10 @@ function AccountPage() {
                           Оформить возврат
                         </Button>
                       </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <OrderTimeline order={selectedOrder} />
                     </div>
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -922,6 +1089,21 @@ function AccountPage() {
                         <p className="mt-1 text-xs text-muted">
                           Финальную стоимость и варианты доставки согласует менеджер.
                         </p>
+                        {selectedOrderTracking.url ? (
+                          <a
+                            href={selectedOrderTracking.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-flex min-h-[36px] items-center rounded-full border border-ink/10 px-3 text-xs font-semibold text-primary"
+                          >
+                            {selectedOrderTracking.label}
+                          </a>
+                        ) : selectedOrderTracking.number ? (
+                          <p className="mt-3 text-xs font-semibold text-ink">
+                            {selectedOrderTracking.label}
+                            {selectedOrderTracking.carrier ? ` · ${selectedOrderTracking.carrier}` : ''}
+                          </p>
+                        ) : null}
                       </Card>
                     </div>
 
@@ -972,59 +1154,91 @@ function AccountPage() {
                 )}
 
                 <div className="space-y-3">
-                {orders.map((order) => {
-                  const dateStr = getOrderDateLabel(order);
-                  const totalAmount = getOrderTotal(order);
-                  return (
-                    <div
-                      key={order.id}
-                      className="rounded-2xl border border-ink/10 bg-white/90 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold">Заказ {String(order.id).slice(0, 8)}...</p>
-                        <p className="text-xs text-muted">{dateStr} · {formatOrderStatus(order.status)}</p>
-                        <p className="mt-0.5 text-[11px] text-muted">
-                          Статус обновлён: {getOrderStatusUpdatedLabel(order)}
-                        </p>
-                      </div>
-                      <div className="text-sm text-right">
-                        <p className="font-semibold">{totalAmount.toLocaleString('ru-RU')} ₽</p>
-                        <div className="mt-1 flex flex-col items-end gap-1">
+                  {orders.map((order) => {
+                    const dateStr = getOrderDateLabel(order);
+                    const totalAmount = getOrderTotal(order);
+                    const tracking = getOrderTrackingInfo(order);
+                    return (
+                      <article
+                        key={order.id}
+                        className="rounded-2xl border border-ink/10 bg-white/90 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold">Заказ {String(order.id).slice(0, 8)}...</p>
+                            <p className="mt-1 text-xs text-muted">{dateStr}</p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="text-sm font-semibold">{totalAmount.toLocaleString('ru-RU')} ₽</p>
+                            <p className="mt-1 text-[11px] text-muted">{formatOrderStatus(order.status)}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <OrderStatusBadge order={order} />
+                          <span className="text-[11px] text-muted">
+                            Обновлено: {getOrderStatusUpdatedLabel(order)}
+                          </span>
+                        </div>
+
+                        <div className="mt-3">
+                          <OrderTimeline order={order} />
+                        </div>
+
+                        {tracking.url ? (
+                          <a
+                            href={tracking.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-flex min-h-[36px] items-center rounded-full border border-ink/10 px-3 text-xs font-semibold text-primary"
+                          >
+                            {tracking.label}
+                            {tracking.carrier ? ` · ${tracking.carrier}` : ''}
+                          </a>
+                        ) : tracking.number ? (
+                          <p className="mt-3 text-xs font-semibold text-ink">
+                            {tracking.label}
+                            {tracking.carrier ? ` · ${tracking.carrier}` : ''}
+                          </p>
+                        ) : null}
+
+                        <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                           <Button
                             as={Link}
                             to={buildAccountOrderPath(order)}
-                            variant="ghost"
+                            variant="secondary"
                             size="sm"
-                            className="!min-h-0 !px-0 !py-0 text-xs text-primary"
+                            className="justify-center"
                           >
-                            {order.publicToken ? 'Открыть заказ' : 'Открыть детали'}
+                            {order.publicToken ? 'Открыть заказ' : 'Детали'}
                           </Button>
-                          {!order.publicToken ? (
-                            <span className="text-[11px] text-muted">Детали доступны в кабинете</span>
-                          ) : null}
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="secondary"
                             size="sm"
-                            className="!min-h-0 !px-0 !py-0 text-xs text-primary"
+                            className="justify-center"
                             onClick={() => handleReorder(order)}
                           >
-                            Повторить заказ
+                            Повторить
                           </Button>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="!min-h-0 !px-0 !py-0 text-xs text-muted"
+                            className="justify-center sm:px-4"
                             onClick={() => openRmaModal(order)}
                           >
                             Возврат
                           </Button>
+                          {!order.publicToken ? (
+                            <span className="col-span-2 self-center text-[11px] text-muted">
+                              Детали доступны в кабинете
+                            </span>
+                          ) : null}
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                      </article>
+                    );
+                  })}
                 </div>
               </div>
             )}

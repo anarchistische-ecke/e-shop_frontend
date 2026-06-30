@@ -20,7 +20,7 @@ describe('checkout validation', () => {
 
   it('validates the manual home address step', () => {
     expect(validateCheckoutStep('address', { homeAddress: '' })).toEqual({
-      homeAddress: 'Укажите домашний адрес. Варианты и стоимость доставки согласует менеджер.'
+      homeAddress: 'Укажите город и улицу с домом. Варианты и стоимость доставки согласует менеджер.'
     });
   });
 

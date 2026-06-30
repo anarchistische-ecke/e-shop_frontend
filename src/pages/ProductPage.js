@@ -470,6 +470,18 @@ function ProductPage() {
     () => (Array.isArray(product?.variants) ? product.variants : Array.from(product?.variants || [])),
     [product]
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const variantId = params.get('variant');
+    if (!variantId || !productVariants.length || selectedVariant?.id === variantId) {
+      return;
+    }
+    const variantFromUrl = productVariants.find((variant) => String(variant?.id || '') === variantId);
+    if (variantFromUrl) {
+      setSelectedVariant(variantFromUrl);
+    }
+  }, [location.search, productVariants, selectedVariant?.id]);
   const hasColorOptions = useMemo(
     () => productVariants.some(hasStructuredColor),
     [productVariants]
@@ -928,6 +940,15 @@ function ProductPage() {
 
     setIsVariantTransitioning(true);
     setSelectedVariant(variant);
+    const params = new URLSearchParams(location.search);
+    params.set('variant', variant.id);
+    navigate(
+      {
+        pathname: location.pathname,
+        search: `?${params.toString()}`
+      },
+      { replace: true, state: location.state }
+    );
     trackGoal(METRIKA_GOALS.PRODUCT_VARIANT_CHANGE, {
       product_id: product?.id,
       variant_id: variant.id,

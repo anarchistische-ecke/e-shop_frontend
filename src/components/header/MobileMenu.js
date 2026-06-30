@@ -236,7 +236,7 @@ function MobileMenu({
               <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-muted">Каталог</p>
               <nav aria-label="Разделы каталога">
                 <ul className="space-y-2">
-                  {mobileCategories.map((category) => (
+                  {mobileCategories.slice(0, 7).map((category) => (
                     <MobileCategoryItem
                       key={resolveCategoryToken(category)}
                       category={category}

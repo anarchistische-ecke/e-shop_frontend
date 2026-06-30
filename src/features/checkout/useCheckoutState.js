@@ -62,6 +62,32 @@ function resolveNameFromToken(tokenParsed) {
   return fullName || tokenParsed?.name || '';
 }
 
+function composeHomeAddress(parts = {}) {
+  return [
+    parts.postalCode ? `Индекс ${parts.postalCode}` : '',
+    parts.city,
+    parts.street,
+    parts.address2
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+function splitHomeAddress(value = '') {
+  const parts = String(value || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const postalMatch = parts[0]?.match(/^Индекс\s+(.+)$/i);
+  return {
+    postalCode: postalMatch ? postalMatch[1] : '',
+    city: postalMatch ? parts[1] || '' : parts[0] || '',
+    street: postalMatch ? parts[2] || '' : parts[1] || '',
+    address2: postalMatch ? parts.slice(3).join(', ') : parts.slice(2).join(', ')
+  };
+}
+
 export function useCheckoutState() {
   const navigate = useNavigate();
   const { items: liveItems, cartId, pricing } = useContext(CartContext);
@@ -87,6 +113,9 @@ export function useCheckoutState() {
   const [customerName, setCustomerName] = useState(formDraft.customerName || '');
   const [phone, setPhone] = useState(formDraft.phone || '');
   const [homeAddress, setHomeAddress] = useState(formDraft.homeAddress || '');
+  const [addressParts, setAddressParts] = useState(
+    formDraft.addressParts || splitHomeAddress(formDraft.homeAddress || '')
+  );
 
   const [status, setStatus] = useState(formDraft.status || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -191,6 +220,7 @@ export function useCheckoutState() {
         customerName,
         phone,
         homeAddress,
+        addressParts,
         fieldErrors,
         savePaymentMethod,
         expressMessage
@@ -201,6 +231,7 @@ export function useCheckoutState() {
     }),
     [
       activeStep,
+      addressParts,
       attempt,
       completedSteps,
       customerName,
@@ -243,6 +274,14 @@ export function useCheckoutState() {
     phone,
     safeRetryState
   ]);
+
+  const updateAddressPart = useCallback((field, value) => {
+    setAddressParts((current) => {
+      const next = { ...current, [field]: value };
+      setHomeAddress(composeHomeAddress(next));
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!itemsCount || beginCheckoutTrackedRef.current) return;
@@ -335,7 +374,8 @@ export function useCheckoutState() {
       email,
       customerName,
       phone,
-      homeAddress
+      homeAddress,
+      addressParts
     });
     const fields = STEP_FIELD_ORDER[stepKey] || [];
     applyStepFieldErrors(fields, errors);
@@ -349,6 +389,7 @@ export function useCheckoutState() {
     return { valid: Object.keys(errors).length === 0, errors };
   }, [
     applyStepFieldErrors,
+    addressParts,
     customerName,
     email,
     homeAddress,
@@ -412,6 +453,21 @@ export function useCheckoutState() {
     trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'success' });
     markCompleted('address');
     setActiveStep(2);
+  }, [markCompleted, validateStep]);
+
+  const handleDeliveryNext = useCallback(() => {
+    setStatus(null);
+    if (!validateStep('contact').valid) {
+      setActiveStep(0);
+      return;
+    }
+    if (!validateStep('address').valid) {
+      setActiveStep(1);
+      return;
+    }
+    trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'delivery', outcome: 'success' });
+    markCompleted('delivery');
+    setActiveStep(3);
   }, [markCompleted, validateStep]);
 
   const handleExpressCheckout = useCallback((providerLabel) => {
@@ -526,7 +582,7 @@ export function useCheckoutState() {
         outcome: 'fail',
         reason: 'missing_confirmation_url'
       });
-      setActiveStep(2);
+      setActiveStep(CHECKOUT_STEPS.length - 1);
       setSafeRetryState(createSafeRetryState('missing_confirmation', {
         orderToken,
         message: 'Заказ уже создан, но платёжная ссылка не пришла. Попробуйте безопасно запросить её ещё раз.'
@@ -552,7 +608,7 @@ export function useCheckoutState() {
         }));
         setSafeRetryState(null);
       } else if (isApiRequestError(err) && err.status === 409) {
-        setActiveStep(2);
+        setActiveStep(CHECKOUT_STEPS.length - 1);
         setSafeRetryState(createSafeRetryState('conflict', {
           orderToken: nextAttempt.orderToken || attempt.orderToken || '',
           message: getCustomerSafeErrorMessage(err, {
@@ -570,7 +626,7 @@ export function useCheckoutState() {
         !isApiRequestError(err) ||
         (isApiRequestError(err) && err.status >= 500 && err.details?.recoverable !== false)
       ) {
-        setActiveStep(2);
+        setActiveStep(CHECKOUT_STEPS.length - 1);
         setSafeRetryState(createSafeRetryState('timeout', {
           orderToken: nextAttempt.orderToken || attempt.orderToken || ''
         }));
@@ -626,15 +682,22 @@ export function useCheckoutState() {
   const mobileAction = activeStep === 0
     ? {
         label: 'К адресу',
-        subtitle: 'Шаг 1 из 3 · Контакты',
+        subtitle: 'Шаг 1 из 4 · Контакты',
         action: handleContactNext,
         disabled: isSubmitting
       }
     : activeStep === 1
     ? {
-        label: 'К подтверждению',
-        subtitle: 'Шаг 2 из 3 · Адрес',
+        label: 'К доставке',
+        subtitle: 'Шаг 2 из 4 · Адрес',
         action: handleAddressNext,
+        disabled: isSubmitting
+      }
+    : activeStep === 2
+    ? {
+        label: 'К оплате',
+        subtitle: 'Шаг 3 из 4 · Доставка',
+        action: handleDeliveryNext,
         disabled: isSubmitting
       }
     : {
@@ -642,8 +705,8 @@ export function useCheckoutState() {
           ? 'Оформляем заказ…'
           : safeRetryState?.retryLabel || checkoutSubmitLabel,
         subtitle: safeRetryState
-          ? 'Шаг 3 из 3 · Безопасная проверка'
-          : 'Шаг 3 из 3 · Подтверждение',
+          ? 'Шаг 4 из 4 · Безопасная проверка'
+          : 'Шаг 4 из 4 · Подтверждение',
         action: safeRetryState
           ? handleSafeRetry
           : () => {
@@ -668,6 +731,8 @@ export function useCheckoutState() {
     setPhone,
     homeAddress,
     setHomeAddress,
+    addressParts,
+    updateAddressPart,
     topNotification,
     isSubmitting,
     savePaymentMethod,
@@ -689,6 +754,7 @@ export function useCheckoutState() {
     handleExpressCheckout,
     handleContactNext,
     handleAddressNext,
+    handleDeliveryNext,
     handleSubmit,
     formatRub,
     moneyToNumber,

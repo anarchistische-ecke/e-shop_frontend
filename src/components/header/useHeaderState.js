@@ -3,21 +3,19 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CartContext } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProductDirectoryData } from '../../features/product-list/data';
-import { buildSearchHref } from '../../features/product-list/url';
 import { METRIKA_GOALS, trackMetrikaGoal } from '../../utils/metrika';
 import {
   buildAccountLinks,
   buildCategoryCollections,
   buildHeaderSearchParams,
-  resolveMobileBottomNavKey,
-  resolveWayfindingLabel,
-  shouldShowMobileBottomNav
+  resolveWayfindingLabel
 } from '../../utils/header';
 import { buildAutocompleteData, normalizeSearchText } from '../../utils/search';
 import { readEnv } from '../../config/runtime';
 
 export function useHeaderState() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [searchScope, setSearchScope] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -49,11 +47,6 @@ export function useHeaderState() {
   const wayfindingLabel = useMemo(
     () => resolveWayfindingLabel(location.pathname, location.search),
     [location.pathname, location.search]
-  );
-
-  const isBottomNavEnabled = useMemo(
-    () => shouldShowMobileBottomNav(location.pathname),
-    [location.pathname]
   );
 
   const totalItems = useMemo(
@@ -90,12 +83,15 @@ export function useHeaderState() {
   const autocompleteData = useMemo(
     () =>
       buildAutocompleteData({
-        query: searchTerm,
+        query: debouncedSearchTerm.length >= 2 ? debouncedSearchTerm : '',
         products,
         categories,
-        scopeToken: searchScope
+        scopeToken: searchScope,
+        queryLimit: 2,
+        productLimit: 3,
+        categoryLimit: 2
       }),
-    [categories, products, searchScope, searchTerm]
+    [categories, debouncedSearchTerm, products, searchScope]
   );
 
   const hasSearchSuggestions =
@@ -103,20 +99,10 @@ export function useHeaderState() {
     autocompleteData.suggestedQueries.length > 0 ||
     autocompleteData.productSuggestions.length > 0 ||
     autocompleteData.hasCorrection;
+  const hasSearchMinimumLength = normalizeSearchText(searchTerm).length >= 2;
 
   const isSearchPanelVisible =
-    (isSearchOpen || isSearchFocused) && (searchTerm || hasSearchSuggestions);
-
-  const activeBottomNavKey = useMemo(
-    () =>
-      resolveMobileBottomNavKey({
-        pathname: location.pathname,
-        search: location.search,
-        isMenuOpen,
-        isSearchPanelVisible
-      }),
-    [isMenuOpen, isSearchPanelVisible, location.pathname, location.search]
-  );
+    (isSearchOpen || isSearchFocused) && hasSearchMinimumLength && (searchTerm || hasSearchSuggestions);
 
   const mobileCategories = navCategories;
   const closeSearch = useCallback(() => {
@@ -158,6 +144,14 @@ export function useHeaderState() {
   useEffect(() => {
     updateHeaderHeight();
   }, [isMenuOpen, isSearchPanelVisible, navCategories.length, updateHeaderHeight]);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setDebouncedSearchTerm(normalizeSearchText(searchTerm));
+    }, 150);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
 
   useEffect(() => {
     const headerEl = headerBarRef.current;
@@ -228,30 +222,6 @@ export function useHeaderState() {
       document.documentElement.style.overflow = previousDocumentOverflow;
     };
   }, [isMenuOpen, isSearchPanelVisible]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      return undefined;
-    }
-
-    const updateBottomNavOffset = () => {
-      const isMobileViewport = window.innerWidth < 768;
-      document.documentElement.style.setProperty(
-        '--mobile-bottom-nav-offset',
-        isBottomNavEnabled && isMobileViewport
-          ? 'calc(5rem + env(safe-area-inset-bottom, 0px))'
-          : '0px'
-      );
-    };
-
-    updateBottomNavOffset();
-    window.addEventListener('resize', updateBottomNavOffset);
-
-    return () => {
-      window.removeEventListener('resize', updateBottomNavOffset);
-      document.documentElement.style.setProperty('--mobile-bottom-nav-offset', '0px');
-    };
-  }, [isBottomNavEnabled]);
 
   useEffect(() => {
     if ((!isSearchOpen && !isSearchFocused) || typeof document === 'undefined') {
@@ -454,12 +424,15 @@ export function useHeaderState() {
     closeMenu();
     closeMega();
     closeAccountMenu();
-    const target = buildSearchHref({
-      query: searchTerm.trim(),
-      scope: searchScope
+    setIsSearchOpen(true);
+    setIsSearchFocused(true);
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.requestAnimationFrame?.(() => {
+      searchInputRef.current?.focus();
     });
-    navigate(target);
-  }, [closeAccountMenu, closeMega, closeMenu, navigate, searchScope, searchTerm]);
+  }, [closeAccountMenu, closeMega, closeMenu]);
 
   const openMenu = useCallback(() => {
     setIsMenuOpen(true);
@@ -501,7 +474,6 @@ export function useHeaderState() {
   return {
     accountLinks,
     accountMenuRef,
-    activeBottomNavKey,
     autocompleteData,
     childrenByParent,
     clearSearch,
@@ -522,10 +494,10 @@ export function useHeaderState() {
     headerRef,
     isAccountMenuOpen,
     isAuthenticated,
-    isBottomNavEnabled,
     isCatalogMenuOpen,
     isManager,
     isMenuOpen,
+    isSearchOpen,
     isSearchPanelVisible,
     lastAddedItem,
     mobileCategories,
