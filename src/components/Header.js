@@ -5,7 +5,6 @@ import { WishlistContext } from '../contexts/WishlistContext';
 import { DEFAULT_HEADER_NAVIGATION } from '../data/cms/defaults';
 import { Button } from './ui';
 import AccountMenu from './header/AccountMenu';
-import BottomNavBar from './header/BottomNavBar';
 import CartButton from './header/CartButton';
 import DesktopMegaMenu from './header/DesktopMegaMenu';
 import FavoritesButton from './header/FavoritesButton';
@@ -14,6 +13,8 @@ import LastAddedCartNotice from './header/LastAddedCartNotice';
 import MobileMenu from './header/MobileMenu';
 import SearchBar from './header/SearchBar';
 import { useHeaderState } from './header/useHeaderState';
+import MiniCartDrawer from './commerce/MiniCartDrawer';
+import { CartIcon, CatalogIcon, HeartIcon, SearchIcon } from './header/icons';
 
 function isInternalUrl(url) {
   return typeof url === 'string' && url.startsWith('/');
@@ -51,6 +52,7 @@ function Header() {
   const header = useHeaderState();
   const { count: wishlistCount } = useContext(WishlistContext);
   const [isUtilityCollapsed, setIsUtilityCollapsed] = useState(false);
+  const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
   const { siteSettings } = useCmsSiteSettings();
   const { navigation: headerNavigation } = useCmsNavigation({
     placement: 'header',
@@ -112,14 +114,72 @@ function Header() {
                 </div>
               ) : null}
 
-              <div className="grid grid-cols-1 gap-1.5 sm:gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3.5">
-                <HeaderBrand
-                  siteName={siteSettings.siteName}
-                  wayfindingLabel={header.wayfindingLabel}
-                />
+              <div className="grid grid-cols-[repeat(5,minmax(0,1fr))] items-stretch gap-1 lg:hidden">
+                <button
+                  type="button"
+                  className="focus-ring-soft flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-2xl border border-ink/10 bg-white/88 px-1 text-[11px] font-semibold text-ink shadow-[0_8px_18px_rgba(43,39,34,0.08)]"
+                  onClick={header.openMenu}
+                  aria-expanded={header.isMenuOpen}
+                  aria-controls="mobile-nav-panel"
+                >
+                  <CatalogIcon className="h-5 w-5" />
+                  Меню
+                </button>
+                <Link
+                  to="/"
+                  className="focus-ring-soft flex min-h-[52px] flex-col items-center justify-center rounded-2xl border border-ink/10 bg-white/88 px-1 text-center font-display text-[17px] font-semibold leading-none text-ink shadow-[0_8px_18px_rgba(43,39,34,0.08)]"
+                >
+                  {siteSettings.siteName}
+                  <span className="mt-1 font-body text-[10px] font-semibold text-muted">Домой</span>
+                </Link>
+                <button
+                  type="button"
+                  className="focus-ring-soft flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-2xl border border-ink/10 bg-white/88 px-1 text-[11px] font-semibold text-ink shadow-[0_8px_18px_rgba(43,39,34,0.08)]"
+                  onClick={header.openSearchPanel}
+                  aria-expanded={header.isSearchOpen}
+                >
+                  <SearchIcon className="h-5 w-5" />
+                  Поиск
+                </button>
+                <Link
+                  to="/favorites"
+                  className="focus-ring-soft relative flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-2xl border border-ink/10 bg-white/88 px-1 text-[11px] font-semibold text-ink shadow-[0_8px_18px_rgba(43,39,34,0.08)]"
+                >
+                  <HeartIcon className="h-5 w-5" filled={wishlistCount > 0} />
+                  Избранное
+                  {wishlistCount > 0 ? (
+                    <span className="absolute right-1 top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent px-1 text-[10px] leading-none text-white">
+                      {wishlistCount > 99 ? '99+' : wishlistCount}
+                    </span>
+                  ) : null}
+                </Link>
+                <button
+                  type="button"
+                  className="focus-ring-soft relative flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-2xl border border-ink/10 bg-white/88 px-1 text-[11px] font-semibold text-ink shadow-[0_8px_18px_rgba(43,39,34,0.08)]"
+                  onClick={() => setIsMiniCartOpen(true)}
+                  aria-expanded={isMiniCartOpen}
+                >
+                  <CartIcon className="h-5 w-5" />
+                  Корзина
+                  {header.totalItems > 0 ? (
+                    <span className="absolute right-1 top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent px-1 text-[10px] leading-none text-white">
+                      {header.totalItems > 99 ? '99+' : header.totalItems}
+                    </span>
+                  ) : null}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-1.5 pt-1.5 sm:gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3.5 lg:pt-0">
+                <div className="hidden lg:block">
+                  <HeaderBrand
+                    siteName={siteSettings.siteName}
+                    wayfindingLabel={header.wayfindingLabel}
+                  />
+                </div>
 
                 <SearchBar
                   autocompleteData={header.autocompleteData}
+                  isSearchOpen={header.isSearchOpen}
                   isSearchPanelVisible={header.isSearchPanelVisible}
                   onChange={header.handleSearchInputChange}
                   onClear={header.clearSearch}
@@ -187,14 +247,9 @@ function Header() {
         wishlistCount={wishlistCount}
       />
 
-      <BottomNavBar
-        activeKey={header.activeBottomNavKey}
-        isAuthenticated={header.isAuthenticated}
-        isEnabled={header.isBottomNavEnabled}
-        isMenuOpen={header.isMenuOpen}
-        onOpenMenu={header.openMenu}
-        onOpenSearch={header.openSearchPanel}
-        totalItems={header.totalItems}
+      <MiniCartDrawer
+        open={isMiniCartOpen}
+        onClose={() => setIsMiniCartOpen(false)}
       />
 
       <LastAddedCartNotice

@@ -36,7 +36,9 @@ function ProductCard({
   imageSizes = '(min-width: 1024px) 22vw, (min-width: 768px) 31vw, 46vw',
   listName = 'product_list',
   position,
-  withOfferCatalogMicrodata = false
+  withOfferCatalogMicrodata = false,
+  onQuickView,
+  showAddToCart = true
 }) {
   const location = useLocation();
   const { isWishlisted, toggle } = useContext(WishlistContext);
@@ -281,11 +283,30 @@ function ProductCard({
               </span>
             )}
           </div>
-          <AddToCartButton
-            product={product}
-            variantId={primaryVariant?.id}
-            disabled={stockCount <= 0}
-          />
+          {onQuickView ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="w-full px-3 py-2 text-xs sm:hidden"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onQuickView(product);
+              }}
+            >
+              Быстрый просмотр
+            </Button>
+          ) : null}
+          {showAddToCart ? (
+            <div className={onQuickView ? 'hidden sm:block' : ''}>
+              <AddToCartButton
+                product={product}
+                variantId={primaryVariant?.id}
+                disabled={stockCount <= 0}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </Card>

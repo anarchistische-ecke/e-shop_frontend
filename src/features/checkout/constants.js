@@ -1,7 +1,8 @@
 export const CHECKOUT_STEPS = [
   { key: 'contact', title: 'Контакты' },
   { key: 'address', title: 'Адрес' },
-  { key: 'confirmation', title: 'Подтверждение' }
+  { key: 'delivery', title: 'Доставка' },
+  { key: 'confirmation', title: 'Оплата' }
 ];
 
 export const CHECKOUT_STEP_INDEX = CHECKOUT_STEPS.reduce((acc, step, index) => {

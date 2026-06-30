@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment } from '../api';
+import { getPublicOrder, payPublicOrder, refreshPublicOrderPayment, requestMagicLink } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
 import { Button, Card, Input } from '../components/ui';
@@ -53,6 +53,13 @@ function detectInAppBrowser() {
   return /Instagram|FBAN|FBAV|Telegram|VK|MicroMessenger|Line/i.test(navigator.userAgent || '');
 }
 
+function maskEmail(email = '') {
+  const normalized = String(email || '').trim();
+  const [name = '', domain = ''] = normalized.split('@');
+  if (!name || !domain) return normalized;
+  return `${name.slice(0, Math.min(2, name.length))}${name.length > 2 ? '***' : '*'}@${domain}`;
+}
+
 function OrderPage() {
   const location = useLocation();
   const isPaymentRoute = location.pathname.startsWith('/pay/');
@@ -70,6 +77,7 @@ function OrderPage() {
   const [status, setStatus] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isInAppBrowser, setIsInAppBrowser] = useState(false);
   const [paymentSession, setPaymentSession] = useState(() =>
@@ -302,6 +310,40 @@ function OrderPage() {
     }
   };
 
+  const handleSaveOrder = async () => {
+    const targetEmail = (order?.receiptEmail || receiptEmail || '').trim();
+    if (!targetEmail) {
+      setStatus(createNotification({
+        type: 'error',
+        title: 'Укажите электронную почту',
+        message: 'Чтобы сохранить заказ в кабинете, нужна почта для входа.'
+      }));
+      return;
+    }
+    setIsSavingOrder(true);
+    setStatus(null);
+    try {
+      await requestMagicLink({
+        email: targetEmail,
+        redirectUri: buildAbsoluteAppUrl('/account?section=orders')
+      });
+      setStatus(createNotification({
+        type: 'success',
+        title: 'Ссылка для входа отправлена',
+        message: `Проверьте почту ${maskEmail(targetEmail)}. После входа откроется история заказов.`
+      }));
+    } catch (err) {
+      console.error('Failed to send order magic link:', err);
+      setStatus(createNotification({
+        type: 'error',
+        title: 'Не удалось отправить ссылку',
+        message: err?.message || 'Попробуйте ещё раз позже.'
+      }));
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="page-shell page-section text-center text-muted">
@@ -423,14 +465,22 @@ function OrderPage() {
               <p className="text-sm text-muted mt-1">
                 Номер заказа: <span className="font-semibold text-ink">{String(order.id).slice(0, 12)}</span>
               </p>
+              {contactEmail ? (
+                <p className="text-sm text-muted mt-1">
+                  Чек 54-ФЗ и обновления отправим на {maskEmail(contactEmail)}.
+                </p>
+              ) : null}
               <p className="text-sm text-muted mt-1">
                 {isConfirmed ? paidManagerMessage : managerDeliveryNotice}
               </p>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <Button type="button" block variant="secondary">Отслеживать заказ</Button>
+            <Button type="button" block variant="secondary" onClick={handleSaveOrder} disabled={isSavingOrder}>
+              {isSavingOrder ? 'Отправляем...' : 'Сохранить заказ'}
+            </Button>
             <Button as={Link} to="/usloviya-prodazhi#return" block variant="secondary">Оформить возврат</Button>
             <Button as={Link} to="/info/delivery" block variant="ghost">Связаться с поддержкой</Button>
           </div>

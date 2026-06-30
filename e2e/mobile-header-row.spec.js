@@ -5,15 +5,12 @@ test.beforeEach(async ({ page }) => {
   await mockStorefrontApi(page);
 });
 
-test('bottom navigation opens the full mobile catalog menu', async ({ page }) => {
+test('mobile header row opens the full catalog menu and bottom nav is absent', async ({ page }) => {
   await page.goto('/');
 
-  const bottomNav = page.getByRole('navigation', { name: 'Быстрая навигация' });
-  await expect(bottomNav).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Быстрая навигация' })).toHaveCount(0);
 
-  const catalogButton = bottomNav.getByRole('button', { name: 'Каталог' });
-  await catalogButton.focus();
-  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Меню' }).click();
 
   const mobileMenu = page.getByTestId('mobile-nav-panel');
   await expect(mobileMenu).toBeVisible();
@@ -21,32 +18,29 @@ test('bottom navigation opens the full mobile catalog menu', async ({ page }) =>
   await expect(page.getByRole('link', { name: 'Перейти к поиску товаров и категорий' })).toBeVisible();
 });
 
-test('bottom navigation opens the dedicated mobile search page', async ({ page }) => {
+test('mobile header search opens inline suggestions and submits to search results', async ({ page }) => {
   await page.goto('/category/throws');
 
-  const bottomNav = page.getByRole('navigation', { name: 'Быстрая навигация' });
-  await bottomNav.getByRole('button', { name: 'Поиск' }).tap();
-
-  await expect(page).toHaveURL(/\/search/);
-
-  const searchInput = page.getByLabel('Что ищем');
+  await page.getByRole('button', { name: 'Поиск' }).click();
+  const searchInput = page.getByRole('searchbox', { name: 'Поиск товаров' });
   await expect(searchInput).toBeFocused();
   await searchInput.fill('Плед');
+  await expect(page.getByTestId('header-search-suggestions-mobile')).toBeVisible();
   await searchInput.press('Enter');
 
   await expect(page).toHaveURL(/\/search\?query=/);
   await expect(page.getByRole('heading', { name: /Найдено/i })).toBeVisible();
 });
 
-test('bottom navigation remains visible on the customer login/account flow', async ({ page }) => {
+test('mobile header row remains available on the magic-link login flow', async ({ page }) => {
   await page.goto('/login');
 
-  const bottomNav = page.getByRole('navigation', { name: 'Быстрая навигация' });
-  await expect(bottomNav).toBeVisible();
-  await expect(bottomNav.getByRole('link', { name: 'Войти' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Быстрая навигация' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Меню' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Поиск' })).toBeVisible();
 });
 
-test('bottom navigation stays hidden on product and checkout routes', async ({ page }) => {
+test('bottom navigation stays removed on product and checkout routes', async ({ page }) => {
   await page.goto('/product/prod-satin-sand/satin-sand');
   await expect(page.getByRole('navigation', { name: 'Быстрая навигация' })).toHaveCount(0);
 

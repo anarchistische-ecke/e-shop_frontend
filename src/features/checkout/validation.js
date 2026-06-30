@@ -28,10 +28,15 @@ export const CHECKOUT_VALIDATION_SCHEMA = {
   },
   homeAddress: {
     step: 'address',
-    validate: ({ homeAddress }) =>
-      String(homeAddress || '').trim()
+    validate: ({ homeAddress, addressParts }) => {
+      const hasStructuredAddress =
+        String(addressParts?.city || '').trim() &&
+        String(addressParts?.street || '').trim();
+      const hasAddressParts = addressParts && Object.values(addressParts).some((value) => String(value || '').trim());
+      return hasStructuredAddress || (!hasAddressParts && String(homeAddress || '').trim())
         ? ''
-        : 'Укажите домашний адрес. Варианты и стоимость доставки согласует менеджер.'
+        : 'Укажите город и улицу с домом. Варианты и стоимость доставки согласует менеджер.';
+    }
   }
 };
 

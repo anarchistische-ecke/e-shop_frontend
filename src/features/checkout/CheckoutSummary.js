@@ -24,7 +24,7 @@ function CheckoutSummary({
   const productSaleDiscount = pricing ? moneyToNumber(pricing.productSaleDiscount) : 0;
   const cartDiscount = pricing ? moneyToNumber(pricing.cartDiscount) : 0;
   const cartDiscountLabel = pricing?.appliedCartDiscountLabel || 'Скидка по корзине';
-  const isPaymentStep = /Шаг 3/.test(mobileAction.subtitle || '');
+  const isPaymentStep = /Шаг 4/.test(mobileAction.subtitle || '');
   const mobileButtonLabel = isPaymentStep && !mobileAction.subtitle.includes('Безопасная проверка')
     ? `Оплатить ${formatRub(payableTotal)}`
     : mobileAction.label;

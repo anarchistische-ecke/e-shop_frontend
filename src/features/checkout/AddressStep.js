@@ -1,16 +1,26 @@
 import React from 'react';
-import { Button, Card, FieldError, Textarea } from '../../components/ui';
+import { Button, Card, FieldError, Input } from '../../components/ui';
 
 function AddressStep({
   active,
   homeAddress,
+  addressParts = {},
   deliveryNotice,
   fieldErrors,
   onHomeAddressChange,
+  onAddressPartChange,
   onContinue,
   onEdit,
   disabled = false
 }) {
+  const handlePartChange = (field) => (event) => {
+    if (onAddressPartChange) {
+      onAddressPartChange(field, event.target.value);
+      return;
+    }
+    onHomeAddressChange(event.target.value);
+  };
+
   return (
     <Card as="section" padding="lg">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -30,30 +40,64 @@ function AddressStep({
 
       {active ? (
         <>
-          <label className="block text-sm">
-            <span className="text-muted">Домашний адрес (обязательно)</span>
-            <Textarea
-              id="checkout-home-address"
-              value={homeAddress}
-              onChange={(event) => onHomeAddressChange(event.target.value)}
-              placeholder="Город, улица, дом, квартира"
-              className={`mt-2 w-full ${fieldErrors.homeAddress ? 'input-error' : ''}`}
-              autoComplete="shipping street-address"
-              aria-invalid={Boolean(fieldErrors.homeAddress)}
-              aria-errormessage={fieldErrors.homeAddress ? 'checkout-home-address-error' : undefined}
-              required
-              rows={4}
-              disabled={disabled}
-            />
-            <FieldError id="checkout-home-address-error">{fieldErrors.homeAddress}</FieldError>
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="text-muted">Индекс</span>
+              <Input
+                id="checkout-postal-code"
+                value={addressParts.postalCode || ''}
+                onChange={handlePartChange('postalCode')}
+                placeholder="350000"
+                inputMode="numeric"
+                autoComplete="shipping postal-code"
+                disabled={disabled}
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-muted">Город (обязательно)</span>
+              <Input
+                id="checkout-city"
+                value={addressParts.city || ''}
+                onChange={handlePartChange('city')}
+                placeholder="Краснодар"
+                autoComplete="shipping address-level2"
+                aria-invalid={Boolean(fieldErrors.homeAddress)}
+                disabled={disabled}
+              />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="text-muted">Улица, дом (обязательно)</span>
+              <Input
+                id="checkout-home-address"
+                value={addressParts.street || ''}
+                onChange={handlePartChange('street')}
+                placeholder="ул. Красная, 1"
+                autoComplete="shipping street-address"
+                aria-invalid={Boolean(fieldErrors.homeAddress)}
+                aria-errormessage={fieldErrors.homeAddress ? 'checkout-home-address-error' : undefined}
+                disabled={disabled}
+                required
+              />
+              <FieldError id="checkout-home-address-error">{fieldErrors.homeAddress}</FieldError>
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="text-muted">Квартира, подъезд, комментарий</span>
+              <Input
+                value={addressParts.address2 || ''}
+                onChange={handlePartChange('address2')}
+                placeholder="кв. 12, подъезд 3"
+                autoComplete="shipping address-line2"
+                disabled={disabled}
+              />
+            </label>
+          </div>
 
           <div className="mt-4 rounded-lg border border-ink/10 bg-white/90 p-3 text-sm text-ink/90">
             {deliveryNotice}
           </div>
 
           <Button className="mt-5" onClick={onContinue} disabled={disabled}>
-            К подтверждению
+            К доставке
           </Button>
         </>
       ) : (

@@ -8,10 +8,7 @@ test.beforeEach(async ({ page }) => {
 test('mobile menu exposes trust content within one tap', async ({ page }) => {
   await page.goto('/');
 
-  await page
-    .getByRole('navigation', { name: 'Быстрая навигация' })
-    .getByRole('button', { name: 'Каталог' })
-    .click();
+  await page.getByRole('button', { name: 'Меню' }).click();
 
   const mobileMenu = page.getByRole('dialog', { name: 'Меню каталога' });
 

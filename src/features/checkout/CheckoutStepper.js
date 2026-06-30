@@ -4,7 +4,7 @@ import { Card } from '../../components/ui';
 function CheckoutStepper({ steps, activeStep, completedSteps, disabled = false }) {
   return (
     <Card className="mb-5 p-3 xs:p-4 md:p-5">
-      <ol className="grid grid-cols-3 gap-2" aria-label="Прогресс оформления заказа">
+      <ol className={`grid gap-2 ${steps.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`} aria-label="Прогресс оформления заказа">
         {steps.map((step, index) => {
           const isActive = activeStep === index;
           const isDone = Boolean(completedSteps[step.key]) || index < activeStep;

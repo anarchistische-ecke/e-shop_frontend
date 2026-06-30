@@ -226,6 +226,7 @@ export function buildAutocompleteData({
   scopeToken = '',
   queryLimit = 6,
   productLimit = 5,
+  categoryLimit = 4,
 } = {}) {
   const normalizedQuery = normalizeSearchText(query);
   const activeScope = normalizeSearchText(scopeToken || '');
@@ -325,7 +326,7 @@ export function buildAutocompleteData({
     })
     .filter(Boolean)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 4);
+    .slice(0, categoryLimit);
 
   return {
     categorySuggestions,

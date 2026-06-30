@@ -21,9 +21,7 @@ test('mobile skip link moves focus past the fixed header', async ({ page }) => {
 test('mobile catalog menu closes on escape and returns focus to the trigger', async ({ page }) => {
   await page.goto('/');
 
-  const menuTrigger = page
-    .getByRole('navigation', { name: 'Быстрая навигация' })
-    .getByRole('button', { name: 'Каталог' });
+  const menuTrigger = page.getByRole('button', { name: 'Меню' });
   await menuTrigger.click();
 
   const mobileMenu = page.getByRole('dialog', { name: 'Меню каталога' });
@@ -39,10 +37,7 @@ test('mobile catalog menu closes on escape and returns focus to the trigger', as
 test('mobile catalog menu traps keyboard focus inside the dialog', async ({ page }) => {
   await page.goto('/');
 
-  await page
-    .getByRole('navigation', { name: 'Быстрая навигация' })
-    .getByRole('button', { name: 'Каталог' })
-    .click();
+  await page.getByRole('button', { name: 'Меню' }).click();
 
   const mobileMenu = page.getByRole('dialog', { name: 'Меню каталога' });
   const closeButton = mobileMenu.getByRole('button', { name: 'Закрыть меню' });

@@ -2,8 +2,6 @@ import {
   buildAccountLinks,
   buildCategoryCollections,
   buildHeaderSearchParams,
-  resolveMobileBottomNavKey,
-  shouldShowMobileBottomNav,
   resolveWayfindingLabel
 } from './header';
 
@@ -59,33 +57,5 @@ describe('header utils', () => {
       { to: '/account#cms', label: 'CMS витрины' },
       { to: '/manager/payment-link', label: 'Ссылка на оплату' }
     ]);
-  });
-
-  it('resolves mobile bottom-nav visibility and active item', () => {
-    expect(shouldShowMobileBottomNav('/')).toBe(true);
-    expect(shouldShowMobileBottomNav('/catalog')).toBe(true);
-    expect(shouldShowMobileBottomNav('/account')).toBe(true);
-    expect(shouldShowMobileBottomNav('/login')).toBe(true);
-    expect(shouldShowMobileBottomNav('/product/1/test')).toBe(false);
-    expect(shouldShowMobileBottomNav('/checkout')).toBe(false);
-    expect(shouldShowMobileBottomNav('/pay/token-1')).toBe(false);
-
-    expect(resolveMobileBottomNavKey({ pathname: '/' })).toBe('home');
-    expect(resolveMobileBottomNavKey({ pathname: '/search', search: '?query=плед' })).toBe(
-      'search'
-    );
-    expect(resolveMobileBottomNavKey({ pathname: '/category/throws' })).toBe('catalog');
-    expect(resolveMobileBottomNavKey({ pathname: '/catalog', search: '?query=плед' })).toBe(
-      'search'
-    );
-    expect(resolveMobileBottomNavKey({ pathname: '/cart' })).toBe('cart');
-    expect(resolveMobileBottomNavKey({ pathname: '/manager/payment-link' })).toBe('cart');
-    expect(resolveMobileBottomNavKey({ pathname: '/account' })).toBe('account');
-    expect(
-      resolveMobileBottomNavKey({
-        pathname: '/catalog',
-        isMenuOpen: true
-      })
-    ).toBe('catalog');
   });
 });

@@ -8,10 +8,7 @@ test.beforeEach(async ({ page }) => {
 test('mobile menu search link opens search results with mocked data', async ({ page }) => {
   await page.goto('/');
 
-  await page
-    .getByRole('navigation', { name: 'Быстрая навигация' })
-    .getByRole('button', { name: 'Каталог' })
-    .click();
+  await page.getByRole('button', { name: 'Меню' }).click();
   await expect(page.getByText('Навигация')).toBeVisible();
 
   await page.getByRole('link', { name: 'Перейти к поиску товаров и категорий' }).click();
@@ -28,10 +25,7 @@ test('mobile menu search link opens search results with mocked data', async ({ p
 test('mobile menu exposes nested categories from the catalog navigation', async ({ page }) => {
   await page.goto('/');
 
-  await page
-    .getByRole('navigation', { name: 'Быстрая навигация' })
-    .getByRole('button', { name: 'Каталог' })
-    .click();
+  await page.getByRole('button', { name: 'Меню' }).click();
   const mobileMenu = page.getByTestId('mobile-nav-panel');
   await expect(mobileMenu.getByRole('link', { name: /Популярное/i })).toBeVisible();
   await expect(mobileMenu.getByRole('link', { name: /^Сатин/i })).toBeVisible();
