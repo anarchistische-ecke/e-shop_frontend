@@ -4,7 +4,6 @@ import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
 import CheckoutEmptyState from '../features/checkout/CheckoutEmptyState';
 import CheckoutFlow from '../features/checkout/CheckoutFlow';
-import CheckoutGuestPanel from '../features/checkout/CheckoutGuestPanel';
 import CheckoutPageHeader from '../features/checkout/CheckoutPageHeader';
 import { useCheckoutState } from '../features/checkout/useCheckoutState';
 
@@ -53,19 +52,6 @@ function CheckoutPage() {
     }
   };
 
-  const handleGuestCheckout = () => {
-    if (checkout.isSubmitting) {
-      return;
-    }
-    checkout.clearStatus();
-    checkout.clearRecoveryState();
-    checkout.setActiveStep(0);
-    const emailInput = document.getElementById('checkout-email');
-    if (emailInput && typeof emailInput.focus === 'function') {
-      emailInput.focus();
-    }
-  };
-
   return (
     <div className="checkout-page page-section pb-28 lg:pb-10">
       <Seo
@@ -89,12 +75,6 @@ function CheckoutPage() {
             onDismiss={!checkout.isSubmitting ? checkout.clearStatus : undefined}
           />
         ) : null}
-
-        <CheckoutGuestPanel
-          isSubmitting={checkout.isSubmitting}
-          onDisabledNavigation={handleDisabledNavigation}
-          onGuestCheckout={handleGuestCheckout}
-        />
 
         <CheckoutFlow checkout={checkout} />
       </div>

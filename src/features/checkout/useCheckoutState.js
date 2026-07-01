@@ -22,6 +22,11 @@ import {
   isEmbeddedPaymentMode,
   normalizePaymentSession
 } from '../../utils/payment';
+import {
+  ACCOUNT_ORDERS_SECTION,
+  buildAccountSectionPath,
+  savePostCheckoutAccountBootstrap
+} from '../../utils/account';
 import { CHECKOUT_REQUEST_TIMEOUT_MS, CHECKOUT_STEPS } from './constants';
 import { clearCheckoutDraft, loadCheckoutDraft, saveCheckoutDraft } from './draftStorage';
 import {
@@ -320,7 +325,7 @@ export function useCheckoutState() {
   const currentAttemptSignature = useMemo(() => {
     return buildCheckoutAttemptSignature({
       cartId: effectiveCartId,
-      receiptEmail: email.trim(),
+      receiptEmail: email.trim().toLowerCase(),
       customerName: customerName.trim(),
       phone: phone.trim(),
       homeAddress: homeAddress.trim(),
@@ -503,14 +508,16 @@ export function useCheckoutState() {
 
     const payload = {
       cartId: effectiveCartId || getStoredCartId(),
-      receiptEmail: email.trim(),
+      receiptEmail: email.trim().toLowerCase(),
       customerName: customerName.trim(),
       phone: phone.trim(),
       homeAddress: homeAddress.trim(),
       returnUrl: buildAbsoluteAppUrl('/order/{token}'),
       orderPageUrl: buildAbsoluteAppUrl('/order/{token}'),
+      accountRedirectUrl: buildAbsoluteAppUrl('/account?order={orderId}#orders'),
       confirmationMode: isPaymentConfigLoaded ? paymentConfig.confirmationMode : undefined,
       savePaymentMethod: isAuthenticated ? savePaymentMethod : false,
+      addressParts,
       analyticsAttribution: getAttributionSnapshot()
     };
 
@@ -545,53 +552,45 @@ export function useCheckoutState() {
         setAttempt((prev) => ({ ...prev, orderToken }));
       }
 
-      const confirmationUrl = response?.payment?.confirmationUrl;
+      const order = response?.order || null;
+      const orderId = order?.id || '';
+      const accountRedirectPath =
+        response?.account?.redirectPath ||
+        (orderId
+          ? buildAccountSectionPath(ACCOUNT_ORDERS_SECTION, { orderId })
+          : '/account#orders');
       const paymentSession = normalizePaymentSession(response?.payment, {
-        returnUrl: orderToken ? buildAbsoluteAppUrl(`/order/${orderToken}`) : ''
+        returnUrl: buildAbsoluteAppUrl(accountRedirectPath)
       });
-      if (hasEmbeddedPaymentSession(paymentSession) && orderToken) {
-        trackGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
-          outcome: 'success',
-          delivery_type: 'MANAGER',
-          cart_total: Math.round(payableTotal)
-        });
-        clearCheckoutDraft(payload.cartId);
-        setSubmitPhase('redirecting');
-        navigate(`/order/${orderToken}`, {
-          replace: true,
-          state: {
-            openEmbeddedPayment: true,
-            paymentSession
-          }
-        });
-        return;
-      }
-      if (confirmationUrl) {
-        trackGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
-          outcome: 'success',
-          delivery_type: 'MANAGER',
-          cart_total: Math.round(payableTotal)
-        });
-        clearCheckoutDraft(payload.cartId);
-        setSubmitPhase('redirecting');
-        window.location.href = confirmationUrl;
-        return;
-      }
+      const savedBootstrap = savePostCheckoutAccountBootstrap({
+        order,
+        orderId,
+        publicToken: orderToken,
+        email: response?.account?.email || payload.receiptEmail,
+        accountStatus: response?.account?.status || '',
+        redirectPath: accountRedirectPath,
+        payment: response?.payment || null,
+        paymentSession
+      });
 
       trackGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
-        outcome: 'fail',
-        reason: 'missing_confirmation_url'
+        outcome: response?.payment ? 'success' : 'pending_account',
+        delivery_type: 'MANAGER',
+        cart_total: Math.round(payableTotal),
+        account_status: response?.account?.status || ''
       });
-      setActiveStep(CHECKOUT_STEPS.length - 1);
-      setSafeRetryState(createSafeRetryState('missing_confirmation', {
-        orderToken,
-        message: 'Заказ уже создан, но платёжная ссылка не пришла. Попробуйте безопасно запросить её ещё раз.'
-      }));
-      setStatus(createNotification({
-        type: 'error',
-        title: 'Не удалось открыть оплату',
-        message: 'Заказ уже создан. Повторите безопасную проверку или откройте страницу заказа.'
-      }));
+      clearCheckoutDraft(payload.cartId);
+      setSubmitPhase('redirecting');
+      navigate(accountRedirectPath, {
+        replace: true,
+        state: {
+          postCheckout: true,
+          bootstrapSaved: Boolean(savedBootstrap),
+          openEmbeddedPayment: hasEmbeddedPaymentSession(paymentSession),
+          paymentSession
+        }
+      });
+      return;
     } catch (err) {
       console.error('Checkout failed:', err);
       trackGoal(METRIKA_GOALS.CHECKOUT_PAYMENT_RESULT, {
@@ -652,6 +651,7 @@ export function useCheckoutState() {
     }
   }, [
     applyBackendErrors,
+    addressParts,
     attempt,
     customerName,
     effectiveCartId,

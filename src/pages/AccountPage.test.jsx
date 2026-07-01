@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   getActivePromotions,
   getCustomerOrders,
+  getPublicOrder,
+  payPublicOrder,
+  refreshPublicOrderPayment,
   updateCustomerProfile
 } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +19,9 @@ vi.mock('../api', () => ({
   getActivePromotions: vi.fn(),
   getCustomerOrders: vi.fn(),
   getCustomerRmaRequests: vi.fn(),
+  getPublicOrder: vi.fn(),
+  payPublicOrder: vi.fn(),
+  refreshPublicOrderPayment: vi.fn(),
   updateCustomerProfile: vi.fn(),
 }));
 
@@ -89,7 +95,11 @@ describe('AccountPage profile', () => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     getActivePromotions.mockResolvedValue({ promotions: [], promoCodes: [] });
     getCustomerOrders.mockResolvedValue([]);
+    getPublicOrder.mockResolvedValue(null);
+    payPublicOrder.mockResolvedValue({});
+    refreshPublicOrderPayment.mockResolvedValue(null);
     updateCustomerProfile.mockImplementation(async (payload) => payload);
+    window.sessionStorage.clear();
     useAuth.mockReturnValue({
       isReady: true,
       isAuthenticated: true,
@@ -109,6 +119,7 @@ describe('AccountPage profile', () => {
   afterEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment;
     vi.clearAllMocks();
+    window.sessionStorage.clear();
   });
 
   it('lets customers edit and save their phone number', async () => {
@@ -133,6 +144,64 @@ describe('AccountPage profile', () => {
     expect(updateCustomerProfile).toHaveBeenCalledWith(expect.objectContaining({
       phone: '+7 999 111-22-33',
     }));
+
+    view.unmount();
+  });
+
+  it('shows only the post-checkout order before email verification', async () => {
+    const order = {
+      id: 'order-1',
+      publicToken: 'public-token',
+      status: 'PENDING',
+      receiptEmail: 'buyer@example.test',
+      contactName: 'Анна Иванова',
+      contactPhone: '+79610000000',
+      homeAddress: 'Краснодар, ул. Красная, 1',
+      totalAmount: { amount: 150000, currency: 'RUB' },
+      items: [
+        {
+          id: 'item-1',
+          productName: 'Комплект',
+          variantName: 'Евро',
+          quantity: 1,
+          unitPrice: { amount: 150000, currency: 'RUB' }
+        }
+      ]
+    };
+    window.sessionStorage.setItem('cozyhome:post-checkout-account:v1', JSON.stringify({
+      orderId: order.id,
+      publicToken: order.publicToken,
+      email: order.receiptEmail,
+      accountStatus: 'MAGIC_LINK_SENT',
+      redirectPath: '/account?order=order-1#orders',
+      order,
+      payment: {
+        paymentId: 'payment-1',
+        confirmationUrl: 'https://pay.example.test/checkout',
+        confirmationType: 'REDIRECT'
+      },
+      expiresAt: Date.now() + 60000
+    }));
+    getPublicOrder.mockResolvedValue(order);
+    useAuth.mockReturnValue({
+      isReady: true,
+      isAuthenticated: false,
+      tokenParsed: null,
+      logout: vi.fn(),
+      refreshProfile: vi.fn(),
+      hasRole: () => false,
+      hasStrongAuth: () => false,
+    });
+
+    const view = renderWithRouter(<AccountPage />, '/account?order=order-1#orders');
+    await view.flush();
+
+    expect(view.container.textContent).toContain('Ваш заказ');
+    expect(view.container.textContent).toContain('До подтверждения здесь доступен только этот заказ');
+    expect(view.container.textContent).toContain('Комплект');
+    expect(view.container.textContent).not.toContain('Акции и промокоды');
+    expect(getCustomerOrders).not.toHaveBeenCalled();
+    expect(getPublicOrder).toHaveBeenCalledWith('public-token');
 
     view.unmount();
   });

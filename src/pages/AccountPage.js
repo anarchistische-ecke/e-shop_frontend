@@ -5,6 +5,9 @@ import {
   getActivePromotions,
   getCustomerOrders,
   getCustomerRmaRequests,
+  getPublicOrder,
+  payPublicOrder,
+  refreshPublicOrderPayment,
   updateCustomerProfile
 } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
@@ -12,15 +15,28 @@ import Seo from '../components/Seo';
 import { Button, Card, Input, Modal, Select, Tabs, Textarea } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { CartContext } from '../contexts/CartContext';
+import { usePaymentConfig } from '../contexts/PaymentConfigContext';
+import EmbeddedPaymentPanel from '../features/payment/EmbeddedPaymentPanel';
 import { moneyToNumber } from '../utils/product';
 import {
   ACCOUNT_DEFAULT_SECTION,
   ACCOUNT_ORDERS_SECTION,
   buildAccountOrderPath,
   buildAccountSectionPath,
+  clearPostCheckoutAccountBootstrap,
   findAccountOrderById,
+  loadPostCheckoutAccountBootstrap,
   resolveAccountLocationState
 } from '../utils/account';
+import { getAttributionSnapshot } from '../utils/metrika';
+import {
+  getOrderPaymentNotice,
+  getPaymentSummaryLabel,
+  hasEmbeddedPaymentSession,
+  normalizePaymentSession
+} from '../utils/payment';
+import { createNotification } from '../utils/notifications';
+import { buildAbsoluteAppUrl } from '../utils/url';
 import ManagerAccountPage from './ManagerAccountPage';
 import { readEnv } from '../config/runtime';
 
@@ -314,6 +330,460 @@ function OrderTimeline({ order }) {
   );
 }
 
+function getAccountOrderTotal(order) {
+  if (!order) return 0;
+  const totalValue = order.total ?? order.totalAmount;
+  if (!totalValue) return 0;
+  if (typeof totalValue === 'object' && totalValue !== null) {
+    if (totalValue.amount !== undefined) return totalValue.amount / 100;
+    if (totalValue.totalAmount !== undefined) return totalValue.totalAmount / 100;
+  }
+  if (typeof totalValue === 'number') return totalValue;
+  return 0;
+}
+
+function getAccountOrderDateLabel(order, { withTime = false } = {}) {
+  const rawDate = order?.createdAt || order?.orderDate;
+  if (!rawDate) return 'Дата уточняется';
+  const date = new Date(rawDate);
+  if (Number.isNaN(date.getTime())) return 'Дата уточняется';
+  return withTime
+    ? date.toLocaleString('ru-RU')
+    : date.toLocaleDateString('ru-RU');
+}
+
+function getAccountOrderStatusUpdatedLabel(order) {
+  const rawDate =
+    order?.statusUpdatedAt ||
+    order?.updatedAt ||
+    order?.paidAt ||
+    order?.deliveredAt ||
+    order?.createdAt ||
+    order?.orderDate;
+  if (!rawDate) return 'Дата статуса уточняется';
+  const date = new Date(rawDate);
+  if (Number.isNaN(date.getTime())) return 'Дата статуса уточняется';
+  return date.toLocaleString('ru-RU');
+}
+
+function getAccountOrderDeliveryLabel(order) {
+  if (!order) return 'Уточним после подтверждения заказа';
+  if (order.homeAddress) return order.homeAddress;
+  if (order.deliveryPickupPointName) return order.deliveryPickupPointName;
+  if (order.deliveryAddress) return order.deliveryAddress;
+  if (order.deliveryMethod) return order.deliveryMethod;
+  return 'Уточним после подтверждения заказа';
+}
+
+function createPostCheckoutNotice(accountStatus, email) {
+  const maskedEmail = String(email || '').replace(/^(.{1,2}).*(@.*)$/u, '$1***$2');
+  if (accountStatus === 'MAGIC_LINK_SENT') {
+    return createNotification({
+      type: 'success',
+      title: 'Заказ сохранён в личном кабинете',
+      message: `Мы отправили ссылку для полного доступа на ${maskedEmail || 'вашу почту'}. До подтверждения здесь доступен только этот заказ.`
+    });
+  }
+  if (accountStatus === 'MAGIC_LINK_RATE_LIMITED') {
+    return createNotification({
+      type: 'info',
+      title: 'Заказ сохранён',
+      message: 'Ссылка для входа уже недавно отправлялась. До подтверждения почты здесь доступен только этот заказ.'
+    });
+  }
+  if (accountStatus === 'AUTHENTICATED') {
+    return createNotification({
+      type: 'success',
+      title: 'Заказ добавлен в ваш кабинет',
+      message: 'История заказов обновится автоматически.'
+    });
+  }
+  return createNotification({
+    type: 'warning',
+    title: 'Заказ сохранён',
+    message: 'Сейчас доступен только этот заказ. Полная история откроется после входа по подтверждённой почте.'
+  });
+}
+
+function AccountOrderPaymentPanel({ order, initialPayment, onOrderUpdate }) {
+  const { paymentConfig, isPaymentConfigLoaded } = usePaymentConfig();
+  const [paymentSession, setPaymentSession] = useState(() =>
+    normalizePaymentSession(initialPayment, {
+      returnUrl: order?.id
+        ? buildAbsoluteAppUrl(buildAccountSectionPath(ACCOUNT_ORDERS_SECTION, { orderId: order.id }))
+        : ''
+    })
+  );
+  const [isPaying, setIsPaying] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [receiptEmail, setReceiptEmail] = useState(order?.receiptEmail || '');
+
+  const orderStatus = order?.status || 'PENDING';
+  const canPay = orderStatus === 'PENDING' || orderStatus === 'PROCESSING';
+  const token = order?.publicToken || '';
+  const returnUrl = order?.id
+    ? buildAbsoluteAppUrl(buildAccountSectionPath(ACCOUNT_ORDERS_SECTION, { orderId: order.id }))
+    : '';
+  const normalizedPaymentSession = normalizePaymentSession(paymentSession, { returnUrl });
+  const showEmbeddedPayment = canPay && hasEmbeddedPaymentSession(normalizedPaymentSession);
+  const paymentNotice = canPay ? getOrderPaymentNotice(paymentConfig, orderStatus) : null;
+  const paymentSummaryLabel = getPaymentSummaryLabel(paymentConfig);
+
+  useEffect(() => {
+    setReceiptEmail(order?.receiptEmail || '');
+  }, [order?.receiptEmail]);
+
+  useEffect(() => {
+    const nextSession = normalizePaymentSession(initialPayment, { returnUrl });
+    if (nextSession.confirmationUrl || hasEmbeddedPaymentSession(nextSession)) {
+      setPaymentSession(nextSession);
+    }
+  }, [
+    initialPayment?.confirmationToken,
+    initialPayment?.confirmationUrl,
+    initialPayment?.paymentId,
+    initialPayment?.id,
+    returnUrl
+  ]);
+
+  const createFreshPayment = async () => {
+    if (!token) {
+      setStatus(createNotification({
+        type: 'error',
+        title: 'Оплата недоступна',
+        message: 'У заказа нет публичного токена для безопасного восстановления оплаты.'
+      }));
+      return;
+    }
+    const email = (order?.receiptEmail || receiptEmail || '').trim();
+    if (!email) {
+      setStatus(createNotification({
+        type: 'error',
+        title: 'Укажите электронную почту для чека',
+        message: 'Перед оплатой нужен адрес для отправки чека.'
+      }));
+      return;
+    }
+
+    setIsPaying(true);
+    setStatus(null);
+    try {
+      const response = await payPublicOrder({
+        token,
+        receiptEmail: email,
+        returnUrl,
+        confirmationMode: isPaymentConfigLoaded ? paymentConfig.confirmationMode : undefined,
+        analyticsAttribution: getAttributionSnapshot()
+      });
+      const nextSession = normalizePaymentSession(response, { returnUrl });
+      setPaymentSession(nextSession);
+      if (hasEmbeddedPaymentSession(nextSession)) {
+        return;
+      }
+      if (nextSession.confirmationUrl) {
+        window.location.href = nextSession.confirmationUrl;
+        return;
+      }
+      setStatus(createNotification({
+        type: 'warning',
+        title: 'Платёжная ссылка не получена',
+        message: 'Проверьте статус оплаты или попробуйте запросить ссылку ещё раз.'
+      }));
+    } catch (err) {
+      console.error('Payment creation failed:', err);
+      setStatus(createNotification({
+        type: 'error',
+        title: 'Не удалось открыть оплату',
+        message: err?.message || 'Попробуйте ещё раз или сначала обновите статус заказа.'
+      }));
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
+  const handlePay = async () => {
+    if (normalizedPaymentSession.confirmationUrl && !hasEmbeddedPaymentSession(normalizedPaymentSession)) {
+      window.location.href = normalizedPaymentSession.confirmationUrl;
+      return;
+    }
+    await createFreshPayment();
+  };
+
+  const refreshPaymentStatus = async () => {
+    if (!token) return;
+    setIsRefreshing(true);
+    setStatus(null);
+    try {
+      const updated = await refreshPublicOrderPayment(token);
+      if (updated && typeof onOrderUpdate === 'function') {
+        onOrderUpdate(updated);
+      }
+    } catch (err) {
+      console.error('Failed to refresh payment status:', err);
+      setStatus(createNotification({
+        type: 'warning',
+        title: 'Не удалось обновить статус оплаты',
+        message: 'Попробуйте ещё раз или вернитесь к оплате позже.'
+      }));
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  if (!canPay) {
+    return (
+      <Card variant="tint" padding="sm" className="bg-white/90 shadow-none">
+        <p className="text-xs uppercase tracking-[0.16em] text-muted">Оплата</p>
+        <p className="mt-2 text-sm font-semibold">Оплата не требуется</p>
+        <p className="mt-1 text-xs text-muted">Текущий статус заказа: {formatOrderStatus(orderStatus)}.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card variant="tint" padding="sm" className="bg-white/90 shadow-none">
+      <p className="text-xs uppercase tracking-[0.16em] text-muted">Оплата</p>
+      <p className="mt-2 text-sm font-semibold">{paymentSummaryLabel}</p>
+      {paymentNotice ? (
+        <NotificationBanner
+          notification={{
+            type: paymentNotice.type,
+            title: paymentNotice.title,
+            message: paymentNotice.message
+          }}
+          compact
+          className="mt-3"
+        />
+      ) : null}
+      {status ? <NotificationBanner notification={status} compact className="mt-3" /> : null}
+      {!order?.receiptEmail ? (
+        <label className="mt-3 block text-sm">
+          <span className="text-muted">Электронная почта для чека</span>
+          <Input
+            type="email"
+            value={receiptEmail}
+            onChange={(event) => setReceiptEmail(event.target.value)}
+            placeholder="pochta@example.ru"
+            className="mt-2"
+          />
+        </label>
+      ) : null}
+      {showEmbeddedPayment ? (
+        <EmbeddedPaymentPanel
+          paymentConfig={paymentConfig}
+          paymentSession={normalizedPaymentSession}
+          isStarting={isPaying}
+          onRequestNewSession={createFreshPayment}
+          onRefreshStatus={refreshPaymentStatus}
+          className="mt-3"
+        />
+      ) : (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <Button type="button" onClick={handlePay} disabled={isPaying}>
+            {isPaying ? `Открываем ${paymentConfig.providerName}…` : paymentNotice?.ctaLabel || 'Перейти к оплате'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={refreshPaymentStatus}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? 'Проверяем…' : 'Проверить оплату'}
+          </Button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function PostCheckoutAccountView({ bootstrap }) {
+  const [order, setOrder] = useState(bootstrap?.order || null);
+  const [status, setStatus] = useState(() =>
+    createPostCheckoutNotice(bootstrap?.accountStatus, bootstrap?.email)
+  );
+  const [isLoading, setIsLoading] = useState(Boolean(bootstrap?.publicToken));
+
+  useEffect(() => {
+    if (!bootstrap?.publicToken) {
+      setIsLoading(false);
+      return undefined;
+    }
+    let mounted = true;
+    setIsLoading(true);
+    getPublicOrder(bootstrap.publicToken)
+      .then((data) => {
+        if (mounted && data) {
+          setOrder(data);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load post-checkout order:', err);
+        if (mounted) {
+          setStatus(createNotification({
+            type: 'error',
+            title: 'Не удалось обновить заказ',
+            message: 'Откройте публичную страницу заказа или попробуйте обновить страницу позже.'
+          }));
+        }
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [bootstrap?.publicToken]);
+
+  const total = getAccountOrderTotal(order);
+  const tracking = getOrderTrackingInfo(order);
+  const initialPayment = bootstrap?.paymentSession || bootstrap?.payment || null;
+
+  return (
+    <div className="account-page page-section">
+      <Seo
+        title="Ваш заказ"
+        description="Статус созданного заказа и безопасная оплата."
+        canonicalPath={bootstrap?.redirectPath || '/account#orders'}
+        robots="noindex,nofollow"
+      />
+      <div className="page-shell">
+        <div className="relative mb-8">
+          <nav className="text-xs sm:text-sm text-muted flex flex-wrap items-center gap-2">
+            <Link to="/" className="hover:text-primary transition">Главная</Link>
+            <span className="text-ink/30">/</span>
+            <span className="text-ink">Ваш заказ</span>
+          </nav>
+          <h1 className="text-2xl sm:text-3xl font-semibold mt-3">Ваш заказ</h1>
+        </div>
+
+        {status ? <NotificationBanner notification={status} className="mb-5" /> : null}
+
+        {isLoading && !order ? (
+          <Card padding="lg">
+            <p className="text-sm text-muted">Загружаем заказ…</p>
+          </Card>
+        ) : order ? (
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <Card padding="lg">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted">Детали заказа</p>
+                  <h2 className="mt-1 text-xl font-semibold">
+                    Заказ {String(order.id).slice(0, 8)}...
+                  </h2>
+                  <p className="mt-1 text-sm text-muted">
+                    {getAccountOrderDateLabel(order, { withTime: true })}
+                  </p>
+                </div>
+                <OrderStatusBadge order={order} />
+              </div>
+
+              <div className="mt-4">
+                <OrderTimeline order={order} />
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <Card variant="tint" padding="sm" className="bg-white/90 shadow-none">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted">Контакт</p>
+                  <p className="mt-2 text-sm font-semibold">
+                    {[order.contactName, order.contactPhone].filter(Boolean).join(' · ') || 'Контакты уточняются'}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">{order.receiptEmail || bootstrap.email}</p>
+                </Card>
+                <Card variant="tint" padding="sm" className="bg-white/90 shadow-none">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted">Доставка</p>
+                  <p className="mt-2 text-sm font-semibold">{getAccountOrderDeliveryLabel(order)}</p>
+                  <p className="mt-1 text-xs text-muted">Финальную стоимость и варианты доставки согласует менеджер.</p>
+                  {tracking.url ? (
+                    <a
+                      href={tracking.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex min-h-[36px] items-center rounded-full border border-ink/10 px-3 text-xs font-semibold text-primary"
+                    >
+                      {tracking.label}
+                    </a>
+                  ) : null}
+                </Card>
+              </div>
+
+              {Array.isArray(order.items) && order.items.length > 0 ? (
+                <div className="mt-5 border-t border-ink/10 pt-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted">Состав заказа</p>
+                  <div className="mt-3 space-y-2">
+                    {order.items.map((item, index) => {
+                      const itemUnitPrice = moneyToNumber(item.unitPrice);
+                      const itemTotal = itemUnitPrice * (item.quantity || 0);
+                      const itemKey = item.id || `${item.variantId || 'item'}-${index}`;
+                      return (
+                        <div
+                          key={itemKey}
+                          className="flex items-start justify-between gap-3 rounded-2xl border border-ink/10 bg-white/85 px-3 py-3 text-sm"
+                        >
+                          <div>
+                            <p className="font-semibold">{item.productName || item.variantName || item.sku || 'Товар'}</p>
+                            <p className="mt-1 text-xs text-muted">
+                              {item.variantName || item.sku || 'Вариант уточняется'} · {item.quantity || 0} шт.
+                            </p>
+                          </div>
+                          <div className="text-right font-semibold">{itemTotal.toLocaleString('ru-RU')} ₽</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </Card>
+
+            <aside className="space-y-4">
+              <Card padding="md">
+                <h2 className="text-xl font-semibold">Итого</h2>
+                <div className="mt-4 flex justify-between text-sm">
+                  <span>Товары</span>
+                  <span>{total.toLocaleString('ru-RU')} ₽</span>
+                </div>
+                <div className="mt-2 flex justify-between text-sm">
+                  <span>Доставка</span>
+                  <span>Согласует менеджер</span>
+                </div>
+                <hr className="my-3 border-ink/10" />
+                <div className="flex justify-between font-semibold">
+                  <span>Итого</span>
+                  <span>{total.toLocaleString('ru-RU')} ₽</span>
+                </div>
+              </Card>
+              <AccountOrderPaymentPanel
+                order={order}
+                initialPayment={initialPayment}
+                onOrderUpdate={setOrder}
+              />
+              {order.publicToken ? (
+                <Button as={Link} to={buildAccountOrderPath(order)} variant="secondary" block>
+                  Открыть публичную страницу заказа
+                </Button>
+              ) : null}
+              <Button as={Link} to="/" variant="ghost" block>
+                Продолжить покупки
+              </Button>
+            </aside>
+          </div>
+        ) : (
+          <Card padding="lg">
+            <NotificationBanner
+              notification={{
+                type: 'error',
+                title: 'Заказ не найден',
+                message: 'Откройте ссылку из письма с заказом или обратитесь в поддержку.'
+              }}
+            />
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AccountPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -339,7 +809,13 @@ function AccountPage() {
     phone: '',
     email: '',
     birthDate: '',
-    gender: 'female'
+    gender: 'female',
+    address: {
+      postalCode: '',
+      city: '',
+      street: '',
+      address2: ''
+    }
   });
   const [saveStatus, setSaveStatus] = useState(null);
   const [saveMessage, setSaveMessage] = useState(null);
@@ -373,6 +849,14 @@ function AccountPage() {
   const activeSection = routeState.section;
   const selectedOrderId =
     activeSection === ACCOUNT_ORDERS_SECTION ? routeState.orderId : '';
+  const [postCheckoutBootstrap, setPostCheckoutBootstrap] = useState(() =>
+    loadPostCheckoutAccountBootstrap(routeState.orderId)
+  );
+  const canUsePostCheckoutBootstrap =
+    !isAuthenticated &&
+    activeSection === ACCOUNT_ORDERS_SECTION &&
+    Boolean(postCheckoutBootstrap) &&
+    (!selectedOrderId || postCheckoutBootstrap.orderId === selectedOrderId);
   const selectedOrder = useMemo(
     () => findAccountOrderById(orders, selectedOrderId),
     [orders, selectedOrderId]
@@ -411,6 +895,23 @@ function AccountPage() {
   }, [isAuthenticated, isManager, loadOrders]);
 
   useEffect(() => {
+    if (isAuthenticated) {
+      return;
+    }
+    setPostCheckoutBootstrap(loadPostCheckoutAccountBootstrap(routeState.orderId));
+  }, [isAuthenticated, routeState.orderId]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !postCheckoutBootstrap?.orderId) {
+      return;
+    }
+    if (orders.some((order) => order?.id === postCheckoutBootstrap.orderId)) {
+      clearPostCheckoutAccountBootstrap(postCheckoutBootstrap.orderId);
+      setPostCheckoutBootstrap(null);
+    }
+  }, [isAuthenticated, orders, postCheckoutBootstrap?.orderId]);
+
+  useEffect(() => {
     if (!isAuthenticated || isManager) return;
     let mounted = true;
     getActivePromotions()
@@ -443,7 +944,11 @@ function AccountPage() {
           phone: data.phone ?? prev.phone,
           email: data.email ?? prev.email,
           birthDate: data.birthDate ?? prev.birthDate,
-          gender: data.gender ?? prev.gender ?? 'female'
+          gender: data.gender ?? prev.gender ?? 'female',
+          address: {
+            ...prev.address,
+            ...(data.address || {})
+          }
         }));
       })
       .catch((err) => {
@@ -487,6 +992,9 @@ function AccountPage() {
   }
 
   if (!isAuthenticated) {
+    if (canUsePostCheckoutBootstrap) {
+      return <PostCheckoutAccountView bootstrap={postCheckoutBootstrap} />;
+    }
     return <Navigate to="/login" />;
   }
 
@@ -521,6 +1029,16 @@ function AccountPage() {
     setProfile((prev) => ({ ...prev, [field]: event.target.value }));
   };
 
+  const handleProfileAddressChange = (field) => (event) => {
+    setProfile((prev) => ({
+      ...prev,
+      address: {
+        ...(prev.address || {}),
+        [field]: event.target.value
+      }
+    }));
+  };
+
   const handleSave = async (event) => {
     event.preventDefault();
     setSaveStatus('saving');
@@ -532,7 +1050,13 @@ function AccountPage() {
         email: profile.email?.trim() || null,
         phone: profile.phone?.trim() || null,
         birthDate: profile.birthDate || null,
-        gender: profile.gender || null
+        gender: profile.gender || null,
+        address: {
+          postalCode: profile.address?.postalCode?.trim() || null,
+          city: profile.address?.city?.trim() || null,
+          street: profile.address?.street?.trim() || null,
+          address2: profile.address?.address2?.trim() || null
+        }
       };
       const updated = await updateCustomerProfile(payload);
       if (updated) {
@@ -543,7 +1067,11 @@ function AccountPage() {
           phone: updated.phone ?? prev.phone,
           email: updated.email ?? prev.email,
           birthDate: updated.birthDate ?? prev.birthDate,
-          gender: updated.gender ?? prev.gender
+          gender: updated.gender ?? prev.gender,
+          address: {
+            ...prev.address,
+            ...(updated.address || {})
+          }
         }));
       }
       setSaveStatus('saved');
@@ -906,6 +1434,53 @@ function AccountPage() {
                 />
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label htmlFor="account-postal-code" className="text-sm text-muted block mb-1">Индекс</label>
+                  <Input
+                    id="account-postal-code"
+                    type="text"
+                    value={profile.address?.postalCode || ''}
+                    onChange={handleProfileAddressChange('postalCode')}
+                    placeholder="350000"
+                    autoComplete="shipping postal-code"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="account-city" className="text-sm text-muted block mb-1">Город</label>
+                  <Input
+                    id="account-city"
+                    type="text"
+                    value={profile.address?.city || ''}
+                    onChange={handleProfileAddressChange('city')}
+                    placeholder="Краснодар"
+                    autoComplete="shipping address-level2"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label htmlFor="account-street" className="text-sm text-muted block mb-1">Улица, дом</label>
+                  <Input
+                    id="account-street"
+                    type="text"
+                    value={profile.address?.street || ''}
+                    onChange={handleProfileAddressChange('street')}
+                    placeholder="ул. Красная, 1"
+                    autoComplete="shipping street-address"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label htmlFor="account-address2" className="text-sm text-muted block mb-1">Квартира, подъезд, комментарий</label>
+                  <Input
+                    id="account-address2"
+                    type="text"
+                    value={profile.address?.address2 || ''}
+                    onChange={handleProfileAddressChange('address2')}
+                    placeholder="кв. 12, подъезд 3"
+                    autoComplete="shipping address-line2"
+                  />
+                </div>
+              </div>
+
               <div className="pt-2">
                 <Button
                   type="submit"
@@ -1095,6 +1670,19 @@ function AccountPage() {
                           </p>
                         ) : null}
                       </Card>
+                    </div>
+
+                    <div className="mt-4">
+                      <AccountOrderPaymentPanel
+                        order={selectedOrder}
+                        onOrderUpdate={(updatedOrder) => {
+                          setOrders((current) =>
+                            current.map((entry) =>
+                              entry?.id === updatedOrder?.id ? updatedOrder : entry
+                            )
+                          );
+                        }}
+                      />
                     </div>
 
                     {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (

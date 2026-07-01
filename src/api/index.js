@@ -364,6 +364,8 @@ export async function checkoutCart({
   confirmationMode,
   savePaymentMethod,
   analyticsAttribution,
+  accountRedirectUrl,
+  addressParts,
   idempotencyKey,
   signal
 } = {}) {
@@ -384,6 +386,8 @@ export async function checkoutCart({
       confirmationMode,
       savePaymentMethod,
       analyticsAttribution,
+      accountRedirectUrl,
+      addressParts,
       idempotencyKey
     })
   });
