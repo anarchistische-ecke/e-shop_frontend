@@ -826,76 +826,66 @@ function AccountPage() {
             <form onSubmit={handleSave} className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="text-sm text-muted block mb-1">Имя</label>
+                  <label htmlFor="account-first-name" className="text-sm text-muted block mb-1">Имя</label>
                   <Input
+                    id="account-first-name"
                     type="text"
                     value={profile.firstName}
                     onChange={handleProfileChange('firstName')}
                     placeholder="Ольга"
+                    autoComplete="given-name"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-muted block mb-1">Фамилия</label>
+                  <label htmlFor="account-last-name" className="text-sm text-muted block mb-1">Фамилия</label>
                   <Input
+                    id="account-last-name"
                     type="text"
                     value={profile.lastName}
                     onChange={handleProfileChange('lastName')}
                     placeholder="Павленко"
+                    autoComplete="family-name"
                   />
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_260px] md:items-start">
                 <div>
-                  <label className="text-sm text-muted block mb-1">Телефон</label>
-                  <div className="relative">
-                    <Input
-                      type="tel"
-                      value={profile.phone}
-                      onChange={handleProfileChange('phone')}
-                      placeholder="+7 961 000-00-00"
-                      className="pr-10"
-                      readOnly
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M20 6L9 17l-5-5" />
-                      </svg>
-                    </span>
-                  </div>
+                  <label htmlFor="account-phone" className="text-sm text-muted block mb-1">Телефон</label>
+                  <Input
+                    id="account-phone"
+                    type="tel"
+                    value={profile.phone}
+                    onChange={handleProfileChange('phone')}
+                    placeholder="+7 961 000-00-00"
+                    autoComplete="tel"
+                  />
                 </div>
                 <p className="text-xs text-muted leading-relaxed md:pt-8">
-                  Для изменения номера телефона обратитесь в службу поддержки по телефону
-                  <span className="text-primary"> +7 961 466-88-33</span> или напишите
-                  письмо на <span className="text-primary">postel-yug@yandex.ru</span>.
+                  Укажите номер, по которому мы сможем связаться с вами по заказу и доставке.
                 </p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="text-sm text-muted block mb-1">Электронная почта</label>
+                  <label htmlFor="account-email" className="text-sm text-muted block mb-1">Электронная почта</label>
                   <Input
+                    id="account-email"
                     type="email"
                     value={profile.email}
                     onChange={handleProfileChange('email')}
                     placeholder="pochta@example.ru"
+                    autoComplete="email"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-muted block mb-1">Дата рождения</label>
+                  <label htmlFor="account-birth-date" className="text-sm text-muted block mb-1">Дата рождения</label>
                   <Input
+                    id="account-birth-date"
                     type="date"
                     value={profile.birthDate}
                     onChange={handleProfileChange('birthDate')}
+                    autoComplete="bday"
                   />
                 </div>
               </div>
