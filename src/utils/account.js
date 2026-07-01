@@ -1,5 +1,7 @@
 export const ACCOUNT_DEFAULT_SECTION = 'profile';
 export const ACCOUNT_ORDERS_SECTION = 'orders';
+export const POST_CHECKOUT_ACCOUNT_BOOTSTRAP_KEY = 'cozyhome:post-checkout-account:v1';
+const POST_CHECKOUT_BOOTSTRAP_TTL_MS = 24 * 60 * 60 * 1000;
 export const CART_SESSION_STRATEGY = Object.freeze({
   code: 'PRESERVE_DEVICE_CART',
   title: 'Корзина на этом устройстве сохранится',
@@ -94,4 +96,87 @@ export function findAccountOrderById(orders = [], orderId) {
   const normalizedOrderId = normalizeValue(orderId);
   if (!normalizedOrderId) return null;
   return orders.find((order) => normalizeValue(order?.id) === normalizedOrderId) || null;
+}
+
+function getSessionStorage() {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.sessionStorage || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function safeParseJson(value) {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch (err) {
+    return null;
+  }
+}
+
+export function savePostCheckoutAccountBootstrap(payload = {}) {
+  const storage = getSessionStorage();
+  const orderId = normalizeValue(payload.orderId || payload.order?.id);
+  const publicToken = normalizeValue(payload.publicToken || payload.order?.publicToken);
+  if (!storage || !orderId || !publicToken) {
+    return null;
+  }
+
+  const bootstrap = {
+    orderId,
+    publicToken,
+    email: normalizeValue(payload.email || payload.order?.receiptEmail),
+    accountStatus: normalizeValue(payload.accountStatus),
+    redirectPath: normalizeValue(payload.redirectPath) || buildAccountSectionPath(ACCOUNT_ORDERS_SECTION, { orderId }),
+    order: payload.order || null,
+    payment: payload.payment || null,
+    paymentSession: payload.paymentSession || null,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + POST_CHECKOUT_BOOTSTRAP_TTL_MS
+  };
+
+  try {
+    storage.setItem(POST_CHECKOUT_ACCOUNT_BOOTSTRAP_KEY, JSON.stringify(bootstrap));
+    return bootstrap;
+  } catch (err) {
+    return null;
+  }
+}
+
+export function loadPostCheckoutAccountBootstrap(orderId = '') {
+  const storage = getSessionStorage();
+  if (!storage) return null;
+  const bootstrap = safeParseJson(storage.getItem(POST_CHECKOUT_ACCOUNT_BOOTSTRAP_KEY));
+  if (!bootstrap || Date.now() >= Number(bootstrap.expiresAt || 0)) {
+    clearPostCheckoutAccountBootstrap();
+    return null;
+  }
+  const expectedOrderId = normalizeValue(orderId);
+  const storedOrderId = normalizeValue(bootstrap.orderId || bootstrap.order?.id);
+  if (expectedOrderId && storedOrderId !== expectedOrderId) {
+    return null;
+  }
+  if (!storedOrderId || !normalizeValue(bootstrap.publicToken || bootstrap.order?.publicToken)) {
+    clearPostCheckoutAccountBootstrap();
+    return null;
+  }
+  return bootstrap;
+}
+
+export function clearPostCheckoutAccountBootstrap(orderId = '') {
+  const storage = getSessionStorage();
+  if (!storage) return;
+  if (orderId) {
+    const bootstrap = safeParseJson(storage.getItem(POST_CHECKOUT_ACCOUNT_BOOTSTRAP_KEY));
+    const storedOrderId = normalizeValue(bootstrap?.orderId || bootstrap?.order?.id);
+    if (storedOrderId && storedOrderId !== normalizeValue(orderId)) {
+      return;
+    }
+  }
+  try {
+    storage.removeItem(POST_CHECKOUT_ACCOUNT_BOOTSTRAP_KEY);
+  } catch (err) {
+  }
 }

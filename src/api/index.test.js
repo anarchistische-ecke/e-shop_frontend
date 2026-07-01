@@ -31,6 +31,13 @@ describe('checkoutCart', () => {
       orderPageUrl: 'https://example.test/order/{token}',
       confirmationMode: 'REDIRECT',
       savePaymentMethod: false,
+      accountRedirectUrl: 'https://example.test/account?order={orderId}#orders',
+      addressParts: {
+        postalCode: '350000',
+        city: 'Krasnodar',
+        street: 'Street 1',
+        address2: 'Flat 2'
+      },
       idempotencyKey: 'checkout-key-1'
     });
 
@@ -38,7 +45,14 @@ describe('checkoutCart', () => {
     const [, options] = globalThis.fetch.mock.calls[0];
     expect(options.headers).not.toHaveProperty('Idempotency-Key');
     expect(JSON.parse(options.body)).toMatchObject({
-      idempotencyKey: 'checkout-key-1'
+      idempotencyKey: 'checkout-key-1',
+      accountRedirectUrl: 'https://example.test/account?order={orderId}#orders',
+      addressParts: {
+        postalCode: '350000',
+        city: 'Krasnodar',
+        street: 'Street 1',
+        address2: 'Flat 2'
+      }
     });
   });
 });
