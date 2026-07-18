@@ -5,7 +5,7 @@ vi.mock('../auth/session.js', () => ({
   getAccessToken: vi.fn(async () => null)
 }));
 
-import { checkoutCart, createManagerOrderLink, getProducts } from './index.js';
+import { checkoutCart, createManagerOrderLink, getChatMessages, getProducts, sendChatMessage } from './index.js';
 
 const originalFetch = globalThis.fetch;
 
@@ -87,6 +87,35 @@ describe('createManagerOrderLink', () => {
       sendEmail: false,
       idempotencyKey: 'manager-link-key-1'
     });
+  });
+});
+
+describe('chat API', () => {
+  it('sends X-Chat-Token when polling messages', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ messages: [] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    }));
+
+    await getChatMessages('conversation-1', 'chat-token', { after: '2026-07-17T10:00:00Z' });
+
+    const [url, options] = globalThis.fetch.mock.calls[0];
+    expect(String(url)).toContain('/chat/conversations/conversation-1/messages?after=2026-07-17T10%3A00%3A00Z');
+    expect(options.headers).toMatchObject({ 'X-Chat-Token': 'chat-token' });
+  });
+
+  it('sends X-Chat-Token when sending a message', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ messages: [] }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    }));
+
+    await sendChatMessage('conversation-1', 'chat-token', 'Hello');
+
+    const [, options] = globalThis.fetch.mock.calls[0];
+    expect(options.method).toBe('POST');
+    expect(options.headers).toMatchObject({ 'X-Chat-Token': 'chat-token' });
+    expect(JSON.parse(options.body)).toEqual({ message: 'Hello' });
   });
 });
 
