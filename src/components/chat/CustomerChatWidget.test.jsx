@@ -183,4 +183,54 @@ describe('CustomerChatWidget', () => {
     expect(view.container.textContent).toContain('Еще вопрос');
     view.unmount();
   });
+
+  it('starts a new conversation after the previous one is closed', async () => {
+    window.localStorage.setItem('cozyhome:customer-chat:v1', JSON.stringify({
+      conversationId: 'chat-closed',
+      conversationToken: 'token-closed',
+    }));
+    getChatMessages.mockResolvedValueOnce({
+      conversationId: 'chat-closed',
+      status: 'CLOSED',
+      messages: [
+        {
+          id: 'message-old',
+          sender: 'CUSTOMER',
+          senderLabel: 'Анна',
+          body: 'Старый вопрос',
+          createdAt: '2026-07-17T10:00:00Z',
+        },
+      ],
+    });
+    const view = renderWidget();
+
+    await act(async () => {
+      view.container.querySelector('button[aria-label="Открыть чат"]').click();
+      await Promise.resolve();
+    });
+
+    const startButton = Array.from(view.container.querySelectorAll('button'))
+      .find((button) => button.textContent === 'Начать новый диалог');
+    expect(startButton).toBeDefined();
+
+    await act(async () => {
+      startButton.click();
+    });
+
+    expect(window.localStorage.getItem('cozyhome:customer-chat:v1')).toBeNull();
+    expect(view.container.textContent).not.toContain('Старый вопрос');
+    expect(view.container.querySelector('input[placeholder="Ваше имя"]')).not.toBeNull();
+    expect(view.container.querySelector('#customer-chat-message')).not.toBeNull();
+
+    await act(async () => {
+      changeValue(view.container.querySelector('#customer-chat-message'), 'Новый вопрос');
+    });
+    await act(async () => {
+      view.container.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    expect(createChatConversation).toHaveBeenCalledWith(expect.objectContaining({ message: 'Новый вопрос' }));
+    expect(sendChatMessage).not.toHaveBeenCalled();
+    view.unmount();
+  });
 });

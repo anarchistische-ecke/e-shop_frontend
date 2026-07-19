@@ -62,6 +62,13 @@ function writeStoredChat(value) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
 }
 
+function clearStoredChat() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.removeItem(STORAGE_KEY);
+}
+
 function mergeMessages(current, incoming) {
   if (!Array.isArray(incoming) || incoming.length === 0) {
     return current;
@@ -165,6 +172,16 @@ function CustomerChatWidget() {
 
   const canSend = draft.trim().length > 0 && draft.trim().length <= MAX_MESSAGE_LENGTH && !isSending && status !== 'CLOSED';
 
+  const handleStartNewConversation = () => {
+    clearStoredChat();
+    latestMessageAtRef.current = undefined;
+    setChatSession(null);
+    setMessages([]);
+    setStatus('OPEN');
+    setDraft('');
+    setError('');
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     const message = draft.trim();
@@ -259,45 +276,52 @@ function CustomerChatWidget() {
           </div>
 
           <form onSubmit={handleSubmit} className="border-t border-ink/10 bg-white px-4 py-3">
-            {!chatSession ? (
-              <div className="mb-3 grid gap-2">
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(event) => setCustomerName(event.target.value)}
-                  placeholder="Ваше имя"
-                  className="control-inline min-h-[42px] rounded-xl border border-ink/10 px-3 text-sm"
-                  maxLength={160}
-                />
-                <input
-                  type="text"
-                  value={customerContact}
-                  onChange={(event) => setCustomerContact(event.target.value)}
-                  placeholder="Телефон или email"
-                  className="control-inline min-h-[42px] rounded-xl border border-ink/10 px-3 text-sm"
-                  maxLength={240}
-                />
-              </div>
-            ) : null}
-            <label className="sr-only" htmlFor="customer-chat-message">
-              Сообщение
-            </label>
-            <textarea
-              id="customer-chat-message"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder={status === 'CLOSED' ? 'Диалог закрыт' : 'Напишите сообщение'}
-              disabled={status === 'CLOSED'}
-              maxLength={MAX_MESSAGE_LENGTH}
-              className="control-inline min-h-[76px] w-full resize-none rounded-xl border border-ink/10 px-3 py-2 text-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/15"
-            />
-            {error ? <p className="mt-2 text-xs font-semibold text-red-700">{error}</p> : null}
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-xs text-muted">{draft.length}/{MAX_MESSAGE_LENGTH}</span>
-              <Button type="submit" size="sm" disabled={!canSend}>
-                {isSending ? 'Отправляем…' : 'Отправить'}
+            {status === 'CLOSED' && chatSession ? (
+              <Button type="button" block onClick={handleStartNewConversation}>
+                Начать новый диалог
               </Button>
-            </div>
+            ) : (
+              <>
+                {!chatSession ? (
+                  <div className="mb-3 grid gap-2">
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(event) => setCustomerName(event.target.value)}
+                      placeholder="Ваше имя"
+                      className="control-inline min-h-[42px] rounded-xl border border-ink/10 px-3 text-sm"
+                      maxLength={160}
+                    />
+                    <input
+                      type="text"
+                      value={customerContact}
+                      onChange={(event) => setCustomerContact(event.target.value)}
+                      placeholder="Телефон или email"
+                      className="control-inline min-h-[42px] rounded-xl border border-ink/10 px-3 text-sm"
+                      maxLength={240}
+                    />
+                  </div>
+                ) : null}
+                <label className="sr-only" htmlFor="customer-chat-message">
+                  Сообщение
+                </label>
+                <textarea
+                  id="customer-chat-message"
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder="Напишите сообщение"
+                  maxLength={MAX_MESSAGE_LENGTH}
+                  className="control-inline min-h-[76px] w-full resize-none rounded-xl border border-ink/10 px-3 py-2 text-sm focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                />
+                {error ? <p className="mt-2 text-xs font-semibold text-red-700">{error}</p> : null}
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <span className="text-xs text-muted">{draft.length}/{MAX_MESSAGE_LENGTH}</span>
+                  <Button type="submit" size="sm" disabled={!canSend}>
+                    {isSending ? 'Отправляем…' : 'Отправить'}
+                  </Button>
+                </div>
+              </>
+            )}
           </form>
         </section>
       ) : null}
