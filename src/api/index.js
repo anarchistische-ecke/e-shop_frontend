@@ -478,6 +478,39 @@ export async function getManagerDashboard({ limit = 8 } = {}) {
   return request(`/managers/me/dashboard?limit=${encodeURIComponent(safeLimit)}`);
 }
 
+// Customer chat
+export async function createChatConversation(payload) {
+  return request('/chat/conversations', {
+    method: 'POST',
+    body: JSON.stringify(payload || {})
+  });
+}
+
+export async function getChatMessages(conversationId, token, { after, signal } = {}) {
+  const query = new URLSearchParams();
+  if (after) {
+    query.append('after', after);
+  }
+  const qs = query.toString();
+  return request(`/chat/conversations/${encodeURIComponent(conversationId)}/messages${qs ? `?${qs}` : ''}`, {
+    signal,
+    cache: 'no-store',
+    headers: {
+      'X-Chat-Token': token
+    }
+  });
+}
+
+export async function sendChatMessage(conversationId, token, message) {
+  return request(`/chat/conversations/${encodeURIComponent(conversationId)}/messages`, {
+    method: 'POST',
+    headers: {
+      'X-Chat-Token': token
+    },
+    body: JSON.stringify({ message })
+  });
+}
+
 // CMS content façade
 export async function getCmsSiteSettings({ preview = false, signal } = {}) {
   const path = preview ? '/content/preview/site-settings' : '/content/site-settings';
