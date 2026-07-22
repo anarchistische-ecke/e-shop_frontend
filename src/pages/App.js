@@ -4,6 +4,7 @@ import Seo from '../components/Seo';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ScrollToTop from '../components/ScrollToTop';
+import CustomerChatWidget from '../components/chat/CustomerChatWidget';
 import { trackPageView } from '../utils/metrika';
 import { useRenderContext } from '../ssr/RenderContext';
 import { matchStorefrontRoute } from '../ssr/routeConfig';
@@ -114,6 +115,7 @@ function App({ routes = [] }) {
           </Routes>
         </main>
         {!isChromeHiddenRoute && <Footer />}
+        {!isChromeHiddenRoute && <CustomerChatWidget />}
       </div>
     </>
   );
