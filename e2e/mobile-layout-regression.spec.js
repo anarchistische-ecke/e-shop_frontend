@@ -197,7 +197,7 @@ test('core storefront routes fit the mobile viewport without horizontal overflow
   await expect(page.getByRole('heading', { name: 'Ваши товары для уюта' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
-  await page.getByRole('button', { name: 'Оформить заказ' }).click();
+  await page.getByRole('button', { name: /Оформить заказ/ }).last().click();
   await expect(page).toHaveURL(/\/checkout$/);
   await expect(page.getByRole('heading', { name: /Быстрое оформление без лишних шагов/i })).toBeVisible();
   await expectNoHorizontalOverflow(page);
@@ -208,3 +208,39 @@ test('core storefront routes fit the mobile viewport without horizontal overflow
   ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
+
+for (const viewport of [
+  { width: 360, height: 800 },
+  { width: 390, height: 844 },
+]) {
+  test(`mobile cart and checkout actions stay unobstructed at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize(viewport);
+    await page.goto('/product/prod-satin-sand/satin-sand');
+    await page.getByRole('button', { name: 'Добавить в корзину' }).click();
+    await page.goto('/cart');
+
+    const checkoutBar = page.getByTestId('mobile-cart-checkout-bar');
+    const chatLauncher = page.getByTestId('customer-chat-launcher');
+    await expect(checkoutBar).toBeVisible();
+    await expect(chatLauncher).toBeVisible();
+
+    const [checkoutBox, chatBox] = await Promise.all([
+      checkoutBar.boundingBox(),
+      chatLauncher.boundingBox(),
+    ]);
+    expect(checkoutBox).not.toBeNull();
+    expect(chatBox).not.toBeNull();
+    expect(chatBox.y + chatBox.height).toBeLessThanOrEqual(checkoutBox.y);
+
+    await checkoutBar.getByRole('button', { name: /Оформить заказ/ }).click();
+    await expect(page).toHaveURL(/\/checkout$/);
+    await expect(page.getByRole('button', { name: 'Открыть чат' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /Нужна помощь/ })).toHaveAttribute(
+      'href',
+      'tel:+79614668833'
+    );
+  });
+}

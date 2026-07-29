@@ -35,6 +35,11 @@ import {
   buildProductMicrodata,
   buildWebPageJsonLd
 } from '../seo/schema';
+import {
+  DELIVERY_DISCLOSURE,
+  DELIVERY_EXCLUDED_LABEL,
+  DELIVERY_SHORT_DISCLOSURE
+} from '../utils/delivery';
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -655,8 +660,8 @@ function ProductPage() {
         key: 'shipping',
         icon: 'delivery',
         title: 'Доставка',
-        summary: 'Согласует менеджер',
-        caption: 'После оплаты менеджер уточнит варианты и финальную стоимость.'
+        summary: DELIVERY_EXCLUDED_LABEL,
+        caption: DELIVERY_SHORT_DISCLOSURE
       },
       {
         key: 'returns',
@@ -1793,8 +1798,7 @@ function ProductPage() {
                   onToggle={() => toggleAccordion('service')}
                 >
                   <div className="space-y-3">
-                    <p>Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.</p>
-                    <p>При онлайн-оплате вы оплачиваете только товары. Доставка оплачивается отдельно после согласования.</p>
+                    <p>{DELIVERY_DISCLOSURE}</p>
                     <p>Возврат возможен в течение 14 дней после получения. Оплата подтверждается на защищённом шаге оформления заказа или на странице заказа.</p>
                     <div className="flex flex-wrap gap-3 pt-1 text-xs">
                       <Link to="/info/payment" className="underline underline-offset-4">Оплата</Link>
@@ -1851,7 +1855,7 @@ function ProductPage() {
           {cartStatus ? <NotificationBanner notification={cartStatus} compact className="mb-3" /> : null}
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(10rem,1.3fr)] items-center gap-3">
             <div className="min-w-0">
-              <p className="text-xs text-ink/55">К оплате</p>
+              <p className="text-xs text-ink/55">К оплате сейчас</p>
               <p className="truncate text-lg font-medium text-ink">{formatRub(price * quantity)}</p>
             </div>
             <Button
@@ -1898,9 +1902,7 @@ function ProductPage() {
       >
         {sheetType === 'shipping' ? (
           <div className="space-y-3 text-sm text-ink/85">
-            <p>Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.</p>
-            <p>При онлайн-оплате вы оплачиваете только товары. Доставка оплачивается отдельно после согласования.</p>
-            <p>Наш менеджер свяжется с вами в ближайшее время после оплаты.</p>
+            <p>{DELIVERY_DISCLOSURE}</p>
           </div>
         ) : sheetType === 'payment' ? (
           <div className="space-y-3 text-sm text-ink/85">

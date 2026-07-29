@@ -50,9 +50,12 @@ import {
   resolveCheckoutAttempt
 } from './utils';
 import { readEnv } from '../../config/runtime';
+import {
+  DELIVERY_EXCLUDED_LABEL,
+  DELIVERY_SHORT_DISCLOSURE
+} from '../../utils/delivery';
 
-export const MANUAL_DELIVERY_NOTICE =
-  'Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.';
+export const MANUAL_DELIVERY_NOTICE = DELIVERY_SHORT_DISCLOSURE;
 
 function clampStep(step, max = CHECKOUT_STEPS.length - 1) {
   if (!Number.isInteger(step)) return 0;
@@ -194,7 +197,7 @@ export function useCheckoutState() {
   );
 
   const payableTotal = total;
-  const deliveryLabel = 'Согласует менеджер';
+  const deliveryLabel = DELIVERY_EXCLUDED_LABEL;
   const confirmationDeliveryLabel = homeAddress.trim() || 'Адрес не указан';
   const checkoutSubmitLabel = isEmbeddedPaymentMode(paymentConfig)
     ? 'Создать заказ и открыть форму оплаты'

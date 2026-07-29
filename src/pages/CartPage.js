@@ -17,6 +17,10 @@ import { Button, Card, Input } from '../components/ui';
 import { readEnv } from '../config/runtime';
 import QuickViewSheet from '../components/commerce/QuickViewSheet';
 import { useProductDirectoryData } from '../features/product-list/data';
+import {
+  DELIVERY_EXCLUDED_LABEL,
+  DELIVERY_SHORT_DISCLOSURE
+} from '../utils/delivery';
 
 function CartPage() {
   const {
@@ -184,7 +188,7 @@ function CartPage() {
   };
 
   return (
-    <div className="cart-page page-section">
+    <div className="cart-page page-section pb-28 lg:pb-0">
       <Seo
         title="Корзина"
         description="Проверьте товары в корзине, итоговую стоимость и переходите к оформлению заказа."
@@ -425,7 +429,7 @@ function CartPage() {
                 ) : null}
                 <div className="flex justify-between mb-2 text-sm">
                   <span>Доставка</span>
-                  <span>Согласует менеджер</span>
+                  <span className="max-w-[13rem] text-right">{DELIVERY_EXCLUDED_LABEL}</span>
                 </div>
                 <div className="flex justify-between mb-2 text-sm text-muted">
                   <span>Оплата</span>
@@ -433,7 +437,7 @@ function CartPage() {
                 </div>
                 <hr className="my-3 border-ink/10" />
                 <div className="flex justify-between font-semibold text-base mb-4">
-                  <span>Итого</span>
+                  <span>К оплате сейчас</span>
                   <span>{total.toLocaleString('ru-RU')} ₽</span>
                 </div>
                 {hasAvailabilityWarnings ? (
@@ -461,13 +465,25 @@ function CartPage() {
               </Card>
               <Card padding="sm" className="text-sm space-y-2">
                 <p className="font-semibold">Почему с нами спокойно</p>
-                <p className="text-muted">После оплаты менеджер согласует варианты доставки и финальную стоимость.</p>
+                <p className="text-muted">{DELIVERY_SHORT_DISCLOSURE}</p>
                 <p className="text-muted">{paymentDescription} Поддержка ежедневно с 9:00 до 21:00.</p>
               </Card>
             </div>
           </div>
         )}
       </div>
+      {items.length > 0 ? (
+        <div
+          data-testid="mobile-cart-checkout-bar"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] lg:hidden"
+        >
+          <Button block onClick={handleCheckout} disabled={hasAvailabilityWarnings}>
+            {hasAvailabilityWarnings
+              ? 'Обновите корзину'
+              : `Оформить заказ · ${total.toLocaleString('ru-RU')} ₽`}
+          </Button>
+        </div>
+      ) : null}
       <QuickViewSheet
         open={Boolean(editingItem)}
         product={findProductForCartItem(editingItem)}

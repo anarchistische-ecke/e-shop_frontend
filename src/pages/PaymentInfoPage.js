@@ -1,6 +1,7 @@
 import React from 'react';
 import CmsManagedPage from '../components/cms/CmsManagedPage';
 import Seo from '../components/Seo';
+import { DELIVERY_DISCLOSURE } from '../utils/delivery';
 
 function PaymentInfoFallbackPage() {
   return (
@@ -13,7 +14,7 @@ function PaymentInfoFallbackPage() {
       <p className="text-xs uppercase tracking-[0.3em] text-muted">Сервис</p>
       <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Удобная оплата</h1>
       <p className="text-muted mb-6">
-        На первом этапе заказ оплачивается полной предоплатой товаров через платёжный сервис. Доставку менеджер согласует отдельно после оформления.
+        {DELIVERY_DISCLOSURE}
       </p>
       <div className="grid md:grid-cols-2 gap-4 mb-6">
         <div className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm">

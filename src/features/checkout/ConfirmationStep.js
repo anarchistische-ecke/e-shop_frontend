@@ -71,7 +71,7 @@ function ConfirmationStep({
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
               <div>
                 <div className="text-xs uppercase tracking-[0.15em] text-muted">Доставка</div>
-                <div className="font-semibold">Доставку согласует менеджер</div>
+                <div className="font-semibold">Не входит в текущую оплату</div>
                 <div className="mt-1 text-xs text-muted">{deliveryNotice}</div>
               </div>
               <Button variant="ghost" size="sm" className="text-xs" onClick={onEditDelivery} disabled={isSubmitting}>
@@ -106,7 +106,8 @@ function ConfirmationStep({
           <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-xs text-ink/90">
             Нажимая «
             {submitLabel}
-            », вы подтверждаете полную предоплату товаров. Доставка оплачивается отдельно после согласования с менеджером.
+            », вы подтверждаете полную предоплату товаров. Доставка в эту сумму не входит:
+            менеджер рассчитает и согласует её с вами до отправки.
           </div>
 
           <Button type="submit" block className="mt-5" disabled={isSubmitting}>

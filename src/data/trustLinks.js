@@ -4,7 +4,7 @@ export const TRUST_LINKS = [
   {
     id: 'delivery',
     title: 'Доставка и возврат',
-    description: 'Варианты доставки согласует менеджер после заказа.',
+    description: 'Доставка не входит в оплату товаров и согласуется отдельно до отправки.',
     path: '/info/delivery'
   },
   {

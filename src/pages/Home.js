@@ -25,6 +25,10 @@ import {
   buildWebPageJsonLd,
   buildWebSiteJsonLd
 } from '../seo/schema';
+import {
+  DELIVERY_DISCLOSURE,
+  DELIVERY_SHORT_DISCLOSURE
+} from '../utils/delivery';
 
 function getProductStock(product) {
   if (!product) return 0;
@@ -86,7 +90,7 @@ const fabricGuideItems = [
 const benefitItems = [
   {
     title: 'Доставка по России',
-    description: 'Финальные условия и стоимость доставки видны до оплаты.',
+    description: DELIVERY_SHORT_DISCLOSURE,
   },
   {
     title: 'Возврат без скрытых условий',
@@ -192,7 +196,7 @@ function ConversionCta() {
           <p className="text-xs uppercase tracking-[0.28em] text-accent">Готовы выбрать</p>
           <h2 className="mt-3 text-3xl font-semibold text-ink">Соберите кровать из проверенных комплектов</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Начните с бестселлеров, добавьте плед или выберите ткань по ощущению. Финальная стоимость доставки и условия оплаты останутся видимыми до оформления заказа.
+            Начните с бестселлеров, добавьте плед или выберите ткань по ощущению. {DELIVERY_DISCLOSURE}
           </p>
         </div>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row lg:mt-0">
@@ -283,7 +287,7 @@ function HomeFallbackPage() {
   const heroHighlights = [
     {
       title: 'Условия доставки',
-      subtitle: 'Стоимость и способ доставки видны до оплаты.',
+      subtitle: DELIVERY_SHORT_DISCLOSURE,
       link: '/info/delivery',
     },
     {

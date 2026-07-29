@@ -1,6 +1,7 @@
 import React from 'react';
 import CmsManagedPage from '../components/cms/CmsManagedPage';
 import Seo from '../components/Seo';
+import { DELIVERY_DISCLOSURE } from '../utils/delivery';
 
 function DeliveryInfoFallbackPage() {
   return (
@@ -13,7 +14,7 @@ function DeliveryInfoFallbackPage() {
       <p className="text-xs uppercase tracking-[0.3em] text-muted">Сервис</p>
       <h1 className="text-2xl sm:text-3xl font-semibold mb-4">Доставку согласует менеджер</h1>
       <p className="text-muted mb-6">
-        При оформлении заказа вы оплачиваете только товары. После оплаты менеджер свяжется с вами, уточнит адрес и предложит доступные варианты доставки с финальной стоимостью.
+        {DELIVERY_DISCLOSURE}
       </p>
       <div className="grid md:grid-cols-2 gap-4 mb-6">
         <div className="rounded-2xl border border-ink/10 bg-white/90 p-5 shadow-sm">

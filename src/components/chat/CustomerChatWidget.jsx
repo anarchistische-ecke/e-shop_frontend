@@ -86,7 +86,7 @@ function latestMessageTimestamp(messages) {
   return messages.length > 0 ? messages[messages.length - 1].createdAt : undefined;
 }
 
-function CustomerChatWidget() {
+function CustomerChatWidget({ elevatedForMobileAction = false }) {
   const auth = useAuth();
   const initialStoredChat = useMemo(readStoredChat, []);
   const [isOpen, setIsOpen] = useState(false);
@@ -225,7 +225,14 @@ function CustomerChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] right-4 z-[180] sm:right-6">
+    <div
+      data-testid="customer-chat-widget"
+      className={`fixed right-4 z-[180] transition-[bottom] sm:right-6 ${
+        elevatedForMobileAction
+          ? 'bottom-[calc(env(safe-area-inset-bottom,0px)+6.75rem)] lg:bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)]'
+          : 'bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)]'
+      }`}
+    >
       {isOpen ? (
         <section
           className="mb-3 flex h-[min(78dvh,38rem)] w-[calc(100vw-2rem)] max-w-[24rem] flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-[0_24px_60px_rgba(43,39,34,0.22)] sm:w-[24rem]"
@@ -328,6 +335,7 @@ function CustomerChatWidget() {
 
       <button
         type="button"
+        data-testid="customer-chat-launcher"
         className="ml-auto grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-[0_18px_38px_rgba(182,91,74,0.36)] transition hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/25"
         onClick={() => setIsOpen((value) => !value)}
         aria-label={isOpen ? 'Скрыть чат' : 'Открыть чат'}

@@ -48,6 +48,9 @@ function RouteEntryRenderer({ route }) {
 function App({ routes = [] }) {
   const location = useLocation();
   const isChromeHiddenRoute = isChromeHiddenRoutePath(location.pathname);
+  const isCheckoutRoute = location.pathname === '/checkout';
+  const hasMobileCommerceAction =
+    location.pathname === '/cart' || location.pathname.startsWith('/product/');
   const mainRef = useRef(null);
   const resolvedRoutes = useMemo(() => routes, [routes]);
 
@@ -115,7 +118,9 @@ function App({ routes = [] }) {
           </Routes>
         </main>
         {!isChromeHiddenRoute && <Footer />}
-        {!isChromeHiddenRoute && <CustomerChatWidget />}
+        {!isChromeHiddenRoute && !isCheckoutRoute ? (
+          <CustomerChatWidget elevatedForMobileAction={hasMobileCommerceAction} />
+        ) : null}
       </div>
     </>
   );

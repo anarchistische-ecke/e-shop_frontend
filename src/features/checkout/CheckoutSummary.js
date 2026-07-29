@@ -59,7 +59,7 @@ function CheckoutSummary({
                 <div className="flex justify-between text-primary"><span>{cartDiscountLabel}</span><span>−{formatRub(cartDiscount)}</span></div>
               ) : null}
               <div className="flex justify-between"><span>Доставка</span><span>{deliveryLabel}</span></div>
-              <div className="flex justify-between font-semibold"><span>К оплате</span><span>{formatRub(payableTotal)}</span></div>
+              <div className="flex justify-between font-semibold"><span>К оплате сейчас</span><span>{formatRub(payableTotal)}</span></div>
             </div>
           </Card>
 
@@ -72,7 +72,7 @@ function CheckoutSummary({
       </div>
 
       <div className="sr-only" aria-live="polite">
-        Текущая сумма к оплате: {formatRub(payableTotal)}
+        Текущая сумма к оплате сейчас: {formatRub(payableTotal)}
       </div>
 
       <aside className="hidden lg:block space-y-4 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] self-start">
@@ -123,7 +123,7 @@ function CheckoutSummary({
           </dl>
           <hr className="my-4 border-ink/10" />
           <div className="flex justify-between text-lg font-semibold">
-            <span>К оплате</span>
+            <span>К оплате сейчас</span>
             <span>{formatRub(payableTotal)}</span>
           </div>
         </Card>
@@ -139,7 +139,7 @@ function CheckoutSummary({
         <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
           <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.16em] text-muted">{mobileAction.subtitle}</div>
-            <div className="text-sm font-semibold">К оплате: {formatRub(payableTotal)}</div>
+            <div className="text-sm font-semibold">К оплате сейчас: {formatRub(payableTotal)}</div>
           </div>
           <Button
             className="ml-auto !px-4 !py-2.5"
