@@ -1,8 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   createCart,
-  getCart,
-  getCartPricing,
+  getCartView,
   applyCartPromoCode,
   removeCartPromoCode,
   addItemToCart,
@@ -22,65 +21,40 @@ import {
   trackGoal,
   trackParams
 } from '../utils/metrika';
-import { useProductDirectoryData } from '../features/product-list/data';
 
 export const CartContext = createContext();
 
-function normalizeVariantsMap(products = []) {
-  const map = {};
-  products.forEach((product) => {
-    const variants = Array.isArray(product.variants)
-      ? product.variants
-      : product.variants
-      ? Array.from(product.variants)
-      : [];
-    variants.forEach((variant) => {
-      if (variant?.id) {
-        map[variant.id] = {
-          productId: product.id,
-          productName: product.name,
-          productSlug: product.slug,
-          variantName: variant.name,
-          variantPrice: variant.price,
-          variantOldPrice: variant.oldPrice,
-          discountPercent: variant.discountPercent,
-          imageUrl: getPrimaryImageUrl(product, variant.id)
-        };
-      }
-    });
-  });
-  return map;
-}
-
-function enrichCartItems(items = [], variantMap = {}, pricing = null) {
+function enrichCartItems(items = [], pricing = null) {
   const pricingLinesByVariantId = new Map(
     Array.isArray(pricing?.items)
       ? pricing.items.map((line) => [line.variantId, line])
       : []
   );
   return items.map((item) => {
-    const variantMeta = variantMap[item.variantId];
-    const pricingLine = pricingLinesByVariantId.get(item.variantId) || null;
+    const product = item.product || null;
+    const pricingLine = item.pricing || pricingLinesByVariantId.get(item.variantId) || null;
     return {
       ...item,
       pricingLine,
-      productInfo: variantMeta
+      productInfo: product
         ? {
-            id: variantMeta.productId,
-            name: variantMeta.productName,
-            slug: variantMeta.productSlug,
-            variantName: variantMeta.variantName,
-            imageUrl: variantMeta.imageUrl
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            variantName: product.variantName,
+            size: product.size,
+            color: product.color,
+            imageUrl: product.primaryMedia?.url || product.image?.url || ''
           }
         : null,
-      unitPriceValue: moneyToNumber(pricingLine?.unitPrice || item.unitPrice || variantMeta?.variantPrice),
-      oldUnitPriceValue: moneyToNumber(pricingLine?.originalUnitPrice || variantMeta?.variantOldPrice),
+      unitPriceValue: moneyToNumber(pricingLine?.unitPrice || item.unitPrice),
+      oldUnitPriceValue: moneyToNumber(pricingLine?.originalUnitPrice),
       discountPercent: pricingLine?.saleApplied
         ? Math.round(
             ((moneyToNumber(pricingLine.originalUnitPrice) - moneyToNumber(pricingLine.unitPrice)) /
               Math.max(1, moneyToNumber(pricingLine.originalUnitPrice))) * 100
           )
-        : variantMeta?.discountPercent || null
+        : null
     };
   });
 }
@@ -118,7 +92,6 @@ function resolveCartStateBucket(items = []) {
 
 export function CartProvider({ children }) {
   const { notify } = useNotifications();
-  const { products } = useProductDirectoryData();
   // Persist cart ID in localStorage
   const [cartId, setCartId] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -130,29 +103,18 @@ export function CartProvider({ children }) {
   const [pricing, setPricing] = useState(null);
   const [lastAddedItem, setLastAddedItem] = useState(null);
 
-  const variantMap = useMemo(
-    () => normalizeVariantsMap(products),
-    [products]
-  );
-
   const items = useMemo(
-    () => enrichCartItems(rawItems, variantMap, pricing),
-    [rawItems, variantMap, pricing]
+    () => enrichCartItems(rawItems, pricing),
+    [rawItems, pricing]
   );
   const cartStateBucket = useMemo(() => resolveCartStateBucket(items), [items]);
 
   const syncCart = useCallback(
     async (id) => {
       try {
-        const cart = await getCart(id);
-        setRawItems(Array.isArray(cart?.items) ? cart.items : []);
-        try {
-          const nextPricing = await getCartPricing(id);
-          setPricing(nextPricing || null);
-        } catch (pricingErr) {
-          console.error('Failed to load cart pricing:', pricingErr);
-          setPricing(null);
-        }
+        const view = await getCartView(id);
+        setRawItems(Array.isArray(view?.items) ? view.items : []);
+        setPricing(view?.pricing || null);
       } catch (err) {
         console.error('Failed to load cart:', err);
       }
@@ -300,15 +262,15 @@ export function CartProvider({ children }) {
         const quantityValue = normalizeCartQuantity(quantity);
         await addItemToCart(id, targetVariant, quantityValue);
         await syncCart(id);
-        const variantMeta = variantMap[targetVariant];
+        const syncedItem = items.find((item) => item.variantId === targetVariant);
         setLastAddedItem({
           id: `${targetVariant}-${Date.now()}`,
-          productId: variantMeta?.productId || targetVariant,
-          name: variantMeta?.productName || 'Товар',
-          variantName: variantMeta?.variantName || targetVariant,
+          productId: syncedItem?.productInfo?.id || targetVariant,
+          name: syncedItem?.productInfo?.name || 'Товар',
+          variantName: syncedItem?.productInfo?.variantName || targetVariant,
           quantity: quantityValue,
-          unitPriceValue: moneyToNumber(variantMeta?.variantPrice),
-          imageUrl: variantMeta?.imageUrl || ''
+          unitPriceValue: syncedItem?.unitPriceValue || 0,
+          imageUrl: syncedItem?.productInfo?.imageUrl || ''
         });
         return { ok: true };
       } catch (err) {
@@ -320,7 +282,7 @@ export function CartProvider({ children }) {
         return { ok: false, notification };
       }
     },
-    [cartId, notify, syncCart, variantMap]
+    [cartId, items, notify, syncCart]
   );
 
   const removeItem = useCallback(
@@ -366,7 +328,9 @@ export function CartProvider({ children }) {
   const refreshPricing = useCallback(async () => {
     if (!cartId) return null;
     try {
-      const nextPricing = await getCartPricing(cartId);
+      const view = await getCartView(cartId);
+      const nextPricing = view?.pricing || null;
+      setRawItems(Array.isArray(view?.items) ? view.items : []);
       setPricing(nextPricing || null);
       return nextPricing || null;
     } catch (err) {

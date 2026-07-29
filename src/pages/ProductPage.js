@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
 import { WishlistContext } from '../contexts/WishlistContext';
-import { getProduct } from '../api';
+import { getCatalogueListing, getProduct } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
 import { CataloguePresentationBlocks } from '../components/cms/CataloguePresentationSections';
@@ -258,7 +258,7 @@ function ProductPage() {
   const { addItem } = useContext(CartContext);
   const { isWishlisted, toggle: toggleWishlist } = useContext(WishlistContext);
   const { routeData } = useSsrData();
-  const { categories, products: directoryProducts } = useProductDirectoryData({ requireFull: true });
+  const { categories } = useProductDirectoryData();
   const hasProductRouteSeed =
     routeData?.kind === 'product' && String(routeData.productId || '') === String(id);
   const hasInitialProductLoad = hasProductRouteSeed && Boolean(routeData.product);
@@ -283,6 +283,7 @@ function ProductPage() {
   const [pendingAction, setPendingAction] = useState('');
   const [cartStatus, setCartStatus] = useState(null);
   const [showMobileCartBar, setShowMobileCartBar] = useState(true);
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
   const transitionTimerRef = useRef(null);
   const cartInputRef = useRef({ quantity: 1, variantId: null });
@@ -384,36 +385,33 @@ function ProductPage() {
     return undefined;
   }, [hasConfirmedNotFound, hasInitialProductLoad, id, initialProduct]);
 
-  const relatedProducts = useMemo(() => {
-    if (!product) {
-      return [];
-    }
-
-    const targetCategoryToken = resolveProductCategoryToken(product);
-    return directoryProducts
-      .filter((item) => {
-        if (!item || item.id === product.id || item?.isActive === false) {
-          return false;
-        }
-        if (!targetCategoryToken) {
-          return true;
-        }
-        return resolveProductCategoryToken(item) === targetCategoryToken;
-      })
-      .slice(0, 4);
-  }, [directoryProducts, product]);
-
   useEffect(() => {
-    if (!relatedProducts.length) return;
-    setBundleSelections((prev) => {
-      if (Object.keys(prev).length > 0) return prev;
-      const next = {};
-      relatedProducts.slice(0, 2).forEach((item) => {
-        if (item?.id) next[item.id] = true;
+    if (!product?.id) {
+      setRelatedProducts([]);
+      return undefined;
+    }
+    let active = true;
+    getCatalogueListing({
+      category: resolveProductCategoryToken(product),
+      page: 0,
+      size: 5,
+      inStock: true
+    })
+      .then((payload) => {
+        if (!active) return;
+        setRelatedProducts(
+          (Array.isArray(payload?.items) ? payload.items : [])
+            .filter((item) => String(item?.id || '') !== String(product.id))
+            .slice(0, 4)
+        );
+      })
+      .catch(() => {
+        if (active) setRelatedProducts([]);
       });
-      return next;
-    });
-  }, [relatedProducts]);
+    return () => {
+      active = false;
+    };
+  }, [product]);
 
   useEffect(() => {
     return () => {

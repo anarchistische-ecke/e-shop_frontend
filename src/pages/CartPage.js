@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { CartContext } from '../contexts/CartContext';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { isApiRequestError } from '../api';
+import { getProduct, isApiRequestError } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
 import { moneyToNumber } from '../utils/product';
@@ -16,7 +16,6 @@ import { CART_SESSION_STRATEGY } from '../utils/account';
 import { Button, Card, Input } from '../components/ui';
 import { readEnv } from '../config/runtime';
 import QuickViewSheet from '../components/commerce/QuickViewSheet';
-import { useProductDirectoryData } from '../features/product-list/data';
 import {
   DELIVERY_EXCLUDED_LABEL,
   DELIVERY_SHORT_DISCLOSURE
@@ -41,7 +40,7 @@ function CartPage() {
   const [isPromoSubmitting, setIsPromoSubmitting] = useState(false);
   const [isPromoExpanded, setIsPromoExpanded] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const { products } = useProductDirectoryData({ requireFull: true });
+  const [editingProduct, setEditingProduct] = useState(null);
   const managerRole = readEnv('REACT_APP_KEYCLOAK_MANAGER_ROLE', 'manager') || 'manager';
   const isManager = isAuthenticated && hasRole(managerRole);
 
@@ -176,15 +175,16 @@ function CartPage() {
     setPromoStatus({ type: 'error', message: 'Не удалось удалить промокод.' });
   };
 
-  const findProductForCartItem = (item) => {
-    if (!item) return null;
-    return products.find((product) => {
-      if (String(product?.id || '') === String(item.productInfo?.id || '')) {
-        return true;
-      }
-      const variants = Array.isArray(product?.variants) ? product.variants : Array.from(product?.variants || []);
-      return variants.some((variant) => String(variant?.id || '') === String(item.variantId || ''));
-    }) || null;
+  const handleEditItem = async (item) => {
+    const productId = item?.productInfo?.id;
+    if (!productId) return;
+    setEditingItem(item);
+    setEditingProduct(null);
+    try {
+      setEditingProduct(await getProduct(productId));
+    } catch (error) {
+      setEditingItem(null);
+    }
   };
 
   return (
@@ -321,7 +321,7 @@ function CartPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setEditingItem(item)}
+                        onClick={() => handleEditItem(item)}
                         className="text-xs text-primary hover:text-primary"
                       >
                         Изменить вариант
@@ -485,8 +485,8 @@ function CartPage() {
         </div>
       ) : null}
       <QuickViewSheet
-        open={Boolean(editingItem)}
-        product={findProductForCartItem(editingItem)}
+        open={Boolean(editingItem && editingProduct)}
+        product={editingProduct}
         title="Изменить вариант"
         submitLabel="Заменить в корзине"
         onAddSuccess={() => {
@@ -494,7 +494,10 @@ function CartPage() {
             removeItem(editingItem.id);
           }
         }}
-        onClose={() => setEditingItem(null)}
+        onClose={() => {
+          setEditingItem(null);
+          setEditingProduct(null);
+        }}
       />
     </div>
   );

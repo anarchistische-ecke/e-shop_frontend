@@ -110,18 +110,21 @@ function ProductCard({
     stockCount <= 0 ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700';
 
   const attributeLine =
-    product?.material
+    product?.attributes?.[0] ||
+    (product?.material
       ? `Материал: ${product.material}`
       : product?.size
       ? `Размер: ${product.size}`
       : product?.color
       ? `Цвет: ${product.color}`
-      : 'Подробности и характеристики на карточке товара';
-  const descriptorLine = product?.description || attributeLine;
+      : product?.brandName
+      ? `Бренд: ${product.brandName}`
+      : stockLabel);
+  const descriptorLine = product?.summary || attributeLine;
 
   const badges = [
     isLowStock ? `Мало на складе: ${stockCount}` : '',
-    product?.category === 'new' ? 'Новинка' : '',
+    Array.isArray(product?.badges) && product.badges.includes('new') ? 'Новинка' : '',
   ].filter(Boolean);
   const handleProductClick = () => {
     trackProductClick(product, {

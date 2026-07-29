@@ -1,51 +1,14 @@
-import { useDeferredValue, useMemo } from 'react';
-import { getProductPrice } from '../../utils/product';
-import {
-  normalizeSearchText,
-  resolveSearchCorrection,
-  searchProducts
-} from '../../utils/search';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { getCatalogueListing } from '../../api';
+import { normalizeSearchText } from '../../utils/search';
 import { PRODUCT_LIST_PAGE_SIZE } from './constants';
 import { useProductDirectoryData } from './data';
 import {
   buildCategoryCollections,
-  buildDiversityRanking,
-  buildPriceBounds,
-  getDiscountRate,
-  getStockCount,
   resolveBrandToken,
   resolveCategoryToken,
-  resolveProductCategoryToken,
   sortCategories
 } from './selectors';
-
-function buildCategoryTokenSet(activeCategory, childrenByParent) {
-  if (!activeCategory) {
-    return new Set();
-  }
-
-  const tokens = new Set();
-  const queue = [activeCategory];
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (!current) continue;
-    tokens.add(normalizeSearchText(resolveCategoryToken(current)));
-    tokens.add(normalizeSearchText(String(current.id || '')));
-    const children = childrenByParent[String(current.id)] || [];
-    queue.push(...children);
-  }
-
-  return tokens;
-}
-
-function buildSearchRank(products = []) {
-  const rank = new Map();
-  products.forEach((product, index) => {
-    rank.set(product.id, products.length - index);
-  });
-  return rank;
-}
 
 function formatItemsLabel(count) {
   const mod10 = count % 10;
@@ -55,10 +18,90 @@ function formatItemsLabel(count) {
   return 'товаров';
 }
 
-export function useProductList({ source = 'catalog', categorySlug = '', params = {} } = {}) {
-  const { categories, brands, products, loading, error } = useProductDirectoryData({ requireFull: true });
+function numberOrNull(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
 
+function toMinor(value) {
+  const parsed = numberOrNull(value);
+  return parsed === null ? undefined : Math.round(parsed * 100);
+}
+
+function buildListingRequest({ source, categorySlug, params }) {
+  const specialCategory = categorySlug === 'new' || categorySlug === 'popular';
+  return {
+    category: source === 'category' && !specialCategory ? categorySlug : '',
+    scope: source === 'catalog' ? params.scope : '',
+    q: params.query,
+    brand: params.brand,
+    minPriceMinor: toMinor(params.minPrice),
+    maxPriceMinor: toMinor(params.maxPrice),
+    inStock: params.inStock,
+    sale: params.sale,
+    sort: categorySlug === 'new' ? 'newest' : params.sort,
+    page: Math.max(0, (params.page || 1) - 1),
+    size: PRODUCT_LIST_PAGE_SIZE
+  };
+}
+
+function visiblePagesFor(totalPages, safePage) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+  const pages = [1];
+  const start = Math.max(2, safePage - 1);
+  const end = Math.min(totalPages - 1, safePage + 1);
+  if (start > 2) pages.push('...');
+  for (let page = start; page <= end; page += 1) pages.push(page);
+  if (end < totalPages - 1) pages.push('...');
+  pages.push(totalPages);
+  return pages;
+}
+
+export function useProductList({ source = 'catalog', categorySlug = '', params = {} } = {}) {
+  const directory = useProductDirectoryData();
   const deferredParams = useDeferredValue(params);
+  const initialListing = directory.listing || null;
+  const [listing, setListing] = useState(initialListing);
+  const [listingLoading, setListingLoading] = useState(!initialListing);
+  const [listingError, setListingError] = useState(null);
+  const requestSequence = useRef(0);
+
+  const requestParams = useMemo(
+    () => buildListingRequest({ source, categorySlug, params: deferredParams }),
+    [categorySlug, deferredParams, source]
+  );
+  const requestKey = useMemo(() => JSON.stringify(requestParams), [requestParams]);
+
+  useEffect(() => {
+    let active = true;
+    const sequence = requestSequence.current + 1;
+    requestSequence.current = sequence;
+    setListingLoading(true);
+    setListingError(null);
+
+    getCatalogueListing(requestParams)
+      .then((payload) => {
+        if (!active || requestSequence.current !== sequence) return;
+        setListing(payload || null);
+        setListingLoading(false);
+      })
+      .catch((error) => {
+        if (!active || requestSequence.current !== sequence) return;
+        setListingError(error);
+        setListingLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [requestKey]);
+
+  const categories = directory.categories || [];
+  const brands = directory.brands || [];
+  const products = Array.isArray(listing?.items) ? listing.items : [];
   const normalizedQuery = normalizeSearchText(deferredParams.query || '');
   const normalizedScope = normalizeSearchText(deferredParams.scope || '');
   const normalizedOriginal = normalizeSearchText(deferredParams.original || '');
@@ -66,252 +109,17 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
   const {
     navCategories,
     categoryByToken,
-    categoryByNormalizedToken,
-    childrenByParent
+    categoryByNormalizedToken
   } = useMemo(() => buildCategoryCollections(categories), [categories]);
 
   const activeCategory = useMemo(() => {
-    if (source !== 'category') {
-      return null;
-    }
-    return (
-      categories.find(
-        (category) =>
-          resolveCategoryToken(category) === categorySlug ||
-          String(category.id) === categorySlug
-      ) || null
-    );
+    if (source !== 'category') return null;
+    return categories.find(
+      (category) =>
+        resolveCategoryToken(category) === categorySlug ||
+        String(category.id) === categorySlug
+    ) || null;
   }, [categories, categorySlug, source]);
-
-  const categoryTokensForListing = useMemo(
-    () => buildCategoryTokenSet(activeCategory, childrenByParent),
-    [activeCategory, childrenByParent]
-  );
-
-  const scopeCategory = useMemo(() => {
-    if (!normalizedScope) {
-      return null;
-    }
-    return categoryByNormalizedToken[normalizedScope] || null;
-  }, [categoryByNormalizedToken, normalizedScope]);
-
-  const categoryTokensForScope = useMemo(() => {
-    if (source !== 'catalog' || !normalizedScope) {
-      return new Set();
-    }
-
-    if (scopeCategory) {
-      return buildCategoryTokenSet(scopeCategory, childrenByParent);
-    }
-
-    return new Set([normalizedScope]);
-  }, [childrenByParent, normalizedScope, scopeCategory, source]);
-
-  const categoryNameByToken = useMemo(() => {
-    const map = {};
-    categories.forEach((category) => {
-      const token = normalizeSearchText(resolveCategoryToken(category));
-      if (!token) return;
-      map[token] = category.name;
-      map[normalizeSearchText(String(category.id || ''))] = category.name;
-      map[normalizeSearchText(String(category.slug || ''))] = category.name;
-    });
-    return map;
-  }, [categories]);
-
-  const searchResults = useMemo(() => {
-    if (!normalizedQuery) {
-      return {
-        list: products,
-        appliedQuery: '',
-        correctionApplied: false
-      };
-    }
-
-    const initial = searchProducts(products, normalizedQuery, {
-      categoryNameByToken,
-      scopeToken: normalizedScope,
-      allowFuzzy: true
-    });
-
-    if (initial.length > 0) {
-      return {
-        list: initial,
-        appliedQuery: normalizedQuery,
-        correctionApplied: false
-      };
-    }
-
-    const dictionary = [
-      ...categories.map((category) => category.name),
-      ...products.map((product) => product.name)
-    ];
-    const correction = resolveSearchCorrection(normalizedQuery, dictionary);
-    if (!correction.isCorrected || !correction.correctedQuery) {
-      return {
-        list: initial,
-        appliedQuery: normalizedQuery,
-        correctionApplied: false
-      };
-    }
-
-    const correctedResults = searchProducts(products, correction.correctedQuery, {
-      categoryNameByToken,
-      scopeToken: normalizedScope,
-      allowFuzzy: true
-    });
-
-    return {
-      list: correctedResults,
-      appliedQuery: correction.correctedQuery,
-      correctionApplied: correctedResults.length > 0
-    };
-  }, [categories, categoryNameByToken, normalizedQuery, normalizedScope, products]);
-
-  const baseProducts = useMemo(() => {
-    let scopedProducts = products;
-
-    if (source === 'category' && activeCategory && categoryTokensForListing.size > 0) {
-      scopedProducts = products.filter((product) => {
-        const token = normalizeSearchText(resolveProductCategoryToken(product));
-        return categoryTokensForListing.has(token);
-      });
-    }
-
-    if (source === 'catalog' && normalizedScope && categoryTokensForScope.size > 0) {
-      scopedProducts = scopedProducts.filter((product) => {
-        const token = normalizeSearchText(resolveProductCategoryToken(product));
-        return categoryTokensForScope.has(token);
-      });
-    }
-
-    if (!normalizedQuery) {
-      return scopedProducts;
-    }
-
-    if (source === 'category') {
-      return searchResults.list.filter((product) => {
-        const token = normalizeSearchText(resolveProductCategoryToken(product));
-        return !categoryTokensForListing.size || categoryTokensForListing.has(token);
-      });
-    }
-
-    return searchResults.list;
-  }, [
-    activeCategory,
-    categoryTokensForScope,
-    categoryTokensForListing,
-    normalizedScope,
-    normalizedQuery,
-    products,
-    searchResults.list,
-    source
-  ]);
-
-  const priceBounds = useMemo(
-    () => buildPriceBounds(baseProducts),
-    [baseProducts]
-  );
-
-  const priceFilter = useMemo(() => {
-    const minValue = deferredParams.minPrice !== '' ? Number(deferredParams.minPrice) : null;
-    const maxValue = deferredParams.maxPrice !== '' ? Number(deferredParams.maxPrice) : null;
-    let safeMin = Number.isFinite(minValue) ? minValue : null;
-    let safeMax = Number.isFinite(maxValue) ? maxValue : null;
-
-    if (safeMin !== null && safeMax !== null && safeMin > safeMax) {
-      [safeMin, safeMax] = [safeMax, safeMin];
-    }
-
-    return { min: safeMin, max: safeMax };
-  }, [deferredParams.maxPrice, deferredParams.minPrice]);
-
-  const filteredProducts = useMemo(() => {
-    return baseProducts.filter((product) => {
-      if (deferredParams.brand) {
-        const brandToken = String(resolveBrandToken(product));
-        if (!brandToken || brandToken !== deferredParams.brand) {
-          return false;
-        }
-      }
-
-      const productPrice = getProductPrice(product);
-      if (priceFilter.min !== null && productPrice < priceFilter.min) return false;
-      if (priceFilter.max !== null && productPrice > priceFilter.max) return false;
-      if (deferredParams.inStock && getStockCount(product) <= 0) return false;
-      if (deferredParams.sale && getDiscountRate(product) <= 0) return false;
-      return true;
-    });
-  }, [
-    baseProducts,
-    deferredParams.brand,
-    deferredParams.inStock,
-    deferredParams.sale,
-    priceFilter
-  ]);
-
-  const diversityRank = useMemo(
-    () => buildDiversityRanking(filteredProducts),
-    [filteredProducts]
-  );
-
-  const searchRank = useMemo(
-    () => buildSearchRank(searchResults.list),
-    [searchResults.list]
-  );
-
-  const sortedProducts = useMemo(() => {
-    const list = [...filteredProducts];
-    const hasQuery = Boolean(normalizedQuery);
-
-    const sorters = {
-      bestMatch: (a, b) => {
-        const rankA = hasQuery ? (searchRank.get(a.id) || 0) : (diversityRank.get(a.id) || 0);
-        const rankB = hasQuery ? (searchRank.get(b.id) || 0) : (diversityRank.get(b.id) || 0);
-        if (rankB !== rankA) return rankB - rankA;
-
-        const stockDelta = getStockCount(b) - getStockCount(a);
-        if (stockDelta !== 0) return stockDelta;
-        return String(a?.name || '').localeCompare(String(b?.name || ''), 'ru');
-      },
-      newest: (a, b) => String(b.id).localeCompare(String(a.id)),
-      priceAsc: (a, b) => getProductPrice(a) - getProductPrice(b),
-      priceDesc: (a, b) => getProductPrice(b) - getProductPrice(a),
-      discount: (a, b) => getDiscountRate(b) - getDiscountRate(a)
-    };
-
-    const sorter = sorters[deferredParams.sort] || sorters.bestMatch;
-    list.sort(sorter);
-    return list;
-  }, [deferredParams.sort, diversityRank, filteredProducts, normalizedQuery, searchRank]);
-
-  const totalItems = sortedProducts.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PRODUCT_LIST_PAGE_SIZE));
-  const safePage = Math.min(deferredParams.page || 1, totalPages);
-  const pagedProducts = useMemo(
-    () =>
-      sortedProducts.slice(
-        0,
-        safePage * PRODUCT_LIST_PAGE_SIZE
-      ),
-    [safePage, sortedProducts]
-  );
-
-  const visiblePages = useMemo(() => {
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, index) => index + 1);
-    }
-
-    const pages = [1];
-    const start = Math.max(2, safePage - 1);
-    const end = Math.min(totalPages - 1, safePage + 1);
-
-    if (start > 2) pages.push('...');
-    for (let page = start; page <= end; page += 1) pages.push(page);
-    if (end < totalPages - 1) pages.push('...');
-    pages.push(totalPages);
-    return pages;
-  }, [safePage, totalPages]);
 
   const activeBrand = useMemo(
     () => brands.find((brand) => String(brand.slug || brand.id) === deferredParams.brand) || null,
@@ -322,63 +130,66 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
     if (!activeCategory) return [];
     return sortCategories(
       categories.filter(
-        (category) => String(category.parentId || '') === String(activeCategory.id || '')
+        (category) => String(category.parentId || category.parent?.id || '') === String(activeCategory.id || '')
       )
     );
   }, [activeCategory, categories]);
 
-  const childCategoryCounts = useMemo(() => {
-    if (!childCategories.length) return {};
+  const childCategoryCounts = useMemo(
+    () => Object.fromEntries(
+      (listing?.facets?.childCategories || []).flatMap((facet) => {
+        const keys = [facet.slug, facet.id]
+          .map((value) => normalizeSearchText(String(value || '')))
+          .filter(Boolean);
+        return keys.map((key) => [key, facet.count || 0]);
+      })
+    ),
+    [listing?.facets?.childCategories]
+  );
 
-    const tokens = new Set(
-      childCategories.map((category) => normalizeSearchText(resolveCategoryToken(category)))
-    );
+  const minPrice = numberOrNull(deferredParams.minPrice);
+  const maxPrice = numberOrNull(deferredParams.maxPrice);
+  const priceFilter = minPrice !== null && maxPrice !== null && minPrice > maxPrice
+    ? { min: maxPrice, max: minPrice }
+    : { min: minPrice, max: maxPrice };
+  const priceBounds = {
+    min: Math.round(Number(listing?.facets?.price?.minMinor || 0) / 100),
+    max: Math.round(Number(listing?.facets?.price?.maxMinor || 0) / 100)
+  };
 
-    return baseProducts.reduce((accumulator, product) => {
-      const token = normalizeSearchText(resolveProductCategoryToken(product));
-      if (!tokens.has(token)) {
-        return accumulator;
-      }
-      accumulator[token] = (accumulator[token] || 0) + 1;
-      return accumulator;
-    }, {});
-  }, [baseProducts, childCategories]);
+  const totalItems = Number(listing?.totalItems || 0);
+  const totalPages = Math.max(1, Number(listing?.totalPages || 0));
+  const safePage = Math.min(Math.max(1, Number(listing?.page || 0) + 1), totalPages);
+  const visiblePages = useMemo(
+    () => visiblePagesFor(totalPages, safePage),
+    [safePage, totalPages]
+  );
 
-  const scopeCategoryLabel = useMemo(() => {
-    if (!normalizedScope) {
-      return '';
-    }
-    return categoryByNormalizedToken[normalizedScope]?.name || normalizedScope;
-  }, [categoryByNormalizedToken, normalizedScope]);
-
-  const heading = source === 'category'
-    ? activeCategory?.name || 'Каталог'
-    : 'Каталог';
-
-  const headingNote = source === 'category'
-    ? activeCategory?.description || ''
-    : normalizedQuery
-    ? 'Подбираем товары по запросу и фильтрам. Сохраняйте ссылку: параметры уже в URL.'
-    : 'Сначала оцените ассортимент, затем уточняйте фильтрами. По умолчанию показываем разные модели, а не дубли.';
-
+  const scopeCategoryLabel = normalizedScope
+    ? categoryByNormalizedToken[normalizedScope]?.name || normalizedScope
+    : '';
+  const searchResults = {
+    list: products,
+    appliedQuery: listing?.appliedQuery || normalizedQuery,
+    correctionApplied: Boolean(listing?.correction)
+  };
   const searchCorrectionNote = (() => {
     if (!normalizedQuery) return '';
     if (normalizedOriginal && normalizedOriginal !== normalizedQuery) {
       return `Показываем результаты для “${deferredParams.query}”. Ваш запрос: “${deferredParams.original}”.`;
     }
-    if (searchResults.correctionApplied && searchResults.appliedQuery) {
-      return `Показываем результаты для “${searchResults.appliedQuery}”. Ваш запрос: “${deferredParams.query}”.`;
+    if (listing?.correction) {
+      return `Показываем результаты для “${listing.correction}”. Ваш запрос: “${deferredParams.query}”.`;
     }
     return '';
   })();
 
   const activeFilters = [];
-
   if (deferredParams.brand) {
     activeFilters.push({ key: 'brand', label: `Бренд: ${activeBrand?.name || deferredParams.brand}` });
   }
   if (normalizedScope) {
-    activeFilters.push({ key: 'scope', label: `Категория: ${scopeCategoryLabel || normalizedScope}` });
+    activeFilters.push({ key: 'scope', label: `Категория: ${scopeCategoryLabel}` });
   }
   if (priceFilter.min !== null || priceFilter.max !== null) {
     const parts = [];
@@ -386,16 +197,21 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
     if (priceFilter.max !== null) parts.push(`до ${priceFilter.max.toLocaleString('ru-RU')} ₽`);
     activeFilters.push({ key: 'price', label: `Цена ${parts.join(' ')}` });
   }
-  if (deferredParams.inStock) {
-    activeFilters.push({ key: 'inStock', label: 'Только в наличии' });
-  }
-  if (deferredParams.sale) {
-    activeFilters.push({ key: 'sale', label: 'Со скидкой' });
-  }
+  if (deferredParams.inStock) activeFilters.push({ key: 'inStock', label: 'Только в наличии' });
+  if (deferredParams.sale) activeFilters.push({ key: 'sale', label: 'Со скидкой' });
+
+  const heading = source === 'category'
+    ? activeCategory?.name || 'Каталог'
+    : 'Каталог';
+  const headingNote = source === 'category'
+    ? activeCategory?.description || ''
+    : normalizedQuery
+    ? 'Подбираем товары по запросу и фильтрам. Сохраняйте ссылку: параметры уже в URL.'
+    : 'Сначала оцените ассортимент, затем уточняйте фильтрами.';
 
   return {
-    loading,
-    error,
+    loading: directory.loading || listingLoading,
+    error: listingError || directory.error,
     categories,
     brands,
     products,
@@ -409,10 +225,10 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
     params: deferredParams,
     scopeCategoryLabel,
     searchResults,
-    baseProducts,
-    filteredProducts,
-    sortedProducts,
-    pagedProducts,
+    baseProducts: products,
+    filteredProducts: products,
+    sortedProducts: products,
+    pagedProducts: products,
     totalItems,
     totalPages,
     safePage,

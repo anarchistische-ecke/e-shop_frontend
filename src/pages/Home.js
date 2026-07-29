@@ -411,7 +411,13 @@ function HomeFallbackPage() {
 }
 
 function Home() {
-  return <CmsManagedPage slug="home" fallback={<HomeFallbackPage />} />;
+  return (
+    <CmsManagedPage
+      slug="home"
+      fallback={<HomeFallbackPage />}
+      afterManagedContent={<NewsletterForm />}
+    />
+  );
 }
 
 export default Home;

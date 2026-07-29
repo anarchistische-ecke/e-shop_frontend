@@ -120,17 +120,22 @@ function CategoryCard({
 
   const badges = [
     stockCount > 0 && stockCount <= 3 ? `Мало на складе: ${stockCount}` : '',
-    !oldPrice ? 'Новинка' : ''
+    Array.isArray(product?.badges) && product.badges.includes('new') ? 'Новинка' : ''
   ].filter(Boolean);
 
   const attributeLine =
-    product?.material
+    product?.attributes?.[0] ||
+    (product?.material
       ? `Материал: ${product.material}`
       : product?.size
       ? `Размер: ${product.size}`
       : product?.color
       ? `Цвет: ${product.color}`
-      : 'Подробные характеристики на странице товара';
+      : product?.brandName
+      ? `Бренд: ${product.brandName}`
+      : stockCount > 0
+      ? 'Можно добавить в корзину'
+      : 'Сейчас нет в наличии');
 
   return (
     <Card

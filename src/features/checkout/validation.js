@@ -4,7 +4,7 @@ import { sanitizeCustomerFieldMessage } from '../../utils/customerErrors';
 
 export const CHECKOUT_VALIDATION_SCHEMA = {
   email: {
-    step: 'contact',
+    step: 'contact_address',
     validate: ({ email }) => {
       const normalizedEmail = String(email || '').trim();
       if (!normalizedEmail) {
@@ -17,17 +17,17 @@ export const CHECKOUT_VALIDATION_SCHEMA = {
     }
   },
   customerName: {
-    step: 'contact',
+    step: 'contact_address',
     validate: ({ customerName }) =>
       String(customerName || '').trim() ? '' : 'Укажите имя получателя.'
   },
   phone: {
-    step: 'contact',
+    step: 'contact_address',
     validate: ({ phone }) =>
       String(phone || '').trim() ? '' : 'Укажите телефон для связи.'
   },
   homeAddress: {
-    step: 'address',
+    step: 'contact_address',
     validate: ({ homeAddress, addressParts }) => {
       const hasStructuredAddress =
         String(addressParts?.city || '').trim() &&
@@ -42,7 +42,9 @@ export const CHECKOUT_VALIDATION_SCHEMA = {
 
 export const STEP_FIELD_ORDER = {
   contact: ['email', 'customerName', 'phone'],
-  address: ['homeAddress']
+  address: ['homeAddress'],
+  contact_address: ['email', 'customerName', 'phone', 'homeAddress'],
+  review_payment: []
 };
 
 export function validateCheckoutStep(stepKey, draft) {

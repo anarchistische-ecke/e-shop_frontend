@@ -431,51 +431,24 @@ export function useCheckoutState() {
     validateStep('contact');
   }, [validateStep]);
 
-  const handleContactNext = useCallback(() => {
+  const handleContactAddressNext = useCallback(() => {
     setStatus(null);
-    const result = validateStep('contact');
+    const result = validateStep('contact_address');
     if (!result.valid) {
-      trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'contact', outcome: 'fail' });
+      trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, {
+        step: 'contact_address',
+        outcome: 'fail'
+      });
       setActiveStep(0);
       return;
     }
 
-    trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'contact', outcome: 'success' });
-    markCompleted('contact');
+    trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, {
+      step: 'contact_address',
+      outcome: 'success'
+    });
+    markCompleted('contact_address');
     setActiveStep(1);
-  }, [markCompleted, validateStep]);
-
-  const handleAddressNext = useCallback(() => {
-    setStatus(null);
-    if (!validateStep('contact').valid) {
-      trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'fail', reason: 'contact' });
-      setActiveStep(0);
-      return;
-    }
-    if (!validateStep('address').valid) {
-      trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'fail', reason: 'address' });
-      setActiveStep(1);
-      return;
-    }
-
-    trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'address', outcome: 'success' });
-    markCompleted('address');
-    setActiveStep(2);
-  }, [markCompleted, validateStep]);
-
-  const handleDeliveryNext = useCallback(() => {
-    setStatus(null);
-    if (!validateStep('contact').valid) {
-      setActiveStep(0);
-      return;
-    }
-    if (!validateStep('address').valid) {
-      setActiveStep(1);
-      return;
-    }
-    trackGoal(METRIKA_GOALS.CHECKOUT_STEP_SUBMIT, { step: 'delivery', outcome: 'success' });
-    markCompleted('delivery');
-    setActiveStep(3);
   }, [markCompleted, validateStep]);
 
   const handleExpressCheckout = useCallback((providerLabel) => {
@@ -499,12 +472,8 @@ export function useCheckoutState() {
     }
 
     if (!retrying) {
-      if (!validateStep('contact').valid) {
+      if (!validateStep('contact_address').valid) {
         setActiveStep(0);
-        return;
-      }
-      if (!validateStep('address').valid) {
-        setActiveStep(1);
         return;
       }
     }
@@ -684,23 +653,9 @@ export function useCheckoutState() {
 
   const mobileAction = activeStep === 0
     ? {
-        label: 'К адресу',
-        subtitle: 'Шаг 1 из 4 · Контакты',
-        action: handleContactNext,
-        disabled: isSubmitting
-      }
-    : activeStep === 1
-    ? {
-        label: 'К доставке',
-        subtitle: 'Шаг 2 из 4 · Адрес',
-        action: handleAddressNext,
-        disabled: isSubmitting
-      }
-    : activeStep === 2
-    ? {
-        label: 'К оплате',
-        subtitle: 'Шаг 3 из 4 · Доставка',
-        action: handleDeliveryNext,
+        label: 'Проверить заказ',
+        subtitle: 'Шаг 1 из 2 · Контакты и адрес',
+        action: handleContactAddressNext,
         disabled: isSubmitting
       }
     : {
@@ -708,8 +663,8 @@ export function useCheckoutState() {
           ? 'Оформляем заказ…'
           : safeRetryState?.retryLabel || checkoutSubmitLabel,
         subtitle: safeRetryState
-          ? 'Шаг 4 из 4 · Безопасная проверка'
-          : 'Шаг 4 из 4 · Подтверждение',
+          ? 'Шаг 2 из 2 · Безопасная проверка'
+          : 'Шаг 2 из 2 · Проверка и оплата',
         action: safeRetryState
           ? handleSafeRetry
           : () => {
@@ -755,9 +710,7 @@ export function useCheckoutState() {
     confirmationDeliveryLabel,
     deliveryNotice: MANUAL_DELIVERY_NOTICE,
     handleExpressCheckout,
-    handleContactNext,
-    handleAddressNext,
-    handleDeliveryNext,
+    handleContactAddressNext,
     handleSubmit,
     formatRub,
     moneyToNumber,

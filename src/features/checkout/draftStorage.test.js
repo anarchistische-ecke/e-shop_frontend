@@ -14,7 +14,7 @@ describe('checkout draft storage', () => {
     const draft = {
       cartId: 'cart-1',
       form: {
-        activeStep: 3,
+        activeStep: 1,
         email: 'customer@example.com'
       },
       attempt: {
@@ -29,8 +29,34 @@ describe('checkout draft storage', () => {
 
     expect(loadCheckoutDraft('cart-1')).toMatchObject(draft);
     expect(window.localStorage.getItem(buildCheckoutDraftKey('cart-1'))).toContain(
-      '"version":3'
+      '"version":4'
     );
+  });
+
+  it('migrates valid four-step drafts to review and invalid drafts to contact/address', () => {
+    window.localStorage.setItem(
+      buildCheckoutDraftKey('cart-1'),
+      JSON.stringify({
+        version: 3,
+        savedAt: Date.now(),
+        form: {
+          activeStep: 3,
+          email: 'buyer@example.com',
+          customerName: 'Иван',
+          phone: '+7 900 000-00-00',
+          homeAddress: 'Краснодар, ул. Красная, 1',
+          addressParts: { city: 'Краснодар', street: 'ул. Красная, 1' }
+        }
+      })
+    );
+
+    expect(loadCheckoutDraft('cart-1')).toMatchObject({
+      version: 4,
+      form: {
+        activeStep: 1,
+        completedSteps: { contact_address: true }
+      }
+    });
   });
 
   it('expires stale drafts', () => {

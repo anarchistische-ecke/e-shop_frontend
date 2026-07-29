@@ -32,6 +32,7 @@ const ManagerPaymentLinkPage = lazy(() => import('../pages/ManagerPaymentLinkPag
 const OrderPage = lazy(() => import('../pages/OrderPage'));
 const SearchPage = lazy(() => import('../pages/SearchPage'));
 const SearchRedirectPage = lazy(() => import('../pages/SearchRedirectPage'));
+const SubscriptionActionPage = lazy(() => import('../pages/SubscriptionActionPage'));
 
 function RouteFallback({ isStandaloneRoute = false }) {
   return (
@@ -66,6 +67,8 @@ const routeRenderers = {
   login: () => CsrRoute(<LoginPage />),
   account: () => CsrRoute(<AccountPage />),
   favorites: () => CsrRoute(<FavoritesPage />),
+  'subscribe-confirm': () => CsrRoute(<SubscriptionActionPage mode="confirm" />),
+  'subscribe-unsubscribe': () => CsrRoute(<SubscriptionActionPage mode="unsubscribe" />),
   about: () => CsrRoute(<AboutPage />),
   order: () => CsrRoute(<OrderPage />),
   pay: () => CsrRoute(<OrderPage />),

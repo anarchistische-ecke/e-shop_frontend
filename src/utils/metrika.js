@@ -74,7 +74,9 @@ export const METRIKA_GOALS = {
   MANAGER_LINK_OPENED: 'manager_link_opened',
   MANAGER_LINK_PAYMENT_STARTED: 'manager_link_payment_started',
   MANAGER_LINK_PAID: 'manager_link_paid',
-  CONTACT_CLICK: 'contact_click'
+  CONTACT_CLICK: 'contact_click',
+  NEWSLETTER_SUBMIT: 'newsletter_submit',
+  NEWSLETTER_CONFIRMED: 'newsletter_confirmed'
 };
 
 function getRuntimeValue(key, envName, fallback = '') {

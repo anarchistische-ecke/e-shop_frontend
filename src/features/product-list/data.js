@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState
 } from 'react';
-import { getBrands, getCategories, getProducts } from '../../api';
+import { getBrands, getCategories, getCatalogueListing } from '../../api';
 import { readEnv } from '../../config/runtime.js';
 
 let cachedDirectoryData = null;
@@ -29,14 +29,14 @@ function isDirectoryCacheFresh() {
   );
 }
 
-function normalizeDirectoryPayload([categoriesResponse, brandsResponse, productsResponse]) {
+function normalizeDirectoryPayload([categoriesResponse, brandsResponse, listingResponse]) {
   const categories = Array.isArray(categoriesResponse) ? categoriesResponse : [];
   const brands = Array.isArray(brandsResponse) ? brandsResponse : [];
-  const products = Array.isArray(productsResponse)
-    ? productsResponse.filter((product) => product?.isActive !== false)
+  const products = Array.isArray(listingResponse?.items)
+    ? listingResponse.items.filter((product) => product?.isActive !== false)
     : [];
 
-  return { categories, brands, products };
+  return { categories, brands, products, listing: listingResponse || null, compact: true };
 }
 
 function normalizeDirectoryData(payload) {
@@ -54,6 +54,7 @@ function normalizeDirectoryData(payload) {
     categories,
     brands,
     products,
+    listing: payload.listing || null,
     compact: Boolean(payload.compact)
   };
 }
@@ -76,6 +77,7 @@ function createDirectoryState(initialData = null) {
     categories: seededData?.categories || [],
     brands: seededData?.brands || [],
     products: seededData?.products || [],
+    listing: seededData?.listing || null,
     compact: Boolean(seededData?.compact),
     loading: !seededData,
     error: cachedDirectoryError
@@ -87,17 +89,17 @@ function applyDirectoryState(setState, data) {
     categories: data.categories,
     brands: data.brands,
     products: data.products,
+    listing: data.listing || null,
     compact: Boolean(data.compact),
     loading: false,
     error: null
   });
 }
 
-export function loadProductDirectoryData({ force = false, requireFull = false } = {}) {
+export function loadProductDirectoryData({ force = false } = {}) {
   if (
     !force &&
-    isDirectoryCacheFresh() &&
-    !(requireFull && cachedDirectoryData.compact)
+    isDirectoryCacheFresh()
   ) {
     return Promise.resolve(cachedDirectoryData);
   }
@@ -106,7 +108,11 @@ export function loadProductDirectoryData({ force = false, requireFull = false } 
     return directoryRequest;
   }
 
-  directoryRequest = Promise.all([getCategories(), getBrands(), getProducts()])
+  directoryRequest = Promise.all([
+    getCategories(),
+    getBrands(),
+    getCatalogueListing({ page: 0, size: 12 })
+  ])
     .then((responses) => {
       cachedDirectoryData = normalizeDirectoryPayload(responses);
       cachedDirectoryError = null;
@@ -124,7 +130,7 @@ export function loadProductDirectoryData({ force = false, requireFull = false } 
   return directoryRequest;
 }
 
-function useStandaloneDirectoryState({ enabled = true, initialData = null, requireFull = false } = {}) {
+function useStandaloneDirectoryState({ enabled = true, initialData = null } = {}) {
   const seededData = useMemo(() => {
     return normalizeDirectoryData(initialData) || cachedDirectoryData;
   }, [initialData]);
@@ -136,7 +142,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null, requi
   const [state, setState] = useState(() => createDirectoryState(seededData));
 
   const refresh = useCallback((options = {}) => {
-    return loadProductDirectoryData({ requireFull, ...options })
+    return loadProductDirectoryData(options)
       .then((data) => {
         applyDirectoryState(setState, data);
         return data;
@@ -149,7 +155,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null, requi
         }));
         throw error;
       });
-  }, [requireFull]);
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -158,7 +164,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null, requi
 
     let active = true;
 
-    if (seededData && !(requireFull && seededData.compact)) {
+    if (seededData) {
       applyDirectoryState(setState, seededData);
       return undefined;
     }
@@ -181,7 +187,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null, requi
     return () => {
       active = false;
     };
-  }, [enabled, refresh, requireFull, seededData]);
+  }, [enabled, refresh, seededData]);
 
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') {
@@ -192,7 +198,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null, requi
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
         return;
       }
-      if (!isDirectoryCacheFresh() || (requireFull && cachedDirectoryData?.compact)) {
+      if (!isDirectoryCacheFresh()) {
         refresh({ force: true }).catch(() => {});
       }
     };
@@ -207,7 +213,7 @@ function useStandaloneDirectoryState({ enabled = true, initialData = null, requi
         document.removeEventListener('visibilitychange', refreshIfStale);
       }
     };
-  }, [enabled, refresh, requireFull]);
+  }, [enabled, refresh]);
 
   return useMemo(
     () => ({
@@ -230,20 +236,11 @@ export function CatalogueDataProvider({ children, initialData = null }) {
   );
 }
 
-export function useProductDirectoryData({ requireFull = false } = {}) {
+export function useProductDirectoryData() {
   const context = useContext(CatalogueDataContext);
   const standaloneState = useStandaloneDirectoryState({
-    enabled: !context,
-    requireFull
+    enabled: !context
   });
-
-  useEffect(() => {
-    if (!context || !requireFull || !context.compact || context.loading) {
-      return undefined;
-    }
-    context.refresh({ force: true, requireFull: true }).catch(() => {});
-    return undefined;
-  }, [context, requireFull]);
 
   return context || standaloneState;
 }

@@ -22,7 +22,7 @@ function SearchPage() {
     source: 'catalog',
     params
   });
-  const { categories, products } = useProductDirectoryData({ requireFull: true });
+  const { categories, products } = useProductDirectoryData();
 
   useEffect(() => {
     setSearchInput(params.query || '');
