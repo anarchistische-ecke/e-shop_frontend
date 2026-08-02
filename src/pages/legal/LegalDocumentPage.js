@@ -6,6 +6,7 @@ import { getCustomerSafeErrorMessage } from '../../utils/customerErrors';
 import { buildAbsoluteAppUrl } from '../../utils/url';
 import { getRuntimeConfig } from '../../config/runtime';
 import { useSsrData } from '../../ssr/SsrDataContext';
+import { getCmsLegalDocument } from '../../api';
 import {
   applyLegalTokens,
   buildLegalRuntimeTokens,
@@ -41,12 +42,24 @@ function LegalDocumentPage({ fileName, onContentReady, className }) {
       }),
     [publicUrl]
   );
-  const documentMeta =
+  const staticDocumentMeta =
     LEGAL_DOCUMENT_BY_FILE[fileName] || {
       title: 'Юридический документ',
       summary: 'Актуальная редакция документа доступна для ознакомления ниже.',
       path: '/info/legal',
     };
+  const directusDocument =
+    routeData?.kind === 'legal-document' && routeData.fileName === fileName
+      ? routeData.document
+      : null;
+  const documentMeta = directusDocument
+    ? {
+        ...staticDocumentMeta,
+        title: directusDocument.title || staticDocumentMeta.title,
+        summary: directusDocument.summary || staticDocumentMeta.summary,
+        path: directusDocument.path || staticDocumentMeta.path,
+      }
+    : staticDocumentMeta;
 
   useEffect(() => {
     if (hasInitialContent) {
@@ -61,16 +74,19 @@ function LegalDocumentPage({ fileName, onContentReady, className }) {
     setError('');
     setIsLoading(true);
 
-    fetch(`${publicUrl}/legal/${fileName}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Не удалось загрузить документ.');
-        }
-        return response.text();
-      })
+    getCmsLegalDocument(staticDocumentMeta.key)
+      .then((document) => document?.bodyHtml || Promise.reject(new Error('Документ пуст.')))
+      .catch(() =>
+        fetch(`${publicUrl}/legal/${fileName}`)
+          .then((response) => {
+            if (!response.ok) throw new Error('Не удалось загрузить документ.');
+            return response.text();
+          })
+          .then((html) => applyLegalTokens(html, tokens))
+      )
       .then((html) => {
         if (!isMounted) return;
-        setContent(applyLegalTokens(html, tokens));
+        setContent(html);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -87,7 +103,15 @@ function LegalDocumentPage({ fileName, onContentReady, className }) {
     return () => {
       isMounted = false;
     };
-  }, [fileName, hasInitialContent, initialContent, initialError, publicUrl, tokens]);
+  }, [
+    fileName,
+    hasInitialContent,
+    initialContent,
+    initialError,
+    publicUrl,
+    staticDocumentMeta.key,
+    tokens
+  ]);
 
   useEffect(() => {
     if (!content || !onContentReady || !containerRef.current) {

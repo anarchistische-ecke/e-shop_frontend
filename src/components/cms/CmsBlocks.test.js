@@ -9,6 +9,8 @@ import ImageBannerBlock from './blocks/ImageBannerBlock';
 import FaqSectionBlock from './blocks/FaqSectionBlock';
 import CtaSectionBlock from './blocks/CtaSectionBlock';
 import CommerceReferenceBlock from './blocks/CommerceReferenceBlock';
+import CampaignSlotBlock from './blocks/CampaignSlotBlock';
+import LegalDocumentListBlock from './blocks/LegalDocumentListBlock';
 import CategoryGrid from '../home/CategoryGrid';
 import { CartContext } from '../../contexts/CartContext';
 import { useProductDirectoryData } from '../../features/product-list/data';
@@ -157,6 +159,41 @@ describe('CMS blocks', () => {
     view.unmount();
   });
 
+  it('renders related banner creatives with responsive media and calls to action', () => {
+    const section = {
+      anchorId: 'campaign-banners',
+      title: 'Предложения недели',
+      banners: [
+        {
+          id: 'banner-1',
+          title: 'Скидка на сатин',
+          description: '<p>Выберите новый комплект до воскресенья.</p>',
+          image: {
+            url: 'https://cdn.example.com/banner-desktop.jpg',
+            alt: 'Сатиновое белье на кровати',
+          },
+          mobileImage: {
+            url: 'https://cdn.example.com/banner-mobile.jpg',
+            alt: 'Сатиновое белье на мобильном',
+          },
+          primaryCtaLabel: 'Выбрать комплект',
+          primaryCtaUrl: '/catalog?material=satin',
+        },
+      ],
+    };
+
+    const view = renderWithRouter(<ImageBannerBlock section={section} />);
+
+    expect(view.container.querySelector('[data-testid="cms-banner-group"]')).not.toBeNull();
+    expect(view.container.textContent).toContain('Скидка на сатин');
+    expect(view.container.querySelector('a[href="/catalog?material=satin"]')?.textContent).toBe(
+      'Выбрать комплект'
+    );
+    expect(view.container.querySelector('img[alt="Сатиновое белье на кровати"]')).not.toBeNull();
+
+    view.unmount();
+  });
+
   it('renders FaqSectionBlock with FAQ details and HTML answers', () => {
     const section = {
       anchorId: 'faq',
@@ -183,6 +220,95 @@ describe('CMS blocks', () => {
     expect(view.container.querySelector('.cms-faq-answer strong')?.textContent).toBe('24 часов');
     expect(view.container.textContent).toContain('Можно ли стирать в машинке?');
     expect(view.container.textContent).toContain('Да, при температуре до 40°C.');
+
+    view.unmount();
+  });
+
+  it('prefers related Directus FAQs over compatibility items', () => {
+    const section = {
+      title: 'Доставка',
+      faqs: [
+        {
+          question: 'Когда отправите заказ?',
+          answer: '<p>В течение <strong>одного рабочего дня</strong>.</p>',
+        },
+      ],
+      items: [{ title: 'Старый вопрос', description: 'Старый ответ' }],
+    };
+
+    const view = renderWithRouter(<FaqSectionBlock section={section} />);
+
+    expect(view.container.textContent).toContain('Когда отправите заказ?');
+    expect(view.container.textContent).toContain('одного рабочего дня');
+    expect(view.container.textContent).not.toContain('Старый вопрос');
+
+    view.unmount();
+  });
+
+  it('renders campaign presentation with backend-owned promotion facts', () => {
+    const section = {
+      anchorId: 'campaigns',
+      title: 'Актуальные акции',
+      campaigns: [
+        {
+          id: 'campaign-1',
+          slug: 'spring',
+          internalName: 'Весенняя кампания',
+          promotion: {
+            discountPercent: 20,
+            currency: 'RUB',
+          },
+          creatives: [
+            {
+              id: 'creative-1',
+              title: 'Весеннее обновление',
+              description: '<p>Текстиль в светлых оттенках.</p>',
+              primaryCtaLabel: 'Подробнее',
+            },
+          ],
+        },
+      ],
+    };
+
+    const view = renderWithRouter(<CampaignSlotBlock section={section} />);
+
+    expect(view.container.querySelector('[data-testid="cms-campaign-slot"]')).not.toBeNull();
+    expect(view.container.textContent).toContain('Весеннее обновление');
+    expect(view.container.textContent).toContain('Скидка 20%');
+    expect(view.container.querySelector('a[href="/promo/spring"]')).not.toBeNull();
+
+    view.unmount();
+  });
+
+  it('does not render an empty campaign slot', () => {
+    const view = renderWithRouter(<CampaignSlotBlock section={{ campaigns: [] }} />);
+    expect(view.container.innerHTML).toBe('');
+    view.unmount();
+  });
+
+  it('renders related legal documents with canonical storefront routes', () => {
+    const section = {
+      anchorId: 'legal',
+      title: 'Документы',
+      legalDocuments: [
+        {
+          key: 'privacy-policy',
+          slug: 'privacy-policy',
+          path: '/konfidentsialnost-i-zashchita-informatsii',
+          title: 'Политика обработки персональных данных',
+          summary: 'Как мы обрабатываем и защищаем данные.',
+        },
+      ],
+    };
+
+    const view = renderWithRouter(<LegalDocumentListBlock section={section} />);
+
+    expect(view.container.textContent).toContain('Политика обработки персональных данных');
+    expect(
+      view.container.querySelector(
+        'a[href="/konfidentsialnost-i-zashchita-informatsii"]'
+      )
+    ).not.toBeNull();
 
     view.unmount();
   });
@@ -364,6 +490,42 @@ describe('CMS blocks', () => {
     expect(view.container.textContent).toContain('Товарная лента');
     expect(view.container.querySelector('.overflow-x-auto')).not.toBeNull();
     expect(view.container.textContent).toContain('Сатиновый комплект');
+
+    view.unmount();
+  });
+
+  it('renders fixed brand references using the backend directory', () => {
+    useProductDirectoryData.mockReturnValue({
+      loading: false,
+      categories: [],
+      brands: [
+        {
+          id: 'brand-cozy',
+          slug: 'cozy-home',
+          name: 'Cozy Home',
+          description: 'Текстиль для спокойного дома.',
+        },
+      ],
+      products: [],
+    });
+
+    const section = {
+      sectionType: 'brand_reference_list',
+      title: 'Любимые бренды',
+      items: [
+        {
+          referenceKind: 'brand_slug',
+          referenceKey: 'cozy-home',
+        },
+      ],
+    };
+
+    const view = renderWithRouter(
+      <CommerceReferenceBlock page={{ template: 'home' }} section={section} />
+    );
+
+    expect(view.container.textContent).toContain('Cozy Home');
+    expect(view.container.querySelector('a[href="/catalog?brand=cozy-home"]')).not.toBeNull();
 
     view.unmount();
   });

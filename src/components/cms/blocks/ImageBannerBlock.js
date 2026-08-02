@@ -2,12 +2,69 @@ import React from 'react';
 import { Card } from '../../ui';
 import {
   CmsAction,
+  CmsRichText,
   CmsSectionActions,
   CmsSectionHeading,
   getCmsLayoutVariant,
   getSurfaceToneClass,
 } from '../cmsBlockShared';
 import CmsImage from '../CmsImage';
+
+function ResolvedBannerCard({ banner }) {
+  return (
+    <Card
+      padding="none"
+      className={`overflow-hidden rounded-[28px] ${getSurfaceToneClass(banner.styleVariant)}`}
+    >
+      {(banner.image || banner.mobileImage) ? (
+        <CmsImage
+          media={banner.image}
+          mobileMedia={banner.mobileImage}
+          alt={banner.image?.alt || banner.mobileImage?.alt || banner.title || 'Баннер'}
+          frameClassName="aspect-[16/8]"
+          sizes="(min-width: 1024px) 36rem, 92vw"
+          preserveAspectRatio={false}
+        />
+      ) : null}
+      <div className="space-y-3 p-5 sm:p-6">
+        {banner.eyebrow ? (
+          <p className="m-0 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+            {banner.eyebrow}
+          </p>
+        ) : null}
+        <h3 className="text-2xl font-semibold text-ink">
+          {banner.title || banner.shortText || 'Предложение'}
+        </h3>
+        <CmsRichText html={banner.description} className="text-sm leading-6 text-muted" />
+        <div className="flex flex-wrap gap-3">
+          <CmsAction label={banner.primaryCtaLabel} url={banner.primaryCtaUrl} />
+          <CmsAction
+            label={banner.secondaryCtaLabel}
+            url={banner.secondaryCtaUrl}
+            variant="secondary"
+          />
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ResolvedBannerGroup({ section, banners }) {
+  return (
+    <section id={section.anchorId || undefined} className="space-y-5" data-testid="cms-banner-group">
+      <CmsSectionHeading
+        eyebrow={section.eyebrow}
+        title={section.title}
+        description={section.body}
+      />
+      <div className="grid gap-4 lg:grid-cols-2">
+        {banners.map((banner) => (
+          <ResolvedBannerCard key={banner.id} banner={banner} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function BannerMedia({ section, items = [] }) {
   const primaryMedia = section.image || section.imageUrl || items[0]?.image || items[0]?.imageUrl;
@@ -82,6 +139,10 @@ function ImageBannerCards({ items = [] }) {
 
 function ImageBannerBlock({ section }) {
   const items = Array.isArray(section.items) ? section.items : [];
+  const banners = Array.isArray(section.banners) ? section.banners : [];
+  if (banners.length > 0) {
+    return <ResolvedBannerGroup section={section} banners={banners} />;
+  }
   const layoutVariant = getCmsLayoutVariant(section.layoutVariant);
   const mediaFirst = layoutVariant === 'media_left';
   const gridClass = mediaFirst

@@ -2,36 +2,42 @@ import { legalTokens } from '../../data/legal/constants.js';
 
 export const LEGAL_DOCUMENTS = [
   {
+    key: 'privacy-policy',
     fileName: 'privacy.html',
     path: '/konfidentsialnost-i-zashchita-informatsii',
     title: 'Политика обработки персональных данных',
     summary: 'Правила обработки и защиты персональных данных пользователей и покупателей.',
   },
   {
+    key: 'user-agreement',
     fileName: 'user-agreement.html',
     path: '/polzovatelskoe-soglashenie',
     title: 'Пользовательское соглашение',
     summary: 'Условия использования сайта и ответственность сторон.',
   },
   {
+    key: 'personal-data-consent',
     fileName: 'pd-consent.html',
     path: '/soglasie-na-obrabotku-pd',
     title: 'Согласие на обработку персональных данных',
     summary: 'Форма согласия на обработку данных в рамках работы сайта.',
   },
   {
+    key: 'ads-consent',
     fileName: 'ads-consent.html',
     path: '/soglasie-na-poluchenie-reklamy',
     title: 'Согласие на получение рекламы',
     summary: 'Порядок подписки и отказа от рекламных сообщений.',
   },
   {
+    key: 'cookies-policy',
     fileName: 'cookies.html',
     path: '/kuki',
     title: 'Политика в отношении куки',
     summary: 'Информация об использовании куки и иных технологий аналитики.',
   },
   {
+    key: 'sales-terms',
     fileName: 'sales-terms.html',
     path: '/usloviya-prodazhi',
     title: 'Условия продажи (публичная оферта)',

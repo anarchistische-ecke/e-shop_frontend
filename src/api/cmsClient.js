@@ -1,5 +1,8 @@
 import {
   getCmsCollection as getCmsCollectionRequest,
+  getCmsCampaign as getCmsCampaignRequest,
+  getCmsCampaigns as getCmsCampaignsRequest,
+  getCmsLegalDocument as getCmsLegalDocumentRequest,
   getCmsNavigation as getCmsNavigationRequest,
   getCmsPage as getCmsPageRequest,
   getCmsSiteSettings as getCmsSiteSettingsRequest,
@@ -160,6 +163,37 @@ export const cmsClient = {
     return readCmsResource(
       cacheKey,
       () => getCmsCollectionRequest(normalizedKey, { preview, signal }),
+      { cacheTtlMs, force, signal }
+    );
+  },
+
+  getCampaigns({ placement = '', limit = 2, signal, force = false, cacheTtlMs = 0 } = {}) {
+    const normalizedPlacement = String(placement || '').trim().toLowerCase();
+    const cacheKey = cacheTtlMs > 0 ? `campaigns:${normalizedPlacement || 'all'}:${limit}` : null;
+    return readCmsResource(
+      cacheKey,
+      () => getCmsCampaignsRequest({ placement: normalizedPlacement, limit, signal }),
+      { cacheTtlMs, force, signal }
+    );
+  },
+
+  getCampaign(slug, { signal, force = false, cacheTtlMs = 0 } = {}) {
+    const normalizedSlug = String(slug || '').trim();
+    if (!normalizedSlug) return Promise.reject(new Error('Campaign slug is required'));
+    const cacheKey = cacheTtlMs > 0 ? `campaign:${normalizedSlug}` : null;
+    return readCmsResource(
+      cacheKey,
+      () => getCmsCampaignRequest(normalizedSlug, { signal }),
+      { cacheTtlMs, force, signal }
+    );
+  },
+
+  getLegalDocument(keyOrSlug, { signal, force = false, cacheTtlMs = CLIENT_CACHE_TTL_MS } = {}) {
+    const normalizedKey = String(keyOrSlug || '').trim();
+    if (!normalizedKey) return Promise.reject(new Error('Legal document key is required'));
+    return readCmsResource(
+      `legal:${normalizedKey}`,
+      () => getCmsLegalDocumentRequest(normalizedKey, { signal }),
       { cacheTtlMs, force, signal }
     );
   },

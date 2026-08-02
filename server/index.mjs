@@ -162,12 +162,99 @@ const PRIVATE_ROUTE_IDS = new Set([
   'favorites',
   'login',
   'manager-login',
-  'manager-payment-link'
+  'manager-payment-link',
+  'cms-preview'
 ]);
+const IMMEDIATELY_FRESH_ROUTE_IDS = new Set(['promo']);
+const CMS_PREVIEW_COOKIE = 'cms_preview_token';
 
-function resolveHtmlCacheControl(route, statusCode) {
-  if (statusCode !== 200 || PRIVATE_ROUTE_IDS.has(route.id)) {
+function parseCookieHeader(value = '') {
+  return String(value || '')
+    .split(';')
+    .reduce((cookies, part) => {
+      const separator = part.indexOf('=');
+      if (separator <= 0) return cookies;
+      const key = part.slice(0, separator).trim();
+      const encodedValue = part.slice(separator + 1).trim();
+      try {
+        cookies[key] = decodeURIComponent(encodedValue);
+      } catch (error) {
+        cookies[key] = '';
+      }
+      return cookies;
+    }, {});
+}
+
+function previewCookie(token, { secure = false, clear = false } = {}) {
+  const parts = [
+    `${CMS_PREVIEW_COOKIE}=${clear ? '' : encodeURIComponent(token)}`,
+    'Path=/__cms-preview',
+    'HttpOnly',
+    'SameSite=Lax',
+    clear ? 'Max-Age=0' : 'Max-Age=900'
+  ];
+  if (secure) parts.push('Secure');
+  return parts.join('; ');
+}
+
+async function validatePreviewToken(token) {
+  const apiBase = String(
+    readEnv('SERVER_API_BASE') ||
+      readEnv('REACT_APP_API_BASE') ||
+      'http://localhost:8080'
+  ).replace(/\/+$/, '');
+  const response = await fetch(`${apiBase}/content/preview/session`, {
+    headers: {
+      Accept: 'application/json',
+      'X-CMS-Preview-Token': token
+    },
+    cache: 'no-store'
+  });
+  if (!response.ok) {
+    const error = new Error('CMS preview link is invalid or expired.');
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+
+function campaignBoundaryTtlSeconds(ssrData) {
+  const campaigns =
+    ssrData?.routeData?.kind === 'home-marketing'
+      ? ssrData.routeData.campaigns
+      : [];
+  const boundaries = (Array.isArray(campaigns) ? campaigns : [])
+    .flatMap((campaign) => [
+      campaign?.activeTo,
+      campaign?.promotion?.endsAt,
+      ...(Array.isArray(campaign?.creatives)
+        ? campaign.creatives.map((creative) => creative?.activeTo)
+        : [])
+    ])
+    .map((value) => Date.parse(value))
+    .filter((value) => Number.isFinite(value) && value > Date.now());
+  if (boundaries.length === 0) return null;
+  return Math.max(
+    0,
+    Math.min(60, Math.floor((Math.min(...boundaries) - Date.now()) / 1000))
+  );
+}
+
+function resolveHtmlCacheControl(route, statusCode, ssrData) {
+  if (
+    statusCode !== 200 ||
+    PRIVATE_ROUTE_IDS.has(route.id) ||
+    IMMEDIATELY_FRESH_ROUTE_IDS.has(route.id)
+  ) {
     return 'no-store';
+  }
+  if (route.id === 'home') {
+    const boundaryTtl = campaignBoundaryTtlSeconds(ssrData);
+    if (boundaryTtl !== null) {
+      return boundaryTtl > 0
+        ? `public, max-age=0, s-maxage=${boundaryTtl}`
+        : 'no-store';
+    }
   }
   if (PUBLIC_LISTING_ROUTE_IDS.has(route.id)) {
     return 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
@@ -313,6 +400,39 @@ export async function createStorefrontServer(options = {}) {
     res.status(200).json({ ok: true });
   });
 
+  app.get('/__cms-preview/accept', async (req, res) => {
+    const token = typeof req.query.token === 'string' ? req.query.token.trim() : '';
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    if (!token) {
+      res.status(400).send('CMS preview token is required.');
+      return;
+    }
+    try {
+      await validatePreviewToken(token);
+      res.setHeader(
+        'Set-Cookie',
+        previewCookie(token, { secure: isProduction })
+      );
+      res.redirect(303, '/__cms-preview/view');
+    } catch (error) {
+      res.status(error?.status === 401 ? 401 : 502).send(
+        error?.status === 401
+          ? 'CMS preview link is invalid or expired.'
+          : 'CMS preview is temporarily unavailable.'
+      );
+    }
+  });
+
+  app.get('/__cms-preview/exit', (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader(
+      'Set-Cookie',
+      previewCookie('', { secure: isProduction, clear: true })
+    );
+    res.redirect(303, '/');
+  });
+
   app.use(async (req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       next();
@@ -332,7 +452,11 @@ export async function createStorefrontServer(options = {}) {
         route,
         params,
         requestQuery: req.query,
-        requestOrigin
+        requestOrigin,
+        previewToken:
+          route.id === 'cms-preview'
+            ? parseCookieHeader(req.get('cookie'))[CMS_PREVIEW_COOKIE] || ''
+            : ''
       });
       if (route.id === 'product' && ssrData.routeData?.product) {
         const canonicalProductPath = buildProductPath(ssrData.routeData.product);
@@ -379,7 +503,10 @@ export async function createStorefrontServer(options = {}) {
       res
         .status(statusCode)
         .setHeader('Content-Type', 'text/html; charset=utf-8')
-        .setHeader('Cache-Control', resolveHtmlCacheControl(route, statusCode))
+        .setHeader(
+          'Cache-Control',
+          resolveHtmlCacheControl(route, statusCode, ssrData)
+        )
         .end(html);
     } catch (error) {
       if (viteServer) {

@@ -7,8 +7,12 @@ import {
   getCatalogueCards,
   getCatalogueListing,
   getCmsCollection,
+  getCmsCampaign,
+  getCmsCampaigns,
+  getCmsLegalDocument,
   getCmsNavigation,
   getCmsPage,
+  getCmsPreviewSession,
   getCmsSiteSettings,
   getProduct
 } from '../src/api/index.js';
@@ -37,6 +41,14 @@ const LEGAL_FILE_BY_ROUTE_ID = {
   'sales-terms': 'sales-terms.html',
   'cookies-policy': 'cookies.html',
   'personal-data-consent': 'pd-consent.html'
+};
+const LEGAL_KEY_BY_ROUTE_ID = {
+  'privacy-policy': 'privacy-policy',
+  'user-agreement': 'user-agreement',
+  'ads-consent': 'ads-consent',
+  'sales-terms': 'sales-terms',
+  'cookies-policy': 'cookies-policy',
+  'personal-data-consent': 'personal-data-consent'
 };
 const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -382,7 +394,23 @@ async function loadProductSeed(productId) {
   }
 }
 
-async function loadLegalDocumentSeed(fileName, requestOrigin) {
+async function loadLegalDocumentSeed(key, fileName, requestOrigin) {
+  try {
+    const document = await getCmsLegalDocument(key);
+    if (document?.bodyHtml) {
+      return {
+        key,
+        fileName,
+        content: document.bodyHtml,
+        document,
+        source: 'directus',
+        notFound: false
+      };
+    }
+  } catch (error) {
+    // Static legal content remains the rollback and outage fallback.
+  }
+
   try {
     const rawHtml = await readThroughCache(
       `legal:${fileName}`,
@@ -400,6 +428,7 @@ async function loadLegalDocumentSeed(fileName, requestOrigin) {
     return {
       fileName,
       content,
+      source: 'static-fallback',
       notFound: false
     };
   } catch (error) {
@@ -525,7 +554,8 @@ export async function loadSsrRequestData({
   route,
   params = {},
   requestQuery = {},
-  requestOrigin = ''
+  requestOrigin = '',
+  previewToken = ''
 } = {}) {
   const ssrData = {
     routeId: route?.id || 'not-found',
@@ -541,7 +571,17 @@ export async function loadSsrRequestData({
 
   const cmsPageSlug = CMS_PAGE_SLUG_BY_ROUTE_ID[route.id];
   const legalFileName = LEGAL_FILE_BY_ROUTE_ID[route.id];
-  const [sharedCms, directory, cmsPageSeed, productSeed, legalSeed] =
+  const legalKey = LEGAL_KEY_BY_ROUTE_ID[route.id];
+  const [
+    sharedCms,
+    directory,
+    cmsPageSeed,
+    productSeed,
+    legalSeed,
+    homeCampaigns,
+    promoCampaign,
+    previewTarget
+  ] =
     await Promise.all([
       loadSharedCmsData(),
       DIRECTORY_ROUTE_IDS.has(route.id)
@@ -552,7 +592,16 @@ export async function loadSsrRequestData({
         ? loadProductSeed(params.id)
         : Promise.resolve(null),
       legalFileName
-        ? loadLegalDocumentSeed(legalFileName, requestOrigin)
+        ? loadLegalDocumentSeed(legalKey, legalFileName, requestOrigin)
+        : Promise.resolve(null),
+      route.id === 'home'
+        ? getCmsCampaigns({ placement: 'home_promo', limit: 2 }).catch(() => [])
+        : Promise.resolve(null),
+      route.id === 'promo' && params.slug
+        ? getCmsCampaign(params.slug).catch((error) => ({ error }))
+        : Promise.resolve(null),
+      route.id === 'cms-preview' && previewToken
+        ? getCmsPreviewSession(previewToken).catch((error) => ({ error }))
         : Promise.resolve(null)
     ]);
 
@@ -590,11 +639,41 @@ export async function loadSsrRequestData({
       kind: 'legal-document',
       fileName: legalSeed.fileName,
       content: legalSeed.content,
+      document: legalSeed.document || null,
+      source: legalSeed.source || '',
       error: legalSeed.error || ''
     };
     if (!legalSeed.content) {
       statusCode = 404;
     }
+  }
+
+  if (route.id === 'home') {
+    ssrData.routeData = {
+      kind: 'home-marketing',
+      campaigns: Array.isArray(homeCampaigns) ? homeCampaigns : []
+    };
+  }
+
+  if (route.id === 'promo') {
+    const campaign = promoCampaign && !promoCampaign.error ? promoCampaign : null;
+    ssrData.routeData = {
+      kind: 'campaign',
+      slug: params.slug,
+      campaign,
+      notFound: !campaign
+    };
+    if (!campaign) statusCode = 404;
+  }
+
+  if (route.id === 'cms-preview') {
+    const target = previewTarget && !previewTarget.error ? previewTarget : null;
+    ssrData.routeData = {
+      kind: 'cms-preview',
+      target,
+      unauthorized: !target
+    };
+    statusCode = target ? 200 : 401;
   }
 
   ssrData.performance = buildPerformanceHints({

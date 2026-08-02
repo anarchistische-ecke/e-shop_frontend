@@ -6,6 +6,8 @@ import FeatureListBlock from './blocks/FeatureListBlock';
 import HeroBlock from './blocks/HeroBlock';
 import ImageBannerBlock from './blocks/ImageBannerBlock';
 import RichTextBlock from './blocks/RichTextBlock';
+import CampaignSlotBlock from './blocks/CampaignSlotBlock';
+import LegalDocumentListBlock from './blocks/LegalDocumentListBlock';
 
 const CMS_BLOCK_COMPONENTS = {
   hero: HeroBlock,
@@ -16,8 +18,14 @@ const CMS_BLOCK_COMPONENTS = {
   collection_teaser: CommerceReferenceBlock,
   product_reference_list: CommerceReferenceBlock,
   category_reference_list: CommerceReferenceBlock,
+  collection_rail: CommerceReferenceBlock,
+  brand_reference_list: CommerceReferenceBlock,
+  campaign_slot: CampaignSlotBlock,
+  legal_document_list: LegalDocumentListBlock,
+  faq: FaqSectionBlock,
   faq_list: FaqSectionBlock,
   newsletter_cta: CtaSectionBlock,
+  cta: CtaSectionBlock,
   cta_section: CtaSectionBlock,
 };
 

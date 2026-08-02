@@ -586,3 +586,41 @@ export async function getCmsCollection(key, { preview = false, signal } = {}) {
   const path = preview ? '/content/preview/collections' : '/content/collections';
   return request(`${path}/${encodeURIComponent(key)}`, { signal, cache: 'no-store' });
 }
+
+export async function getCmsCampaigns({ placement = '', limit = 2, signal } = {}) {
+  const query = new URLSearchParams();
+  if (placement) query.append('placement', placement);
+  if (limit) query.append('limit', String(limit));
+  const qs = query.toString();
+  return request(`/content/campaigns/active${qs ? `?${qs}` : ''}`, {
+    signal,
+    cache: 'no-store'
+  });
+}
+
+export async function getCmsCampaign(slug, { signal } = {}) {
+  if (!slug) throw new Error('Campaign slug is required');
+  return request(`/content/campaigns/${encodeURIComponent(slug)}`, {
+    signal,
+    cache: 'no-store'
+  });
+}
+
+export async function getCmsLegalDocument(keyOrSlug, { signal } = {}) {
+  if (!keyOrSlug) throw new Error('Legal document key or slug is required');
+  return request(`/content/legal-documents/${encodeURIComponent(keyOrSlug)}`, {
+    signal,
+    cache: 'no-store'
+  });
+}
+
+export async function getCmsPreviewSession(token, { signal } = {}) {
+  if (!token) throw new Error('CMS preview token is required');
+  return request('/content/preview/session', {
+    signal,
+    cache: 'no-store',
+    headers: {
+      'X-CMS-Preview-Token': token
+    }
+  });
+}

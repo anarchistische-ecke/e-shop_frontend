@@ -5,6 +5,8 @@ import CataloguePage from '../pages/CataloguePage';
 import CategoryPage from '../pages/CategoryPage';
 import DeliveryInfoPage from '../pages/DeliveryInfoPage';
 import Home from '../pages/Home';
+import CampaignLandingPage from '../pages/CampaignLandingPage';
+import CmsPreviewPage from '../pages/CmsPreviewPage';
 import LegalInfoPage from '../pages/LegalInfoPage';
 import NotFound from '../pages/NotFound';
 import PaymentInfoPage from '../pages/PaymentInfoPage';
@@ -48,6 +50,8 @@ function RouteBoundary(routeElement, options = {}) {
 
 const routeRenderers = {
   home: () => <Home />,
+  'cms-preview': () => RouteBoundary(<CmsPreviewPage />),
+  promo: () => RouteBoundary(<CampaignLandingPage />),
   'category-search': () => <RouteFallback />,
   search: () => <RouteFallback />,
   category: () => RouteBoundary(<CategoryPage />),

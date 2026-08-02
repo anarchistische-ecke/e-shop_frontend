@@ -101,6 +101,8 @@ export const routeSeoConfig = {
 
 export const storefrontRouteConfig = [
   { id: 'home', path: '/', renderMode: 'ssr', seo: routeSeoConfig.home },
+  { id: 'cms-preview', path: '/__cms-preview/view', renderMode: 'ssr' },
+  { id: 'promo', path: '/promo/:slug', renderMode: 'ssr' },
   { id: 'category-search', path: '/category/search', renderMode: 'csr', seo: routeSeoConfig['category-search'] },
   { id: 'search', path: '/search', renderMode: 'csr', seo: routeSeoConfig.search },
   { id: 'category', path: '/category/:slug', renderMode: 'ssr' },
