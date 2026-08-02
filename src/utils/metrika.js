@@ -57,6 +57,7 @@ export const METRIKA_GOALS = {
   PROMO_CODE_ATTEMPT: 'promo_code_attempt',
   PROMO_CODE_SUCCESS: 'promo_code_success',
   PROMO_CODE_FAILURE: 'promo_code_failure',
+  CMS_CONTENT_FALLBACK: 'cms_content_fallback',
   CHECKOUT_CTA_CLICK: 'checkout_cta_click',
   BEGIN_CHECKOUT: 'begin_checkout',
   CHECKOUT_STEP_VIEW: 'checkout_step_view',

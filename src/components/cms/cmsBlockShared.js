@@ -19,7 +19,22 @@ const LAYOUT_VARIANT_MAP = {
 const CMS_IMAGE_WIDTHS = [320, 480, 640, 768, 960, 1200, 1440];
 
 export function isInternalUrl(url) {
-  return typeof url === 'string' && url.startsWith('/');
+  return typeof url === 'string' && url.startsWith('/') && !url.startsWith('//');
+}
+
+export function isSafeCmsUrl(url) {
+  if (isInternalUrl(url)) {
+    return true;
+  }
+  if (typeof url !== 'string' || !url.trim()) {
+    return false;
+  }
+  try {
+    const parsed = new URL(url);
+    return ['https:', 'mailto:', 'tel:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
 }
 
 export function getBlockKey(section, index) {
@@ -196,7 +211,7 @@ export function CmsRichText({ html, className = '' }) {
 }
 
 export function CmsAction({ label, url, variant = 'primary', className = '' }) {
-  if (!label || !url) {
+  if (!label || !isSafeCmsUrl(url)) {
     return null;
   }
 
@@ -208,14 +223,15 @@ export function CmsAction({ label, url, variant = 'primary', className = '' }) {
     );
   }
 
+  const isExternalWebUrl = String(url).startsWith('https://');
   return (
     <Button
       as="a"
       href={url}
       variant={variant}
       className={className}
-      rel="noreferrer"
-      target="_blank"
+      rel={isExternalWebUrl ? 'noopener noreferrer' : undefined}
+      target={isExternalWebUrl ? '_blank' : undefined}
     >
       {label}
     </Button>

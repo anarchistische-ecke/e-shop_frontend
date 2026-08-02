@@ -161,6 +161,45 @@ const homeBestsellersCollection = {
     }
   ]
 };
+const springCampaign = {
+  id: 'campaign-spring',
+  slug: 'spring',
+  internalName: 'Весенняя кампания',
+  promotion: {
+    id: 'promotion-spring',
+    name: 'Весенняя скидка',
+    discountPercent: 20,
+    currency: 'RUB'
+  },
+  creatives: [
+    {
+      id: 'creative-spring',
+      title: 'Весеннее обновление спальни',
+      description: '<p>Скидка на избранные комплекты.</p>',
+      primaryCtaLabel: 'Выбрать комплект',
+      primaryCtaUrl: '/catalog'
+    }
+  ]
+};
+const previewTarget = {
+  collection: 'page',
+  id: 'page-home',
+  version: 'version-draft',
+  content: {
+    title: 'Черновик главной страницы',
+    slug: 'home',
+    path: '/',
+    template: 'home',
+    sections: [
+      {
+        anchorId: 'preview-hero',
+        sectionType: 'rich_text',
+        title: 'Этот текст виден только в защищенном предпросмотре',
+        body: '<p>Черновая редакционная версия.</p>'
+      }
+    ]
+  }
+};
 
 function jsonResponse(payload, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -176,7 +215,7 @@ function notFoundResponse(message = 'Not found') {
 }
 
 function createFetchMock() {
-  return vi.fn(async (input) => {
+  return vi.fn(async (input, init = {}) => {
     const targetUrl =
       typeof input === 'string'
         ? input
@@ -206,6 +245,25 @@ function createFetchMock() {
 
     if (pathname === '/content/collections/home-bestsellers') {
       return jsonResponse(homeBestsellersCollection);
+    }
+
+    if (pathname === '/content/campaigns/active') {
+      return jsonResponse(
+        searchParams.get('placement') === 'home_promo' ? [springCampaign] : []
+      );
+    }
+
+    if (pathname === '/content/campaigns/spring') {
+      return jsonResponse(springCampaign);
+    }
+
+    if (pathname === '/content/preview/session') {
+      const token =
+        init?.headers?.['X-CMS-Preview-Token'] ||
+        init?.headers?.get?.('X-CMS-Preview-Token');
+      return token === 'preview-valid'
+        ? jsonResponse(previewTarget)
+        : jsonResponse({ message: 'Unauthorized' }, 401);
     }
 
     if (
@@ -356,6 +414,75 @@ describe('storefront SSR server', () => {
     expect(response.text).toContain('"directory"');
     expect(response.text).toContain('"compact":true');
     expect(response.text).not.toContain('"reviewCount"');
+    expect(response.text).toContain('Весеннее обновление спальни');
+  });
+
+  it('renders an active campaign on its canonical SSR landing route', async () => {
+    const response = await request(app).get('/promo/spring');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.text).toContain('Весеннее обновление спальни');
+    expect(response.text).toContain('Скидка 20%');
+    expect(response.text).toContain('href="https://yug-postel.ru/promo/spring"');
+    expect(response.text).toContain('"routeId":"promo"');
+  });
+
+  it('limits home HTML caching to the next campaign boundary', async () => {
+    springCampaign.activeTo = new Date(Date.now() + 30_000).toISOString();
+    try {
+      const response = await request(app).get('/');
+      const cacheControl = response.headers['cache-control'];
+
+      expect(cacheControl).toMatch(/^public, max-age=0, s-maxage=\d+$/);
+      expect(Number(cacheControl.match(/s-maxage=(\d+)/)?.[1])).toBeLessThanOrEqual(30);
+      expect(cacheControl).not.toContain('stale-while-revalidate');
+    } finally {
+      delete springCampaign.activeTo;
+    }
+  });
+
+  it('keeps Directus preview tokens in an HttpOnly session cookie and never in rendered HTML', async () => {
+    const acceptResponse = await request(app)
+      .get('/__cms-preview/accept?token=preview-valid')
+      .redirects(0);
+
+    expect(acceptResponse.status).toBe(303);
+    expect(acceptResponse.headers.location).toBe('/__cms-preview/view');
+    expect(acceptResponse.headers['cache-control']).toContain('no-store');
+    const cookie = acceptResponse.headers['set-cookie']?.[0] || '';
+    expect(cookie).toContain('cms_preview_token=preview-valid');
+    expect(cookie).toContain('HttpOnly');
+    expect(cookie).toContain('SameSite=Lax');
+
+    const previewResponse = await request(app)
+      .get('/__cms-preview/view')
+      .set('Cookie', cookie.split(';')[0]);
+
+    expect(previewResponse.status).toBe(200);
+    expect(previewResponse.headers['cache-control']).toBe('no-store');
+    expect(previewResponse.text).toContain('Черновик главной страницы');
+    expect(previewResponse.text).toContain(
+      'Этот текст виден только в защищенном предпросмотре'
+    );
+    expect(previewResponse.text).toContain('noindex,nofollow');
+    expect(previewResponse.text).not.toContain('preview-valid');
+  });
+
+  it('rejects missing and invalid Directus preview tokens', async () => {
+    const missingResponse = await request(app).get('/__cms-preview/accept');
+    expect(missingResponse.status).toBe(400);
+
+    const invalidResponse = await request(app)
+      .get('/__cms-preview/accept?token=preview-invalid')
+      .redirects(0);
+    expect(invalidResponse.status).toBe(401);
+    expect(invalidResponse.headers['set-cookie']).toBeUndefined();
+
+    const viewWithoutCookie = await request(app).get('/__cms-preview/view');
+    expect(viewWithoutCookie.status).toBe(401);
+    expect(viewWithoutCookie.text).toContain('Предпросмотр недоступен');
+    expect(viewWithoutCookie.text).not.toContain('cms_preview_token');
   });
 
   it('renders catalog, category, product, legal info, and legal document SSR routes', async () => {

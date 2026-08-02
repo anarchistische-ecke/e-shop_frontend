@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import CmsPageRenderer from './CmsPageRenderer';
 import { useCmsPage } from '../../contexts/CmsContentContext';
 import { Card } from '../ui';
+import { METRIKA_GOALS, trackGoal } from '../../utils/metrika';
 
 function CmsPageUnavailableState() {
   return (
@@ -28,6 +29,15 @@ function CmsManagedPage({
   afterManagedContent = null,
 }) {
   const { page, isPageLoading } = useCmsPage(slug, { preview });
+  const usesFallback = Boolean(!page && !isPageLoading && fallback);
+
+  useEffect(() => {
+    if (!usesFallback) return;
+    trackGoal(METRIKA_GOALS.CMS_CONTENT_FALLBACK, {
+      cms_slug: slug,
+      preview: Boolean(preview),
+    });
+  }, [preview, slug, usesFallback]);
 
   if (page) {
     return (

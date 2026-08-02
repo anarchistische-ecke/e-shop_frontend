@@ -26,6 +26,7 @@ const COLLECTION_REFERENCE_KINDS = new Set([
 ]);
 const PRODUCT_REFERENCE_KINDS = new Set(['product', 'product_id', 'product_slug']);
 const CATEGORY_REFERENCE_KINDS = new Set(['category', 'category_id', 'category_slug']);
+const BRAND_REFERENCE_KINDS = new Set(['brand', 'brand_id', 'brand_slug']);
 
 function normalizeReferenceKind(value = '') {
   return String(value || '')
@@ -65,6 +66,7 @@ function readCollectionKeys(section = {}) {
   };
 
   addKey(section.collectionKey || section.collection_key);
+  addKey(section.storefrontCollectionKey || section.storefront_collection_key);
   if (Array.isArray(section.collectionKeys)) {
     section.collectionKeys.forEach(addKey);
   }
@@ -126,6 +128,18 @@ function findCategory(categories, referenceKey, referenceKind) {
     }
 
     return categoryId === normalizedKey || categorySlug === normalizedKey;
+  }) || null;
+}
+
+function findBrand(brands, referenceKey, referenceKind) {
+  const normalizedKey = normalizeLookupValue(referenceKey);
+  if (!normalizedKey) return null;
+  return brands.find((brand) => {
+    const brandId = normalizeLookupValue(brand?.id);
+    const brandSlug = normalizeLookupValue(brand?.slug);
+    if (referenceKind === 'brand_id') return brandId === normalizedKey;
+    if (referenceKind === 'brand_slug') return brandSlug === normalizedKey;
+    return brandId === normalizedKey || brandSlug === normalizedKey;
   }) || null;
 }
 
@@ -211,6 +225,56 @@ function CategoryReferenceCard({ category, products, item }) {
   );
 }
 
+function BrandReferenceCard({ brand, products, item }) {
+  const title = item?.title || brand?.name || 'Бренд';
+  const brandKey = String(brand?.slug || brand?.id || '').trim();
+  const product = products.find((candidate) => {
+    const productBrand = candidate?.brand?.slug || candidate?.brand?.id || candidate?.brand;
+    return normalizeLookupValue(productBrand) === normalizeLookupValue(brandKey);
+  });
+  const directMedia = brand?.media || brand?.image || null;
+  const imageUrl = resolveImageUrl(
+    directMedia?.url || brand?.imageUrl || getPrimaryImageUrl(product)
+  );
+  const imageMedia = directMedia || getPrimaryImageMedia(product);
+  const href = item?.url || `/catalog?brand=${encodeURIComponent(brandKey)}`;
+
+  return (
+    <Card
+      as={Link}
+      to={href}
+      variant="outline"
+      padding="none"
+      interactive
+      className="group block h-full overflow-hidden rounded-[24px]"
+    >
+      {imageUrl ? (
+        <div className="relative overflow-hidden bg-sand/45 pt-[58%]">
+          <ResponsiveImage
+            media={imageMedia}
+            src={imageUrl}
+            alt={directMedia?.alt || title}
+            className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+            sizes="(min-width: 1024px) 22rem, (min-width: 640px) 46vw, 92vw"
+            loading="lazy"
+          />
+        </div>
+      ) : null}
+      <div className="space-y-2 p-5">
+        <h3 className="text-lg font-semibold text-ink">{title}</h3>
+        {(item?.description || brand?.description) ? (
+          <p className="text-sm leading-6 text-muted">
+            {item?.description || brand?.description}
+          </p>
+        ) : null}
+        <span className="inline-flex min-h-11 items-center text-sm font-medium text-primary">
+          Смотреть товары →
+        </span>
+      </div>
+    </Card>
+  );
+}
+
 function CommerceSectionShell({ section, children, testId }) {
   const hasHeading = section?.eyebrow || section?.title || section?.body;
 
@@ -264,7 +328,7 @@ function getReferenceItemClass(section) {
 }
 
 function ProductReferenceList({ section, page }) {
-  const { products, loading } = useProductDirectoryData();
+  const { products = [], loading } = useProductDirectoryData();
   const references = normalizeItems(section)
     .map((item) => ({
       item,
@@ -339,7 +403,7 @@ function ProductReferenceList({ section, page }) {
 }
 
 function CategoryReferenceList({ section, page }) {
-  const { categories, products, loading } = useProductDirectoryData();
+  const { categories = [], products = [], loading } = useProductDirectoryData();
   const references = normalizeItems(section)
     .map((item) => ({
       item,
@@ -389,6 +453,45 @@ function CategoryReferenceList({ section, page }) {
   );
 }
 
+function BrandReferenceList({ section }) {
+  const { brands = [], products = [], loading } = useProductDirectoryData();
+  const references = normalizeItems(section)
+    .map((item) => ({
+      item,
+      kind: readReferenceKind(item),
+      key: readReferenceKey(item),
+    }))
+    .filter(({ kind, key }) => key && (!kind || BRAND_REFERENCE_KINDS.has(kind)));
+  const resolvedBrands = useMemo(
+    () =>
+      references
+        .map(({ item, key, kind }) => {
+          const brand = findBrand(brands, key, kind);
+          return brand ? { brand, item } : null;
+        })
+        .filter(Boolean),
+    [brands, references]
+  );
+  if (!resolvedBrands.length && !loading) return <FeatureListBlock section={section} />;
+  return (
+    <CommerceSectionShell section={section}>
+      {resolvedBrands.length ? (
+        <div className={getReferenceListClass(section, 'brand')}>
+          {resolvedBrands.map(({ brand, item }) => (
+            <div key={brand.id || brand.slug} className={getReferenceItemClass(section)}>
+              <BrandReferenceCard brand={brand} products={products} item={item} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <Card padding="lg" className="rounded-[24px] border border-dashed border-ink/10 bg-white/66 text-sm text-muted">
+          Загружаем бренды…
+        </Card>
+      )}
+    </CommerceSectionShell>
+  );
+}
+
 function CollectionTeaser({ section }) {
   const collectionKeys = readCollectionKeys(section);
 
@@ -404,7 +507,7 @@ function CollectionTeaser({ section }) {
 }
 
 function CommerceReferenceBlock({ page, section }) {
-  if (section?.sectionType === 'collection_teaser') {
+  if (section?.sectionType === 'collection_teaser' || section?.sectionType === 'collection_rail') {
     return <CollectionTeaser section={section} />;
   }
   if (section?.sectionType === 'category_reference_list') {
@@ -412,6 +515,9 @@ function CommerceReferenceBlock({ page, section }) {
   }
   if (section?.sectionType === 'product_reference_list') {
     return <ProductReferenceList page={page} section={section} />;
+  }
+  if (section?.sectionType === 'brand_reference_list') {
+    return <BrandReferenceList section={section} />;
   }
 
   return <FeatureListBlock section={section} />;

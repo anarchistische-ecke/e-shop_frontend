@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
-import { getActivePromotions, getCustomerOrders } from '../api';
+import { getActivePromotions, getCmsCampaigns, getCustomerOrders } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useProductDirectoryData } from '../features/product-list/data';
 import AccountPage from './AccountPage';
@@ -11,6 +11,7 @@ import Home from './Home';
 
 vi.mock('../api', () => ({
   getActivePromotions: vi.fn(),
+  getCmsCampaigns: vi.fn(),
   getCmsPage: vi.fn(() => Promise.reject(Object.assign(new Error('Not found'), { status: 404 }))),
   getCustomerOrders: vi.fn(),
   isApiRequestError: vi.fn((error) => Boolean(error?.status)),
@@ -99,6 +100,27 @@ const activePromotionsPayload = {
   ],
 };
 
+const activeCampaignsPayload = [
+  {
+    id: 'campaign-1',
+    slug: 'spring',
+    internalName: 'Весенняя акция',
+    promotion: {
+      name: 'Весенняя акция',
+      discountAmount: 50000,
+      currency: 'RUB',
+    },
+    creatives: [
+      {
+        id: 'creative-1',
+        title: 'Весенняя акция',
+        primaryCtaLabel: 'Подробнее',
+        primaryCtaUrl: '/promo/spring',
+      },
+    ],
+  },
+];
+
 describe('active promotion surfaces', () => {
   let originalActEnvironment;
 
@@ -106,6 +128,7 @@ describe('active promotion surfaces', () => {
     originalActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     getActivePromotions.mockResolvedValue(activePromotionsPayload);
+    getCmsCampaigns.mockResolvedValue(activeCampaignsPayload);
     getCustomerOrders.mockResolvedValue([]);
     useProductDirectoryData.mockReturnValue({
       loading: false,
@@ -144,7 +167,7 @@ describe('active promotion surfaces', () => {
     await view.flush();
 
     expect(view.container.textContent).toContain('Весенняя акция');
-    expect(view.container.textContent).toContain('500 RUB');
+    expect(view.container.textContent).toContain('Скидка 500');
     expect(view.container.textContent).not.toContain('Соберите спальню за один заход');
 
     view.unmount();

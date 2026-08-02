@@ -8,7 +8,7 @@ import NewsletterForm from '../components/home/NewsletterForm';
 import CmsManagedPage from '../components/cms/CmsManagedPage';
 import ResponsiveImage from '../components/media/ResponsiveImage';
 import { Button, Card } from '../components/ui';
-import { getActivePromotions } from '../api';
+import { getCmsCampaigns } from '../api';
 import { DEFAULT_CMS_SITE_SETTINGS } from '../data/cms/defaults';
 import { useProductDirectoryData } from '../features/product-list/data';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
@@ -29,6 +29,8 @@ import {
   DELIVERY_DISCLOSURE,
   DELIVERY_SHORT_DISCLOSURE
 } from '../utils/delivery';
+import { useSsrData } from '../ssr/SsrDataContext';
+import { promotionFactLabel } from '../components/cms/blocks/CampaignSlotBlock';
 
 function getProductStock(product) {
   if (!product) return 0;
@@ -214,26 +216,29 @@ function ConversionCta() {
 
 function HomeFallbackPage() {
   const { products, loading } = useProductDirectoryData();
+  const { routeData } = useSsrData();
   const heroConfig = homeHeroDefaults;
-  const [activePromotions, setActivePromotions] = useState({ promotions: [], promoCodes: [] });
+  const seededCampaigns =
+    routeData?.kind === 'home-marketing' && Array.isArray(routeData.campaigns)
+      ? routeData.campaigns
+      : [];
+  const [campaigns, setCampaigns] = useState(seededCampaigns);
 
   useEffect(() => {
+    if (seededCampaigns.length > 0) return undefined;
     let mounted = true;
-    getActivePromotions()
+    getCmsCampaigns({ placement: 'home_promo', limit: 2 })
       .then((data) => {
         if (!mounted) return;
-        setActivePromotions({
-          promotions: Array.isArray(data?.promotions) ? data.promotions : [],
-          promoCodes: Array.isArray(data?.promoCodes) ? data.promoCodes : []
-        });
+        setCampaigns(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
-        console.warn('Failed to load active promotions', err);
+        console.warn('Failed to load CMS campaigns', err);
       });
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [seededCampaigns.length]);
 
   const activeProducts = useMemo(
     () => products.filter((product) => product?.isActive !== false),
@@ -307,49 +312,25 @@ function HomeFallbackPage() {
     },
   ];
 
-  const formatMinorAmount = (amount, currency = 'RUB') => {
-    const numeric = Number(amount);
-    if (!Number.isFinite(numeric)) return '';
-    return `${(numeric / 100).toLocaleString('ru-RU')} ${currency}`;
-  };
-
   const livePromoBanners = useMemo(() => {
-    const promotionCards = activePromotions.promotions.slice(0, 2).map((promotion) => ({
-      id: `promotion-${promotion.id}`,
-      eyebrow: 'Акция',
-      title: promotion.name,
-      description:
-        promotion.description ||
-        (promotion.discountPercent
-          ? `Скидка ${promotion.discountPercent}% применяется автоматически к товарам акции.`
-          : promotion.discountAmount
-          ? `Скидка ${formatMinorAmount(promotion.discountAmount, promotion.currency)} применяется автоматически.`
-          : promotion.salePriceAmount
-          ? `Акционная цена ${formatMinorAmount(promotion.salePriceAmount, promotion.currency)} применяется автоматически.`
-          : 'Акционная цена применяется автоматически при оформлении заказа.'),
-      cta: 'Смотреть каталог',
-      link: '/catalog',
-      secondaryCta: 'Условия оплаты',
-      secondaryLink: '/info/payment',
-      className: 'bg-gradient-to-br from-[#eaf2ec] via-white to-[#f4efe8]'
-    }));
-    const promoCodeCards = activePromotions.promoCodes.slice(0, Math.max(0, 2 - promotionCards.length)).map((promoCode) => ({
-      id: `promo-code-${promoCode.id}`,
-      eyebrow: 'Промокод',
-      title: promoCode.code,
-      description:
-        promoCode.description ||
-        (promoCode.discountPercent
-          ? `Введите промокод в корзине, чтобы получить скидку ${promoCode.discountPercent}%.`
-          : 'Введите промокод в корзине, чтобы применить скидку.'),
-      cta: 'Открыть корзину',
-      link: '/cart',
-      secondaryCta: 'Все акции',
-      secondaryLink: '/account#promocodes',
-      className: 'bg-gradient-to-br from-[#edf4f6] via-white to-[#f7eee8]'
-    }));
-    return [...promotionCards, ...promoCodeCards];
-  }, [activePromotions]);
+    return campaigns.slice(0, 2).map((campaign) => {
+      const creative = Array.isArray(campaign.creatives) ? campaign.creatives[0] : null;
+      const fact = promotionFactLabel(campaign.promotion);
+      return {
+        id: `campaign-${campaign.id}`,
+        eyebrow: creative?.eyebrow || 'Акция',
+        title: creative?.title || creative?.shortText || campaign.internalName,
+        description: creative?.description
+          ? creative.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+          : fact || 'Условия кампании доступны на промо-странице.',
+        cta: creative?.primaryCtaLabel || 'Подробнее',
+        link: creative?.primaryCtaUrl || campaign.landingPage?.path || `/promo/${campaign.slug}`,
+        secondaryCta: creative?.secondaryCtaLabel,
+        secondaryLink: creative?.secondaryCtaUrl,
+        className: 'bg-gradient-to-br from-[#edf4f6] via-white to-[#f7eee8]'
+      };
+    });
+  }, [campaigns]);
 
   const featuredProductSummary = featuredProduct
     ? {

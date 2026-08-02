@@ -21,7 +21,15 @@ function FaqAnswer({ answer }) {
 }
 
 function FaqSectionBlock({ section }) {
-  const items = Array.isArray(section.items) ? section.items : [];
+  const relatedFaqs = Array.isArray(section.faqs)
+    ? section.faqs.map((faq) => ({
+        title: faq.question,
+        description: faq.answer,
+      }))
+    : [];
+  const items = relatedFaqs.length > 0
+    ? relatedFaqs
+    : (Array.isArray(section.items) ? section.items : []);
 
   return (
     <section id={section.anchorId || undefined} className="space-y-4">

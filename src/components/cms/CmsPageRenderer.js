@@ -52,6 +52,7 @@ function CmsPageRenderer({ page }) {
         canonicalPath={canonicalPath}
         image={shareImage}
         imageAlt={pageTitle}
+        robots={page?.robots || 'index,follow'}
         jsonLd={jsonLd}
       />
 

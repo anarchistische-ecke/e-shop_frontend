@@ -33,6 +33,8 @@ const OrderPage = lazy(() => import('../pages/OrderPage'));
 const SearchPage = lazy(() => import('../pages/SearchPage'));
 const SearchRedirectPage = lazy(() => import('../pages/SearchRedirectPage'));
 const SubscriptionActionPage = lazy(() => import('../pages/SubscriptionActionPage'));
+const CampaignLandingPage = lazy(() => import('../pages/CampaignLandingPage'));
+const CmsPreviewPage = lazy(() => import('../pages/CmsPreviewPage'));
 
 function RouteFallback({ isStandaloneRoute = false }) {
   return (
@@ -58,6 +60,8 @@ function CsrRoute(routeElement, options = {}) {
 
 const routeRenderers = {
   home: () => <Home />,
+  'cms-preview': () => CsrRoute(<CmsPreviewPage />),
+  promo: () => CsrRoute(<CampaignLandingPage />),
   'category-search': () => CsrRoute(<SearchRedirectPage />),
   search: () => CsrRoute(<SearchPage />),
   category: () => CsrRoute(<CategoryPage />),
