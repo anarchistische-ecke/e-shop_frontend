@@ -11,6 +11,7 @@ function AddressStep({
   onAddressPartChange,
   onContinue,
   onEdit,
+  continueLabel = 'Проверить заказ',
   disabled = false
 }) {
   const handlePartChange = (field) => (event) => {
@@ -97,7 +98,7 @@ function AddressStep({
           </div>
 
           <Button className="mt-5" onClick={onContinue} disabled={disabled}>
-            К доставке
+            {continueLabel}
           </Button>
         </>
       ) : (

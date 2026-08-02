@@ -3,10 +3,10 @@ import { vi } from 'vitest';
 vi.mock('../../api', () => ({
   getBrands: vi.fn(),
   getCategories: vi.fn(),
-  getProducts: vi.fn()
+  getCatalogueListing: vi.fn()
 }));
 
-import { getBrands, getCategories, getProducts } from '../../api';
+import { getBrands, getCategories, getCatalogueListing } from '../../api';
 import {
   __resetProductDirectoryCacheForTests,
   loadProductDirectoryData
@@ -22,10 +22,12 @@ describe('product directory data', () => {
   it('reuses the shared directory request and cache across calls', async () => {
     getCategories.mockResolvedValue([{ id: 'cat-1', name: 'Постельное белье' }]);
     getBrands.mockResolvedValue([{ id: 'brand-1', name: 'Уютный дом' }]);
-    getProducts.mockResolvedValue([
-      { id: 'prod-1', name: 'Комплект сатин', isActive: true },
-      { id: 'prod-2', name: 'Скрытый товар', isActive: false }
-    ]);
+    getCatalogueListing.mockResolvedValue({
+      items: [
+        { id: 'prod-1', name: 'Комплект сатин', isActive: true },
+        { id: 'prod-2', name: 'Скрытый товар', isActive: false }
+      ]
+    });
 
     const [first, second] = await Promise.all([
       loadProductDirectoryData(),
@@ -34,7 +36,7 @@ describe('product directory data', () => {
 
     expect(getCategories).toHaveBeenCalledTimes(1);
     expect(getBrands).toHaveBeenCalledTimes(1);
-    expect(getProducts).toHaveBeenCalledTimes(1);
+    expect(getCatalogueListing).toHaveBeenCalledTimes(1);
     expect(first).toBe(second);
     expect(first.products).toEqual([
       { id: 'prod-1', name: 'Комплект сатин', isActive: true }
@@ -44,7 +46,7 @@ describe('product directory data', () => {
 
     expect(getCategories).toHaveBeenCalledTimes(1);
     expect(getBrands).toHaveBeenCalledTimes(1);
-    expect(getProducts).toHaveBeenCalledTimes(1);
+    expect(getCatalogueListing).toHaveBeenCalledTimes(1);
   });
 
   it('can force-refresh the cached directory snapshot', async () => {
@@ -54,16 +56,16 @@ describe('product directory data', () => {
     getBrands
       .mockResolvedValueOnce([{ id: 'brand-1', name: 'Luna' }])
       .mockResolvedValueOnce([{ id: 'brand-2', name: 'Nova' }]);
-    getProducts
-      .mockResolvedValueOnce([{ id: 'prod-1', name: 'Плед', isActive: true }])
-      .mockResolvedValueOnce([{ id: 'prod-2', name: 'Полотенце', isActive: true }]);
+    getCatalogueListing
+      .mockResolvedValueOnce({ items: [{ id: 'prod-1', name: 'Плед', isActive: true }] })
+      .mockResolvedValueOnce({ items: [{ id: 'prod-2', name: 'Полотенце', isActive: true }] });
 
     await loadProductDirectoryData();
     const refreshed = await loadProductDirectoryData({ force: true });
 
     expect(getCategories).toHaveBeenCalledTimes(2);
     expect(getBrands).toHaveBeenCalledTimes(2);
-    expect(getProducts).toHaveBeenCalledTimes(2);
+    expect(getCatalogueListing).toHaveBeenCalledTimes(2);
     expect(refreshed.categories).toEqual([{ id: 'cat-2', name: 'Ванная' }]);
     expect(refreshed.products).toEqual([
       { id: 'prod-2', name: 'Полотенце', isActive: true }
@@ -75,15 +77,15 @@ describe('product directory data', () => {
     vi.setSystemTime(new Date('2026-06-22T10:00:00Z'));
     getCategories.mockResolvedValue([]);
     getBrands.mockResolvedValue([]);
-    getProducts
-      .mockResolvedValueOnce([{ id: 'prod-1', name: 'First', isActive: true }])
-      .mockResolvedValueOnce([{ id: 'prod-2', name: 'Second', isActive: true }]);
+    getCatalogueListing
+      .mockResolvedValueOnce({ items: [{ id: 'prod-1', name: 'First', isActive: true }] })
+      .mockResolvedValueOnce({ items: [{ id: 'prod-2', name: 'Second', isActive: true }] });
 
     await loadProductDirectoryData();
     vi.setSystemTime(new Date('2026-06-22T10:00:31Z'));
     const refreshed = await loadProductDirectoryData();
 
-    expect(getProducts).toHaveBeenCalledTimes(2);
+    expect(getCatalogueListing).toHaveBeenCalledTimes(2);
     expect(refreshed.products).toEqual([{ id: 'prod-2', name: 'Second', isActive: true }]);
   });
 });

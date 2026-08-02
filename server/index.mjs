@@ -152,22 +152,30 @@ function resolveTrailingSlashTarget(req) {
   return `${pathname}${search}`;
 }
 
-const IMMEDIATELY_FRESH_ROUTE_IDS = new Set([
-  'home',
-  'catalog',
-  'category',
-  'product',
-  'about',
-  'payment-info',
-  'delivery-info',
-  'production-info'
+const PUBLIC_LISTING_ROUTE_IDS = new Set(['home', 'catalog', 'category']);
+const PRIVATE_ROUTE_IDS = new Set([
+  'cart',
+  'checkout',
+  'account',
+  'order',
+  'pay',
+  'favorites',
+  'login',
+  'manager-login',
+  'manager-payment-link'
 ]);
 
 function resolveHtmlCacheControl(route, statusCode) {
-  if (statusCode === 200 && IMMEDIATELY_FRESH_ROUTE_IDS.has(route.id)) {
+  if (statusCode !== 200 || PRIVATE_ROUTE_IDS.has(route.id)) {
     return 'no-store';
   }
-  if (route.renderMode === 'ssr' && statusCode === 200) {
+  if (PUBLIC_LISTING_ROUTE_IDS.has(route.id)) {
+    return 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
+  }
+  if (route.id === 'product') {
+    return 'public, max-age=0, s-maxage=30, stale-while-revalidate=300';
+  }
+  if (route.renderMode === 'ssr') {
     return 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
   }
 
@@ -323,6 +331,7 @@ export async function createStorefrontServer(options = {}) {
       const { ssrData, statusCode } = await loadSsrRequestData({
         route,
         params,
+        requestQuery: req.query,
         requestOrigin
       });
       if (route.id === 'product' && ssrData.routeData?.product) {

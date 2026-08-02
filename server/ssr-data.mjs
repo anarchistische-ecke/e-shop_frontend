@@ -5,12 +5,12 @@ import {
   getBrands,
   getCategories,
   getCatalogueCards,
+  getCatalogueListing,
   getCmsCollection,
   getCmsNavigation,
   getCmsPage,
   getCmsSiteSettings,
-  getProduct,
-  getProducts
+  getProduct
 } from '../src/api/index.js';
 import { readEnv } from '../src/config/runtime.js';
 import { legalTokens } from '../src/data/legal/constants.js';
@@ -113,11 +113,10 @@ async function readThroughCache(key, loader, ttlMs = DEFAULT_CACHE_TTL_MS) {
 
 async function loadSharedCmsData() {
   const [siteSettingsResult, footerNavigationResult] = await Promise.allSettled([
-    readThroughCache('cms:site-settings', () => getCmsSiteSettings(), 0),
+    readThroughCache('cms:site-settings', () => getCmsSiteSettings()),
     readThroughCache(
       'cms:navigation:footer',
-      () => getCmsNavigation({ placement: 'footer' }),
-      0
+      () => getCmsNavigation({ placement: 'footer' })
     )
   ]);
 
@@ -133,23 +132,54 @@ async function loadSharedCmsData() {
   };
 }
 
-async function loadDirectoryData() {
+function normalizeQueryValue(value) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function listingParamsForRoute(routeId, params, requestQuery) {
+  const categorySlug = routeId === 'category' ? params?.slug : '';
+  const page = Math.max(0, (Number(normalizeQueryValue(requestQuery?.page)) || 1) - 1);
+  const rublesToMinor = (value) => {
+    const parsed = Number(normalizeQueryValue(value));
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : undefined;
+  };
+  return {
+    category: categorySlug && !['new', 'popular'].includes(categorySlug) ? categorySlug : '',
+    scope: routeId === 'catalog' ? normalizeQueryValue(requestQuery?.scope) : '',
+    q: normalizeQueryValue(requestQuery?.query),
+    brand: normalizeQueryValue(requestQuery?.brand),
+    minPriceMinor: rublesToMinor(requestQuery?.minPrice),
+    maxPriceMinor: rublesToMinor(requestQuery?.maxPrice),
+    inStock: ['1', 'true', 'yes'].includes(String(normalizeQueryValue(requestQuery?.inStock) || '').toLowerCase()),
+    sale: ['1', 'true', 'yes'].includes(String(normalizeQueryValue(requestQuery?.sale) || '').toLowerCase()),
+    sort: categorySlug === 'new' ? 'newest' : normalizeQueryValue(requestQuery?.sort) || 'bestMatch',
+    page,
+    size: 12
+  };
+}
+
+async function loadDirectoryData({ routeId, params, requestQuery }) {
   try {
-    return await readThroughCache('catalogue:directory', async () => {
-      const [categories, brands, products] = await Promise.all([
+    const listingParams = listingParamsForRoute(routeId, params, requestQuery);
+    const cacheKey = `catalogue:directory:${routeId}:${JSON.stringify(listingParams)}`;
+    return await readThroughCache(cacheKey, async () => {
+      const shouldLoadListing = routeId === 'catalog' || routeId === 'category';
+      const [categories, brands, listing] = await Promise.all([
         getCategories(),
         getBrands(),
-        getProducts()
+        shouldLoadListing ? getCatalogueListing(listingParams) : Promise.resolve(null)
       ]);
 
       return {
         categories: Array.isArray(categories) ? categories : [],
         brands: Array.isArray(brands) ? brands : [],
-        products: Array.isArray(products)
-          ? products.filter((product) => product?.isActive !== false)
-          : []
+        products: Array.isArray(listing?.items)
+          ? listing.items.filter((product) => product?.isActive !== false)
+          : [],
+        listing,
+        compact: true
       };
-    }, 0);
+    });
   } catch (error) {
     return null;
   }
@@ -225,7 +255,7 @@ async function loadHomeDirectoryData(page) {
 
 async function loadCmsPageSeed(slug) {
   try {
-    const page = await readThroughCache(`cms:page:${slug}`, () => getCmsPage(slug), 0);
+    const page = await readThroughCache(`cms:page:${slug}`, () => getCmsPage(slug));
     return { slug, page, shouldUseFallback: false };
   } catch (error) {
     return {
@@ -299,7 +329,7 @@ async function loadCmsCollectionsSeed(page) {
 
   const results = await Promise.allSettled(
     collectionKeys.map((key) =>
-      readThroughCache(`cms:collection:${key}`, () => getCmsCollection(key), 0)
+      readThroughCache(`cms:collection:${key}`, () => getCmsCollection(key))
         .then((collection) => ({ key, collection }))
     )
   );
@@ -326,8 +356,7 @@ async function loadProductSeed(productId) {
   try {
     const product = await readThroughCache(
       `product:${productId}`,
-      () => getProduct(productId),
-      0
+      () => getProduct(productId)
     );
 
     if (!product || product?.isActive === false) {
@@ -495,6 +524,7 @@ function buildPerformanceHints({ directory, runtimeConfig }) {
 export async function loadSsrRequestData({
   route,
   params = {},
+  requestQuery = {},
   requestOrigin = ''
 } = {}) {
   const ssrData = {
@@ -515,7 +545,7 @@ export async function loadSsrRequestData({
     await Promise.all([
       loadSharedCmsData(),
       DIRECTORY_ROUTE_IDS.has(route.id)
-        ? loadDirectoryData()
+        ? loadDirectoryData({ routeId: route.id, params, requestQuery })
         : Promise.resolve(null),
       cmsPageSlug ? loadCmsPageSeed(cmsPageSlug) : Promise.resolve(null),
       route.id === 'product' && params.id

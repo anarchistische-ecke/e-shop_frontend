@@ -242,6 +242,29 @@ export async function getCatalogueCards(params = {}) {
   const qs = query.toString();
   return request(`/catalogue/cards${qs ? `?${qs}` : ''}`);
 }
+export async function getCatalogueListing(params = {}) {
+  const query = new URLSearchParams();
+  const appendText = (name, value) => {
+    const normalized = String(value ?? '').trim();
+    if (normalized) query.append(name, normalized);
+  };
+  appendText('category', params.category);
+  appendText('scope', params.scope);
+  appendText('q', params.q ?? params.query);
+  appendText('brand', params.brand);
+  if (Number.isFinite(Number(params.minPriceMinor))) {
+    query.append('minPriceMinor', String(Math.max(0, Number(params.minPriceMinor))));
+  }
+  if (Number.isFinite(Number(params.maxPriceMinor))) {
+    query.append('maxPriceMinor', String(Math.max(0, Number(params.maxPriceMinor))));
+  }
+  if (params.inStock) query.append('inStock', 'true');
+  if (params.sale) query.append('sale', 'true');
+  appendText('sort', params.sort);
+  query.append('page', String(Math.max(0, Number(params.page) || 0)));
+  query.append('size', String(Math.min(24, Math.max(1, Number(params.size) || 12))));
+  return request(`/catalogue/listing?${query.toString()}`);
+}
 export async function createProduct(product) {
   return request('/products', {
     method: 'POST',
@@ -313,6 +336,9 @@ export async function createCart(customerId) {
 }
 export async function getCart(cartId) {
   return request(`/carts/${cartId}`);
+}
+export async function getCartView(cartId) {
+  return request(`/carts/${cartId}/view`);
 }
 export async function getCartTotal(cartId) {
   return request(`/carts/${cartId}/total`);
@@ -456,6 +482,24 @@ export async function updateCustomerSubscription(marketingOptIn) {
   return request('/customers/me/subscription', {
     method: 'PUT',
     body: JSON.stringify({ marketingOptIn })
+  });
+}
+export async function createMarketingSubscription({ email, consent, source } = {}) {
+  return request('/marketing/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify({ email, consent: Boolean(consent), source })
+  });
+}
+export async function confirmMarketingSubscription(token) {
+  return request('/marketing/subscriptions/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ token })
+  });
+}
+export async function unsubscribeMarketingSubscription(token) {
+  return request('/marketing/subscriptions/unsubscribe', {
+    method: 'POST',
+    body: JSON.stringify({ token })
   });
 }
 export async function getCustomerOrders() {

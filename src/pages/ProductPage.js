@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CartContext } from '../contexts/CartContext';
 import { WishlistContext } from '../contexts/WishlistContext';
-import { getProduct } from '../api';
+import { getCatalogueListing, getProduct } from '../api';
 import NotificationBanner from '../components/NotificationBanner';
 import Seo from '../components/Seo';
 import { CataloguePresentationBlocks } from '../components/cms/CataloguePresentationSections';
@@ -35,6 +35,11 @@ import {
   buildProductMicrodata,
   buildWebPageJsonLd
 } from '../seo/schema';
+import {
+  DELIVERY_DISCLOSURE,
+  DELIVERY_EXCLUDED_LABEL,
+  DELIVERY_SHORT_DISCLOSURE
+} from '../utils/delivery';
 
 function resolveCategoryToken(entity) {
   if (!entity) return '';
@@ -253,7 +258,7 @@ function ProductPage() {
   const { addItem } = useContext(CartContext);
   const { isWishlisted, toggle: toggleWishlist } = useContext(WishlistContext);
   const { routeData } = useSsrData();
-  const { categories, products: directoryProducts } = useProductDirectoryData({ requireFull: true });
+  const { categories } = useProductDirectoryData();
   const hasProductRouteSeed =
     routeData?.kind === 'product' && String(routeData.productId || '') === String(id);
   const hasInitialProductLoad = hasProductRouteSeed && Boolean(routeData.product);
@@ -278,6 +283,7 @@ function ProductPage() {
   const [pendingAction, setPendingAction] = useState('');
   const [cartStatus, setCartStatus] = useState(null);
   const [showMobileCartBar, setShowMobileCartBar] = useState(true);
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
   const transitionTimerRef = useRef(null);
   const cartInputRef = useRef({ quantity: 1, variantId: null });
@@ -379,36 +385,33 @@ function ProductPage() {
     return undefined;
   }, [hasConfirmedNotFound, hasInitialProductLoad, id, initialProduct]);
 
-  const relatedProducts = useMemo(() => {
-    if (!product) {
-      return [];
-    }
-
-    const targetCategoryToken = resolveProductCategoryToken(product);
-    return directoryProducts
-      .filter((item) => {
-        if (!item || item.id === product.id || item?.isActive === false) {
-          return false;
-        }
-        if (!targetCategoryToken) {
-          return true;
-        }
-        return resolveProductCategoryToken(item) === targetCategoryToken;
-      })
-      .slice(0, 4);
-  }, [directoryProducts, product]);
-
   useEffect(() => {
-    if (!relatedProducts.length) return;
-    setBundleSelections((prev) => {
-      if (Object.keys(prev).length > 0) return prev;
-      const next = {};
-      relatedProducts.slice(0, 2).forEach((item) => {
-        if (item?.id) next[item.id] = true;
+    if (!product?.id) {
+      setRelatedProducts([]);
+      return undefined;
+    }
+    let active = true;
+    getCatalogueListing({
+      category: resolveProductCategoryToken(product),
+      page: 0,
+      size: 5,
+      inStock: true
+    })
+      .then((payload) => {
+        if (!active) return;
+        setRelatedProducts(
+          (Array.isArray(payload?.items) ? payload.items : [])
+            .filter((item) => String(item?.id || '') !== String(product.id))
+            .slice(0, 4)
+        );
+      })
+      .catch(() => {
+        if (active) setRelatedProducts([]);
       });
-      return next;
-    });
-  }, [relatedProducts]);
+    return () => {
+      active = false;
+    };
+  }, [product]);
 
   useEffect(() => {
     return () => {
@@ -655,8 +658,8 @@ function ProductPage() {
         key: 'shipping',
         icon: 'delivery',
         title: 'Доставка',
-        summary: 'Согласует менеджер',
-        caption: 'После оплаты менеджер уточнит варианты и финальную стоимость.'
+        summary: DELIVERY_EXCLUDED_LABEL,
+        caption: DELIVERY_SHORT_DISCLOSURE
       },
       {
         key: 'returns',
@@ -1793,8 +1796,7 @@ function ProductPage() {
                   onToggle={() => toggleAccordion('service')}
                 >
                   <div className="space-y-3">
-                    <p>Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.</p>
-                    <p>При онлайн-оплате вы оплачиваете только товары. Доставка оплачивается отдельно после согласования.</p>
+                    <p>{DELIVERY_DISCLOSURE}</p>
                     <p>Возврат возможен в течение 14 дней после получения. Оплата подтверждается на защищённом шаге оформления заказа или на странице заказа.</p>
                     <div className="flex flex-wrap gap-3 pt-1 text-xs">
                       <Link to="/info/payment" className="underline underline-offset-4">Оплата</Link>
@@ -1851,7 +1853,7 @@ function ProductPage() {
           {cartStatus ? <NotificationBanner notification={cartStatus} compact className="mb-3" /> : null}
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(10rem,1.3fr)] items-center gap-3">
             <div className="min-w-0">
-              <p className="text-xs text-ink/55">К оплате</p>
+              <p className="text-xs text-ink/55">К оплате сейчас</p>
               <p className="truncate text-lg font-medium text-ink">{formatRub(price * quantity)}</p>
             </div>
             <Button
@@ -1898,9 +1900,7 @@ function ProductPage() {
       >
         {sheetType === 'shipping' ? (
           <div className="space-y-3 text-sm text-ink/85">
-            <p>Финальную стоимость и варианты доставки согласует менеджер после оформления заказа.</p>
-            <p>При онлайн-оплате вы оплачиваете только товары. Доставка оплачивается отдельно после согласования.</p>
-            <p>Наш менеджер свяжется с вами в ближайшее время после оплаты.</p>
+            <p>{DELIVERY_DISCLOSURE}</p>
           </div>
         ) : sheetType === 'payment' ? (
           <div className="space-y-3 text-sm text-ink/85">

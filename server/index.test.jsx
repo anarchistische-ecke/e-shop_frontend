@@ -2,6 +2,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { gzipSync } from 'node:zlib';
 import request from 'supertest';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '../src/entry-server.jsx';
@@ -263,6 +264,45 @@ function createFetchMock() {
       });
     }
 
+    if (pathname === '/catalogue/listing') {
+      const items = products.map((product) => ({
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        summary: product.description,
+        description: product.description,
+        category: product.category,
+        categories: product.categories || [],
+        brand: product.brand,
+        price: product.variants[0].price,
+        oldPrice: product.variants[0].oldPrice,
+        primaryVariant: product.variants[0],
+        variants: [product.variants[0]],
+        stock: product.variants[0].stock,
+        inStock: true,
+        images: product.images.slice(0, 1),
+        attributes: [`Материал: ${product.material}`],
+        badges: ['in_stock'],
+        primaryMedia: {
+          url: 'https://img.example.com/media/products/prod-satin-sand/w640.webp'
+        }
+      }));
+      return jsonResponse({
+        items,
+        page: Number(searchParams.get('page') || 0),
+        size: Number(searchParams.get('size') || 12),
+        totalItems: items.length,
+        totalPages: 1,
+        appliedQuery: searchParams.get('q') || '',
+        correction: null,
+        facets: {
+          price: { minMinor: 420000, maxMinor: 420000 },
+          brands: [{ slug: 'cozy-home', name: 'Cozy Home', count: 1 }],
+          childCategories: []
+        }
+      });
+    }
+
     if (pathname === '/products/prod-satin-sand') {
       return jsonResponse(products[0]);
     }
@@ -300,7 +340,9 @@ describe('storefront SSR server', () => {
     const response = await request(app).get('/');
 
     expect(response.status).toBe(200);
-    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.headers['cache-control']).toBe(
+      'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+    );
     expect(response.text).toContain(
       'Домашний текстиль для уютного дома | Постельное Белье-ЮГ'
     );
@@ -358,6 +400,17 @@ describe('storefront SSR server', () => {
     expect(privacyResponse.text).toContain('Политика обработки персональных данных');
     expect(privacyResponse.text).toContain('ИП Касьянова И.Л.');
     expect(privacyResponse.text).toContain('/legal-assets/list.png');
+  });
+
+  it('keeps listing SSR responses inside the raw and compressed budgets', async () => {
+    const response = await request(app).get('/category/popular');
+    const rawBytes = Buffer.byteLength(response.text, 'utf8');
+    const compressedBytes = gzipSync(response.text).byteLength;
+
+    expect(rawBytes).toBeLessThan(750 * 1024);
+    expect(compressedBytes).toBeLessThan(150 * 1024);
+    expect(response.text).not.toContain('"reviewCount"');
+    expect(response.text).not.toContain('/products?');
   });
 
   it('redirects www and legacy /home routes to the root-path storefront', async () => {

@@ -16,7 +16,7 @@ function DeliveryStep({
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">3</span>
           <div>
             <h2 className="text-2xl font-semibold">Доставка</h2>
-            <p className="text-sm text-muted">Выберите способ доставки для этого заказа.</p>
+            <p className="text-sm text-muted">Проверьте условия отдельной оплаты доставки.</p>
           </div>
         </div>
         {!active ? (

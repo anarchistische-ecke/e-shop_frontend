@@ -3,7 +3,6 @@ import CheckoutStepper from './CheckoutStepper';
 import CheckoutSummary from './CheckoutSummary';
 import ContactStep from './ContactStep';
 import AddressStep from './AddressStep';
-import DeliveryStep from './DeliveryStep';
 import ConfirmationStep from './ConfirmationStep';
 import { CHECKOUT_STEPS } from './constants';
 
@@ -59,13 +58,13 @@ function CheckoutFlow({ checkout }) {
               checkout.clearRecoveryState();
               checkout.setSavePaymentMethod(value);
             }}
-            onContinue={checkout.handleContactNext}
+            showContinue={false}
             onEdit={() => checkout.setActiveStep(0)}
             disabled={checkout.isSubmitting}
           />
 
           <AddressStep
-            active={checkout.activeStep === 1}
+            active={checkout.activeStep === 0}
             homeAddress={checkout.homeAddress}
             addressParts={checkout.addressParts}
             deliveryNotice={checkout.deliveryNotice}
@@ -82,22 +81,14 @@ function CheckoutFlow({ checkout }) {
               checkout.clearFieldError('homeAddress');
               checkout.updateAddressPart(field, value);
             }}
-            onContinue={checkout.handleAddressNext}
-            onEdit={() => checkout.setActiveStep(1)}
-            disabled={checkout.isSubmitting}
-          />
-
-          <DeliveryStep
-            active={checkout.activeStep === 2}
-            deliveryLabel={checkout.deliveryLabel}
-            deliveryNotice={checkout.deliveryNotice}
-            onContinue={checkout.handleDeliveryNext}
-            onEdit={() => checkout.setActiveStep(2)}
+            onContinue={checkout.handleContactAddressNext}
+            continueLabel="Проверить заказ"
+            onEdit={() => checkout.setActiveStep(0)}
             disabled={checkout.isSubmitting}
           />
 
           <ConfirmationStep
-            active={checkout.activeStep === 3}
+            active={checkout.activeStep === 1}
             email={checkout.email}
             customerName={checkout.customerName}
             phone={checkout.phone}
@@ -108,9 +99,8 @@ function CheckoutFlow({ checkout }) {
             isSubmitting={checkout.isSubmitting}
             submitLabel={checkout.submitLabel}
             onEditContact={() => checkout.setActiveStep(0)}
-            onEditAddress={() => checkout.setActiveStep(1)}
-            onEditDelivery={() => checkout.setActiveStep(2)}
-            onOpen={() => checkout.setActiveStep(3)}
+            onEditAddress={() => checkout.setActiveStep(0)}
+            onOpen={() => checkout.setActiveStep(1)}
             onSubmit={checkout.handleSubmit}
             onSafeRetry={checkout.handleSafeRetry}
           />

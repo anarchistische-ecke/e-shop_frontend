@@ -21,11 +21,21 @@ function CmsPageUnavailableState() {
   );
 }
 
-function CmsManagedPage({ slug, fallback = null, preview = false }) {
+function CmsManagedPage({
+  slug,
+  fallback = null,
+  preview = false,
+  afterManagedContent = null,
+}) {
   const { page, isPageLoading } = useCmsPage(slug, { preview });
 
   if (page) {
-    return <CmsPageRenderer page={page} />;
+    return (
+      <>
+        <CmsPageRenderer page={page} />
+        {afterManagedContent}
+      </>
+    );
   }
 
   if (isPageLoading) {

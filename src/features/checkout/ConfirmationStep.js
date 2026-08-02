@@ -16,7 +16,6 @@ function ConfirmationStep({
   submitLabel,
   onEditContact,
   onEditAddress,
-  onEditDelivery,
   onOpen,
   onSafeRetry
 }) {
@@ -31,7 +30,7 @@ function ConfirmationStep({
     <Card as="section" padding="lg">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">4</span>
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">2</span>
           <div>
             <h2 className="text-2xl font-semibold">Проверка и оплата</h2>
             <p className="text-sm text-muted">{confirmationDescription}</p>
@@ -71,12 +70,9 @@ function ConfirmationStep({
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
               <div>
                 <div className="text-xs uppercase tracking-[0.15em] text-muted">Доставка</div>
-                <div className="font-semibold">Доставку согласует менеджер</div>
+                <div className="font-semibold">Не входит — менеджер рассчитает отдельно</div>
                 <div className="mt-1 text-xs text-muted">{deliveryNotice}</div>
               </div>
-              <Button variant="ghost" size="sm" className="text-xs" onClick={onEditDelivery} disabled={isSubmitting}>
-                Изменить
-              </Button>
             </div>
           </div>
 
@@ -106,7 +102,8 @@ function ConfirmationStep({
           <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-xs text-ink/90">
             Нажимая «
             {submitLabel}
-            », вы подтверждаете полную предоплату товаров. Доставка оплачивается отдельно после согласования с менеджером.
+            », вы подтверждаете полную предоплату товаров. Доставка в эту сумму не входит:
+            менеджер рассчитает и согласует её с вами до отправки.
           </div>
 
           <Button type="submit" block className="mt-5" disabled={isSubmitting}>

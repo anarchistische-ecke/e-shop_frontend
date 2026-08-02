@@ -12,6 +12,7 @@ import {
 } from '../../utils/header';
 import { buildAutocompleteData, normalizeSearchText } from '../../utils/search';
 import { readEnv } from '../../config/runtime';
+import { getCatalogueListing } from '../../api';
 
 export function useHeaderState() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,7 +26,8 @@ export function useHeaderState() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { categories, products } = useProductDirectoryData();
+  const { categories } = useProductDirectoryData();
+  const [suggestionProducts, setSuggestionProducts] = useState([]);
   const { items, lastAddedItem, dismissLastAddedItem } = useContext(CartContext);
   const { hasRole, isAuthenticated, logout, tokenParsed } = useAuth();
 
@@ -84,14 +86,14 @@ export function useHeaderState() {
     () =>
       buildAutocompleteData({
         query: debouncedSearchTerm.length >= 2 ? debouncedSearchTerm : '',
-        products,
+        products: suggestionProducts,
         categories,
         scopeToken: searchScope,
         queryLimit: 2,
         productLimit: 3,
         categoryLimit: 2
       }),
-    [categories, debouncedSearchTerm, products, searchScope]
+    [categories, debouncedSearchTerm, searchScope, suggestionProducts]
   );
 
   const hasSearchSuggestions =
@@ -152,6 +154,34 @@ export function useHeaderState() {
 
     return () => clearTimeout(debounceTimer);
   }, [searchTerm]);
+
+  useEffect(() => {
+    if (
+      debouncedSearchTerm.length < 2 ||
+      (!isSearchOpen && !isSearchFocused)
+    ) {
+      setSuggestionProducts([]);
+      return undefined;
+    }
+    let active = true;
+    getCatalogueListing({
+      q: debouncedSearchTerm,
+      scope: searchScope,
+      page: 0,
+      size: 5
+    })
+      .then((payload) => {
+        if (active) {
+          setSuggestionProducts(Array.isArray(payload?.items) ? payload.items : []);
+        }
+      })
+      .catch(() => {
+        if (active) setSuggestionProducts([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [debouncedSearchTerm, isSearchFocused, isSearchOpen, searchScope]);
 
   useEffect(() => {
     const headerEl = headerBarRef.current;

@@ -10,10 +10,9 @@ async function completeCheckoutForm(page) {
   await page.getByLabel(/Электронная почта/i).fill('buyer@example.com');
   await page.getByLabel(/^Имя/i).fill('Иван Петров');
   await page.getByLabel(/^Телефон/i).fill('+79990000000');
-  await page.locator('#checkout-form').getByRole('button', { name: 'К адресу' }).click();
-
-  await page.getByLabel(/Домашний адрес/i).fill('Москва, Тестовая улица, 1');
-  await page.locator('#checkout-form').getByRole('button', { name: 'К подтверждению' }).click();
+  await page.getByLabel(/Город/i).fill('Москва');
+  await page.getByLabel(/Улица, дом/i).fill('Тестовая улица, 1');
+  await page.locator('#checkout-form').getByRole('button', { name: 'Проверить заказ' }).click();
 }
 
 test('wishlist persists to favorites and supports direct add-to-cart for single-variant products', async ({ page }) => {
@@ -30,7 +29,7 @@ test('wishlist persists to favorites and supports direct add-to-cart for single-
   await expect(page.getByRole('link', { name: /Набор полотенец Лесной мох/i }).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'В корзину' }).first().click();
-  await expect(page.getByText('Добавлено в корзину')).toBeVisible();
+  await expect(page.getByText('Добавлено в корзину').first()).toBeVisible();
 
   await page.goto('/cart');
   await expect(page.getByRole('heading', { name: 'Набор полотенец Лесной мох' })).toBeVisible();
@@ -64,11 +63,11 @@ test('cart checkout creates an embedded payment session and /pay/:token can requ
   await page.goto('/product/prod-satin-sand/satin-sand');
   await page.getByRole('button', { name: 'Добавить в корзину' }).click();
   await page.getByRole('link', { name: 'Открыть корзину' }).click();
-  await page.getByRole('button', { name: 'Оформить заказ' }).click();
+  await page.getByRole('button', { name: 'Оформить заказ', exact: true }).click();
   await completeCheckoutForm(page);
 
   await page.locator('#checkout-form').getByRole('button', { name: 'Создать заказ и открыть форму оплаты' }).click();
-  await expect(page).toHaveURL(new RegExp(`/order/${publicOrder.publicToken}$`));
+  await expect(page).toHaveURL(/\/account\?order=order-e2e-1#orders$/);
   await expect(page.locator('[data-testid="mock-yookassa-widget"]')).toBeVisible();
   expect(testInfo.storefrontApi.stats.checkoutRequests).toBe(1);
   expect(testInfo.storefrontApi.stats.checkoutPayloads[0]).toMatchObject({
@@ -99,7 +98,7 @@ test('account reorder adds order items back to cart and RMA creation records sel
   await expect(page.getByRole('heading', { name: 'Мои заказы' })).toBeVisible();
   await expect(page.getByText(`Заказ ${String(returnableOrder.id).slice(0, 8)}...`).first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Повторить заказ' }).first().click();
+  await page.getByRole('button', { name: 'Повторить', exact: true }).first().click();
   await expect(page.getByText('Товары добавлены в корзину')).toBeVisible();
   expect(testInfo.storefrontApi.stats.addItemPayloads).toContainEqual({
     variantId: 'var-satin-sand-200',

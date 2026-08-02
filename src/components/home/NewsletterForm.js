@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button, Card, Input } from '../ui';
+import { createMarketingSubscription } from '../../api';
+import { METRIKA_GOALS, trackGoal } from '../../utils/metrika';
 
 function NewsletterForm() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState(null);
+  const [consent, setConsent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const value = email.trim();
     const isValid = /\S+@\S+\.\S+/.test(value);
@@ -17,16 +22,40 @@ function NewsletterForm() {
       });
       return;
     }
+    if (!consent) {
+      setStatus({
+        type: 'error',
+        message: 'Подтвердите согласие на рекламную рассылку.'
+      });
+      return;
+    }
 
-    setStatus({
-      type: 'success',
-      message: 'Спасибо. Мы будем присылать только полезные подборки и редкие акции.'
-    });
-    setEmail('');
+    setIsSubmitting(true);
+    try {
+      await createMarketingSubscription({
+        email: value,
+        consent: true,
+        source: 'home_newsletter'
+      });
+      trackGoal(METRIKA_GOALS.NEWSLETTER_SUBMIT, { source: 'home_newsletter' });
+      setStatus({
+        type: 'success',
+        message: 'Проверьте почту и подтвердите подписку по ссылке в течение 24 часов.'
+      });
+      setEmail('');
+      setConsent(false);
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: 'Не удалось отправить письмо. Попробуйте ещё раз немного позже.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <section className="page-shell page-section">
+    <section id="newsletter" className="page-shell page-section">
       <Card
         padding="lg"
         className="rounded-[32px] border border-primary/20 bg-gradient-to-br from-white via-white to-blush/65"
@@ -56,8 +85,25 @@ function NewsletterForm() {
               placeholder="Ваша электронная почта"
               aria-label="Электронная почта для рассылки"
             />
-            <Button type="submit" block>
-              Подписаться
+            <label className="flex items-start gap-2 text-xs leading-relaxed text-muted">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(event) => {
+                  setConsent(event.target.checked);
+                  if (status) setStatus(null);
+                }}
+                className="mt-0.5"
+              />
+              <span>
+                Я согласен(на) получать рекламную рассылку и принимаю{' '}
+                <Link className="underline hover:text-primary" to="/konfidentsialnost-i-zashchita-informatsii">
+                  политику конфиденциальности
+                </Link>.
+              </span>
+            </label>
+            <Button type="submit" block disabled={isSubmitting}>
+              {isSubmitting ? 'Отправляем…' : 'Подписаться'}
             </Button>
             {status ? (
               <p

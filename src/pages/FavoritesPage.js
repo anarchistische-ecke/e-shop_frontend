@@ -1,10 +1,11 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import NotificationBanner from '../components/NotificationBanner';
 import QuickViewSheet from '../components/commerce/QuickViewSheet';
 import ProductCard from '../components/ProductCard';
 import Seo from '../components/Seo';
 import { Button, Card } from '../components/ui';
+import { getCatalogueCards } from '../api';
 import { CartContext } from '../contexts/CartContext';
 import { WishlistContext } from '../contexts/WishlistContext';
 import { getPrimaryVariant } from '../utils/product';
@@ -18,12 +19,31 @@ function getStockValue(entity) {
 }
 
 function FavoritesPage() {
-  const { items, count, add, remove, clear } = useContext(WishlistContext);
+  const { ids, items, count, add, remove, clear, reconcile } = useContext(WishlistContext);
   const { addItem } = useContext(CartContext);
   const [status, setStatus] = useState(null);
   const [pendingId, setPendingId] = useState('');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [undoProduct, setUndoProduct] = useState(null);
+  const [isReconciling, setIsReconciling] = useState(false);
+
+  useEffect(() => {
+    if (!ids.length) return undefined;
+    let active = true;
+    setIsReconciling(true);
+    getCatalogueCards({ productKeys: ids, productLimit: Math.min(ids.length, 24) })
+      .then((payload) => {
+        if (!active) return;
+        reconcile(Array.isArray(payload?.products) ? payload.products : []);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setIsReconciling(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [ids, reconcile]);
 
   const handleAddSingleVariant = async (product) => {
     const variants = getVariants(product);
@@ -113,7 +133,11 @@ function FavoritesPage() {
           </div>
         ) : null}
 
-        {items.length === 0 ? (
+        {items.length === 0 && isReconciling ? (
+          <Card padding="lg" className="text-center">
+            <p className="text-sm text-muted">Обновляем сохранённые товары…</p>
+          </Card>
+        ) : items.length === 0 ? (
           <Card padding="lg" className="text-center">
             <p className="mb-2 text-lg font-semibold">Избранное пока пусто</p>
             <p className="mx-auto mb-5 max-w-xl text-sm text-muted">

@@ -16,6 +16,7 @@ function ContactStep({
   onSavePaymentMethodChange,
   onContinue,
   onEdit,
+  showContinue = true,
   disabled = false
 }) {
   return (
@@ -108,9 +109,11 @@ function ContactStep({
             </label>
           ) : null}
 
-          <Button className="mt-5" onClick={onContinue} disabled={disabled}>
-            К адресу
-          </Button>
+          {showContinue ? (
+            <Button className="mt-5" onClick={onContinue} disabled={disabled}>
+              К адресу
+            </Button>
+          ) : null}
         </>
       ) : (
         <p className="text-sm text-muted">

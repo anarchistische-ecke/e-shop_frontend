@@ -152,9 +152,9 @@ async function fillCheckout(page) {
   await page.getByLabel(/Электронная почта/i).fill(readSetting('PLAYWRIGHT_STAGING_CUSTOMER_EMAIL') || 'buyer@example.com');
   await page.getByLabel(/^Имя/i).fill('Smoke Customer');
   await page.getByLabel(/^Телефон/i).fill('+79990000000');
-  await page.locator('#checkout-form').getByRole('button', { name: 'К адресу' }).click();
-  await page.getByLabel(/Домашний адрес/i).fill('Smoke staging address');
-  await page.locator('#checkout-form').getByRole('button', { name: 'К подтверждению' }).click();
+  await page.getByLabel(/Город/i).fill('Москва');
+  await page.getByLabel(/Улица, дом/i).fill('Smoke staging address');
+  await page.locator('#checkout-form').getByRole('button', { name: 'Проверить заказ' }).click();
 }
 
 test.describe('staging integration smoke', () => {

@@ -22,20 +22,57 @@ export function loadCheckoutDraft(cartId) {
     const rawValue = storage.getItem(draftKey);
     if (!rawValue) return null;
     const payload = JSON.parse(rawValue);
-    if (payload?.version !== CHECKOUT_DRAFT_VERSION) {
+    const migrated = migrateCheckoutDraft(payload);
+    if (!migrated) {
       storage.removeItem(draftKey);
       return null;
     }
-    const savedAt = Number(payload?.savedAt || 0);
+    const savedAt = Number(migrated?.savedAt || 0);
     if (!Number.isFinite(savedAt) || Date.now() - savedAt > CHECKOUT_DRAFT_TTL_MS) {
       storage.removeItem(draftKey);
       return null;
     }
-    return payload;
+    if (migrated.version !== payload.version) {
+      storage.setItem(draftKey, JSON.stringify(migrated));
+    }
+    return migrated;
   } catch (err) {
     storage.removeItem(buildCheckoutDraftKey(cartId));
     return null;
   }
+}
+
+function hasValidContactAddress(form = {}) {
+  const hasContact =
+    /\S+@\S+\.\S+/.test(String(form.email || '').trim()) &&
+    String(form.customerName || '').trim() &&
+    String(form.phone || '').trim();
+  const parts = form.addressParts || {};
+  const hasStructuredAddress =
+    String(parts.city || '').trim() &&
+    String(parts.street || '').trim();
+  return Boolean(hasContact && (hasStructuredAddress || String(form.homeAddress || '').trim()));
+}
+
+export function migrateCheckoutDraft(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  if (payload.version === CHECKOUT_DRAFT_VERSION) return payload;
+  if (payload.version !== 3) return null;
+
+  const form = payload.form || {};
+  const oldStep = Number(form.activeStep || 0);
+  const canOpenReview = oldStep >= 2 && hasValidContactAddress(form);
+  return {
+    ...payload,
+    version: CHECKOUT_DRAFT_VERSION,
+    form: {
+      ...form,
+      activeStep: canOpenReview ? 1 : 0,
+      completedSteps: canOpenReview
+        ? { contact_address: true }
+        : {}
+    }
+  };
 }
 
 export function saveCheckoutDraft(cartId, draft) {

@@ -73,6 +73,36 @@ function serializeCartPricing(state, catalogProducts) {
   };
 }
 
+function compactProduct(product) {
+  const primaryVariant = (product.variants || [])[0] || null;
+  const stock = (product.variants || []).reduce(
+    (sum, variant) => sum + Number(variant.stock ?? variant.stockQuantity ?? 0),
+    0
+  );
+  return {
+    id: product.id,
+    slug: product.slug,
+    name: product.name,
+    summary: String(product.description || '').slice(0, 160),
+    description: String(product.description || '').slice(0, 160),
+    category: product.category,
+    categories: product.categories || [],
+    brand: product.brand,
+    brandName: product.brandName || '',
+    primaryVariant,
+    variants: primaryVariant ? [primaryVariant] : [],
+    price: primaryVariant?.price ?? product.price,
+    oldPrice: primaryVariant?.oldPrice ?? product.oldPrice,
+    onSale: Number(primaryVariant?.oldPrice || 0) > Number(primaryVariant?.price || product.price || 0),
+    stock,
+    inStock: stock > 0,
+    images: (product.images || []).slice(0, 1),
+    primaryMedia: product.primaryMedia || product.images?.[0]?.media || null,
+    attributes: product.material ? [`Материал: ${product.material}`] : [],
+    badges: stock > 0 ? ['in_stock'] : ['out_of_stock'],
+  };
+}
+
 function fulfillJson(route, payload, status = 200) {
   return route.fulfill({
     status,
@@ -409,6 +439,8 @@ async function mockStorefrontApi(page, overrides = {}) {
     customerRmaListRequests: 0,
     customerRmaCreateRequests: 0,
     customerRmaPayloads: [],
+    fullProductsRequests: 0,
+    newsletterRequests: 0,
   };
   const paymentProviderConfig = {
     ...clone(paymentProvider),
@@ -543,7 +575,62 @@ async function mockStorefrontApi(page, overrides = {}) {
     }
 
     if (pathname === '/products' && method === 'GET') {
+      stats.fullProductsRequests += 1;
       return fulfillJson(route, clone(storefrontProducts));
+    }
+
+    if (pathname === '/catalogue/listing' && method === 'GET') {
+      const query = String(url.searchParams.get('q') || '').trim().toLowerCase();
+      const category = String(url.searchParams.get('category') || url.searchParams.get('scope') || '').trim();
+      const brand = String(url.searchParams.get('brand') || '').trim();
+      const pageNumber = Math.max(0, Number(url.searchParams.get('page') || 0));
+      const size = Math.max(1, Math.min(24, Number(url.searchParams.get('size') || 12)));
+      let filtered = storefrontProducts.filter((product) => {
+        if (category && !['popular', 'new'].includes(category) && String(product.category || '') !== category) return false;
+        if (brand && String(product.brand || '') !== brand) return false;
+        if (query && !`${product.name} ${product.description || ''}`.toLowerCase().includes(query)) return false;
+        const card = compactProduct(product);
+        if (url.searchParams.get('inStock') === 'true' && !card.inStock) return false;
+        if (url.searchParams.get('sale') === 'true' && !card.onSale) return false;
+        return true;
+      });
+      const cards = filtered.map(compactProduct);
+      const priceMinors = cards.map(
+        (card) => Math.round(Number(card.price?.amount ?? card.price ?? 0) * 100)
+      );
+      const start = pageNumber * size;
+      return fulfillJson(route, {
+        items: cards.slice(start, start + size),
+        page: pageNumber,
+        size,
+        totalItems: cards.length,
+        totalPages: Math.ceil(cards.length / size),
+        appliedQuery: query,
+        correction: null,
+        facets: {
+          price: {
+            minMinor: priceMinors.length ? Math.min(...priceMinors) : 0,
+            maxMinor: priceMinors.length ? Math.max(...priceMinors) : 0,
+          },
+          brands: brands.map((entry) => ({ slug: entry.slug, name: entry.name, count: cards.length })),
+          childCategories: [],
+        },
+      });
+    }
+
+    if (pathname === '/catalogue/cards' && method === 'GET') {
+      const requestedKeys = String(url.searchParams.get('productKeys') || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      const selected = requestedKeys.length
+        ? storefrontProducts.filter((product) => requestedKeys.includes(String(product.id)) || requestedKeys.includes(String(product.slug)))
+        : storefrontProducts;
+      return fulfillJson(route, {
+        compact: true,
+        categories: clone(categories),
+        products: selected.map(compactProduct),
+      });
     }
 
     if (/^\/products\/[^/]+$/.test(pathname) && method === 'GET') {
@@ -565,6 +652,35 @@ async function mockStorefrontApi(page, overrides = {}) {
 
     if (pathname === `/carts/${cartState.id}/pricing` && method === 'GET') {
       return fulfillJson(route, serializeCartPricing(cartState, storefrontProducts));
+    }
+
+    if (pathname === `/carts/${cartState.id}/view` && method === 'GET') {
+      const pricing = serializeCartPricing(cartState, storefrontProducts);
+      return fulfillJson(route, {
+        cartId: cartState.id,
+        promoCode: '',
+        pricing,
+        items: cartState.items.map((item) => {
+          const resolved = findVariant(storefrontProducts, item.variantId);
+          const line = pricing.items.find((entry) => entry.variantId === item.variantId) || null;
+          return {
+            ...item,
+            pricing: line,
+            product: resolved
+              ? {
+                  id: resolved.product.id,
+                  slug: resolved.product.slug,
+                  name: resolved.product.name,
+                  variantName: resolved.variant.name,
+                  size: resolved.variant.sizeLabel || '',
+                  color: resolved.variant.colorLabel || '',
+                  image: resolved.product.images?.[0] || null,
+                  primaryMedia: resolved.product.primaryMedia || null,
+                }
+              : null,
+          };
+        }),
+      });
     }
 
     if (pathname === `/carts/${cartState.id}/items` && method === 'POST') {
@@ -619,6 +735,19 @@ async function mockStorefrontApi(page, overrides = {}) {
       stats.checkoutRequests += 1;
       stats.checkoutPayloads.push(request.postDataJSON());
       return fulfillJson(route, clone(checkoutResponse));
+    }
+
+    if (pathname === '/marketing/subscriptions' && method === 'POST') {
+      stats.newsletterRequests += 1;
+      return fulfillJson(route, { status: 'PENDING' }, 202);
+    }
+
+    if (pathname === '/marketing/subscriptions/confirm' && method === 'POST') {
+      return fulfillJson(route, { status: 'CONFIRMED' });
+    }
+
+    if (pathname === '/marketing/subscriptions/unsubscribe' && method === 'POST') {
+      return fulfillJson(route, { status: 'UNSUBSCRIBED' });
     }
 
     if (pathname === '/orders/me' && method === 'GET') {

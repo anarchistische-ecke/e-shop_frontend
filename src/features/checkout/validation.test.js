@@ -76,7 +76,7 @@ describe('checkout validation', () => {
       fieldErrors: {
         homeAddress: 'Проверьте это поле.'
       },
-      nextStep: 1
+      nextStep: 0
     });
   });
 
@@ -89,7 +89,7 @@ describe('checkout validation', () => {
       fieldErrors: {
         homeAddress: 'Проверьте это поле.'
       },
-      nextStep: 1
+      nextStep: 0
     });
   });
 });
