@@ -269,7 +269,7 @@ function ProductPage() {
   const [selectedVariant, setSelectedVariant] = useState(() =>
     resolveInitialSelectedVariant(initialProduct)
   );
-  const [openAccordions, setOpenAccordions] = useState({ bundle: true, description: true });
+  const [openAccordions, setOpenAccordions] = useState({});
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [bundleSelections, setBundleSelections] = useState({});
   const [quantity, setQuantity] = useState(1);
@@ -347,7 +347,7 @@ function ProductPage() {
     }, [cartStatus, quantity, selectedVariant?.id]);
 
   useEffect(() => {
-    setOpenAccordions({ bundle: true, description: true });
+    setOpenAccordions({});
     setActiveImageIndex(0);
     setBundleSelections({});
     setQuantity(1);
@@ -645,7 +645,8 @@ function ProductPage() {
     [images, productVariants]
   );
 
-  const bundleItems = relatedProducts.slice(0, 3);
+  const bundleItems = useMemo(() => relatedProducts.slice(0, 3), [relatedProducts]);
+  const recommendationItems = useMemo(() => relatedProducts.slice(3), [relatedProducts]);
   const bundleAddOnTotal = bundleItems.reduce((sum, item) => {
     if (!bundleSelections[item.id]) return sum;
     return sum + getProductPrice(item);
@@ -821,12 +822,12 @@ function ProductPage() {
   }, [product, selectedVariant]);
 
   useEffect(() => {
-    if (!relatedProducts.length) return;
-    trackProductList(relatedProducts, {
+    if (!recommendationItems.length) return;
+    trackProductList(recommendationItems, {
       listName: 'pdp_related_products',
       pageType: 'product'
     });
-  }, [relatedProducts]);
+  }, [recommendationItems]);
 
   const selectImageByIndex = (index) => {
     if (!orderedImages.length) return;
@@ -1247,7 +1248,7 @@ function ProductPage() {
                     key={image ? image.id || index : index}
                     type="button"
                     onClick={() => selectImageByIndex(index)}
-                    className="focus-ring-soft flex h-12 w-10 items-center justify-center rounded-full"
+                    className="focus-ring-soft flex h-12 w-12 items-center justify-center rounded-full"
                     aria-label={`Показать изображение ${index + 1}`}
                     aria-current={index === activeImageIndex ? 'true' : undefined}
                   >
@@ -1368,7 +1369,6 @@ function ProductPage() {
                     </Link>
                   ) : null}
                   {product?.material ? <span>{product.material}</span> : null}
-                  {selectedVariant?.name ? <span>{selectedVariant.name}</span> : null}
                   {productPresentation?.badgeText ? <span>{productPresentation.badgeText}</span> : null}
                   {productPresentation?.ribbonText ? <span>{productPresentation.ribbonText}</span> : null}
                 </div>
@@ -1820,7 +1820,7 @@ function ProductPage() {
           className="mt-10 sm:mt-12"
         />
 
-        {relatedProducts.length > 0 && (
+        {recommendationItems.length > 0 && (
           <section className="mt-12 sm:mt-14">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-2xl font-medium tracking-normal">С этим товаром покупают</h2>
@@ -1829,7 +1829,7 @@ function ProductPage() {
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
-              {relatedProducts.map((item, index) => (
+              {recommendationItems.map((item, index) => (
                 <ProductCard
                   key={item.id}
                   product={item}

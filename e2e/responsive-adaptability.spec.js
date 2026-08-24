@@ -66,6 +66,35 @@ test('mobile filter sheet uses a 75dvh bottom sheet with sticky apply controls',
   await expect(dialog.getByTestId('product-filters-sheet-actions')).toHaveCSS('opacity', '0');
 });
 
+test('mobile category uses one coherent card and filter system', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/category/popular');
+
+  await expect(page.locator('main h1')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: /фильтр/i })).toHaveCount(1);
+
+  const firstCard = page.locator('.product-card').first();
+  await expect(firstCard).toBeVisible();
+  await expect(firstCard.getByRole('button', { name: 'Добавить в избранное' })).toBeVisible();
+
+  const availabilityCount = await firstCard.locator('p, span').evaluateAll((elements) =>
+    elements.filter((element) => element.textContent.trim() === 'В наличии').length
+  );
+  expect(availabilityCount).toBe(1);
+
+  const headerOverflow = await page.locator('header').evaluate((header) =>
+    [...header.querySelectorAll('button, a')]
+      .filter((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      })
+      .slice(0, 5)
+      .some((element) => element.scrollWidth > element.clientWidth)
+  );
+  expect(headerOverflow).toBe(false);
+  await expectNoHorizontalOverflow(page);
+});
+
 test('product page hides mobile breadcrumbs and keeps PDP sticky CTA safe-area aware', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/product/prod-satin-sand/satin-sand');
@@ -75,6 +104,10 @@ test('product page hides mobile breadcrumbs and keeps PDP sticky CTA safe-area a
 
   const stickyBar = page.getByTestId('product-mobile-cart-bar');
   await expect(stickyBar).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Товары коллекции' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'С этим товаром покупают' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Что входит в комплект/ })).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('button', { name: /Описание/ })).toHaveAttribute('aria-expanded', 'false');
   const box = await stickyBar.boundingBox();
   const viewport = page.viewportSize();
   expect(box).not.toBeNull();

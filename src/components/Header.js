@@ -14,7 +14,7 @@ import MobileMenu from './header/MobileMenu';
 import SearchBar from './header/SearchBar';
 import { useHeaderState } from './header/useHeaderState';
 import MiniCartDrawer from './commerce/MiniCartDrawer';
-import { CartIcon, CatalogIcon, HeartIcon, SearchIcon } from './header/icons';
+import { CartIcon, CatalogIcon, HeartIcon, HomeIcon, SearchIcon } from './header/icons';
 
 function isInternalUrl(url) {
   return typeof url === 'string' && url.startsWith('/');
@@ -127,10 +127,11 @@ function Header() {
                 </button>
                 <Link
                   to="/"
-                  className="focus-ring-soft flex min-h-[52px] flex-col items-center justify-center rounded-2xl border border-ink/10 bg-white/88 px-1 text-center font-display text-[17px] font-semibold leading-none text-ink shadow-[0_8px_18px_rgba(43,39,34,0.08)]"
+                  className="focus-ring-soft flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-ink/10 bg-white/88 px-1 text-[11px] font-semibold text-ink shadow-[0_8px_18px_rgba(43,39,34,0.08)]"
+                  aria-label={`${siteSettings.siteName}, домой`}
                 >
-                  {siteSettings.siteName}
-                  <span className="mt-1 font-body text-[10px] font-semibold text-muted">Домой</span>
+                  <HomeIcon className="h-5 w-5" />
+                  Домой
                 </Link>
                 <button
                   type="button"

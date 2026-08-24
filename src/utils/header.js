@@ -22,6 +22,17 @@ export function resolveWayfindingLabel(pathname = '', search = '') {
   if (pathname.startsWith('/checkout')) return 'Оформление';
   if (pathname.startsWith('/pay/')) return 'Оплата заказа';
   if (pathname.startsWith('/favorites')) return 'Избранное';
+  if (pathname.startsWith('/about')) return 'О бренде';
+  if (pathname.startsWith('/info/payment')) return 'Оплата';
+  if (pathname.startsWith('/info/delivery')) return 'Доставка';
+  if (pathname.startsWith('/info/production')) return 'Производство';
+  if (pathname.startsWith('/info/legal')) return 'Реквизиты';
+  if (pathname.startsWith('/konfidentsialnost-i-zashchita-informatsii')) return 'Конфиденциальность';
+  if (pathname.startsWith('/polzovatelskoe-soglashenie')) return 'Пользовательское соглашение';
+  if (pathname.startsWith('/soglasie-na-poluchenie-reklamy')) return 'Согласие на рекламу';
+  if (pathname.startsWith('/usloviya-prodazhi')) return 'Условия продажи';
+  if (pathname.startsWith('/kuki')) return 'Политика cookies';
+  if (pathname.startsWith('/soglasie-na-obrabotku-pd')) return 'Обработка данных';
   if (pathname.startsWith('/manager/payment-link')) return 'Ссылка на оплату';
   if (pathname.startsWith('/account')) return 'Личный кабинет';
   return 'Раздел магазина';

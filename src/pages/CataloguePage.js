@@ -232,14 +232,21 @@ function CataloguePage() {
           <span className="text-ink">{hasQuery ? 'Поиск' : 'Каталог'}</span>
         </nav>
 
-        <h1 className="sr-only">
-          {hasQuery ? 'Результаты поиска по всему каталогу' : 'Каталог товаров'}
-        </h1>
+        <div className="mt-4 lg:mt-2.5">
+          <h1 className="text-2xl font-semibold sm:text-3xl">
+            {hasQuery ? 'Результаты поиска' : 'Каталог товаров'}
+          </h1>
+          <p className="mt-1.5 text-sm text-muted">
+            {hasQuery
+              ? `По запросу «${params.query}» во всём каталоге`
+              : 'Домашний текстиль по категориям, материалам и наличию.'}
+          </p>
+        </div>
 
         <Card
           as="section"
           variant="quiet"
-          className="mt-3 md:p-5 lg:mt-2.5"
+          className="mt-4 md:p-5 lg:mt-3"
           padding="sm"
           data-testid="catalogue-search-card"
         >
