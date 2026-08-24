@@ -41,6 +41,11 @@ describe('header utils', () => {
     expect(resolveWayfindingLabel('/checkout')).toBe('Оформление');
     expect(resolveWayfindingLabel('/pay/token-1')).toBe('Оплата заказа');
     expect(resolveWayfindingLabel('/favorites')).toBe('Избранное');
+    expect(resolveWayfindingLabel('/about')).toBe('О бренде');
+    expect(resolveWayfindingLabel('/info/payment')).toBe('Оплата');
+    expect(resolveWayfindingLabel('/info/delivery')).toBe('Доставка');
+    expect(resolveWayfindingLabel('/info/production')).toBe('Производство');
+    expect(resolveWayfindingLabel('/info/legal')).toBe('Реквизиты');
     expect(resolveWayfindingLabel('/manager/payment-link')).toBe('Ссылка на оплату');
     expect(resolveWayfindingLabel('/search', '?query=плед')).toBe('Поиск');
     expect(resolveWayfindingLabel('/category/search?query=плед')).toBe('Поиск');

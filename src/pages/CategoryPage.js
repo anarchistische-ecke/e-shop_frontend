@@ -6,19 +6,14 @@ import {
   CataloguePresentationHero,
 } from '../components/cms/CataloguePresentationSections';
 import CmsStorefrontCollectionRail from '../components/cms/CmsStorefrontCollectionRail';
+import ProductCard from '../components/ProductCard';
 import {
   Button,
   Card,
   FilterChip,
   Select
 } from '../components/ui';
-import {
-  getPrimaryImageUrl,
-  getPrimaryVariant,
-  getProductPrice,
-  moneyToNumber,
-  normalizeProductImages
-} from '../utils/product';
+import { getPrimaryImageUrl } from '../utils/product';
 import { PRODUCT_LIST_SORT_OPTIONS } from '../features/product-list/constants';
 import {
   ProductFiltersDesktop,
@@ -26,26 +21,20 @@ import {
   ProductFiltersTrigger
 } from '../features/product-list/ProductFilters';
 import ProductPagination from '../features/product-list/ProductPagination';
-import {
-  getStockCount,
-  resolveCategoryToken
-} from '../features/product-list/selectors';
+import { resolveCategoryToken } from '../features/product-list/selectors';
 import { useProductList } from '../features/product-list/useProductList';
 import { useProductListRouteState } from '../features/product-list/useProductListRouteState';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { normalizeSearchText } from '../utils/search';
-import { buildProductPath } from '../utils/url';
 import {
   METRIKA_GOALS,
   trackGoal,
-  trackProductClick,
   trackProductList
 } from '../utils/metrika';
 import {
   buildBreadcrumbJsonLd,
   buildJsonLdGraph,
   buildOfferCatalogJsonLd,
-  buildOfferMicrodata,
   buildWebPageJsonLd
 } from '../seo/schema';
 import {
@@ -54,196 +43,6 @@ import {
   hasListingSeoVariant
 } from '../seo/listing';
 import QuickViewSheet from '../components/commerce/QuickViewSheet';
-
-function CategoryCard({
-  product,
-  fromPath,
-  fromLabel,
-  listName,
-  position,
-  withOfferCatalogMicrodata = false,
-  onQuickView
-}) {
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const hoverTimerRef = useRef(null);
-
-  const images = useMemo(() => {
-    const normalized = normalizeProductImages(product?.images || []);
-    if (normalized.length > 0) return normalized;
-    const fallback = getPrimaryImageUrl(product);
-    return fallback
-      ? [{ id: `${product.id}-fallback`, url: fallback, variantId: null, alt: product?.name || '' }]
-      : [];
-  }, [product]);
-
-  useEffect(() => {
-    if (!isHovered || images.length <= 1) return undefined;
-    hoverTimerRef.current = setInterval(() => {
-      setActiveImageIndex((prev) => (prev + 1) % images.length);
-    }, 1700);
-
-    return () => {
-      if (hoverTimerRef.current) clearInterval(hoverTimerRef.current);
-    };
-  }, [images.length, isHovered]);
-
-  useEffect(() => {
-    if (activeImageIndex > images.length - 1) {
-      setActiveImageIndex(0);
-    }
-  }, [activeImageIndex, images.length]);
-
-  const currentImage = images[activeImageIndex]?.url || '';
-  const primaryVariant = getPrimaryVariant(product);
-  const price = primaryVariant?.price ? moneyToNumber(primaryVariant.price) : getProductPrice(product);
-  const oldPrice = primaryVariant?.oldPrice
-    ? moneyToNumber(primaryVariant.oldPrice)
-    : product?.oldPrice
-    ? moneyToNumber(product.oldPrice)
-    : 0;
-  const hasDiscount = oldPrice > price;
-  const discount = hasDiscount
-    ? primaryVariant?.discountPercent || product.discountPercent || Math.round(((oldPrice - price) / oldPrice) * 100)
-    : 0;
-  const stockCount = getStockCount(product);
-  const offerMicrodata = useMemo(
-    () =>
-      withOfferCatalogMicrodata
-        ? buildOfferMicrodata(product, {
-            position,
-            image: currentImage
-          })
-        : null,
-    [currentImage, position, product, withOfferCatalogMicrodata]
-  );
-
-  const badges = [
-    stockCount > 0 && stockCount <= 3 ? `Мало на складе: ${stockCount}` : '',
-    Array.isArray(product?.badges) && product.badges.includes('new') ? 'Новинка' : ''
-  ].filter(Boolean);
-
-  const attributeLine =
-    product?.attributes?.[0] ||
-    (product?.material
-      ? `Материал: ${product.material}`
-      : product?.size
-      ? `Размер: ${product.size}`
-      : product?.color
-      ? `Цвет: ${product.color}`
-      : product?.brandName
-      ? `Бренд: ${product.brandName}`
-      : stockCount > 0
-      ? 'Можно добавить в корзину'
-      : 'Сейчас нет в наличии');
-
-  return (
-    <Card
-      variant="quiet"
-      padding="sm"
-      interactive
-      className="group relative block rounded-[24px]"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      itemProp={offerMicrodata ? 'itemListElement' : undefined}
-      itemScope={Boolean(offerMicrodata) || undefined}
-      itemType={offerMicrodata ? 'https://schema.org/Offer' : undefined}
-    >
-      {offerMicrodata ? (
-        <>
-          <meta itemProp="name" content={offerMicrodata.name} />
-          <meta itemProp="description" content={offerMicrodata.description} />
-          <link itemProp="url" href={offerMicrodata.url} />
-          <link itemProp="image" href={offerMicrodata.image} />
-          <link itemProp="availability" href={offerMicrodata.availability} />
-          <meta itemProp="price" content={offerMicrodata.price} />
-          <meta itemProp="priceCurrency" content={offerMicrodata.priceCurrency} />
-        </>
-      ) : null}
-      <Link
-        to={buildProductPath(product)}
-        state={{ fromPath, fromLabel }}
-        className="block"
-        onClick={() => {
-          trackProductClick(product, {
-            variant: primaryVariant,
-            variantId: primaryVariant?.id,
-            listName,
-            position
-          });
-        }}
-      >
-        <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
-          <div className="relative pt-[74%]">
-            {currentImage ? (
-              <img
-                src={currentImage}
-                alt={product.name}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                loading="lazy"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">Нет фото</div>
-            )}
-          </div>
-
-          <div className="absolute inset-x-2 top-2 flex flex-wrap items-start gap-2">
-            {hasDiscount ? (
-              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                −{discount}%
-              </span>
-            ) : null}
-            {badges.slice(0, 2).map((badge) => (
-              <span
-                key={`${product.id}-${badge}`}
-                className="rounded-full border border-ink/15 bg-white/90 px-2.5 py-1 text-[11px] text-ink/75"
-              >
-                {badge}
-              </span>
-            ))}
-          </div>
-        </div>
-      </Link>
-
-      <div className="mt-3 space-y-2">
-        <Link
-          to={buildProductPath(product)}
-          state={{ fromPath, fromLabel }}
-          className="block"
-          onClick={() => {
-            trackProductClick(product, {
-              variant: primaryVariant,
-              variantId: primaryVariant?.id,
-              listName,
-              position
-            });
-          }}
-        >
-          <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
-        </Link>
-
-        <p className="line-clamp-1 text-xs text-muted">{attributeLine}</p>
-
-        <div className="flex items-end justify-between gap-3 pt-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-semibold text-accent">{price.toLocaleString('ru-RU')} ₽</span>
-            {hasDiscount ? (
-              <span className="text-xs text-muted line-through">{oldPrice.toLocaleString('ru-RU')} ₽</span>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className="inline-flex min-h-[36px] items-center rounded-xl border border-primary/20 bg-primary/10 px-2 text-xs font-semibold text-primary md:hidden"
-            onClick={() => onQuickView?.(product)}
-          >
-            Быстро
-          </button>
-          <span className="hidden text-xs text-primary md:inline">Открыть →</span>
-        </div>
-      </div>
-    </Card>
-  );
-}
 
 function CategoryPage() {
   const { slug } = useParams();
@@ -334,6 +133,7 @@ function CategoryPage() {
     headingNote ||
     `${heading}. Подборка товаров для дома с удобной доставкой по России.`;
   const categoryPresentation = list.activeCategory?.presentation || null;
+  const hasCategoryHeroHeading = categoryPresentation?.hero?.sectionType === 'hero';
   const categoryCatalogImage =
     categoryPresentation?.seoImage?.url ||
     list.activeCategory?.imageUrl ||
@@ -418,7 +218,6 @@ function CategoryPage() {
       ? 'grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 lg:gap-5'
       : 'page-grid--catalog';
 
-  const fromPath = `${location.pathname}${location.search}`;
   const filterProps = {
     brands: list.brands,
     priceBounds: list.priceBounds,
@@ -499,7 +298,11 @@ function CategoryPage() {
 
         <div data-testid="category-header" className="section-header mt-3 lg:mt-2.5">
           <div className="flex flex-wrap items-baseline gap-3">
-            <h1 className="text-2xl sm:text-3xl font-semibold">{heading}</h1>
+            {hasCategoryHeroHeading ? (
+              <h2 className="text-2xl sm:text-3xl font-semibold">{heading}</h2>
+            ) : (
+              <h1 className="text-2xl sm:text-3xl font-semibold">{heading}</h1>
+            )}
             <span className="text-sm text-muted">{list.itemsLabel}</span>
             {categoryPresentation?.badgeText ? (
               <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
@@ -619,16 +422,6 @@ function CategoryPage() {
           onCloseFilters={() => setIsFilterOpen(false)}
         />
 
-        {!isFilterOpen ? (
-          <Button
-            type="button"
-            className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 !rounded-full px-5 shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
-            onClick={() => setIsFilterOpen(true)}
-          >
-            Фильтры{list.activeFilters.length > 0 ? ` · ${list.activeFilters.length}` : ''}
-          </Button>
-        ) : null}
-
         {list.activeFilters.length > 0 ? (
           <Card className="mt-4 flex flex-wrap items-center gap-2 lg:mt-3" variant="quiet" padding="sm">
             <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Применено</span>
@@ -704,10 +497,9 @@ function CategoryPage() {
             <>
               <div className={gridClassName}>
                 {list.pagedProducts.map((product, index) => (
-                  <CategoryCard
+                  <ProductCard
                     key={product.id}
                     product={product}
-                    fromPath={fromPath}
                     fromLabel={heading}
                     listName={`category_${slug || 'unknown'}`}
                     position={index + 1}

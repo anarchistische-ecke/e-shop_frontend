@@ -39,6 +39,10 @@ describe('storefront route config', () => {
       id: 'favorites',
       renderMode: 'csr'
     });
+    expect(matchStorefrontRoute('/subscribe').route).toMatchObject({
+      id: 'subscribe',
+      renderMode: 'csr'
+    });
     expect(matchStorefrontRoute('/pay/public-token').route).toMatchObject({
       id: 'pay',
       renderMode: 'csr'
