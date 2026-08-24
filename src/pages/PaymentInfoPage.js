@@ -1,9 +1,14 @@
 import React from 'react';
 import CmsManagedPage from '../components/cms/CmsManagedPage';
 import Seo from '../components/Seo';
+import { useCmsSiteSettings } from '../contexts/CmsContentContext';
 import { DELIVERY_DISCLOSURE } from '../utils/delivery';
 
 function PaymentInfoFallbackPage() {
+  const { siteSettings } = useCmsSiteSettings();
+  const supportEmail = siteSettings?.supportEmail || '';
+  const supportPhone = siteSettings?.supportPhone || '';
+
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <Seo
@@ -38,7 +43,20 @@ function PaymentInfoFallbackPage() {
         <ul className="list-disc list-inside text-sm text-muted space-y-1">
           <li>Онлайн-чеки 54-ФЗ формирует платёжный сервис и отправляет на электронную почту.</li>
           <li>При отмене заказа возврат оформляется тем же способом оплаты.</li>
-          <li>Вопросы по оплате: postel-yug@yandex.ru или +7 961 466‑88‑33.</li>
+          <li>
+            Вопросы по оплате:{' '}
+            <a className="text-primary hover:text-accent" href={`mailto:${supportEmail}`}>
+              {supportEmail}
+            </a>{' '}
+            или{' '}
+            <a
+              className="text-primary hover:text-accent"
+              href={`tel:${supportPhone.replace(/[^\d+]/g, '')}`}
+            >
+              {supportPhone}
+            </a>
+            .
+          </li>
         </ul>
       </div>
     </div>

@@ -35,6 +35,7 @@ function ProductCard({
   priority = false,
   imageSizes = '(min-width: 1024px) 22vw, (min-width: 768px) 31vw, 46vw',
   listName = 'product_list',
+  fromLabel = 'Каталог',
   position,
   withOfferCatalogMicrodata = false,
   onQuickView,
@@ -109,7 +110,9 @@ function ProductCard({
   const stockTone =
     stockCount <= 0 ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700';
 
-  const attributeLine =
+  const normalizeDetailLine = (value) =>
+    String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const attributeCandidate =
     product?.attributes?.[0] ||
     (product?.material
       ? `Материал: ${product.material}`
@@ -119,8 +122,22 @@ function ProductCard({
       ? `Цвет: ${product.color}`
       : product?.brandName
       ? `Бренд: ${product.brandName}`
-      : stockLabel);
-  const descriptorLine = product?.summary || attributeLine;
+      : product?.brand?.name
+      ? `Бренд: ${product.brand.name}`
+      : '');
+  const attributeLine =
+    normalizeDetailLine(attributeCandidate) === normalizeDetailLine(stockLabel)
+      ? ''
+      : attributeCandidate;
+  const descriptorCandidate = product?.summary || '';
+  const normalizedDetailLines = new Set(
+    [attributeLine, stockLabel]
+      .filter(Boolean)
+      .map(normalizeDetailLine)
+  );
+  const descriptorLine = normalizedDetailLines.has(normalizeDetailLine(descriptorCandidate))
+    ? ''
+    : descriptorCandidate;
 
   const badges = [
     isLowStock ? `Мало на складе: ${stockCount}` : '',
@@ -167,7 +184,7 @@ function ProductCard({
       <div className="relative">
         <Link
           to={buildProductPath(product)}
-          state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
+          state={{ fromPath: `${location.pathname}${location.search}`, fromLabel }}
           tabIndex={-1}
           aria-hidden="true"
           className="block"
@@ -224,8 +241,8 @@ function ProductCard({
         </button>
       </div>
 
-      <div className="mt-2 min-h-[34px]">
-        {shouldRenderThumbnails && (
+      {shouldRenderThumbnails ? (
+        <div className="mt-2">
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
             {images.slice(0, 4).map((image, index) => (
               <button
@@ -250,26 +267,26 @@ function ProductCard({
               </button>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      ) : null}
 
       <div className="mt-3 flex flex-1 flex-col gap-2">
         <Link
           to={buildProductPath(product)}
-          state={{ fromPath: `${location.pathname}${location.search}`, fromLabel: 'Каталог' }}
+          state={{ fromPath: `${location.pathname}${location.search}`, fromLabel }}
           className="block"
           onClick={handleProductClick}
         >
           <p className="min-h-[2.75rem] line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
         </Link>
 
-        <p className="min-h-[1.1rem] line-clamp-1 text-xs font-medium text-ink/78">
-          {attributeLine}
-        </p>
+        {attributeLine ? (
+          <p className="line-clamp-1 text-xs font-medium text-ink/78">{attributeLine}</p>
+        ) : null}
 
-        <p className="min-h-[1.1rem] line-clamp-2 text-xs leading-5 text-muted">
-          {descriptorLine}
-        </p>
+        {descriptorLine ? (
+          <p className="line-clamp-2 text-xs leading-5 text-muted">{descriptorLine}</p>
+        ) : null}
 
         <div className="min-h-[1.1rem] flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
           <span className={stockTone}>{stockLabel}</span>

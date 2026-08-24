@@ -49,6 +49,12 @@ export const routeSeoConfig = {
     canonicalPath: '/favorites',
     robots: 'noindex,nofollow'
   },
+  subscribe: {
+    title: 'Подписка на рассылку',
+    description: 'Форма подписки на новости и специальные предложения.',
+    canonicalPath: '/',
+    robots: 'noindex,follow'
+  },
   'subscribe-confirm': {
     title: 'Подтверждение подписки',
     description: 'Подтверждение подписки на рассылку.',
@@ -113,6 +119,7 @@ export const storefrontRouteConfig = [
   { id: 'login', path: '/login', renderMode: 'csr', seo: routeSeoConfig.login },
   { id: 'account', path: '/account', renderMode: 'csr', seo: routeSeoConfig.account },
   { id: 'favorites', path: '/favorites', renderMode: 'csr', seo: routeSeoConfig.favorites },
+  { id: 'subscribe', path: '/subscribe', renderMode: 'csr', seo: routeSeoConfig.subscribe },
   { id: 'subscribe-confirm', path: '/subscribe/confirm', renderMode: 'csr', seo: routeSeoConfig['subscribe-confirm'] },
   { id: 'subscribe-unsubscribe', path: '/subscribe/unsubscribe', renderMode: 'csr', seo: routeSeoConfig['subscribe-unsubscribe'] },
   { id: 'about', path: '/about', renderMode: 'ssr' },

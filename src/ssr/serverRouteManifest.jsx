@@ -61,6 +61,7 @@ const routeRenderers = {
   login: () => <RouteFallback />,
   account: () => <RouteFallback />,
   favorites: () => <RouteFallback />,
+  subscribe: () => <RouteFallback />,
   'subscribe-confirm': () => <RouteFallback />,
   'subscribe-unsubscribe': () => <RouteFallback />,
   about: () => RouteBoundary(<AboutPage />),

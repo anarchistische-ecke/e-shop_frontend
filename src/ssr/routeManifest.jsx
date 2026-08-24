@@ -71,6 +71,7 @@ const routeRenderers = {
   login: () => CsrRoute(<LoginPage />),
   account: () => CsrRoute(<AccountPage />),
   favorites: () => CsrRoute(<FavoritesPage />),
+  subscribe: () => <Navigate to="/#newsletter" replace />,
   'subscribe-confirm': () => CsrRoute(<SubscriptionActionPage mode="confirm" />),
   'subscribe-unsubscribe': () => CsrRoute(<SubscriptionActionPage mode="unsubscribe" />),
   about: () => CsrRoute(<AboutPage />),
