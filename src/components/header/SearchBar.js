@@ -257,7 +257,7 @@ function SearchBar({
             <div
               id={mobileSearchSuggestionsId}
               data-testid="header-search-suggestions-mobile"
-              className="absolute left-0 right-0 top-[calc(100%+0.5rem)] max-h-[calc(100dvh-var(--site-header-height,6rem)-1rem)] overflow-y-auto rounded-[22px] border border-ink/10 bg-white p-3 shadow-[0_20px_46px_rgba(43,39,34,0.18)]"
+              className="absolute bottom-[calc(100%+0.5rem)] left-0 right-0 max-h-[calc(100dvh-var(--site-header-height,6rem)-1rem)] overflow-y-auto rounded-[22px] border border-ink/10 bg-white p-3 shadow-[0_20px_46px_rgba(43,39,34,0.18)]"
             >
               <SearchPanelBody
                 autocompleteData={autocompleteData}
@@ -271,7 +271,7 @@ function SearchBar({
               />
             </div>
           ) : searchTerm.trim().length > 0 ? (
-            <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] rounded-[22px] border border-ink/10 bg-white p-4 text-sm text-muted shadow-[0_20px_46px_rgba(43,39,34,0.14)]">
+            <div className="absolute bottom-[calc(100%+0.5rem)] left-0 right-0 rounded-[22px] border border-ink/10 bg-white p-4 text-sm text-muted shadow-[0_20px_46px_rgba(43,39,34,0.14)]">
               Введите минимум 2 символа.
             </div>
           ) : null}

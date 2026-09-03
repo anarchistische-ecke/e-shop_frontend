@@ -48,7 +48,7 @@ function HeaderUtilityLink({ item }) {
   );
 }
 
-function Header() {
+function Header({ showMobileStickyMenu = true }) {
   const header = useHeaderState();
   const { count: wishlistCount } = useContext(WishlistContext);
   const [isUtilityCollapsed, setIsUtilityCollapsed] = useState(false);
@@ -77,11 +77,15 @@ function Header() {
 
   return (
     <>
-      <div className="viewport-fixed-edge fixed inset-x-0 top-0 z-50 pointer-events-none">
+      <div
+        className={`viewport-fixed-edge fixed inset-x-0 bottom-0 z-50 pointer-events-none lg:bottom-auto lg:top-0 ${
+          showMobileStickyMenu ? '' : 'hidden lg:block'
+        }`}
+      >
         <header ref={header.headerRef} className="relative pointer-events-auto">
           <div
             ref={header.headerBarRef}
-            className="relative z-[90] border-b border-ink/10 bg-[#fbf7f1]/96 shadow-[0_10px_24px_rgba(43,39,34,0.08)] backdrop-blur-xl lg:bg-white/92 lg:shadow-[0_12px_28px_rgba(43,39,34,0.08)]"
+            className="relative z-[90] border-t border-ink/10 bg-[#fbf7f1]/96 shadow-[0_-10px_24px_rgba(43,39,34,0.08)] backdrop-blur-xl lg:border-b lg:border-t-0 lg:bg-white/92 lg:shadow-[0_12px_28px_rgba(43,39,34,0.08)]"
           >
             {announcementText ? (
               <div
@@ -94,7 +98,7 @@ function Header() {
                 </div>
               </div>
             ) : null}
-            <div className="page-shell page-section--tight py-1.5 sm:py-3 lg:pb-5 lg:pt-2.5 xl:pb-5 xl:pt-3">
+            <div className="page-shell page-section--tight flex flex-col pb-[calc(env(safe-area-inset-bottom,0px)+0.375rem)] pt-1.5 sm:pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:pt-3 lg:block lg:pb-5 lg:pt-2.5 xl:pb-5 xl:pt-3">
               {headerLinks.length > 0 ? (
                 <div className="mb-2.5 hidden items-center justify-between gap-4 border-b border-ink/10 pb-2.5 lg:flex">
                   <nav
@@ -114,7 +118,10 @@ function Header() {
                 </div>
               ) : null}
 
-              <div className="grid grid-cols-[repeat(5,minmax(0,1fr))] items-stretch gap-1 lg:hidden">
+              <div
+                data-testid="mobile-sticky-menu"
+                className="order-2 grid grid-cols-[repeat(5,minmax(0,1fr))] items-stretch gap-1 lg:hidden"
+              >
                 <button
                   type="button"
                   className="focus-ring-soft flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-2xl border border-ink/10 bg-white/88 px-1 text-[11px] font-semibold text-ink shadow-[0_8px_18px_rgba(43,39,34,0.08)]"
@@ -170,7 +177,7 @@ function Header() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-1.5 pt-1.5 sm:gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3.5 lg:pt-0">
+              <div className="order-1 grid grid-cols-1 gap-1.5 pb-1.5 sm:gap-3 sm:pb-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-3.5 lg:pb-0">
                 <div className="hidden lg:block">
                   <HeaderBrand
                     siteName={siteSettings.siteName}

@@ -5,10 +5,18 @@ test.beforeEach(async ({ page }) => {
   await mockStorefrontApi(page);
 });
 
-test('mobile header row opens the full catalog menu and bottom nav is absent', async ({ page }) => {
+test('mobile sticky menu stays anchored to the bottom and opens the full catalog menu', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('navigation', { name: 'Быстрая навигация' })).toHaveCount(0);
+  const stickyMenu = page.getByTestId('mobile-sticky-menu');
+  await expect(stickyMenu).toBeVisible();
+
+  const menuBox = await stickyMenu.boundingBox();
+  const viewport = page.viewportSize();
+  expect(menuBox).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(menuBox.y).toBeGreaterThan(viewport.height / 2);
+  expect(Math.round(menuBox.y + menuBox.height)).toBeLessThanOrEqual(viewport.height);
 
   await page.getByRole('button', { name: 'Меню' }).click();
 
@@ -40,10 +48,13 @@ test('mobile header row remains available on the magic-link login flow', async (
   await expect(page.getByRole('button', { name: 'Поиск' })).toBeVisible();
 });
 
-test('bottom navigation stays removed on product and checkout routes', async ({ page }) => {
+test('sticky menu stays clear of product, cart, and checkout action bars', async ({ page }) => {
   await page.goto('/product/prod-satin-sand/satin-sand');
-  await expect(page.getByRole('navigation', { name: 'Быстрая навигация' })).toHaveCount(0);
+  await expect(page.getByTestId('mobile-sticky-menu')).toBeHidden();
+
+  await page.goto('/cart');
+  await expect(page.getByTestId('mobile-sticky-menu')).toBeHidden();
 
   await page.goto('/checkout');
-  await expect(page.getByRole('navigation', { name: 'Быстрая навигация' })).toHaveCount(0);
+  await expect(page.getByTestId('mobile-sticky-menu')).toBeHidden();
 });

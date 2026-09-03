@@ -51,6 +51,11 @@ function App({ routes = [] }) {
   const isCheckoutRoute = location.pathname === '/checkout';
   const hasMobileCommerceAction =
     location.pathname === '/cart' || location.pathname.startsWith('/product/');
+  const showMobileStickyMenu =
+    !hasMobileCommerceAction &&
+    !isCheckoutRoute &&
+    !location.pathname.startsWith('/order/') &&
+    !location.pathname.startsWith('/pay/');
   const mainRef = useRef(null);
   const resolvedRoutes = useMemo(() => routes, [routes]);
 
@@ -93,18 +98,17 @@ function App({ routes = [] }) {
             Перейти к содержимому
           </a>
         ) : null}
-        {!isChromeHiddenRoute && <Header />}
+        {!isChromeHiddenRoute && <Header showMobileStickyMenu={showMobileStickyMenu} />}
         <main
           id="main-content"
           ref={mainRef}
           tabIndex={-1}
-          className={isChromeHiddenRoute ? 'min-h-screen' : 'min-h-[80vh]'}
-          style={
+          className={
             isChromeHiddenRoute
-              ? undefined
-              : {
-                  paddingTop: 'var(--site-header-height, 7rem)'
-                }
+              ? 'min-h-screen'
+              : `site-main-with-chrome min-h-[80vh] ${
+                  showMobileStickyMenu ? '' : 'site-main-with-chrome--no-mobile-menu'
+                }`
           }
         >
           <Routes>

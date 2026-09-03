@@ -354,6 +354,12 @@ body {
     block-size: var(--viewport-block);
     max-block-size: var(--viewport-block);
   }
+  .site-main-with-chrome {
+    padding-bottom: var(--site-header-height, 7rem);
+  }
+  .site-main-with-chrome--no-mobile-menu {
+    padding-bottom: 0;
+  }
   .section-header {
     @apply flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between;
   }
@@ -906,6 +912,13 @@ body {
       transform: translateY(100%);
       pointer-events: none;
     }
+  }
+}
+
+@media (min-width: 1024px) {
+  .site-main-with-chrome {
+    padding-top: var(--site-header-height, 7rem);
+    padding-bottom: 0;
   }
 }
 
