@@ -148,8 +148,17 @@ function getVariantSizeKey(variant) {
   return normalizeOptionToken(variant?.sizeCode || variant?.sizeLabel || variant?.name || variant?.sku || variant?.id);
 }
 
-function getVariantSizeLabel(variant) {
-  return variant?.sizeLabel || variant?.name || variant?.sku || 'Вариант';
+function getVariantSizeLabel(variant, productName) {
+  if (variant?.sizeLabel) return variant.sizeLabel;
+
+  const name = variant?.name?.trim();
+  const title = productName?.trim();
+  if (name && title && name.toLowerCase().startsWith(title.toLowerCase())) {
+    const suffix = name.slice(title.length);
+    if (/^\s+\S/.test(suffix)) return suffix.trim();
+  }
+
+  return name || variant?.sku || 'Вариант';
 }
 
 function hasStructuredColor(variant) {
@@ -489,7 +498,7 @@ function ProductPage() {
       if (!map.has(key)) {
         map.set(key, {
           key,
-          label: getVariantSizeLabel(variant),
+          label: getVariantSizeLabel(variant, product?.name),
           variant,
           stock: getStockValue(variant)
         });
@@ -499,14 +508,14 @@ function ProductPage() {
       if (current.stock <= 0 && getStockValue(variant) > 0) {
         map.set(key, {
           key,
-          label: getVariantSizeLabel(variant),
+          label: getVariantSizeLabel(variant, product?.name),
           variant,
           stock: getStockValue(variant)
         });
       }
     });
     return Array.from(map.values());
-  }, [hasColorOptions, productVariants, selectedColorKey]);
+  }, [hasColorOptions, product?.name, productVariants, selectedColorKey]);
 
   const variantNameById = useMemo(() => {
     const map = {};
@@ -558,7 +567,7 @@ function ProductPage() {
   const marketingTitle = productPresentation?.marketingTitle || product?.name || '';
   const descriptionBody = product?.description || productPresentation?.introBody || '';
 
-  const variantSizeLabel = selectedVariant ? getVariantSizeLabel(selectedVariant) : '';
+  const variantSizeLabel = selectedVariant ? getVariantSizeLabel(selectedVariant, product?.name) : '';
   const variantMeasurements = /^\d{2,3}\s*[xх×/]\s*\d{2,3}/i.test(variantSizeLabel) ? variantSizeLabel : '';
   const size = variantMeasurements || product?.size;
   const fallbackSpecs = [

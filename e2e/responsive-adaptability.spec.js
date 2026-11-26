@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { mockStorefrontApi } = require('./support/mockStorefrontApi');
+const { products } = require('./fixtures/storefront');
 
 async function getGridColumnCount(locator) {
   return locator.evaluate((node) => {
@@ -155,4 +156,29 @@ test('product page hides mobile breadcrumbs and keeps PDP sticky CTA safe-area a
   expect(viewport).not.toBeNull();
   expect(Math.round(box.y + box.height)).toBeLessThanOrEqual(viewport.height + 1);
   await expectNoHorizontalOverflow(page);
+});
+
+test('desktop purchase card aligns with the gallery and displays a concise legacy size label', async ({ page }) => {
+  const product = products.find(({ id }) => id === 'prod-satin-sand');
+  await page.route('**/products/prod-satin-sand', (route) => route.fulfill({ json: {
+    ...product,
+    variants: [{
+      ...product.variants[0],
+      name: `${product.name}\tЕВРО`,
+      sizeLabel: null,
+      sizeCode: null,
+    }],
+  } }));
+
+  await page.setViewportSize({ width: 1512, height: 859 });
+  await page.goto('/product/prod-satin-sand/satin-sand');
+
+  const purchaseCard = page.getByTestId('product-purchase-card');
+  const gallery = page.getByTestId('product-gallery-card');
+  await expect(purchaseCard.getByRole('button', { name: /^ЕВРО В наличии$/ })).toBeVisible();
+  await expect(gallery).toBeVisible();
+  await expect.poll(async () => {
+    const [card, photo] = await Promise.all([purchaseCard.boundingBox(), gallery.boundingBox()]);
+    return Math.abs(card.y - photo.y);
+  }).toBeLessThanOrEqual(1);
 });

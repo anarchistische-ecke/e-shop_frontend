@@ -256,7 +256,7 @@ body {
   main {
     @apply w-full;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   [id] {
