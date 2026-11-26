@@ -153,11 +153,6 @@ function CataloguePage() {
     }
   };
 
-  const topCategories = useMemo(
-    () => list.navCategories.slice(0, 10),
-    [list.navCategories]
-  );
-
   const filterProps = {
     brands: list.brands,
     priceBounds: list.priceBounds,
@@ -280,7 +275,7 @@ function CataloguePage() {
             >
               Весь каталог
             </button>
-            {topCategories.map((category) => {
+            {list.navCategories.map((category) => {
               const token = normalizeSearchText(resolveCategoryToken(category));
               const isActive = params.scope === token;
               return (

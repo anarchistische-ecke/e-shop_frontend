@@ -15,6 +15,7 @@ import {
   getSurfaceToneClass,
 } from '../cmsBlockShared';
 import { useProductDirectoryData } from '../../../features/product-list/data';
+import { resolveCategoryToken, sortCategories } from '../../../features/product-list/selectors';
 import { buildCategoryListingHref } from '../../../features/product-list/url';
 import { getPrimaryImageMedia, getPrimaryImageUrl, resolveImageUrl } from '../../../utils/product';
 import { trackProductList } from '../../../utils/metrika';
@@ -440,6 +441,7 @@ function ProductReferenceList({ section, page }) {
 
 function CategoryReferenceList({ section, page }) {
   const { categories = [], products = [], loading } = useProductDirectoryData();
+  const isHome = page?.template === 'home';
   const references = normalizeItems(section)
     .map((item) => ({
       item,
@@ -459,36 +461,55 @@ function CategoryReferenceList({ section, page }) {
     [categories, references]
   );
 
-  if (!resolvedCategories.length && !loading) {
+  const featuredTokens = new Set(resolvedCategories.map(({ category }) => resolveCategoryToken(category)));
+  const otherCategories = isHome
+    ? sortCategories(categories.filter((category) => (
+      !category.parentId && category.isActive !== false && !featuredTokens.has(resolveCategoryToken(category))
+    )))
+    : [];
+
+  if (!resolvedCategories.length && !otherCategories.length && !loading) {
     return <FeatureListBlock section={section} />;
   }
 
   return (
     <CommerceSectionShell
       section={section}
-      testId={page?.template === 'home' ? 'home-category-grid' : undefined}
-      editorial={page?.template === 'home'}
+      testId={isHome ? 'home-category-grid' : undefined}
+      editorial={isHome}
     >
       {resolvedCategories.length ? (
-        <div className={page?.template === 'home'
+        <div className={isHome
           ? 'flex flex-wrap gap-2'
           : getReferenceListClass(section, 'category')
         }>
           {resolvedCategories.map(({ category, item }) => (
-            <div key={category.id || category.slug} className={page?.template === 'home' ? 'min-w-0 max-w-full' : getReferenceItemClass(section)}>
+            <div key={category.id || category.slug} className={isHome ? 'min-w-0 max-w-full' : getReferenceItemClass(section)}>
               <CategoryReferenceCard
                 category={category}
                 products={products}
                 item={item}
-                compact={page?.template === 'home'}
+                compact={isHome}
               />
             </div>
           ))}
         </div>
-      ) : (
+      ) : loading ? (
         <Card padding="lg" className="rounded-[24px] border border-dashed border-ink/10 bg-white/66 text-sm text-muted">
           Загружаем разделы…
         </Card>
+      ) : null}
+      {otherCategories.length > 0 && (
+        <nav aria-label="Другие разделы каталога" className="mt-2 flex flex-wrap gap-x-4">
+          {otherCategories.map((category) => {
+            const token = resolveCategoryToken(category);
+            return (
+              <Link key={token} to={buildCategoryListingHref(token)} className="focus-ring-soft flex min-h-11 items-center text-sm font-semibold text-primary underline underline-offset-4">
+                {category.name}
+              </Link>
+            );
+          })}
+        </nav>
       )}
     </CommerceSectionShell>
   );

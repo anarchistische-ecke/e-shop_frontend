@@ -48,7 +48,7 @@ function HomeFallbackPage() {
     return () => { mounted = false; };
   }, [seededCampaigns.length]);
 
-  const navCategories = useMemo(() => buildCategoryCollections(categories).navCategories.slice(0, 5), [categories]);
+  const navCategories = useMemo(() => buildCategoryCollections(categories).navCategories, [categories]);
   const featuredProducts = useMemo(
     () => products.filter((product) => product?.isActive !== false).slice(0, 4),
     [products]
@@ -106,7 +106,7 @@ function HomeFallbackPage() {
         />
 
         {navCategories.length ? (
-          <nav aria-label="Разделы каталога" className="flex gap-4 overflow-x-auto border-b border-ink/10 scrollbar-hide sm:gap-7">
+          <nav aria-label="Разделы каталога" className="flex flex-wrap gap-x-4 border-b border-ink/10 sm:gap-x-7">
             {navCategories.map((category) => {
               const token = resolveCategoryToken(category);
               return (

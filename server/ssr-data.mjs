@@ -241,7 +241,7 @@ function collectHomeCardKeys(page) {
   };
 }
 
-async function loadHomeDirectoryData(page) {
+async function loadHomeDirectoryData(page, directory) {
   try {
     const { productKeys, categoryKeys } = collectHomeCardKeys(page);
     const shouldUseFallbackLimits = productKeys.length === 0 && categoryKeys.length === 0;
@@ -253,15 +253,15 @@ async function loadHomeDirectoryData(page) {
     });
 
     return {
-      categories: Array.isArray(payload?.categories) ? payload.categories : [],
-      brands: [],
+      categories: directory?.categories ?? (Array.isArray(payload?.categories) ? payload.categories : []),
+      brands: directory?.brands ?? [],
       products: Array.isArray(payload?.products)
         ? payload.products.filter((product) => product?.isActive !== false)
         : [],
       compact: true
     };
   } catch (error) {
-    return null;
+    return directory;
   }
 }
 
@@ -584,7 +584,7 @@ export async function loadSsrRequestData({
   ] =
     await Promise.all([
       loadSharedCmsData(),
-      DIRECTORY_ROUTE_IDS.has(route.id)
+      route.id === 'home' || DIRECTORY_ROUTE_IDS.has(route.id)
         ? loadDirectoryData({ routeId: route.id, params, requestQuery })
         : Promise.resolve(null),
       cmsPageSlug ? loadCmsPageSeed(cmsPageSlug) : Promise.resolve(null),
@@ -615,7 +615,7 @@ export async function loadSsrRequestData({
 
   const runtimeConfig = buildClientRuntimeConfig({ requestOrigin });
   const resolvedDirectory = route.id === 'home'
-    ? await loadHomeDirectoryData(cmsPageSeed?.page)
+    ? await loadHomeDirectoryData(cmsPageSeed?.page, directory)
     : directory;
 
   if (resolvedDirectory) {

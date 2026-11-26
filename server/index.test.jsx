@@ -19,7 +19,8 @@ const categories = [
     slug: 'popular',
     name: 'Популярное',
     description: 'Бестселлеры для спальни и дома.'
-  }
+  },
+  { id: 'towels', slug: 'towels', name: 'Полотенца' }
 ];
 const brands = [{ id: 'brand-cozy', slug: 'cozy-home', name: 'Cozy Home' }];
 const products = [
@@ -81,6 +82,12 @@ const homePage = {
           sort: 1
         }
       ]
+    },
+    {
+      sectionType: 'category_reference_list',
+      sort: 2,
+      title: 'Популярные разделы',
+      items: [{ referenceKind: 'category_slug', referenceKey: 'popular' }]
     },
     {
       anchorId: 'home-bestsellers',
@@ -290,7 +297,7 @@ function createFetchMock() {
     if (pathname === '/catalogue/cards') {
       return jsonResponse({
         compact: true,
-        categories,
+        categories: categories.slice(0, 1),
         products: products.map((product) => ({
           id: product.id,
           slug: product.slug,
@@ -413,6 +420,9 @@ describe('storefront SSR server', () => {
     expect(response.text).toContain('"routeId":"home"');
     expect(response.text).toContain('"directory"');
     expect(response.text).toContain('"compact":true');
+    expect(response.text).toContain('"brands":[{"id":"brand-cozy"');
+    expect(response.text).toContain('aria-label="Другие разделы каталога"');
+    expect(response.text).toContain('href="/category/towels"');
     expect(response.text).not.toContain('"reviewCount"');
     expect(response.text).toContain('Весеннее обновление спальни');
   });
