@@ -1,119 +1,85 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { usePaymentConfig } from '../../contexts/PaymentConfigContext';
-import { getConfirmationPaymentHint } from '../../utils/payment';
-import { Button, Card } from '../../components/ui';
+import { getConfirmationPaymentHint, getPaymentSummaryLabel } from '../../utils/payment';
+import { DELIVERY_SEPARATE_PAYMENT_NOTE } from '../../utils/delivery';
+import { Button } from '../../components/ui';
+import DeliveryQuoteLink from '../../components/commerce/DeliveryQuoteLink';
 
 function ConfirmationStep({
-  active,
   email,
   customerName,
   phone,
   homeAddress,
-  deliveryNotice,
   safeRetryState,
   isSubmitting,
   submitLabel,
+  primaryActionRef,
   onEditContact,
   onEditAddress,
-  onOpen,
   onSafeRetry
 }) {
   const { paymentConfig } = usePaymentConfig();
-  const confirmationPaymentHint = getConfirmationPaymentHint(paymentConfig);
-  const confirmationDescription =
-    paymentConfig.confirmationMode === 'EMBEDDED'
-      ? 'Проверьте данные. После этого откроется встроенная защищённая форма оплаты.'
-      : 'Проверьте данные. После этого откроется защищённая страница оплаты.';
 
   return (
-    <Card as="section" padding="lg">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">2</span>
-          <div>
-            <h2 className="text-2xl font-semibold">Проверка и оплата</h2>
-            <p className="text-sm text-muted">{confirmationDescription}</p>
+    <section aria-labelledby="checkout-review-title">
+      <h2 id="checkout-review-title" tabIndex={-1} className="mb-2 text-2xl font-semibold">Проверка и оплата</h2>
+      <div className="divide-y divide-ink/10 text-sm">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 py-3">
+          <div className="min-w-0">
+            <p className="text-xs text-muted">Контакты</p>
+            <p className="mt-1 break-words font-semibold">{customerName}</p>
+            <p className="mt-1 break-words text-muted">{phone} · {email}</p>
           </div>
-        </div>
-        {!active ? (
-          <Button variant="ghost" size="sm" className="text-xs" onClick={onOpen} disabled={isSubmitting}>
-            Открыть
+          <Button variant="ghost" size="sm" className="!px-2 text-xs" onClick={onEditContact} disabled={isSubmitting} aria-label="Изменить контакты">
+            Изменить
           </Button>
-        ) : null}
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 py-3">
+          <div className="min-w-0">
+            <p className="text-xs text-muted">Адрес доставки</p>
+            <p className="mt-1 break-words font-semibold">{homeAddress}</p>
+          </div>
+          <Button variant="ghost" size="sm" className="!px-2 text-xs" onClick={onEditAddress} disabled={isSubmitting} aria-label="Изменить адрес">
+            Изменить
+          </Button>
+        </div>
+        <div className="py-3">
+          <p className="text-xs text-muted">Онлайн-оплата</p>
+          <p className="mt-1 font-semibold">{getPaymentSummaryLabel(paymentConfig)}</p>
+          <p className="mt-1 text-muted">{getConfirmationPaymentHint(paymentConfig)}</p>
+        </div>
       </div>
 
-      {active ? (
-        <>
-          <div className="rounded-2xl border border-ink/10 bg-white/85 p-4 text-sm space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div className="text-xs uppercase tracking-[0.15em] text-muted">Контакты</div>
-                <div className="font-semibold">{customerName}</div>
-                <div className="text-xs text-muted">{phone} · {email}</div>
-              </div>
-              <Button variant="ghost" size="sm" className="text-xs" onClick={onEditContact} disabled={isSubmitting}>
-                Изменить
+      {safeRetryState ? (
+        <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-ink">
+          <p className="font-semibold">{safeRetryState.title}</p>
+          <p className="mt-1 text-muted">{safeRetryState.message}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button ref={primaryActionRef} onClick={onSafeRetry} disabled={isSubmitting}>
+              {submitLabel}
+            </Button>
+            {safeRetryState.orderToken ? (
+              <Button as={Link} to={`/order/${safeRetryState.orderToken}`} variant="ghost">
+                Открыть заказ
               </Button>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
-              <div>
-                <div className="text-xs uppercase tracking-[0.15em] text-muted">Адрес</div>
-                <div className="font-semibold">{homeAddress}</div>
-              </div>
-              <Button variant="ghost" size="sm" className="text-xs" onClick={onEditAddress} disabled={isSubmitting}>
-                Изменить
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
-              <div>
-                <div className="text-xs uppercase tracking-[0.15em] text-muted">Доставка</div>
-                <div className="font-semibold">Не входит — менеджер рассчитает отдельно</div>
-                <div className="mt-1 text-xs text-muted">{deliveryNotice}</div>
-              </div>
-            </div>
+            ) : null}
           </div>
-
-          <div className="mt-4 rounded-lg border border-ink/10 bg-white/90 p-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted">Онлайн-оплата</p>
-            <p className="mt-2 text-sm font-semibold">Карта или СБП через платёжный сервис</p>
-            <p className="mt-2 text-xs text-muted">{confirmationPaymentHint}</p>
-          </div>
-
-          {safeRetryState ? (
-            <div className="mt-4 rounded-lg border border-primary/20 bg-primary/10 p-3 text-sm text-ink/90">
-              <p className="font-semibold">{safeRetryState.title}</p>
-              <p className="mt-1 text-xs text-muted">{safeRetryState.message}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button onClick={onSafeRetry} disabled={isSubmitting}>
-                  {safeRetryState.retryLabel || 'Проверить ещё раз'}
-                </Button>
-                {safeRetryState.orderToken ? (
-                  <Button as={Link} to={`/order/${safeRetryState.orderToken}`} variant="ghost">
-                    Открыть заказ
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-xs text-ink/90">
-            Нажимая «
-            {submitLabel}
-            », вы подтверждаете полную предоплату товаров. Доставка в эту сумму не входит:
-            менеджер рассчитает и согласует её с вами до отправки.
-          </div>
-
-          <Button type="submit" block className="mt-5" disabled={isSubmitting}>
-            {submitLabel}
-          </Button>
-        </>
+        </div>
       ) : (
-        <p className="text-sm text-muted">Сначала завершите предыдущие шаги, затем подтвердите заказ.</p>
+        <>
+          <p id="checkout-review-delivery-note" className="mt-3 border-t border-ink/10 pt-4 text-sm leading-relaxed text-muted">
+            Товары оплачиваются полностью. {DELIVERY_SEPARATE_PAYMENT_NOTE} Менеджер согласует её стоимость до отправки.
+          </p>
+          <DeliveryQuoteLink className="text-sm" disabled={isSubmitting} />
+          <div className="mt-2">
+            <Button ref={primaryActionRef} type="submit" className="w-full sm:w-auto" disabled={isSubmitting} aria-describedby="checkout-review-delivery-note">
+              {submitLabel}
+            </Button>
+          </div>
+        </>
       )}
-    </Card>
+    </section>
   );
 }
 

@@ -2,6 +2,9 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from './ui';
 import { TRUST_LINKS_BY_ID } from '../data/trustLinks';
+import { ArrowRightIcon, ShieldIcon, TruckIcon } from './header/icons';
+
+const serviceIcons = { delivery: TruckIcon, payment: ShieldIcon };
 
 function TrustLinksPanel({
   title = 'Почему нам доверяют',
@@ -23,29 +26,31 @@ function TrustLinksPanel({
   const content = (
     <>
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted">{title}</p>
+        <p className="text-sm font-bold text-ink">{title}</p>
         {description ? (
           <p className={`mt-2 text-sm text-muted ${compact ? '' : 'max-w-xl'}`}>{description}</p>
         ) : null}
       </div>
 
-      <div className={`grid gap-2 ${compact ? 'mt-3' : 'mt-4'}`}>
-        {links.map((item) => (
-          <Link
-            key={item.id}
-            to={item.path}
-            onClick={onNavigate}
-            className="focus-ring-soft grid min-h-[44px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-ink/10 bg-white/90 px-3 py-2 text-left transition hover:border-primary/30 hover:bg-primary/5"
-          >
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-ink">{item.title}</span>
-              <span className="mt-1 block text-xs text-muted">{item.description}</span>
-            </span>
-            <span className="text-primary" aria-hidden="true">
-              →
-            </span>
-          </Link>
-        ))}
+      <div className="mt-2 divide-y divide-line">
+        {links.map((item) => {
+          const Icon = serviceIcons[item.id];
+          return (
+            <Link
+              key={item.id}
+              to={item.path}
+              onClick={onNavigate}
+              className="focus-ring-soft flex min-h-11 items-center gap-3 py-2 text-left hover:text-primary"
+            >
+              {Icon ? <Icon className="h-5 w-5 shrink-0 text-primary" /> : null}
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">{item.title}</span>
+                {!compact ? <span className="mt-0.5 block text-xs text-muted">{item.description}</span> : null}
+              </span>
+              <ArrowRightIcon className="h-4 w-4 shrink-0 text-muted" />
+            </Link>
+          );
+        })}
       </div>
     </>
   );

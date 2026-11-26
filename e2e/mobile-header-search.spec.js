@@ -9,7 +9,7 @@ test('mobile menu search link opens search results with mocked data', async ({ p
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Меню' }).click();
-  await expect(page.getByText('Навигация')).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Меню каталога' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Перейти к поиску товаров и категорий' }).click();
 

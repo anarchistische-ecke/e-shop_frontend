@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card } from '../ui';
+import { CheckIcon, CloseIcon } from './icons';
 
 function LastAddedCartNotice({ lastAddedItem, onDismiss }) {
   if (!lastAddedItem) {
@@ -18,11 +19,12 @@ function LastAddedCartNotice({ lastAddedItem, onDismiss }) {
       <Card
         variant="quiet"
         padding="sm"
-        className="rounded-[22px] shadow-[0_22px_48px_rgba(43,39,34,0.22)]"
+        className="shadow-[0_10px_30px_rgba(38,43,37,0.16)]"
       >
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-primary">
+              <CheckIcon className="h-4 w-4" />
               Добавлено в корзину
             </p>
             <p className="text-sm font-semibold text-ink">
@@ -36,7 +38,7 @@ function LastAddedCartNotice({ lastAddedItem, onDismiss }) {
             onClick={onDismiss}
             aria-label="Закрыть уведомление"
           >
-            ✕
+            <CloseIcon />
           </Button>
         </div>
 

@@ -94,19 +94,23 @@ async function getImageCenter(page) {
 }
 
 async function getHorizontalSwipePoints(page) {
-  const imageBox = await page.getByTestId('product-media-image').boundingBox();
-  expect(imageBox).not.toBeNull();
-  const maxOffset = Math.max(32, imageBox.width / 2 - 8);
-  const offset = Math.min(Math.max(imageBox.width * 0.42, 80), maxOffset);
-  const center = {
-    x: imageBox.x + imageBox.width / 2,
-    y: imageBox.y + imageBox.height / 2,
-  };
+  return page.getByTestId('product-media-image').evaluate((image) => {
+    const stage = image.closest('[data-testid="product-media-stage"]').getBoundingClientRect();
+    const rect = image.getBoundingClientRect();
+    const left = Math.max(stage.left, rect.left);
+    const right = Math.min(stage.right, rect.right);
+    const top = Math.max(stage.top, rect.top);
+    const bottom = Math.min(stage.bottom, rect.bottom);
+    const width = right - left;
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
+    const offset = Math.min(Math.max(width * 0.42, 80), width / 2 - 8);
 
-  return {
-    start: { x: center.x + offset, y: center.y },
-    end: { x: center.x - offset, y: center.y },
-  };
+    return {
+      start: { x: centerX + offset, y: centerY },
+      end: { x: centerX - offset, y: centerY },
+    };
+  });
 }
 
 async function getBackgroundPoint(page) {
@@ -165,7 +169,9 @@ test('mobile media viewer fills the viewport and isolates pinch zoom from the pa
   await page.evaluate(() => window.scrollBy(0, 96));
 
   const before = await getPageMetrics(page);
-  await page.getByRole('button', { name: 'Увеличить изображение' }).click();
+  const openBox = await gallery.getByRole('button', { name: 'Увеличить изображение', exact: true }).boundingBox();
+  expect(openBox).not.toBeNull();
+  await page.touchscreen.tap(openBox.x + openBox.width / 2, openBox.y + openBox.height / 2);
 
   const viewer = page.getByTestId('product-media-viewer');
   const stage = page.getByTestId('product-media-stage');
@@ -224,11 +230,16 @@ test('mobile media viewer double-tap zooms, clamps pan, and swipes only at base 
   await expectNoHorizontalOverflow(page);
 
   await page.getByTestId('product-media-reset').click();
-  await expect(page.getByTestId('product-media-image')).toHaveAttribute('data-scale', '1.00');
-
+  const image = page.getByTestId('product-media-image');
+  await expect(image).toHaveAttribute('data-scale', '1.00');
+  // React updates data-scale before the translated image finishes returning to its base position.
+  await expect.poll(() => image.evaluate((element) => {
+    const paintedTransform = getComputedStyle(element).transform;
+    return paintedTransform === 'none' || new DOMMatrixReadOnly(paintedTransform).isIdentity;
+  })).toBe(true);
   const baseSwipe = await getHorizontalSwipePoints(page);
   await pointerDrag(stage, baseSwipe.start, baseSwipe.end);
-  expect(await page.getByTestId('product-media-frame').getAttribute('data-slide')).toBe('next');
+  await expect(page.getByTestId('product-media-frame')).toHaveAttribute('data-slide', 'next');
   await expect(counter).toHaveText('2 / 3');
   await expect(page.getByTestId('product-media-previous-frame').first()).toBeVisible();
 
@@ -409,8 +420,8 @@ test('mobile viewer buttons close, navigate, and zoom', async ({ page }) => {
   });
   expect(controlStyle.background).toContain('255, 255, 255');
   expect(controlStyle.radius).toBe('16px');
-  expect(controlStyle.width).toBe('44px');
-  expect(controlStyle.height).toBe('44px');
+  expect(Number.parseFloat(controlStyle.width)).toBeGreaterThanOrEqual(44);
+  expect(Number.parseFloat(controlStyle.height)).toBeGreaterThanOrEqual(44);
 
   await viewer.getByRole('button', { name: 'Следующее изображение' }).click();
   await expect(counter).toHaveText('2 / 3');

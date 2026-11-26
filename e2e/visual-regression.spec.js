@@ -98,12 +98,12 @@ test('cart, checkout, and pay route visual states stay stable', async ({ page })
   await page.getByRole('button', { name: 'Добавить в корзину' }).click();
 
   await page.goto('/cart');
-  await expect(page.getByRole('heading', { name: 'Ваши товары для уюта' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Корзина', exact: true })).toBeVisible();
   await expectStableScreenshot(page, 'cart.png');
 
   await page.getByRole('button', { name: 'Оформить заказ' }).click();
   await expect(page).toHaveURL(/\/checkout$/);
-  await expect(page.getByRole('heading', { name: /Быстрое оформление без лишних шагов/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Оформление заказа', exact: true })).toBeVisible();
   await expectStableScreenshot(page, 'checkout.png');
 
   await page.goto(`/pay/${publicOrder.publicToken}`);

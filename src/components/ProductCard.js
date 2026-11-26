@@ -1,10 +1,10 @@
-import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import NotificationBanner from './NotificationBanner';
 import { CartContext } from '../contexts/CartContext';
 import { WishlistContext } from '../contexts/WishlistContext';
 import ResponsiveImage from './media/ResponsiveImage';
-import { Button, Card } from './ui';
+import { Button } from './ui';
 import { HeartIcon } from './header/icons';
 import {
   getPrimaryVariant,
@@ -66,24 +66,12 @@ function ProductCard({
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const hoverTimerRef = useRef(null);
 
   useEffect(() => {
     if (activeImageIndex > images.length - 1) {
       setActiveImageIndex(0);
     }
   }, [images.length, activeImageIndex]);
-
-  useEffect(() => {
-    if (!isHovered || images.length <= 1) return undefined;
-    hoverTimerRef.current = setInterval(() => {
-      setActiveImageIndex((prev) => (prev + 1) % images.length);
-    }, 1800);
-
-    return () => {
-      if (hoverTimerRef.current) clearInterval(hoverTimerRef.current);
-    };
-  }, [isHovered, images.length]);
 
   const activeImage = images[activeImageIndex]?.url || images[0]?.url || '';
   const activeMedia = images[activeImageIndex]?.media || images[0]?.media || product?.primaryMedia || null;
@@ -100,49 +88,26 @@ function ProductCard({
   );
 
   const stockCount = getStockCount(product);
-  const isLowStock = stockCount > 0 && stockCount <= 3;
+  const isAvailable = stockCount > 0;
+  const isLowStock = isAvailable && stockCount <= 3;
   const stockLabel =
-    stockCount <= 0
+    !isAvailable
       ? 'Нет в наличии'
       : isLowStock
       ? `Осталось ${stockCount} шт.`
       : 'В наличии';
-  const stockTone =
-    stockCount <= 0 ? 'text-red-700' : isLowStock ? 'text-amber-700' : 'text-emerald-700';
 
-  const normalizeDetailLine = (value) =>
-    String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
-  const attributeCandidate =
-    product?.attributes?.[0] ||
-    (product?.material
-      ? `Материал: ${product.material}`
-      : product?.size
-      ? `Размер: ${product.size}`
-      : product?.color
-      ? `Цвет: ${product.color}`
-      : product?.brandName
-      ? `Бренд: ${product.brandName}`
-      : product?.brand?.name
-      ? `Бренд: ${product.brand.name}`
-      : '');
-  const attributeLine =
-    normalizeDetailLine(attributeCandidate) === normalizeDetailLine(stockLabel)
-      ? ''
-      : attributeCandidate;
-  const descriptorCandidate = product?.summary || '';
-  const normalizedDetailLines = new Set(
-    [attributeLine, stockLabel]
-      .filter(Boolean)
-      .map(normalizeDetailLine)
-  );
-  const descriptorLine = normalizedDetailLines.has(normalizeDetailLine(descriptorCandidate))
+  const attributeCandidate = product?.attributes?.[0]
+    || product?.material
+    || product?.size
+    || product?.color
+    || product?.brandName
+    || product?.brand?.name
+    || '';
+  const attributeLine = String(attributeCandidate).trim().replace(/\s+/g, ' ').toLowerCase() === stockLabel.toLowerCase()
     ? ''
-    : descriptorCandidate;
+    : attributeCandidate;
 
-  const badges = [
-    isLowStock ? `Мало на складе: ${stockCount}` : '',
-    Array.isArray(product?.badges) && product.badges.includes('new') ? 'Новинка' : '',
-  ].filter(Boolean);
   const handleProductClick = () => {
     trackProductClick(product, {
       variant: primaryVariant,
@@ -159,11 +124,8 @@ function ProductCard({
   };
 
   return (
-    <Card
-      variant="quiet"
-      padding="sm"
-      interactive
-      className="product-card group h-full flex flex-col"
+    <article
+      className="product-card group flex h-full min-w-0 flex-col border-b border-ink/15 pb-3"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       itemProp={offerMicrodata ? 'itemListElement' : undefined}
@@ -190,14 +152,14 @@ function ProductCard({
           className="block"
           onClick={handleProductClick}
         >
-          <div className="relative overflow-hidden rounded-2xl border border-ink/10 bg-sand/60">
-            <div className="relative pt-[74%]">
+          <div className="relative overflow-hidden rounded-lg bg-[#ede8df]">
+            <div className="relative aspect-[4/3]">
               {activeImage ? (
                 <ResponsiveImage
                   media={activeMedia}
                   src={activeImage}
                   alt={product.name}
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 md:group-hover:scale-[1.03]"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 motion-safe:md:group-hover:scale-[1.025]"
                   sizes={imageSizes}
                   priority={priority}
                   loading={priority ? 'eager' : 'lazy'}
@@ -209,29 +171,19 @@ function ProductCard({
               )}
             </div>
 
-            <div className="absolute inset-x-2 top-2 flex flex-wrap gap-2 pr-12">
-              {hasDiscount && (
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                  −{discount}%
-                </span>
-              )}
-              {badges.slice(0, 2).map((badge) => (
-                <span
-                  key={`${product.id}-${badge}`}
-                  className="rounded-full border border-ink/15 bg-white/90 px-2.5 py-1 text-[11px] text-ink/75"
-                >
-                  {badge}
-                </span>
-              ))}
-            </div>
+            {hasDiscount ? (
+              <span className="absolute left-2 top-2 rounded bg-white px-2 py-1 text-[11px] font-semibold text-sale">
+                −{discount}%
+              </span>
+            ) : null}
           </div>
         </Link>
         <button
           type="button"
-          className={`focus-ring-soft absolute right-2 top-2 inline-flex h-12 w-12 items-center justify-center rounded-full border shadow-[0_10px_22px_rgba(43,39,34,0.12)] transition ${
+          className={`focus-ring-soft absolute right-1 top-1 inline-flex h-11 w-11 items-center justify-center rounded-md border transition sm:right-2 sm:top-2 ${
             isFavorite
               ? 'border-primary/25 bg-primary text-white'
-              : 'border-white/80 bg-white/92 text-ink/70 hover:text-primary'
+              : 'border-white/80 bg-white/95 text-ink hover:text-primary'
           }`}
           onClick={handleWishlistClick}
           aria-label={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
@@ -239,101 +191,83 @@ function ProductCard({
         >
           <HeartIcon className="h-5 w-5" filled={isFavorite} />
         </button>
+        {shouldRenderThumbnails ? (
+          <div className={deferThumbnails ? 'absolute inset-x-1 bottom-1 rounded-md bg-white/90 p-1' : 'mt-1.5'}>
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+              {images.slice(0, 4).map((image, index) => (
+                <button
+                  key={image.id || `${product.id}-thumb-${index}`}
+                  type="button"
+                  className={`h-11 w-11 shrink-0 overflow-hidden rounded-lg border ${
+                    index === activeImageIndex ? 'border-primary/55 ring-2 ring-primary/20' : 'border-ink/15'
+                  }`}
+                  onClick={() => setActiveImageIndex(index)}
+                  aria-label={`Показать изображение ${index + 1}`}
+                  aria-pressed={index === activeImageIndex}
+                >
+                  <ResponsiveImage
+                    media={image.media}
+                    src={image.url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    sizes="2rem"
+                    loading="lazy"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      {shouldRenderThumbnails ? (
-        <div className="mt-2">
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-            {images.slice(0, 4).map((image, index) => (
-              <button
-                key={image.id || `${product.id}-thumb-${index}`}
-                type="button"
-                className={`h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg border ${
-                  index === activeImageIndex
-                    ? 'border-primary/55 ring-2 ring-primary/20'
-                    : 'border-ink/15'
-                }`}
-                onClick={() => setActiveImageIndex(index)}
-                aria-label={`Показать изображение ${index + 1}`}
-              >
-                <ResponsiveImage
-                  media={image.media}
-                  src={image.url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  sizes="2rem"
-                  loading="lazy"
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="mt-3 flex flex-1 flex-col gap-2">
+      <div className="mt-2.5 flex flex-1 flex-col gap-1.5">
         <Link
           to={buildProductPath(product)}
           state={{ fromPath: `${location.pathname}${location.search}`, fromLabel }}
-          className="block"
+          className="focus-ring-soft block rounded-sm hover:text-primary"
           onClick={handleProductClick}
         >
-          <p className="min-h-[2.75rem] line-clamp-2 text-sm font-semibold leading-snug text-ink">{product.name}</p>
+          <p className="line-clamp-2 text-sm font-semibold leading-snug sm:text-[15px]">{product.name}</p>
         </Link>
 
-        {attributeLine ? (
-          <p className="line-clamp-1 text-xs font-medium text-ink/78">{attributeLine}</p>
-        ) : null}
-
-        {descriptorLine ? (
-          <p className="line-clamp-2 text-xs leading-5 text-muted">{descriptorLine}</p>
-        ) : null}
-
-        <div className="min-h-[1.1rem] flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-          <span className={stockTone}>{stockLabel}</span>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className={`text-base font-bold tabular-nums ${hasDiscount ? 'text-sale' : 'text-ink'}`}>
+            {currentPrice.toLocaleString('ru-RU')} ₽
+          </span>
+          {hasDiscount ? (
+            <span className="text-xs tabular-nums text-muted line-through">{oldPrice.toLocaleString('ru-RU')} ₽</span>
+          ) : null}
         </div>
 
-        <div className="mt-auto flex flex-col gap-2 pt-1 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-semibold text-accent">
-              {currentPrice.toLocaleString('ru-RU')} ₽
-            </span>
-            {hasDiscount && (
-              <span className="line-through text-muted text-xs">
-                {oldPrice.toLocaleString('ru-RU')} ₽
-              </span>
-            )}
+        {attributeLine ? <p className="line-clamp-1 text-xs text-muted">{attributeLine}</p> : null}
+        <p className={`text-xs ${isAvailable ? 'text-primary' : 'font-semibold text-muted'}`}>{stockLabel}</p>
+
+        {isAvailable && (onQuickView || showAddToCart) ? (
+          <div className="mt-auto pt-1">
+            {onQuickView ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="w-full !min-h-11 border-primary/30 !px-2 text-xs text-primary shadow-none hover:bg-primary/5 sm:hidden"
+                onClick={() => onQuickView(product)}
+              >
+                Быстрый просмотр
+              </Button>
+            ) : null}
+            {showAddToCart ? (
+              <div className={onQuickView ? 'hidden sm:block' : ''}>
+                <AddToCartButton product={product} variantId={primaryVariant?.id} />
+              </div>
+            ) : null}
           </div>
-          {onQuickView ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="w-full px-3 py-2 text-xs sm:hidden"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onQuickView(product);
-              }}
-            >
-              Быстрый просмотр
-            </Button>
-          ) : null}
-          {showAddToCart ? (
-            <div className={onQuickView ? 'hidden sm:block' : ''}>
-              <AddToCartButton
-                product={product}
-                variantId={primaryVariant?.id}
-                disabled={stockCount <= 0}
-              />
-            </div>
-          ) : null}
-        </div>
+        ) : null}
       </div>
-    </Card>
+    </article>
   );
 }
 
-function AddToCartButton({ product, variantId, disabled = false }) {
+function AddToCartButton({ product, variantId }) {
   const { addItem } = useContext(CartContext);
   const [status, setStatus] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -345,7 +279,7 @@ function AddToCartButton({ product, variantId, disabled = false }) {
 
   const handleClick = async (event) => {
     event.preventDefault();
-    if (isAdding || disabled) {
+    if (isAdding) {
       return;
     }
     setStatus(null);
@@ -361,15 +295,16 @@ function AddToCartButton({ product, variantId, disabled = false }) {
   };
 
   return (
-    <div className="w-full sm:w-auto">
+    <div className="w-full">
       <Button
         size="sm"
-        className="w-full bg-accent px-3 py-2 text-xs shadow-[0_10px_20px_rgba(47,61,50,0.24)] hover:bg-accent/90 sm:w-auto"
+        variant="secondary"
+        className="w-full !min-h-11 border-primary/30 !px-2 text-xs text-primary shadow-none hover:bg-primary/5"
         onClick={handleClick}
-        disabled={disabled || isAdding}
+        disabled={isAdding}
       >
         <span>
-          {disabled ? 'Нет в наличии' : isAdding ? 'Добавляем…' : 'В корзину'}
+          {isAdding ? 'Добавляем…' : 'В корзину'}
         </span>
       </Button>
       {status ? <NotificationBanner notification={status} compact className="mt-2 sm:max-w-[240px]" /> : null}

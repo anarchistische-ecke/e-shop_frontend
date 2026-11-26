@@ -56,9 +56,9 @@ function CmsPageRenderer({ page }) {
         jsonLd={jsonLd}
       />
 
-      <section className={isHomeTemplate ? 'py-6 sm:py-8' : 'py-10 sm:py-12'}>
-        <div className={`container mx-auto px-4 ${isHomeTemplate ? 'max-w-6xl' : 'max-w-5xl'}`}>
-          <div className={isHomeTemplate ? 'space-y-6 sm:space-y-8' : 'space-y-5 sm:space-y-6'}>
+      <section className={isHomeTemplate ? 'pb-8 pt-3 sm:pt-5' : 'py-10 sm:py-12'}>
+        <div className={isHomeTemplate ? 'page-shell' : 'container mx-auto max-w-5xl px-4'}>
+          <div className={isHomeTemplate ? 'space-y-5 sm:space-y-8' : 'space-y-5 sm:space-y-6'}>
             {sections.length > 0 ? (
               sections.map((section, index) => {
                 const BlockComponent = getCmsBlockComponent(section.sectionType);

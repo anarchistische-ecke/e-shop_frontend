@@ -12,7 +12,7 @@ test('public commerce surfaces never request the full product directory', async 
   await page.goto('/favorites');
   await expect(page.getByRole('heading', { name: 'Сохранённые товары' })).toBeVisible();
   await page.goto('/cart');
-  await expect(page.getByRole('heading', { name: /Ваши товары/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Корзина', exact: true })).toBeVisible();
 
   expect(api.stats.fullProductsRequests).toBe(0);
 });

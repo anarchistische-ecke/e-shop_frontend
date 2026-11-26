@@ -14,7 +14,7 @@ function ProductFilterFields({
   return (
     <>
       <label className="block text-sm">
-        <span className="text-xs uppercase tracking-[0.18em] text-muted">Бренд</span>
+        <span className="text-xs text-muted">Бренд</span>
         <Select
           value={params.brand}
           onChange={(event) => onBrandChange(event.target.value)}
@@ -30,7 +30,7 @@ function ProductFilterFields({
       </label>
 
       <div className="text-sm">
-        <span className="text-xs uppercase tracking-[0.18em] text-muted">Цена, ₽</span>
+        <span className="text-xs text-muted">Цена, ₽</span>
         <div className="mt-1 grid grid-cols-2 gap-2">
           <Input
             type="number"
@@ -51,7 +51,7 @@ function ProductFilterFields({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 gap-2 lg:flex">
         <FilterToggle
           type="button"
           onClick={onToggleInStock}
@@ -153,8 +153,11 @@ export function ProductFiltersTrigger({ activeFilterCount, isOpen = false, onOpe
       variant="secondary"
       block
       size="sm"
-      className="lg:hidden"
-      onClick={onOpenFilters}
+      className="whitespace-nowrap !px-3 lg:hidden"
+      onClick={(event) => {
+        event.currentTarget.focus({ preventScroll: true });
+        onOpenFilters();
+      }}
       aria-expanded={isOpen}
       aria-controls="product-filters-sheet"
       aria-haspopup="dialog"

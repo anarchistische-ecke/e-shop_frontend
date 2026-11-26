@@ -9,14 +9,13 @@ function CartButton({ totalItems }) {
       as={Link}
       to="/cart"
       aria-label="Корзина"
-      variant="secondary"
-      size="sm"
-      className="relative px-3"
+      variant="ghost"
+      size="icon"
+      className="relative text-primary"
     >
       <CartIcon className="h-5 w-5" />
-      <span className="hidden text-sm font-medium sm:inline">Корзина</span>
       {totalItems > 0 ? (
-        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent px-1.5 text-[11px] leading-none text-white">
+        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[11px] leading-none text-white">
           {totalItems}
         </span>
       ) : null}

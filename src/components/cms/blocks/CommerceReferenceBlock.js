@@ -8,6 +8,7 @@ import FeatureListBlock from './FeatureListBlock';
 import { Card } from '../../ui';
 import {
   CmsAction,
+  CmsRichText,
   CmsSectionHeading,
   getCmsLayoutVariant,
   resolveMediaUrl,
@@ -173,12 +174,26 @@ function stripHtml(value = '') {
     .trim();
 }
 
-function CategoryReferenceCard({ category, products, item }) {
+function CategoryReferenceCard({ category, products, item, compact = false }) {
   const title = item?.title || category?.name || 'Категория';
   const description = item?.description || category?.description || category?.summary || '';
   const imageUrl = buildCategoryImage(category, products);
   const imageMedia = category?.media || getPrimaryImageMedia(products.find((candidate) => candidate?.category === String(category?.slug || category?.id || '').trim()));
   const href = item?.url || buildCategoryListingHref(category?.slug || category?.id || '');
+
+  if (compact) {
+    return (
+      <Link to={href} className="focus-ring-soft group flex min-h-11 min-w-0 items-center gap-2.5 rounded-lg border border-ink/10 bg-white px-2.5 py-1 text-sm font-semibold text-primary hover:border-primary/40">
+        {imageUrl ? (
+          <span className="relative hidden h-8 w-8 shrink-0 overflow-hidden rounded sm:block">
+            <ResponsiveImage media={imageMedia} src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" sizes="36px" loading="lazy" />
+          </span>
+        ) : null}
+        <span>{title}</span>
+        <span aria-hidden="true" className="ml-auto">↗</span>
+      </Link>
+    );
+  }
 
   return (
     <Card
@@ -275,8 +290,28 @@ function BrandReferenceCard({ brand, products, item }) {
   );
 }
 
-function CommerceSectionShell({ section, children, testId }) {
+function CommerceSectionShell({ section, children, testId, editorial = false }) {
   const hasHeading = section?.eyebrow || section?.title || section?.body;
+
+  if (editorial) {
+    return (
+      <section id={section.anchorId || undefined} data-testid={testId} className="space-y-2 border-t border-ink/10 pt-3 sm:space-y-3 sm:pt-4">
+        {hasHeading || section.primaryCtaLabel || section.secondaryCtaLabel ? (
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <div className="min-w-0">
+              {section.title ? <h2 className="font-display text-[1.375rem] font-medium leading-tight sm:text-[1.8rem]">{section.title}</h2> : null}
+              {section.body ? <CmsRichText html={section.body} className="mt-1 max-w-[64ch] text-sm text-muted" /> : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3">
+              <CmsAction label={section.primaryCtaLabel} url={section.primaryCtaUrl} variant="ghost" className="justify-start !px-0 text-primary underline decoration-primary/25 underline-offset-4" />
+              <CmsAction label={section.secondaryCtaLabel} url={section.secondaryCtaUrl} variant="ghost" className="justify-start !px-0 text-primary underline decoration-primary/25 underline-offset-4" />
+            </div>
+          </div>
+        ) : null}
+        {children}
+      </section>
+    );
+  }
 
   return (
     <section id={section.anchorId || undefined} data-testid={testId} className="space-y-4">
@@ -378,14 +413,15 @@ function ProductReferenceList({ section, page }) {
   }
 
   return (
-    <CommerceSectionShell section={section}>
+    <CommerceSectionShell section={section} editorial={page?.template === 'home'}>
       {resolvedProducts.length ? (
-        <div className={getReferenceListClass(section, 'product')}>
+        <div className={page?.template === 'home' && section.layoutVariant !== 'rail' ? 'page-grid--catalog' : getReferenceListClass(section, 'product')}>
           {resolvedProducts.map((product, index) => (
             <div key={product.id || product.slug} className={getReferenceItemClass(section)}>
               <ProductCard
                 product={product}
                 deferThumbnails={page?.template === 'home'}
+                priority={page?.template === 'home' && index < 2}
                 imageSizes="(max-width: 767px) 48vw, (min-width: 1024px) 22rem, 46vw"
                 listName={listName}
                 position={index + 1}
@@ -431,15 +467,20 @@ function CategoryReferenceList({ section, page }) {
     <CommerceSectionShell
       section={section}
       testId={page?.template === 'home' ? 'home-category-grid' : undefined}
+      editorial={page?.template === 'home'}
     >
       {resolvedCategories.length ? (
-        <div className={getReferenceListClass(section, 'category')}>
+        <div className={page?.template === 'home'
+          ? 'flex flex-wrap gap-2'
+          : getReferenceListClass(section, 'category')
+        }>
           {resolvedCategories.map(({ category, item }) => (
-            <div key={category.id || category.slug} className={getReferenceItemClass(section)}>
+            <div key={category.id || category.slug} className={page?.template === 'home' ? 'min-w-0 max-w-full' : getReferenceItemClass(section)}>
               <CategoryReferenceCard
                 category={category}
                 products={products}
                 item={item}
+                compact={page?.template === 'home'}
               />
             </div>
           ))}

@@ -49,6 +49,7 @@ test.describe('desktop listing layout', () => {
     await expect(page.getByTestId('category-breadcrumbs')).toBeVisible();
     await expect(page.getByTestId('category-header')).toBeVisible();
     await expect(page.getByTestId('category-filters-card')).toBeVisible();
+    await expect(page.getByTestId('category-results').locator('.product-card').first().getByText(/₽/).first()).toBeInViewport();
 
     const metrics = await measureVerticalRhythm(page, {
       header: 'header',
@@ -71,6 +72,7 @@ test.describe('desktop listing layout', () => {
     await expect(page.getByTestId('catalogue-header-card')).toHaveCount(0);
     await expect(page.getByTestId('catalogue-filters-card')).toBeVisible();
     await expect(page.getByTestId('catalogue-search-card')).toBeVisible();
+    await expect(page.getByTestId('catalogue-grid').locator('.product-card').first().getByText(/₽/).first()).toBeInViewport();
 
     const metrics = await measureVerticalRhythm(page, {
       header: 'header',

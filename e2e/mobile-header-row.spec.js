@@ -26,6 +26,56 @@ test('mobile sticky menu stays anchored to the bottom and opens the full catalog
   await expect(page.getByRole('link', { name: 'Перейти к поиску товаров и категорий' })).toBeVisible();
 });
 
+test('customer chat clears the mobile navigation and fits in a short viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 568 });
+  await page.goto('/catalog');
+
+  const stickyMenu = page.getByTestId('mobile-sticky-menu');
+  const launcher = page.getByTestId('customer-chat-launcher');
+  await expect(stickyMenu).toBeVisible();
+  await expect(launcher).toBeVisible();
+
+  const navigation = await stickyMenu.boundingBox();
+  const chat = await launcher.boundingBox();
+  expect(chat.y + chat.height).toBeLessThan(navigation.y);
+
+  await launcher.click();
+  const panel = page.getByRole('region', { name: 'Чат с менеджером' });
+  await expect(panel).toBeVisible();
+  expect((await panel.boundingBox()).y).toBeGreaterThanOrEqual(0);
+
+  await stickyMenu.getByRole('button', { name: 'Корзина' }).click();
+  await expect(page.getByRole('dialog', { name: 'Корзина' })).toBeVisible();
+});
+
+test('guests can scroll to the chat composer on a phone in landscape', async ({ page }) => {
+  await page.setViewportSize({ width: 780, height: 390 });
+  await page.goto('/catalog');
+  await page.getByTestId('customer-chat-launcher').click();
+
+  const panel = page.getByRole('region', { name: 'Чат с менеджером' });
+  const message = panel.getByRole('textbox', { name: 'Сообщение' });
+  const send = panel.getByRole('button', { name: 'Отправить' });
+  const { height } = await panel.boundingBox();
+
+  await panel.hover({ position: { x: 24, y: height - 12 } });
+  await page.mouse.wheel(0, 300);
+
+  await expect(send).toBeInViewport({ ratio: 1 });
+  await message.fill('Подскажите, как выбрать размер?');
+  await send.click({ trial: true });
+});
+
+test('guests can close chat on a short desktop window', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 450 });
+  await page.goto('/catalog');
+  await page.getByTestId('customer-chat-launcher').click();
+
+  const panel = page.getByRole('region', { name: 'Чат с менеджером' });
+  await panel.getByRole('button', { name: 'Закрыть чат' }).click();
+  await expect(panel).toBeHidden();
+});
+
 test('mobile header search opens inline suggestions and submits to search results', async ({ page }) => {
   await page.goto('/category/throws');
 

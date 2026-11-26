@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CartContext } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,8 +8,7 @@ import { METRIKA_GOALS, trackMetrikaGoal } from '../../utils/metrika';
 import {
   buildAccountLinks,
   buildCategoryCollections,
-  buildHeaderSearchParams,
-  resolveWayfindingLabel
+  buildHeaderSearchParams
 } from '../../utils/header';
 import { buildAutocompleteData, normalizeSearchText } from '../../utils/search';
 import { readEnv } from '../../config/runtime';
@@ -37,7 +37,8 @@ export function useHeaderState() {
   const headerRef = useRef(null);
   const headerBarRef = useRef(null);
   const searchRef = useRef(null);
-  const searchInputRef = useRef(null);
+  const mobileSearchInputRef = useRef(null);
+  const mobileSearchTriggerRef = useRef(null);
   const accountMenuRef = useRef(null);
   const lastAddedDismissTimerRef = useRef(null);
 
@@ -45,11 +46,6 @@ export function useHeaderState() {
     navCategories,
     childrenByParent
   } = useMemo(() => buildCategoryCollections(categories), [categories]);
-
-  const wayfindingLabel = useMemo(
-    () => resolveWayfindingLabel(location.pathname, location.search),
-    [location.pathname, location.search]
-  );
 
   const totalItems = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
@@ -96,21 +92,21 @@ export function useHeaderState() {
     [categories, debouncedSearchTerm, searchScope, suggestionProducts]
   );
 
-  const hasSearchSuggestions =
-    autocompleteData.categorySuggestions.length > 0 ||
-    autocompleteData.suggestedQueries.length > 0 ||
-    autocompleteData.productSuggestions.length > 0 ||
-    autocompleteData.hasCorrection;
   const hasSearchMinimumLength = normalizeSearchText(searchTerm).length >= 2;
 
   const isSearchPanelVisible =
-    (isSearchOpen || isSearchFocused) && hasSearchMinimumLength && (searchTerm || hasSearchSuggestions);
+    (isSearchOpen || isSearchFocused) && hasSearchMinimumLength;
 
   const mobileCategories = navCategories;
   const closeSearch = useCallback(() => {
     setIsSearchOpen(false);
     setIsSearchFocused(false);
   }, []);
+
+  const dismissMobileSearch = useCallback(() => {
+    closeSearch();
+    window.requestAnimationFrame(() => mobileSearchTriggerRef.current?.focus({ preventScroll: true }));
+  }, [closeSearch]);
 
   const closeMenu = useCallback(() => {
     setIsMenuOpen(false);
@@ -209,6 +205,7 @@ export function useHeaderState() {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
         closeMenu();
+        if (isSearchOpen) closeSearch();
       }
       if (window.innerWidth >= 768) {
         closeAccountMenu();
@@ -217,7 +214,7 @@ export function useHeaderState() {
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [closeAccountMenu, closeMenu]);
+  }, [closeAccountMenu, closeMenu, closeSearch, isSearchOpen]);
 
   useEffect(() => {
     closeAllPanels();
@@ -228,13 +225,7 @@ export function useHeaderState() {
       return undefined;
     }
 
-    const shouldLockViewport =
-      isMenuOpen ||
-      (isSearchPanelVisible &&
-        typeof window !== 'undefined' &&
-        window.innerWidth < 1024);
-
-    if (!shouldLockViewport) {
+    if (!isMenuOpen) {
       return undefined;
     }
 
@@ -251,10 +242,10 @@ export function useHeaderState() {
       document.body.style.touchAction = previousBodyTouchAction;
       document.documentElement.style.overflow = previousDocumentOverflow;
     };
-  }, [isMenuOpen, isSearchPanelVisible]);
+  }, [isMenuOpen]);
 
   useEffect(() => {
-    if ((!isSearchOpen && !isSearchFocused) || typeof document === 'undefined') {
+    if (!isSearchFocused || isSearchOpen || typeof document === 'undefined') {
       return undefined;
     }
 
@@ -432,7 +423,6 @@ export function useHeaderState() {
       closeAccountMenu();
       closeMenu();
       closeMega();
-      setIsSearchOpen(true);
     },
     [closeAccountMenu, closeMega, closeMenu]
   );
@@ -442,26 +432,27 @@ export function useHeaderState() {
     closeMenu();
     closeMega();
     setIsSearchFocused(true);
-    setIsSearchOpen(true);
   }, [closeAccountMenu, closeMega, closeMenu]);
 
   const clearSearch = useCallback(() => {
     setSearchTerm('');
-    closeSearch();
-  }, [closeSearch]);
-
-  const openSearchPanel = useCallback(() => {
-    closeMenu();
-    closeMega();
-    closeAccountMenu();
-    setIsSearchOpen(true);
-    setIsSearchFocused(true);
-    if (typeof window === 'undefined') {
-      return;
+    if (isSearchOpen) {
+      mobileSearchInputRef.current?.focus({ preventScroll: true });
+    } else {
+      closeSearch();
     }
-    window.requestAnimationFrame?.(() => {
-      searchInputRef.current?.focus();
+  }, [closeSearch, isSearchOpen]);
+
+  const openSearchPanel = useCallback((event) => {
+    mobileSearchTriggerRef.current = event.currentTarget;
+    // Safari needs input focus in the same tap that opens the search dialog.
+    flushSync(() => {
+      closeMenu();
+      closeMega();
+      closeAccountMenu();
+      setIsSearchOpen(true);
     });
+    mobileSearchInputRef.current?.focus({ preventScroll: true });
   }, [closeAccountMenu, closeMega, closeMenu]);
 
   const openMenu = useCallback(() => {
@@ -510,6 +501,7 @@ export function useHeaderState() {
     closeMenu,
     closeMega,
     closeSearch,
+    dismissMobileSearch,
     dismissLastAddedItem,
     displayName,
     displayPhone,
@@ -537,13 +529,12 @@ export function useHeaderState() {
     openSearchPanel,
     scopeOptions,
     searchRef,
-    searchInputRef,
+    mobileSearchInputRef,
     searchScope,
     searchTerm,
     setSearchScope,
     trackCategoryNavigation,
     trackSearchSuggestionClick,
     totalItems,
-    wayfindingLabel
   };
 }

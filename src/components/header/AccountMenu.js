@@ -14,12 +14,11 @@ function LoggedOutAccountButton() {
       to="/login"
       state={{ from: redirectTo }}
       aria-label="Войти"
-      variant="secondary"
-      size="sm"
-      className="gap-2 px-3"
+      variant="ghost"
+      size="icon"
+      className="text-primary"
     >
       <UserIcon className="h-5 w-5" />
-      <span className="hidden text-sm sm:inline">Войти</span>
     </Button>
   );
 }
@@ -40,7 +39,7 @@ function LoggedInAccountMenu({
         as={Link}
         to="/account"
         aria-label="Личный кабинет"
-        variant="secondary"
+        variant="ghost"
         size="icon"
         className="md:hidden"
       >
@@ -50,17 +49,14 @@ function LoggedInAccountMenu({
       <div ref={accountMenuRef} className="relative hidden md:block">
         <Button
           type="button"
-          variant="secondary"
-          size="sm"
+          variant="ghost"
+          size="icon"
           aria-label="Личный кабинет"
-          className="gap-2 px-3"
+          className="text-primary"
           onClick={onAccountTrigger}
           aria-expanded={isAccountMenuOpen}
         >
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sand/70 text-accent">
-            <UserIcon className="h-4 w-4" />
-          </span>
-          <span className="hidden text-sm font-medium lg:inline">Мой кабинет</span>
+          <UserIcon className="h-5 w-5" />
         </Button>
 
         <div
@@ -70,7 +66,7 @@ function LoggedInAccountMenu({
               : 'pointer-events-none translate-y-2 opacity-0'
           }`}
         >
-          <div className="overflow-hidden rounded-[24px] border border-ink/10 bg-white shadow-[0_24px_60px_rgba(43,39,34,0.18)]">
+          <div className="overflow-hidden rounded-lg border border-ink/10 bg-white shadow-[0_24px_60px_rgba(43,39,34,0.18)]">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-ink/10 bg-sand/40 px-4 py-4">
               <div>
                 <p className="text-base font-semibold leading-tight">{displayName}</p>
@@ -92,7 +88,7 @@ function LoggedInAccountMenu({
                   key={entry.to}
                   to={entry.to}
                   onClick={onAccountNav}
-                  className="touch-link block px-4 py-2.5 text-sm text-ink transition hover:bg-sand/45"
+                  className="touch-link block px-4 py-2.5 text-sm text-ink transition hover:bg-primary/5"
                 >
                   {entry.label}
                 </Link>

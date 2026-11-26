@@ -223,3 +223,11 @@ export function getPrimaryImageMedia(product, variantId = null) {
   const url = getPrimaryImageUrl(product, variantId);
   return url ? { url, originalUrl: url, alt: '' } : null;
 }
+
+export function formatProductCount(count) {
+  const lastDigit = count % 10;
+  const lastTwoDigits = count % 100;
+  if (lastDigit === 1 && lastTwoDigits !== 11) return `${count} товар`;
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) return `${count} товара`;
+  return `${count} товаров`;
+}

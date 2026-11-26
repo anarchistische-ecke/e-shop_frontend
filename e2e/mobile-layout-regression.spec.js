@@ -116,6 +116,7 @@ test('mobile header actions stay evenly distributed without horizontal overflow'
 });
 
 test('mobile search page controls stay inside the card without overlap', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/search?query=%D0%9F%D0%BB%D0%B5%D0%B4');
 
   await expect(page.getByRole('heading', { name: /Найдено/i })).toBeVisible();
@@ -125,6 +126,15 @@ test('mobile search page controls stay inside the card without overlap', async (
   await expect(searchCard).toBeVisible();
   await expect(searchCard.getByTestId('search-page-scope-select')).toBeVisible();
   await expectNoOverlaps(page.getByTestId('search-page-controls'));
+  const sortFits = await searchCard.getByLabel('Сортировка результатов поиска').evaluate((select) => {
+    const style = getComputedStyle(select);
+    const canvas = document.createElement('canvas').getContext('2d');
+    canvas.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const labelWidth = canvas.measureText(select.selectedOptions[0].textContent).width;
+    return labelWidth + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) <= select.clientWidth;
+  });
+  expect(sortFits).toBe(true);
+  await expect(page.locator('.product-card').first().getByText(/₽/).first()).toBeInViewport();
 });
 
 test('home hero stays compact after mobile header simplification', async ({ page }) => {
@@ -194,12 +204,12 @@ test('core storefront routes fit the mobile viewport without horizontal overflow
 
   await page.getByRole('button', { name: 'Добавить в корзину' }).click();
   await page.goto('/cart');
-  await expect(page.getByRole('heading', { name: 'Ваши товары для уюта' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Корзина', exact: true })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole('button', { name: /Оформить заказ/ }).last().click();
   await expect(page).toHaveURL(/\/checkout$/);
-  await expect(page.getByRole('heading', { name: /Быстрое оформление без лишних шагов/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Оформление заказа', exact: true })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/info/delivery');
@@ -224,8 +234,13 @@ for (const viewport of [
 
     const checkoutBar = page.getByTestId('mobile-cart-checkout-bar');
     const chatLauncher = page.getByTestId('customer-chat-launcher');
+    const quote = { name: 'Уточнить доставку до оплаты', exact: true };
     await expect(checkoutBar).toBeVisible();
+    await expect(checkoutBar.getByRole('link', quote)).toBeInViewport({ ratio: 1 });
     await expect(chatLauncher).toBeVisible();
+    await expect(page.getByTestId('customer-chat-widget')).toHaveCSS('position', 'static');
+    await chatLauncher.evaluate((launcher) => launcher.scrollIntoView({ block: 'center' }));
+    await expect(chatLauncher).toBeInViewport();
 
     const [checkoutBox, chatBox] = await Promise.all([
       checkoutBar.boundingBox(),
@@ -237,6 +252,7 @@ for (const viewport of [
 
     await checkoutBar.getByRole('button', { name: /Оформить заказ/ }).click();
     await expect(page).toHaveURL(/\/checkout$/);
+    await expect(page.getByRole('link', quote).first()).toBeInViewport({ ratio: 1 });
     await expect(page.getByRole('button', { name: 'Открыть чат' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /Нужна помощь/ })).toHaveAttribute(
       'href',

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Seo from '../components/Seo';
 import {
@@ -24,7 +24,6 @@ import ProductPagination from '../features/product-list/ProductPagination';
 import { resolveCategoryToken } from '../features/product-list/selectors';
 import { useProductList } from '../features/product-list/useProductList';
 import { useProductListRouteState } from '../features/product-list/useProductListRouteState';
-import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { normalizeSearchText } from '../utils/search';
 import {
   METRIKA_GOALS,
@@ -43,6 +42,7 @@ import {
   hasListingSeoVariant
 } from '../seo/listing';
 import QuickViewSheet from '../components/commerce/QuickViewSheet';
+import { GridIcon, ListIcon } from '../components/header/icons';
 
 function CategoryPage() {
   const { slug } = useParams();
@@ -50,6 +50,7 @@ function CategoryPage() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('grid');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const closeFilters = useCallback(() => setIsFilterOpen(false), []);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const resultsRef = useRef(null);
 
@@ -63,18 +64,12 @@ function CategoryPage() {
     params
   });
 
-  useBodyScrollLock(isFilterOpen);
-
   useEffect(() => {
     if (params.page <= 1 || !resultsRef.current) {
       return;
     }
     resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [params.page]);
-
-  const activeSortLabel =
-    PRODUCT_LIST_SORT_OPTIONS.find((option) => option.value === params.sort)?.label ||
-    'Лучшее совпадение';
 
   const heading = useMemo(() => {
     if (list.activeCategory?.presentation?.marketingTitle) {
@@ -133,7 +128,6 @@ function CategoryPage() {
     headingNote ||
     `${heading}. Подборка товаров для дома с удобной доставкой по России.`;
   const categoryPresentation = list.activeCategory?.presentation || null;
-  const hasCategoryHeroHeading = categoryPresentation?.hero?.sectionType === 'hero';
   const categoryCatalogImage =
     categoryPresentation?.seoImage?.url ||
     list.activeCategory?.imageUrl ||
@@ -257,7 +251,7 @@ function CategoryPage() {
   };
 
   return (
-    <div className="category-page relative page-section page-section--listing">
+    <div className="category-page relative pb-10 pt-3 md:pt-5">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -290,147 +284,87 @@ function CategoryPage() {
           <span className="text-ink">{heading}</span>
         </nav>
 
-        <CataloguePresentationHero
-          hero={categoryPresentation?.hero}
-          page={categoryPresentationPage}
-          className="mt-4"
-        />
-
-        <div data-testid="category-header" className="section-header mt-3 lg:mt-2.5">
-          <div className="flex flex-wrap items-baseline gap-3">
-            {hasCategoryHeroHeading ? (
-              <h2 className="text-2xl sm:text-3xl font-semibold">{heading}</h2>
-            ) : (
-              <h1 className="text-2xl sm:text-3xl font-semibold">{heading}</h1>
-            )}
-            <span className="text-sm text-muted">{list.itemsLabel}</span>
-            {categoryPresentation?.badgeText ? (
-              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                {categoryPresentation.badgeText}
-              </span>
-            ) : null}
-            {categoryPresentation?.ribbonText ? (
-              <span className="rounded-full border border-ink/10 bg-white/90 px-2.5 py-1 text-xs text-ink/75">
-                {categoryPresentation.ribbonText}
-              </span>
-            ) : null}
+        <div data-testid="category-header" className="md:mt-3">
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <h1 className="font-display text-[1.875rem] font-medium leading-tight tracking-tight sm:text-[2.5rem]">{heading}</h1>
+            <span className="text-sm text-muted" aria-live="polite">{list.itemsLabel}</span>
           </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-            <div className="inline-flex min-h-[48px] w-full items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_10px_24px_rgba(43,39,34,0.07)] sm:w-auto">
-              <span className="text-ink/55">↕</span>
-              <label htmlFor="category-sort" className="text-ink/65">
-                Сорт:
-              </label>
-              <Select
-                id="category-sort"
-                value={params.sort}
-                onChange={(event) => {
-                  trackGoal(METRIKA_GOALS.SEARCH_SORT_CHANGE, {
-                    sort: event.target.value,
-                    page_type: 'category'
-                  });
-                  updateParams({ sort: event.target.value });
-                }}
-                className="control-inline min-w-0 w-full bg-transparent pr-6 text-sm font-medium text-ink focus:outline-none sm:min-w-[200px]"
-                aria-label="Сортировка товаров"
-              >
-                {PRODUCT_LIST_SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <ProductFiltersTrigger
-              activeFilterCount={list.activeFilters.length}
-              isOpen={isFilterOpen}
-              onOpenFilters={() => setIsFilterOpen(true)}
-            />
-
-            <div className="hidden sm:flex items-center gap-1 rounded-2xl border border-ink/10 bg-white/90 p-1">
-              <Button
-                type="button"
-                variant={viewMode === 'grid' ? 'primary' : 'ghost'}
-                size="icon"
-                onClick={() => setViewMode('grid')}
-                className="rounded-xl"
-                aria-label="Крупная сетка"
-              >
-                ▦
-              </Button>
-              <Button
-                type="button"
-                variant={viewMode === 'compact' ? 'primary' : 'ghost'}
-                size="icon"
-                onClick={() => setViewMode('compact')}
-                className="rounded-xl"
-                aria-label="Компактная сетка"
-              >
-                ▩
-              </Button>
-            </div>
-          </div>
+          {headingNote ? <p className="mt-2 max-w-2xl text-sm text-muted">{headingNote}</p> : null}
+          {categoryPresentation?.badgeText || categoryPresentation?.ribbonText ? (
+            <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-primary">
+              {categoryPresentation.badgeText ? <span>{categoryPresentation.badgeText}</span> : null}
+              {categoryPresentation.ribbonText ? <span>{categoryPresentation.ribbonText}</span> : null}
+            </p>
+          ) : null}
         </div>
 
-        {headingNote ? <p className="mt-1.5 text-sm text-muted lg:mt-1">{headingNote}</p> : null}
-
         {list.childCategories.length > 0 ? (
-          <div className="mt-4 flex flex-wrap gap-2 lg:mt-3">
+          <nav aria-label="Подкатегории" className="mt-3 flex gap-x-5 overflow-x-auto border-y border-ink/10 scrollbar-hide lg:flex-wrap">
             {list.childCategories.map((category) => {
               const token = resolveCategoryToken(category);
               const count = list.childCategoryCounts[normalizeSearchText(token)] || 0;
               return (
-                <FilterChip
-                  key={token}
-                  type="button"
-                  className="rounded-2xl text-sm"
-                  onClick={() => navigate(`/category/${token}`)}
-                >
+                <Link key={token} to={`/category/${token}`} className="focus-ring-soft flex min-h-11 shrink-0 items-center whitespace-nowrap text-sm font-semibold text-primary hover:underline">
                   {category.name}{count ? ` (${count})` : ''}
-                </FilterChip>
+                </Link>
               );
             })}
-          </div>
+          </nav>
         ) : null}
 
-        <Card
-          as="section"
-          variant="quiet"
-          className="mt-4 lg:mt-3"
-          padding="sm"
+        <section
+          className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_12rem_auto] xl:grid-cols-[minmax(0,1fr)_15rem_auto]"
           data-testid="category-filters-card"
+          aria-label="Фильтры и сортировка"
         >
+          <ProductFiltersTrigger
+            activeFilterCount={list.activeFilters.length}
+            isOpen={isFilterOpen}
+            onOpenFilters={() => setIsFilterOpen(true)}
+          />
           <ProductFiltersDesktop
             {...filterProps}
-            className="hidden gap-3 lg:grid xl:grid-cols-4"
+            className="hidden grid-cols-[minmax(8rem,1fr)_minmax(11rem,1.2fr)_auto] items-end gap-2 lg:grid"
           />
-          <div className="text-xs text-muted lg:mt-3">
-            Сортировка: <span className="font-semibold text-ink">{activeSortLabel}</span>
-            {params.sort === 'bestMatch' ? (
-              <span className="ml-2">
-                Рекомендуем на основе наличия, цены и разнообразия товаров.
-              </span>
-            ) : null}
+          <label htmlFor="category-sort" className="sr-only">Сортировка товаров</label>
+          <Select
+            id="category-sort"
+            value={params.sort}
+            onChange={(event) => {
+              trackGoal(METRIKA_GOALS.SEARCH_SORT_CHANGE, { sort: event.target.value, page_type: 'category' });
+              updateParams({ sort: event.target.value });
+            }}
+            className="min-w-0 text-sm"
+          >
+            {PRODUCT_LIST_SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </Select>
+          <div className="hidden gap-1 sm:flex">
+            <Button type="button" variant={viewMode === 'grid' ? 'subtle' : 'ghost'} size="icon" onClick={() => setViewMode('grid')} aria-label="Крупная сетка" aria-pressed={viewMode === 'grid'}>
+              <GridIcon className="h-5 w-5" />
+            </Button>
+            <Button type="button" variant={viewMode === 'compact' ? 'subtle' : 'ghost'} size="icon" onClick={() => setViewMode('compact')} aria-label="Компактная сетка" aria-pressed={viewMode === 'compact'}>
+              <ListIcon className="h-5 w-5" />
+            </Button>
           </div>
-        </Card>
+        </section>
 
         <ProductFiltersSheet
           {...filterProps}
           isFilterOpen={isFilterOpen}
-          onCloseFilters={() => setIsFilterOpen(false)}
+          onCloseFilters={closeFilters}
         />
 
         {list.activeFilters.length > 0 ? (
-          <Card className="mt-4 flex flex-wrap items-center gap-2 lg:mt-3" variant="quiet" padding="sm">
-            <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Применено</span>
-            <div className="flex flex-1 items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <section aria-label="Применённые фильтры" className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
               {list.activeFilters.map((filter) => (
                 <FilterChip
                   key={filter.key}
                   type="button"
                   onClick={() => clearFilterByKey(filter.key)}
+                  className="shrink-0 whitespace-nowrap"
                   active
                 >
                   {filter.label}
@@ -447,23 +381,13 @@ function CategoryPage() {
             >
               Очистить всё
             </Button>
-          </Card>
+          </section>
         ) : null}
-
-        <CataloguePresentationBlocks
-          blocks={categoryPresentation?.blocks}
-          page={categoryPresentationPage}
-          className="mt-6"
-        />
-        <CmsStorefrontCollectionRail
-          collectionKeys={categoryPresentation?.linkedCollectionKeys}
-          className="mt-6"
-        />
 
         <div
           ref={resultsRef}
           data-testid="category-results"
-          className="mt-5 lg:mt-4"
+          className="mt-3 md:mt-4"
           itemScope={!isListingVariant || undefined}
           itemType={!isListingVariant ? 'https://schema.org/OfferCatalog' : undefined}
         >
@@ -477,8 +401,8 @@ function CategoryPage() {
           {list.loading ? (
             <div className={gridClassName}>
               {Array.from({ length: list.pageSize }).map((_, index) => (
-                <div key={`skeleton-${index}`} className="ui-card ui-card--quiet p-3">
-                  <div className="skeleton shimmer-safe h-[180px] w-full rounded-2xl" />
+                <div key={`skeleton-${index}`} className="space-y-3">
+                  <div className="skeleton shimmer-safe aspect-[4/3] w-full rounded-lg" />
                   <div className="mt-3 space-y-2">
                     <div className="skeleton shimmer-safe h-4 w-11/12 rounded-full" />
                     <div className="skeleton shimmer-safe h-4 w-2/3 rounded-full" />
@@ -535,6 +459,13 @@ function CategoryPage() {
             </Card>
           )}
         </div>
+        <CataloguePresentationHero
+          hero={categoryPresentation?.hero}
+          page={{ ...categoryPresentationPage, secondaryHeading: true }}
+          className="mt-8"
+        />
+        <CataloguePresentationBlocks blocks={categoryPresentation?.blocks} page={categoryPresentationPage} className="mt-6" />
+        <CmsStorefrontCollectionRail collectionKeys={categoryPresentation?.linkedCollectionKeys} className="mt-6" />
       </div>
       <QuickViewSheet
         open={Boolean(quickViewProduct)}

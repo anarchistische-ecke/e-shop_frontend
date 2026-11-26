@@ -53,14 +53,14 @@ function CheckoutPage() {
   };
 
   return (
-    <div className="checkout-page page-section pb-28 lg:pb-10">
+    <div className="checkout-page pb-28 pt-3 sm:pt-6 lg:pb-14">
       <Seo
         title="Оформление заказа"
         description="Быстрое оформление заказа с контактами, адресом, оплатой товаров и обновлениями по заказу."
         canonicalPath="/checkout"
         robots="noindex,nofollow"
       />
-      <div className="page-shell">
+      <div className="page-shell max-w-[1170px]">
         <CheckoutPageHeader
           isSubmitting={checkout.isSubmitting}
           onDisabledNavigation={handleDisabledNavigation}

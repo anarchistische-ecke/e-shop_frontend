@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Seo from '../components/Seo';
 import ProductCard from '../components/ProductCard';
-import { Button, Card, FilterChip, Input, Select } from '../components/ui';
+import { Button, FilterChip, Input, Select } from '../components/ui';
 import ProductPagination from '../features/product-list/ProductPagination';
 import { PRODUCT_LIST_SORT_OPTIONS } from '../features/product-list/constants';
 import { useProductDirectoryData } from '../features/product-list/data';
@@ -49,10 +49,6 @@ function SearchPage() {
   );
   const topCategories = useMemo(() => list.navCategories.slice(0, 8), [list.navCategories]);
   const visibleProducts = hasQuery ? list.pagedProducts : [];
-  const currentSortLabel =
-    PRODUCT_LIST_SORT_OPTIONS.find((option) => option.value === params.sort)?.label ||
-    'Лучшее совпадение';
-
   useEffect(() => {
     if (list.loading || !visibleProducts.length) return;
     trackProductList(visibleProducts, {
@@ -89,8 +85,15 @@ function SearchPage() {
     ? `Поиск по запросу «${params.query}». ${list.headingNote}`
     : 'Найдите товар по названию, категории или коллекции без скрытых свайпов и лишних шагов.';
 
+  const hasActiveFilters = Boolean(params.scope || params.inStock || params.sort !== 'bestMatch');
+
+  function updateScope(scope) {
+    trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'scope', scope: scope || 'all' });
+    updateParams({ scope });
+  }
+
   return (
-    <div className="page-section">
+    <div className="pb-10 pt-3 md:pt-5">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -98,307 +101,141 @@ function SearchPage() {
         robots="noindex,follow"
       />
 
-      <div className="page-shell space-y-5">
-        <nav className="flex flex-wrap items-center gap-2 text-xs text-muted">
-          <Link to="/" className="transition hover:text-primary">Главная</Link>
-          <span className="text-ink/40">›</span>
-          <span className="text-ink">Поиск</span>
+      <div className="page-shell">
+        <nav aria-label="Хлебные крошки" className="hidden items-center gap-2 text-xs text-muted md:flex">
+          <Link to="/" className="hover:text-primary">Главная</Link>
+          <span aria-hidden="true">›</span>
+          <span>Поиск</span>
         </nav>
 
-        <Card data-testid="search-page-card" className="overflow-hidden rounded-[28px] p-4 sm:p-5">
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-accent">Поиск</p>
-              <h1 className="mt-1 text-2xl font-semibold leading-tight sm:text-3xl">
-                Найти товар по названию, категории или подборке
-              </h1>
-              <p className="mt-2 text-sm text-muted">
-                Отдельная страница поиска с крупным полем ввода, понятными фильтрами и
-                видимыми результатами без плавающих оверлеев.
-              </p>
-            </div>
-
-            <form role="search" onSubmit={handleSearchSubmit} className="space-y-3">
-              <label htmlFor="search-page-input" className="text-xs uppercase tracking-[0.2em] text-muted">
-                Что ищем
-              </label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  id="search-page-input"
-                  type="search"
-                  autoFocus
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Например: сатин, подушки, плед"
-                  className="bg-white"
-                  enterKeyHint="search"
-                />
-                <div className="flex gap-2">
-                  {searchInput ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => {
-                        setSearchInput('');
-                        updateParams({ query: '', original: '' });
-                      }}
-                    >
-                      Очистить
-                    </Button>
-                  ) : null}
-                  <Button type="submit" className="flex-1 sm:flex-none">
-                    Найти
-                  </Button>
-                </div>
-              </div>
+        <section data-testid="search-page-card" className="space-y-3 md:mt-3">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(19rem,29rem)] md:items-center">
+            <h1 className="font-display text-[1.875rem] font-medium leading-tight tracking-tight sm:text-[2.5rem]">
+              {hasQuery ? `Поиск: «${params.query}»` : 'Поиск по каталогу'}
+            </h1>
+            <form role="search" onSubmit={handleSearchSubmit} className="flex min-w-0 gap-2">
+              <label htmlFor="search-page-input" className="sr-only">Что ищем</label>
+              <Input
+                id="search-page-input"
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Название товара или ткани"
+                className="min-w-0 bg-white"
+              />
+              <Button type="submit" size="sm" className="shrink-0 !px-3">Найти</Button>
             </form>
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted">
-                  Область поиска
-                </p>
-                <div className="mt-2 md:hidden">
-                  <label
-                    htmlFor="search-scope-select"
-                    className="sr-only"
-                  >
-                    Раздел каталога для поиска
-                  </label>
-                  <Select
-                    id="search-scope-select"
-                    data-testid="search-page-scope-select"
-                    value={params.scope}
-                    onChange={(event) => {
-                      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, {
-                        filter: 'scope',
-                        scope: event.target.value || 'all'
-                      });
-                      updateParams({ scope: event.target.value });
-                    }}
-                    className="bg-white"
-                    aria-label="Раздел каталога для поиска"
-                  >
-                    <option value="">Весь каталог</option>
-                    {topCategories.map((category) => (
-                      <option
-                        key={resolveCategoryToken(category)}
-                        value={normalizeSearchText(resolveCategoryToken(category))}
-                      >
-                        {category.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div className="mt-2 hidden flex-wrap gap-2 md:flex">
-                  <FilterChip
-                    type="button"
-                    onClick={() => {
-                      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'scope', scope: 'all' });
-                      updateParams({ scope: '' });
-                    }}
-                    active={!params.scope}
-                    className="whitespace-nowrap"
-                  >
-                    Весь каталог
-                  </FilterChip>
-                  {topCategories.map((category) => {
-                    const token = normalizeSearchText(resolveCategoryToken(category));
-                    const isActive = params.scope === token;
-                    return (
-                      <FilterChip
-                        key={resolveCategoryToken(category)}
-                        type="button"
-                        onClick={() => {
-                          trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, {
-                            filter: 'scope',
-                            scope: isActive ? 'all' : token
-                          });
-                          updateParams({ scope: isActive ? '' : token });
-                        }}
-                        active={isActive}
-                        className="whitespace-nowrap"
-                      >
-                        {category.name}
-                      </FilterChip>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div
-                data-testid="search-page-controls"
-                className="grid grid-cols-2 gap-2 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:items-center"
+          {hasQuery ? (
+            <div
+              data-testid="search-page-controls"
+              className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 border-y border-line py-2 sm:flex sm:flex-wrap"
+            >
+              <label htmlFor="search-page-scope" className="sr-only">Область поиска</label>
+              <Select id="search-page-scope" data-testid="search-page-scope-select" value={params.scope} onChange={(event) => updateScope(event.target.value)} className="col-span-2 min-w-0 sm:w-auto">
+                <option value="">Весь каталог</option>
+                {topCategories.map((category) => {
+                  const token = normalizeSearchText(resolveCategoryToken(category));
+                  return <option key={token} value={token}>{category.name}</option>;
+                })}
+              </Select>
+              <FilterChip
+                type="button"
+                onClick={() => {
+                  trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'in_stock', enabled: !params.inStock });
+                  updateParams({ inStock: !params.inStock });
+                }}
+                active={params.inStock}
+                aria-pressed={params.inStock}
+                aria-label="Только в наличии"
+                className="justify-start whitespace-nowrap"
               >
-                <FilterChip
-                  type="button"
-                  onClick={() => {
-                    trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, {
-                      filter: 'in_stock',
-                      enabled: !params.inStock
-                    });
-                    updateParams({ inStock: !params.inStock });
-                  }}
-                  active={params.inStock}
-                  className="justify-center"
-                >
-                  Только в наличии
-                </FilterChip>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="justify-center"
-                  onClick={() =>
-                    updateParams({
-                      scope: '',
-                      inStock: false,
-                      sort: 'bestMatch',
-                      page: 1
-                    })
-                  }
-                >
+                В наличии
+              </FilterChip>
+              <Select
+                value={params.sort}
+                onChange={(event) => {
+                  trackGoal(METRIKA_GOALS.SEARCH_SORT_CHANGE, { sort: event.target.value, page_type: 'search' });
+                  updateParams({ sort: event.target.value });
+                }}
+                className="min-w-0 sm:w-auto"
+                aria-label="Сортировка результатов поиска"
+              >
+                {PRODUCT_LIST_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </Select>
+              {hasActiveFilters ? (
+                <Button type="button" variant="ghost" size="sm" className="justify-start !px-2 text-primary" onClick={() => updateParams({ scope: '', inStock: false, sort: 'bestMatch' })}>
                   Сбросить
                 </Button>
-                <label className="col-span-2 inline-grid min-h-[44px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_8px_18px_rgba(43,39,34,0.06)] sm:col-span-1">
-                  <span className="text-ink/55">↕</span>
-                  <Select
-                    value={params.sort}
-                    onChange={(event) => {
-                      trackGoal(METRIKA_GOALS.SEARCH_SORT_CHANGE, {
-                        sort: event.target.value,
-                        page_type: 'search'
-                      });
-                      updateParams({ sort: event.target.value });
-                    }}
-                    className="control-inline w-full pr-6 text-sm font-medium text-ink"
-                    aria-label="Сортировка результатов поиска"
-                  >
-                    {PRODUCT_LIST_SORT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
-              </div>
+              ) : null}
             </div>
-          </div>
-        </Card>
-
-        {!hasQuery ? (
-          <Card variant="quiet" className="rounded-[28px]">
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-lg font-semibold">С чего начать</h2>
-                <p className="mt-1 text-sm text-muted">
-                  Введите запрос или перейдите сразу в основные разделы каталога.
-                </p>
-              </div>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                {topCategories.slice(0, 6).map((category) => (
-                  <Button
-                    key={category.id}
-                    as={Link}
-                    to={`/category/${resolveCategoryToken(category)}`}
-                    variant="secondary"
-                    className="justify-between"
-                  >
-                    <span className="truncate">{category.name}</span>
-                    <span aria-hidden="true">→</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </Card>
-        ) : null}
+          ) : null}
+        </section>
 
         {hasQuery ? (
-          <div ref={resultsRef}>
-            <Card variant="quiet" className="rounded-[28px]">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted">Результаты</p>
-                <h2 className="mt-1 text-xl font-semibold sm:text-2xl">
-                  {visibleProducts.length > 0
-                    ? `Найдено ${list.itemsLabel}`
-                    : 'Подходящих товаров пока нет'}
-                </h2>
-                <p className="mt-1 text-sm text-muted">
-                  Запрос: <span className="font-medium text-ink">«{params.query}»</span>.
-                  {' '}
-                  Сортировка: {currentSortLabel.toLowerCase()}.
-                </p>
-                {list.searchCorrectionNote ? (
-                  <p className="mt-2 text-sm text-primary">{list.searchCorrectionNote}</p>
-                ) : null}
-              </div>
-              <Button as={Link} to="/catalog" variant="secondary">
-                Открыть весь каталог
-              </Button>
+          <section ref={resultsRef} className="mt-3 md:mt-4">
+            <div className="mb-2 text-sm text-muted" aria-live="polite">
+              <h2 className="font-body text-sm font-medium text-muted">
+                {list.loading ? 'Ищем товары…' : visibleProducts.length > 0 ? `Найдено ${list.itemsLabel}` : 'Подходящих товаров пока нет'}
+              </h2>
+              {list.searchCorrectionNote ? <p className="mt-1 text-primary">{list.searchCorrectionNote}</p> : null}
             </div>
 
-            {autocompleteData.suggestedQueries.length > 0 ? (
-              <div className="mt-4">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Подсказки</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {autocompleteData.suggestedQueries.slice(0, 6).map((suggestion) => (
-                    <FilterChip
-                      key={`${suggestion.label}-${suggestion.scopeToken}`}
-                      type="button"
-                      onClick={() => {
-                        trackGoal(METRIKA_GOALS.SEARCH_SUGGESTION_CLICK, {
-                          search_query: suggestion.label,
-                          scope: suggestion.scopeToken || params.scope || 'all'
-                        });
-                        updateParams({
-                          query: suggestion.label,
-                          scope: suggestion.scopeToken || params.scope,
-                          original: ''
-                        });
-                      }}
-                      className="whitespace-nowrap"
-                    >
-                      {suggestion.label}
-                    </FilterChip>
-                  ))}
-                </div>
+            {list.loading && !visibleProducts.length ? (
+              <div className="page-grid--catalog" aria-hidden="true">
+                {Array.from({ length: 4 }, (_, index) => <div key={index} className="aspect-[4/3] rounded-lg bg-[#eee9df]" />)}
               </div>
-            ) : null}
-
-            {visibleProducts.length > 0 ? (
+            ) : visibleProducts.length > 0 ? (
               <>
-                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="page-grid--catalog">
                   {visibleProducts.map((product, index) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      listName="search_results"
-                      position={index + 1}
-                    />
+                    <ProductCard key={product.id} product={product} listName="search_results" position={index + 1} priority={index < 2} />
                   ))}
                 </div>
-
                 {list.totalPages > 1 ? (
-                  <div className="mt-6">
-                    <ProductPagination
-                      safePage={list.safePage}
-                      totalPages={list.totalPages}
-                      visiblePages={list.visiblePages}
-                      onPageChange={(page) => updateParams({ page }, { resetPage: false })}
-                    />
-                  </div>
+                  <ProductPagination safePage={list.safePage} totalPages={list.totalPages} visiblePages={list.visiblePages} onPageChange={(page) => updateParams({ page }, { resetPage: false })} />
                 ) : null}
               </>
             ) : (
-              <div className="mt-5 rounded-[24px] border border-dashed border-ink/20 bg-white px-4 py-5 text-sm text-muted">
-                Попробуйте уточнить запрос, выбрать другую область поиска или перейти в каталог.
+              <div className="space-y-4 border-t border-ink/10 py-4">
+                <p className="text-sm text-muted">
+                  {list.error ? 'Не удалось загрузить товары. Попробуйте ещё раз.' : 'Проверьте написание или попробуйте другой запрос.'}
+                </p>
+                {autocompleteData.suggestedQueries.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {autocompleteData.suggestedQueries.slice(0, 6).map((suggestion) => (
+                      <FilterChip
+                        key={`${suggestion.label}-${suggestion.scopeToken}`}
+                        type="button"
+                        onClick={() => {
+                          trackGoal(METRIKA_GOALS.SEARCH_SUGGESTION_CLICK, { search_query: suggestion.label, scope: suggestion.scopeToken || params.scope || 'all' });
+                          updateParams({ query: suggestion.label, scope: suggestion.scopeToken || params.scope, original: '' });
+                        }}
+                      >
+                        {suggestion.label}
+                      </FilterChip>
+                    ))}
+                  </div>
+                ) : null}
+                <Link to="/catalog" className="focus-ring-soft inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline">Открыть весь каталог →</Link>
               </div>
             )}
-            </Card>
-          </div>
-        ) : null}
+          </section>
+        ) : (
+          <section className="mt-6 border-t border-ink/10 pt-4">
+            <h2 className="font-display text-2xl font-medium">Разделы каталога</h2>
+            <div className="mt-3 grid gap-x-5 sm:grid-cols-2 lg:grid-cols-3">
+              {topCategories.slice(0, 6).map((category) => (
+                <Link key={category.id} to={`/category/${resolveCategoryToken(category)}`} className="focus-ring-soft flex min-h-11 items-center justify-between border-b border-ink/10 text-sm font-semibold text-primary">
+                  {category.name}<span aria-hidden="true">→</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

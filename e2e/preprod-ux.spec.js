@@ -66,7 +66,7 @@ test('cart checkout creates an embedded payment session and /pay/:token can requ
   await page.getByRole('button', { name: 'Оформить заказ', exact: true }).click();
   await completeCheckoutForm(page);
 
-  await page.locator('#checkout-form').getByRole('button', { name: 'Создать заказ и открыть форму оплаты' }).click();
+  await page.locator('#checkout-form').getByRole('button', { name: 'Перейти к оплате' }).click();
   await expect(page).toHaveURL(/\/account\?order=order-e2e-1#orders$/);
   await expect(page.locator('[data-testid="mock-yookassa-widget"]')).toBeVisible();
   expect(testInfo.storefrontApi.stats.checkoutRequests).toBe(1);

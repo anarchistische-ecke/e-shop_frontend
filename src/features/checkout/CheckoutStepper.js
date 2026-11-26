@@ -1,45 +1,33 @@
 import React from 'react';
-import { Card } from '../../components/ui';
 
-function CheckoutStepper({ steps, activeStep, completedSteps, disabled = false }) {
+function CheckoutStepper({ steps, activeStep, completedSteps }) {
   return (
-    <Card className="mb-5 p-3 xs:p-4 md:p-5">
-      <ol
-        className="grid gap-2"
-        style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
-        aria-label="Прогресс оформления заказа"
-      >
-        {steps.map((step, index) => {
-          const isActive = activeStep === index;
-          const isDone = Boolean(completedSteps[step.key]) || index < activeStep;
-          return (
-            <li
-              key={step.key}
-              aria-current={isActive ? 'step' : undefined}
-              aria-disabled={disabled || undefined}
-              className={`rounded-2xl border px-2 py-2.5 text-sm transition xs:px-3 xs:py-3 ${
-                isActive
-                  ? 'border-primary/35 bg-primary/10'
-                  : isDone
-                  ? 'border-emerald-300 bg-emerald-50'
-                  : 'border-ink/10 bg-white'
+    <ol className="mb-5 grid grid-cols-2 gap-3 sm:mb-6 sm:gap-6" aria-label="Прогресс оформления заказа">
+      {steps.map((step, index) => {
+        const isActive = activeStep === index;
+        const isDone = Boolean(completedSteps[step.key]) || index < activeStep;
+
+        return (
+          <li
+            key={step.key}
+            aria-current={isActive ? 'step' : undefined}
+            className={`flex items-start gap-2 border-b-2 pb-3 text-xs font-semibold leading-snug sm:items-center sm:text-sm ${
+              isActive ? 'border-primary text-primary' : 'border-ink/10 text-muted'
+            }`}
+          >
+            <span
+              className={`flex h-6 w-6 flex-none items-center justify-center rounded-full text-xs ${
+                isActive ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
               }`}
+              aria-hidden="true"
             >
-              <div className="flex min-h-[48px] items-center justify-center gap-2 xs:justify-start">
-                <span
-                  className={`inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                    isDone ? 'bg-emerald-600 text-white' : isActive ? 'bg-primary text-white' : 'bg-secondary text-muted'
-                  }`}
-                >
-                  {isDone ? '✓' : index + 1}
-                </span>
-                <span className="hidden font-semibold xs:inline">{step.title}</span>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-    </Card>
+              {isDone && !isActive ? '✓' : index + 1}
+            </span>
+            <span className="pt-1 sm:pt-0">{step.title}</span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

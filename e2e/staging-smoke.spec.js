@@ -238,7 +238,7 @@ test.describe('staging integration smoke', () => {
     const checkoutResponsePromise = page.waitForResponse(
       (response) => response.url().includes('/orders/checkout') && response.request().method() === 'POST'
     );
-    await page.locator('#checkout-form').getByRole('button', { name: /Создать заказ/ }).click();
+    await page.locator('#checkout-form').getByRole('button', { name: 'Перейти к оплате' }).click();
     const checkoutResponse = await checkoutResponsePromise;
     expect(checkoutResponse.ok(), 'Expected checkout request to succeed').toBeTruthy();
     const checkoutPayload = await checkoutResponse.json();

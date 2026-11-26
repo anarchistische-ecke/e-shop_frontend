@@ -1,155 +1,94 @@
 import React from 'react';
-import TrustLinksPanel from '../../components/TrustLinksPanel';
 import { moneyToNumber } from '../../utils/product';
-import { usePaymentConfig } from '../../contexts/PaymentConfigContext';
-import { CHECKOUT_TRUST_LINK_IDS } from '../../data/trustLinks';
-import { getCheckoutPaymentDescription } from '../../utils/payment';
-import { Button, Card } from '../../components/ui';
+import { DELIVERY_SEPARATE_PAYMENT_NOTE } from '../../utils/delivery';
+import DeliveryQuoteLink from '../../components/commerce/DeliveryQuoteLink';
 
-function CheckoutSummary({
-  items,
-  itemsCount,
-  pricing,
-  total,
-  deliveryLabel,
-  payableTotal,
-  formatRub,
-  mobileAction,
-  deliveryNotice
-}) {
-  const { paymentConfig } = usePaymentConfig();
-  const paymentDescription = getCheckoutPaymentDescription(paymentConfig);
+function CheckoutSummary({ items, itemsCount, pricing, total, payableTotal, formatRub, isSubmitting }) {
   const originalSubtotal = pricing ? moneyToNumber(pricing.originalSubtotal) : total;
-  const saleSubtotal = pricing ? moneyToNumber(pricing.saleSubtotal) : total;
   const productSaleDiscount = pricing ? moneyToNumber(pricing.productSaleDiscount) : 0;
   const cartDiscount = pricing ? moneyToNumber(pricing.cartDiscount) : 0;
   const cartDiscountLabel = pricing?.appliedCartDiscountLabel || 'Скидка по корзине';
-  const isPaymentStep = /Шаг 2/.test(mobileAction.subtitle || '');
-  const mobileButtonLabel = isPaymentStep && !mobileAction.subtitle.includes('Безопасная проверка')
-    ? `Оплатить ${formatRub(payableTotal)}`
-    : mobileAction.label;
+  const payableLabel = formatRub(payableTotal);
+
+  const summary = (
+    <>
+      <ul className="divide-y divide-ink/10">
+        {items.map((item) => (
+          <li key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-3 text-sm">
+            <div className="flex min-w-0 items-start gap-3">
+              {item.productInfo?.imageUrl ? (
+                <img src={item.productInfo.imageUrl} alt="" className="h-11 w-11 shrink-0 rounded-md object-cover" loading="lazy" />
+              ) : null}
+              <div className="min-w-0">
+                <p className="break-words font-medium leading-snug">{item.productInfo?.name || 'Товар'}</p>
+                <p className="mt-1 text-xs text-muted">{item.quantity} шт.</p>
+              </div>
+            </div>
+            <p className="whitespace-nowrap font-semibold tabular-nums">
+              {formatRub(item.pricingLine?.lineTotal != null
+                ? moneyToNumber(item.pricingLine.lineTotal)
+                : (item.unitPriceValue ?? moneyToNumber(item.unitPrice)) * item.quantity)}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <dl className="space-y-2 border-t border-line py-3 text-sm">
+        <div className="flex justify-between gap-3">
+          <dt>Товары ({itemsCount})</dt>
+          <dd className="whitespace-nowrap tabular-nums">{formatRub(originalSubtotal)}</dd>
+        </div>
+        {productSaleDiscount > 0 ? (
+          <div className="flex justify-between gap-3 text-sale">
+            <dt>Скидки на товары</dt>
+            <dd className="whitespace-nowrap tabular-nums">−{formatRub(productSaleDiscount)}</dd>
+          </div>
+        ) : null}
+        {cartDiscount > 0 ? (
+          <div className="flex justify-between gap-3 text-sale">
+            <dt>{cartDiscountLabel}</dt>
+            <dd className="whitespace-nowrap tabular-nums">−{formatRub(cartDiscount)}</dd>
+          </div>
+        ) : null}
+        <div className="flex justify-between gap-3 text-muted">
+          <dt>Доставка</dt>
+          <dd className="text-right">Рассчитаем отдельно</dd>
+        </div>
+      </dl>
+      <div className="flex items-baseline justify-between gap-2 border-t border-line pt-3">
+        <p className="text-sm font-semibold">К оплате за товары</p>
+        <p className="whitespace-nowrap text-lg font-semibold tabular-nums">{payableLabel}</p>
+      </div>
+    </>
+  );
 
   return (
     <>
-      <div className="lg:hidden mb-6">
-        <div className="space-y-3">
-          <Card as="details" padding="sm">
-            <summary className="cursor-pointer text-sm font-semibold">Сводка заказа · {formatRub(payableTotal)}</summary>
-            <div className="mt-3 space-y-2 text-sm">
-              {items.map((item) => (
-                <div key={item.id} className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{item.productInfo?.name || 'Товар'}</div>
-                    <div className="text-xs text-muted">{item.quantity} шт.</div>
-                  </div>
-                  <div className="whitespace-nowrap font-semibold">
-                    {formatRub((item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity)}
-                  </div>
-                </div>
-              ))}
-              <hr className="my-2 border-ink/10" />
-              <div className="flex justify-between"><span>Товары</span><span>{formatRub(originalSubtotal)}</span></div>
-              {productSaleDiscount > 0 ? (
-                <div className="flex justify-between text-primary"><span>Скидки на товары</span><span>−{formatRub(productSaleDiscount)}</span></div>
-              ) : null}
-              {saleSubtotal !== originalSubtotal ? (
-                <div className="flex justify-between"><span>Цена с акциями</span><span>{formatRub(saleSubtotal)}</span></div>
-              ) : null}
-              {cartDiscount > 0 ? (
-                <div className="flex justify-between text-primary"><span>{cartDiscountLabel}</span><span>−{formatRub(cartDiscount)}</span></div>
-              ) : null}
-              <div className="flex justify-between"><span>Доставка</span><span>{deliveryLabel}</span></div>
-              <div className="flex justify-between font-semibold"><span>К оплате сейчас</span><span>{formatRub(payableTotal)}</span></div>
-            </div>
-          </Card>
-
-          <TrustLinksPanel
-            title="Почему нам доверяют"
-            description={`${paymentDescription} ${deliveryNotice}`}
-            linkIds={CHECKOUT_TRUST_LINK_IDS}
-          />
+      <div className="lg:hidden">
+        <details className="rounded-lg border border-line bg-white">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <svg width="12" height="12" viewBox="0 0 12 12" className="text-primary" aria-hidden="true">
+                <path d="m2.5 4.5 3.5 3.5 3.5-3.5" stroke="currentColor" strokeWidth="1.4" fill="none" />
+              </svg>
+              Сводка заказа
+            </span>
+            <span className="whitespace-nowrap tabular-nums">{payableLabel}</span>
+          </summary>
+          <div className="border-t border-line px-4 pb-4">{summary}</div>
+        </details>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs">
+          <p className="text-muted">{DELIVERY_SEPARATE_PAYMENT_NOTE}</p>
+          <DeliveryQuoteLink disabled={isSubmitting} />
         </div>
       </div>
 
-      <div className="sr-only" aria-live="polite">
-        Текущая сумма к оплате сейчас: {formatRub(payableTotal)}
-      </div>
-
-      <aside className="hidden lg:block space-y-4 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] self-start">
-        <Card padding="md">
-          <h2 className="text-2xl font-semibold mb-4">Ваш заказ</h2>
-          <div className="space-y-2 text-sm">
-            {items.map((item) => (
-              <div key={item.id} className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-medium truncate">{item.productInfo?.name || 'Товар'}</div>
-                  <div className="text-xs text-muted">{item.quantity} шт.</div>
-                </div>
-                <div className="font-semibold whitespace-nowrap">
-                  {formatRub((item.unitPriceValue || moneyToNumber(item.unitPrice)) * item.quantity)}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <hr className="my-4 border-ink/10" />
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <dt>Товары ({itemsCount})</dt>
-              <dd>{formatRub(originalSubtotal)}</dd>
-            </div>
-            {productSaleDiscount > 0 ? (
-              <div className="flex justify-between text-primary">
-                <dt>Скидки на товары</dt>
-                <dd>−{formatRub(productSaleDiscount)}</dd>
-              </div>
-            ) : null}
-            {saleSubtotal !== originalSubtotal ? (
-              <div className="flex justify-between">
-                <dt>Цена с акциями</dt>
-                <dd>{formatRub(saleSubtotal)}</dd>
-              </div>
-            ) : null}
-            {cartDiscount > 0 ? (
-              <div className="flex justify-between text-primary">
-                <dt>{cartDiscountLabel}</dt>
-                <dd>−{formatRub(cartDiscount)}</dd>
-              </div>
-            ) : null}
-            <div className="flex justify-between">
-              <dt>Доставка</dt>
-              <dd>{deliveryLabel}</dd>
-            </div>
-          </dl>
-          <hr className="my-4 border-ink/10" />
-          <div className="flex justify-between text-lg font-semibold">
-            <span>К оплате сейчас</span>
-            <span>{formatRub(payableTotal)}</span>
-          </div>
-        </Card>
-
-        <TrustLinksPanel
-          title="Доверие и безопасность"
-          description={`${paymentDescription} ${deliveryNotice}`}
-          linkIds={CHECKOUT_TRUST_LINK_IDS}
-        />
+      <aside className="hidden rounded-lg border border-line bg-white p-5 lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] lg:col-start-2 lg:row-start-1 lg:block xl:p-6">
+        <h2 className="mb-1 text-2xl font-semibold">Ваш заказ</h2>
+        {summary}
+        <DeliveryQuoteLink className="text-sm" disabled={isSubmitting} />
       </aside>
 
-      <div className="checkout-mobile-action fixed bottom-0 left-0 right-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 shadow-[0_-10px_30px_rgba(43,39,34,0.12)] transition-transform duration-200 lg:hidden">
-        <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
-          <div className="min-w-0">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-muted">{mobileAction.subtitle}</div>
-            <div className="text-sm font-semibold">К оплате сейчас: {formatRub(payableTotal)}</div>
-          </div>
-          <Button
-            className="ml-auto !px-4 !py-2.5"
-            onClick={mobileAction.action}
-            disabled={mobileAction.disabled}
-          >
-            {mobileButtonLabel}
-          </Button>
-        </div>
-      </div>
+      <div className="sr-only" aria-live="polite">К оплате за товары {payableLabel}</div>
     </>
   );
 }

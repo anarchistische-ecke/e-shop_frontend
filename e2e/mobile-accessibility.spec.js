@@ -53,6 +53,7 @@ test('mobile catalog menu traps keyboard focus inside the dialog', async ({ page
 
 test('mobile filter sheet restores focus to its trigger when dismissed', async ({ page }) => {
   await page.goto('/catalog');
+  await expect(page.locator('main .product-card').first()).toBeVisible();
 
   const filterTrigger = page.getByRole('button', { name: 'Все фильтры' });
   await filterTrigger.click();
@@ -73,10 +74,14 @@ test('mobile product information accordion is keyboard operable', async ({ page 
   const detailsButton = page.getByRole('button', { name: /Характеристики/ });
 
   await descriptionButton.focus();
+  await expect(descriptionButton).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('Enter');
   await expect(descriptionButton).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#pdp-description-panel')).toBeVisible();
 
   await page.keyboard.press('Tab');
   await expect(detailsButton).toBeFocused();
+  await expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
 
   await page.keyboard.press('Enter');
 

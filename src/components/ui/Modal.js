@@ -2,12 +2,26 @@ import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from './cn';
 import Button from './Button';
+import { CloseIcon } from '../header/icons';
 import { focusFirstElement, trapFocusEvent } from '../../utils/a11y';
 
 const SIZE_CLASS = {
   sm: 'ui-modal__panel--sm',
   md: 'ui-modal__panel--md',
   lg: 'ui-modal__panel--lg'
+};
+
+const PLACEMENT_CLASSES = {
+  center: {
+    overlay: 'ui-modal__overlay--center',
+    viewport: 'ui-modal__viewport--center',
+    panel: 'ui-modal__panel--center'
+  },
+  sheet: {
+    overlay: 'ui-modal__overlay--sheet',
+    viewport: 'ui-modal__viewport--sheet',
+    panel: 'ui-modal__panel--sheet'
+  }
 };
 
 function Modal({
@@ -29,14 +43,18 @@ function Modal({
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef(null);
-  const lastFocusedRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open || typeof document === 'undefined') {
       return undefined;
     }
 
-    lastFocusedRef.current =
+    const previouslyFocused =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const { body, documentElement } = document;
@@ -53,8 +71,8 @@ function Modal({
     });
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && typeof onClose === 'function') {
-        onClose();
+      if (event.key === 'Escape' && typeof onCloseRef.current === 'function') {
+        onCloseRef.current();
         return;
       }
 
@@ -69,21 +87,22 @@ function Modal({
       body.style.touchAction = previousBodyTouchAction;
       documentElement.style.overflow = previousDocumentOverflow;
 
-      if (lastFocusedRef.current instanceof HTMLElement && lastFocusedRef.current.isConnected) {
+      if (previouslyFocused?.isConnected) {
         window.requestAnimationFrame(() => {
-          lastFocusedRef.current?.focus();
+          previouslyFocused.focus();
         });
       }
     };
-  }, [onClose, open]);
+  }, [open]);
 
   if (!open || typeof document === 'undefined') {
     return null;
   }
+  const placementClasses = PLACEMENT_CLASSES[placement] || PLACEMENT_CLASSES.center;
 
   return createPortal(
     <div
-      className={cn('ui-modal__overlay', `ui-modal__overlay--${placement}`, overlayClassName)}
+      className={cn('ui-modal__overlay', placementClasses.overlay, overlayClassName)}
       onMouseDown={(event) => {
         if (
           closeOnOverlayClick &&
@@ -95,7 +114,7 @@ function Modal({
         }
       }}
     >
-      <div className={cn('ui-modal__viewport', `ui-modal__viewport--${placement}`)}>
+      <div className={cn('ui-modal__viewport', placementClasses.viewport)}>
         <div
           ref={panelRef}
           id={panelId}
@@ -106,7 +125,7 @@ function Modal({
           tabIndex={-1}
           className={cn(
             'ui-modal__panel',
-            `ui-modal__panel--${placement}`,
+            placementClasses.panel,
             SIZE_CLASS[size] || SIZE_CLASS.md,
             panelClassName,
             className
@@ -134,7 +153,7 @@ function Modal({
                   onClick={onClose}
                   aria-label={closeLabel}
                 >
-                  ✕
+                  <CloseIcon />
                 </Button>
               ) : null}
             </div>

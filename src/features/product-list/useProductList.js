@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { getCatalogueListing } from '../../api';
+import { formatProductCount } from '../../utils/product';
 import { normalizeSearchText } from '../../utils/search';
 import { PRODUCT_LIST_PAGE_SIZE } from './constants';
 import { useProductDirectoryData } from './data';
@@ -9,14 +10,6 @@ import {
   resolveCategoryToken,
   sortCategories
 } from './selectors';
-
-function formatItemsLabel(count) {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'товар';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'товара';
-  return 'товаров';
-}
 
 function numberOrNull(value) {
   if (value === '' || value === null || value === undefined) return null;
@@ -238,8 +231,7 @@ export function useProductList({ source = 'catalog', categorySlug = '', params =
     heading,
     headingNote,
     searchCorrectionNote,
-    formatItemsLabel,
     pageSize: PRODUCT_LIST_PAGE_SIZE,
-    itemsLabel: `${totalItems} ${formatItemsLabel(totalItems)}`
+    itemsLabel: formatProductCount(totalItems)
   };
 }

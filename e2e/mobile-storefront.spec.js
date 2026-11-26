@@ -23,17 +23,23 @@ test('customer can add a product to cart and open checkout on mobile', async ({ 
   await expect(page.getByRole('heading', { name: /Песочный сатиновый комплект/i })).toBeVisible();
 
   await page.getByRole('button', { name: 'Добавить в корзину' }).click();
-  await expect(page.getByText('Добавлено в корзину')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Корзина' })).toContainText('1');
+  const cartNotice = page.getByRole('status').filter({ hasText: 'Добавлено в корзину' });
+  await expect(cartNotice).toContainText('1 шт.');
 
-  await page.getByRole('link', { name: 'Открыть корзину' }).click();
+  await cartNotice.getByRole('link', { name: 'Открыть корзину' }).click();
   await expect(page).toHaveURL(/\/cart$/);
-  await expect(page.getByRole('heading', { name: 'Ваши товары для уюта' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Корзина', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Песочный сатиновый комплект' })).toBeVisible();
   await expect(page.getByText('ТестКасса (карта / СБП)')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Оформить заказ' }).click();
+  const mobileCartAction = page.getByTestId('mobile-cart-checkout-bar').getByRole('button');
+  await expect(mobileCartAction).toHaveAccessibleDescription('Доставка оплачивается отдельно.');
+
+  await mobileCartAction.click();
   await expect(page).toHaveURL(/\/checkout$/);
-  await expect(page.getByRole('heading', { name: /Быстрое оформление без лишних шагов/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Оформление заказа', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /Безопасная оплата/i })).toBeVisible();
+  await expect(page.locator('.checkout-mobile-action').getByRole('button')).toHaveAccessibleDescription(
+    'Доставка оплачивается отдельно.'
+  );
 });

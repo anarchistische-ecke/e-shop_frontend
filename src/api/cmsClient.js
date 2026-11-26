@@ -80,9 +80,9 @@ function readCachedEntry(cacheKey) {
 }
 
 function readCmsResource(cacheKey, loader, { cacheTtlMs = CLIENT_CACHE_TTL_MS, force = false, signal, maxRetries } = {}) {
+  const cachedEntry = readCachedEntry(cacheKey);
   if (!force) {
-    const cachedEntry = readCachedEntry(cacheKey);
-    if (cachedEntry?.promise) {
+    if (cachedEntry?.promise && !cachedEntry.signal?.aborted) {
       return cachedEntry.promise;
     }
     if (Object.prototype.hasOwnProperty.call(cachedEntry || {}, 'data')) {
@@ -92,18 +92,19 @@ function readCmsResource(cacheKey, loader, { cacheTtlMs = CLIENT_CACHE_TTL_MS, f
 
   const promise = loadWithRetry(loader, { maxRetries, signal })
     .then((data) => {
-      if (cacheKey && cacheTtlMs > 0) {
+      const currentEntry = cacheKey ? cmsCache.get(cacheKey) : null;
+      if (cacheTtlMs > 0 && currentEntry?.promise === promise) {
         cmsCache.set(cacheKey, {
           data,
           expiresAt: Date.now() + cacheTtlMs,
         });
-      } else if (cacheKey) {
+      } else if (cacheKey && cacheTtlMs <= 0 && currentEntry === cachedEntry) {
         cmsCache.delete(cacheKey);
       }
       return data;
     })
     .catch((error) => {
-      if (cacheKey) {
+      if (cacheKey && cmsCache.get(cacheKey)?.promise === promise) {
         cmsCache.delete(cacheKey);
       }
       throw error;
@@ -112,6 +113,7 @@ function readCmsResource(cacheKey, loader, { cacheTtlMs = CLIENT_CACHE_TTL_MS, f
   if (cacheKey && cacheTtlMs > 0) {
     cmsCache.set(cacheKey, {
       promise,
+      signal,
       expiresAt: Date.now() + cacheTtlMs,
     });
   }

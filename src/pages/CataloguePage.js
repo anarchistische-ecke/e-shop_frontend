@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Seo from '../components/Seo';
 import { Button, Card, FilterChip, Input, Select } from '../components/ui';
@@ -13,7 +13,6 @@ import ProductPagination from '../features/product-list/ProductPagination';
 import { resolveCategoryToken } from '../features/product-list/selectors';
 import { useProductList } from '../features/product-list/useProductList';
 import { useProductListRouteState } from '../features/product-list/useProductListRouteState';
-import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { normalizeSearchText } from '../utils/search';
 import { getPrimaryImageUrl } from '../utils/product';
 import { METRIKA_GOALS, trackGoal, trackProductList } from '../utils/metrika';
@@ -49,6 +48,7 @@ function SearchIcon({ className = 'h-4 w-4' }) {
 
 function CataloguePage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const closeFilters = useCallback(() => setIsFilterOpen(false), []);
   const [searchInput, setSearchInput] = useState('');
   const resultsRef = useRef(null);
 
@@ -59,8 +59,6 @@ function CataloguePage() {
     source: 'catalog',
     params
   });
-
-  useBodyScrollLock(isFilterOpen);
 
   useEffect(() => {
     setSearchInput(params.query || '');
@@ -73,9 +71,6 @@ function CataloguePage() {
     resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [params.page]);
 
-  const activeSortLabel =
-    PRODUCT_LIST_SORT_OPTIONS.find((option) => option.value === params.sort)?.label ||
-    'Лучшее совпадение';
   const hasQuery = Boolean(normalizeSearchText(params.query));
   const isListingVariant = useMemo(
     () => hasListingSeoVariant(params, { source: 'catalog' }),
@@ -214,7 +209,7 @@ function CataloguePage() {
   };
 
   return (
-    <div className="catalogue-page relative page-section page-section--listing">
+    <div className="catalogue-page relative pb-10 pt-3 md:pt-5">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -232,193 +227,126 @@ function CataloguePage() {
           <span className="text-ink">{hasQuery ? 'Поиск' : 'Каталог'}</span>
         </nav>
 
-        <div className="mt-4 lg:mt-2.5">
-          <h1 className="text-2xl font-semibold sm:text-3xl">
-            {hasQuery ? 'Результаты поиска' : 'Каталог товаров'}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted">
-            {hasQuery
-              ? `По запросу «${params.query}» во всём каталоге`
-              : 'Домашний текстиль по категориям, материалам и наличию.'}
-          </p>
-        </div>
-
-        <Card
-          as="section"
-          variant="quiet"
-          className="mt-4 md:p-5 lg:mt-3"
-          padding="sm"
-          data-testid="catalogue-search-card"
-        >
-          <form onSubmit={handleSearchSubmit}>
-            <label htmlFor="catalog-search" className="text-xs uppercase tracking-[0.2em] text-muted">
-              Поиск по каталогу
-            </label>
-            <div className="relative mt-2">
-              <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" />
+        <section data-testid="catalogue-search-card" className="space-y-3 md:mt-3">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(17rem,25rem)] md:items-center">
+            <h1 className="font-display text-[1.875rem] font-medium leading-tight tracking-tight sm:text-[2.5rem]">
+              {hasQuery ? `Поиск: «${params.query}»` : 'Каталог товаров'}
+            </h1>
+            <form onSubmit={handleSearchSubmit} className="relative" role="search" aria-label="Поиск по каталогу">
+              <label htmlFor="catalog-search" className="sr-only">Поиск по каталогу</label>
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
               <Input
                 id="catalog-search"
                 type="text"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Например: сатин 200x220, плед, подушки"
-                className="bg-white pl-11 pr-32 shadow-[0_8px_20px_rgba(43,39,34,0.07)]"
+                placeholder="Например, сатин или плед"
+                className="w-full bg-white !pl-9 !pr-[7.25rem]"
               />
               {searchInput ? (
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
                   onClick={() => {
                     setSearchInput('');
                     updateParams({ query: '', original: '' });
                   }}
-                  className="absolute right-16 top-1/2 -translate-y-1/2"
+                  className="focus-ring-soft absolute right-[4.25rem] top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-md text-xl text-muted"
                   aria-label="Очистить поиск"
                 >
                   ×
-                </Button>
+                </button>
               ) : null}
-              <Button
-                type="submit"
-                size="sm"
-                className="absolute right-1 top-1/2 -translate-y-1/2"
-              >
+              <Button type="submit" size="sm" variant="ghost" className="absolute right-0 top-1/2 -translate-y-1/2 !px-3 text-primary">
                 Найти
               </Button>
-            </div>
-          </form>
-
-          {list.searchCorrectionNote ? (
-            <p className="mt-2 text-xs text-primary">{list.searchCorrectionNote}</p>
-          ) : null}
-          {list.scopeCategoryLabel ? (
-            <p className="mt-2 text-xs text-muted">Область поиска: {list.scopeCategoryLabel}</p>
-          ) : null}
-
-          <div className="mt-3">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Область поиска</p>
-            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:flex-wrap lg:overflow-visible">
-              <FilterChip
-                type="button"
-                onClick={() => {
-                  trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'scope', scope: 'all' });
-                  updateParams({ scope: '' });
-                }}
-                active={!params.scope}
-                className="whitespace-nowrap"
-              >
-                Весь каталог
-              </FilterChip>
-              {topCategories.map((category) => {
-                const token = normalizeSearchText(resolveCategoryToken(category));
-                const isActive = params.scope === token;
-                return (
-                  <FilterChip
-                    key={resolveCategoryToken(category)}
-                    type="button"
-                    onClick={() => {
-                      trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, {
-                        filter: 'scope',
-                        scope: isActive ? 'all' : token
-                      });
-                      updateParams({ scope: isActive ? '' : token });
-                    }}
-                    active={isActive}
-                    className="whitespace-nowrap"
-                  >
-                    {category.name}
-                  </FilterChip>
-                );
-              })}
-            </div>
+            </form>
           </div>
-        </Card>
 
-        <Card
-          as="section"
-          variant="quiet"
-            className="mt-4 lg:mt-3"
-          padding="sm"
+          {list.searchCorrectionNote ? <p className="text-sm text-primary">{list.searchCorrectionNote}</p> : null}
+
+          <div
+            role="group"
+            aria-label="Область поиска"
+            className="flex gap-x-5 overflow-x-auto border-y border-ink/10 px-0.5 scrollbar-hide lg:flex-wrap lg:overflow-visible"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'scope', scope: 'all' });
+                updateParams({ scope: '' });
+              }}
+              aria-pressed={!params.scope}
+              className="focus-ring-soft min-h-11 shrink-0 whitespace-nowrap border-b-2 border-transparent text-sm text-muted hover:text-primary aria-pressed:border-primary aria-pressed:font-semibold aria-pressed:text-primary"
+            >
+              Весь каталог
+            </button>
+            {topCategories.map((category) => {
+              const token = normalizeSearchText(resolveCategoryToken(category));
+              const isActive = params.scope === token;
+              return (
+                <button
+                  key={resolveCategoryToken(category)}
+                  type="button"
+                  onClick={() => {
+                    trackGoal(METRIKA_GOALS.SEARCH_FILTER_CHANGE, { filter: 'scope', scope: isActive ? 'all' : token });
+                    updateParams({ scope: isActive ? '' : token });
+                  }}
+                  aria-pressed={isActive}
+                  className="focus-ring-soft min-h-11 shrink-0 whitespace-nowrap border-b-2 border-transparent text-sm text-muted hover:text-primary aria-pressed:border-primary aria-pressed:font-semibold aria-pressed:text-primary"
+                >
+                  {category.name}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section
+          className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 lg:grid-cols-[minmax(0,1fr)_13rem] xl:grid-cols-[minmax(0,1fr)_16rem]"
           data-testid="catalogue-filters-card"
+          aria-label="Фильтры и сортировка"
         >
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-            <div className="inline-grid min-h-[48px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-ink/10 bg-white/90 px-3 text-sm shadow-[0_8px_18px_rgba(43,39,34,0.06)]">
-              <span className="text-ink/55">↕</span>
-              <label htmlFor="catalog-sort" className="sr-only">Сортировка товаров</label>
-              <Select
-                id="catalog-sort"
-                value={params.sort}
-                onChange={(event) => {
-                  trackGoal(METRIKA_GOALS.SEARCH_SORT_CHANGE, {
-                    sort: event.target.value,
-                    page_type: 'catalog'
-                  });
-                  updateParams({ sort: event.target.value });
-                }}
-                className="control-inline w-full pr-6 text-sm font-medium text-ink"
-              >
-                {PRODUCT_LIST_SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <ProductFiltersTrigger
-              activeFilterCount={list.activeFilters.length}
-              isOpen={isFilterOpen}
-              onOpenFilters={() => setIsFilterOpen(true)}
-            />
-          </div>
-
+          <ProductFiltersTrigger
+            activeFilterCount={list.activeFilters.length}
+            isOpen={isFilterOpen}
+            onOpenFilters={() => setIsFilterOpen(true)}
+          />
           <ProductFiltersDesktop
             {...filterProps}
-            className="mt-4 hidden gap-3 lg:mt-3 lg:grid xl:grid-cols-4"
+            className="hidden grid-cols-[minmax(9rem,1fr)_minmax(12rem,1.25fr)_auto] items-end gap-2 lg:grid"
           />
-
-          <div className="mt-2 text-xs text-muted">
-            Сортировка: <span className="font-semibold text-ink">{activeSortLabel}</span>
-            {params.sort === 'bestMatch' ? (
-              <span className="ml-2">
-                Рекомендуем на основе релевантности, популярности и разнообразия товаров.
-              </span>
-            ) : null}
-          </div>
-        </Card>
+          <label htmlFor="catalog-sort" className="sr-only">Сортировка товаров</label>
+          <Select
+            id="catalog-sort"
+            value={params.sort}
+            onChange={(event) => {
+              trackGoal(METRIKA_GOALS.SEARCH_SORT_CHANGE, { sort: event.target.value, page_type: 'catalog' });
+              updateParams({ sort: event.target.value });
+            }}
+            className="min-w-0 text-sm"
+          >
+            {PRODUCT_LIST_SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </Select>
+        </section>
 
         <ProductFiltersSheet
           {...filterProps}
           isFilterOpen={isFilterOpen}
-          onCloseFilters={() => setIsFilterOpen(false)}
+          onCloseFilters={closeFilters}
           description="Фильтры каталога"
         />
 
-        {!isFilterOpen ? (
-          <Button
-            type="button"
-            className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] right-4 z-40 !rounded-full px-5 shadow-[0_14px_30px_rgba(43,39,34,0.18)] lg:hidden"
-            onClick={() => setIsFilterOpen(true)}
-          >
-            Фильтры{list.activeFilters.length > 0 ? ` · ${list.activeFilters.length}` : ''}
-          </Button>
-        ) : null}
-
         {list.activeFilters.length > 0 ? (
-          <Card
-            as="section"
-            variant="quiet"
-            className="mt-4 grid gap-2 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center lg:mt-3"
-            padding="sm"
-          >
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted">Применено</p>
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <section aria-label="Применённые фильтры" className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
               {list.activeFilters.map((filter) => (
                 <FilterChip
                   key={filter.key}
                   type="button"
                   onClick={() => clearFilterByKey(filter.key)}
+                  className="shrink-0 whitespace-nowrap"
                   active
                 >
                   {filter.label}
@@ -435,13 +363,13 @@ function CataloguePage() {
             >
               Очистить всё
             </Button>
-          </Card>
+          </section>
         ) : null}
 
         <section
           ref={resultsRef}
           data-testid="catalogue-results"
-          className="mt-5 lg:mt-4"
+          className="mt-3 md:mt-4"
           itemScope={!isListingVariant || undefined}
           itemType={!isListingVariant ? 'https://schema.org/OfferCatalog' : undefined}
         >
@@ -452,17 +380,15 @@ function CataloguePage() {
               {catalogMicrodataImage ? <link itemProp="image" href={catalogMicrodataImage} /> : null}
             </>
           ) : null}
-          <div className="mb-3 text-sm text-muted">
-            {list.loading ? 'Загружаем каталог…' : `${list.totalItems} товаров в выдаче`}
-            {hasQuery ? ` · Запрос: “${params.query}”` : ''}
-            {!hasQuery && list.scopeCategoryLabel ? ` · Категория: ${list.scopeCategoryLabel}` : ''}
-          </div>
+          <p className="mb-2 text-sm text-muted" aria-live="polite">
+            {list.loading ? 'Загружаем каталог…' : list.itemsLabel}
+          </p>
 
           {list.loading ? (
             <div className="page-grid--catalog">
               {Array.from({ length: list.pageSize }).map((_, index) => (
-                <div key={`catalog-skeleton-${index}`} className="ui-card ui-card--quiet p-3">
-                  <div className="skeleton shimmer-safe h-[190px] w-full rounded-2xl" />
+                <div key={`catalog-skeleton-${index}`} className="space-y-3">
+                  <div className="skeleton shimmer-safe aspect-[4/3] w-full rounded-lg" />
                   <div className="mt-3 space-y-2">
                     <div className="skeleton shimmer-safe h-4 w-11/12 rounded-full" />
                     <div className="skeleton shimmer-safe h-4 w-2/3 rounded-full" />
@@ -481,7 +407,7 @@ function CataloguePage() {
             </Card>
           ) : list.totalItems > 0 ? (
             <>
-              <div className="page-grid--catalog">
+              <div className="page-grid--catalog" data-testid="catalogue-grid">
                 {list.pagedProducts.map((product, index) => (
                   <ProductCard
                     key={product.id}

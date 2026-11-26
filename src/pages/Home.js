@@ -1,227 +1,40 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Seo from '../components/Seo';
-import HeroBanner from '../components/home/HeroBanner';
+import HeroBanner, { HOME_HERO_FALLBACK_IMAGE } from '../components/home/HeroBanner';
 import FeaturedProducts from '../components/home/FeaturedProducts';
 import PromoBanners from '../components/home/PromoBanners';
 import NewsletterForm from '../components/home/NewsletterForm';
 import CmsManagedPage from '../components/cms/CmsManagedPage';
-import ResponsiveImage from '../components/media/ResponsiveImage';
-import { Button, Card } from '../components/ui';
 import { getCmsCampaigns } from '../api';
 import { DEFAULT_CMS_SITE_SETTINGS } from '../data/cms/defaults';
-import { useProductDirectoryData } from '../features/product-list/data';
 import { homeHeroDefaults } from '../data/homeHeroDefaults';
-import {
-  getPrimaryImageMedia,
-  getPrimaryImageUrl,
-  getProductPrice,
-  resolveImageUrl,
-} from '../utils/product';
-import { buildProductPath } from '../utils/url';
-import {
-  buildJsonLdGraph,
-  buildOrganizationJsonLd,
-  buildWebPageJsonLd,
-  buildWebSiteJsonLd
-} from '../seo/schema';
-import {
-  DELIVERY_DISCLOSURE,
-  DELIVERY_SHORT_DISCLOSURE
-} from '../utils/delivery';
+import { useProductDirectoryData } from '../features/product-list/data';
+import { buildCategoryCollections, resolveCategoryToken } from '../features/product-list/selectors';
+import { buildCatalogSearchHref } from '../features/product-list/url';
+import { buildJsonLdGraph, buildOrganizationJsonLd, buildWebPageJsonLd, buildWebSiteJsonLd } from '../seo/schema';
+import { DELIVERY_SHORT_DISCLOSURE } from '../utils/delivery';
 import { useSsrData } from '../ssr/SsrDataContext';
 import { promotionFactLabel } from '../components/cms/blocks/CampaignSlotBlock';
 
-function getProductStock(product) {
-  if (!product) return 0;
-  if (product.stock !== undefined || product.stockQuantity !== undefined) {
-    return Number(product.stock ?? product.stockQuantity ?? 0);
-  }
-  const variants = Array.isArray(product.variants)
-    ? product.variants
-    : Array.from(product.variants || []);
-  return variants.reduce(
-    (sum, variant) => sum + Number(variant?.stock ?? variant?.stockQuantity ?? 0),
-    0
-  );
-}
-
-const fabricGuideItems = [
-  {
-    title: 'Перкаль',
-    label: 'Прохладная свежесть',
-    description: 'Матовая хлопковая ткань для тех, кто любит прохладное, свежее ощущение.',
-    cue: 'Лучше для теплого сна',
-    cta: 'Смотреть перкаль',
-    link: '/catalog?query=%D0%BF%D0%B5%D1%80%D0%BA%D0%B0%D0%BB%D1%8C',
-    imageUrl:
-      'https://images.unsplash.com/photo-1616627561839-074385245ff6?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    title: 'Сатин',
-    label: 'Гладко и мягко',
-    description: 'Гладкая поверхность с мягким блеском, которая ощущается плотнее и теплее.',
-    cue: 'Лучше для мягкости',
-    cta: 'Смотреть сатин',
-    link: '/catalog?query=%D1%81%D0%B0%D1%82%D0%B8%D0%BD',
-    imageUrl:
-      'https://images.unsplash.com/photo-1567016376408-0226e4d0c1ea?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    title: 'Лен',
-    label: 'Живая фактура',
-    description: 'Живая фактура, свободная посадка и ощущение спальни без лишней парадности.',
-    cue: 'Лучше для фактуры',
-    cta: 'Смотреть лен',
-    link: '/catalog?query=%D0%BB%D0%B5%D0%BD',
-    imageUrl:
-      'https://images.unsplash.com/photo-1600210491369-e753d80a41f3?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    title: 'Готовый комплект',
-    label: 'Готовое сочетание',
-    description: 'Простыня, пододеяльник, наволочки и акценты в одной спокойной палитре.',
-    cue: 'Лучше для быстрого выбора',
-    cta: 'Собрать кровать',
-    link: '/catalog?query=%D0%BA%D0%BE%D0%BC%D0%BF%D0%BB%D0%B5%D0%BA%D1%82',
-    imageUrl:
-      'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=900&q=80',
-  },
+const serviceItems = [
+  { title: 'Доставка по России', description: DELIVERY_SHORT_DISCLOSURE, url: '/info/delivery' },
+  { title: 'Оплата картой и СБП', description: 'Онлайн-оплата через платёжную форму.', url: '/info/payment' },
+  { title: 'Условия возврата', description: 'Сроки и порядок возврата товара.', url: '/usloviya-prodazhi#return' },
 ];
 
-const benefitItems = [
-  {
-    title: 'Доставка по России',
-    description: DELIVERY_SHORT_DISCLOSURE,
-  },
-  {
-    title: 'Возврат без скрытых условий',
-    description: 'Сервисные правила доступны заранее в документах магазина.',
-  },
-  {
-    title: 'Контроль ткани и пошива',
-    description: 'Собственное производство помогает держать качество стабильным.',
-  },
-  {
-    title: 'Оплата картой или СБП',
-    description: 'Безопасная оплата без сохранения платёжных данных на сайте.',
-  },
+const fabrics = [
+  ['Перкаль', 'Матовая и гладкая фактура'],
+  ['Сатин', 'Мягкая ткань с лёгким блеском'],
+  ['Лён', 'Выраженная натуральная фактура'],
 ];
-
-function SectionIntro({ eyebrow, title, description, actionLabel, actionUrl }) {
-  return (
-    <div className="section-header">
-      <div className="section-header__copy">
-        {eyebrow ? (
-          <p className="text-xs uppercase tracking-[0.28em] text-accent">{eyebrow}</p>
-        ) : null}
-        <h2 className="text-2xl font-semibold md:text-3xl">{title}</h2>
-        {description ? <p className="mt-2 text-sm text-muted">{description}</p> : null}
-      </div>
-      {actionLabel && actionUrl ? (
-        <Button as={Link} to={actionUrl} variant="ghost" className="self-start text-primary">
-          {actionLabel}
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function ShopByFeelSection() {
-  return (
-    <section className="page-shell page-section">
-      <SectionIntro
-        eyebrow="Найти свою ткань"
-        title="Выберите по ощущению, а не по названию ткани"
-        description="Короткие редакционные карточки объясняют разницу между перкалем, сатином, льном и готовыми комплектами без длинного перехода в справочник."
-        actionLabel="Открыть каталог"
-        actionUrl="/catalog"
-      />
-
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {fabricGuideItems.map((item) => (
-          <Card
-            key={item.title}
-            variant="quiet"
-            padding="sm"
-            className="group h-full overflow-hidden rounded-[24px] border border-ink/10 bg-white/88"
-          >
-            <div className="overflow-hidden rounded-[20px] border border-ink/10 bg-sky/30">
-              <div className="relative pt-[72%]">
-                <ResponsiveImage
-                  src={item.imageUrl}
-                  alt={`${item.title}: фактура ткани`}
-                  className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                  sizes="(min-width: 1280px) 23vw, (min-width: 640px) 46vw, 92vw"
-                  loading="lazy"
-                />
-              </div>
-            </div>
-            <div className="mt-4 flex min-h-[12rem] flex-col gap-2">
-              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
-                {item.label}
-              </p>
-              <h3 className="text-lg font-semibold text-ink">{item.title}</h3>
-              <p className="text-sm leading-6 text-muted">{item.description}</p>
-              <p className="mt-auto text-xs font-semibold text-accent">{item.cue}</p>
-              <Button as={Link} to={item.link} variant="secondary" size="sm" className="mt-1">
-                {item.cta}
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function BenefitsRow() {
-  return (
-    <section className="page-shell page-section--tight">
-      <div className="grid gap-3 rounded-[28px] border border-[#d7e1dc] bg-[#f6f8f3] p-4 shadow-[0_18px_36px_rgba(43,39,34,0.08)] sm:grid-cols-2 lg:grid-cols-4 lg:p-5">
-        {benefitItems.map((item) => (
-          <div key={item.title} className="rounded-2xl border border-ink/10 bg-white/86 p-4">
-            <p className="text-sm font-semibold leading-5 text-ink">{item.title}</p>
-            <p className="mt-2 text-xs leading-5 text-muted">{item.description}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ConversionCta() {
-  return (
-    <section className="page-shell page-section">
-      <div className="overflow-hidden rounded-[30px] border border-primary/20 bg-[#fff8ef] px-5 py-6 shadow-[0_22px_48px_rgba(126,81,44,0.12)] sm:px-7 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-8">
-        <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-accent">Готовы выбрать</p>
-          <h2 className="mt-3 text-3xl font-semibold text-ink">Соберите кровать из проверенных комплектов</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Начните с бестселлеров, добавьте плед или выберите ткань по ощущению. {DELIVERY_DISCLOSURE}
-          </p>
-        </div>
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row lg:mt-0">
-          <Button as={Link} to="/category/popular">
-            Смотреть бестселлеры
-          </Button>
-          <Button as={Link} to="/catalog?query=%D0%BA%D0%BE%D0%BC%D0%BF%D0%BB%D0%B5%D0%BA%D1%82" variant="secondary">
-            Собрать кровать
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function HomeFallbackPage() {
-  const { products, loading } = useProductDirectoryData();
+  const { categories, products, loading } = useProductDirectoryData();
   const { routeData } = useSsrData();
-  const heroConfig = homeHeroDefaults;
+  const hero = homeHeroDefaults;
   const seededCampaigns =
-    routeData?.kind === 'home-marketing' && Array.isArray(routeData.campaigns)
-      ? routeData.campaigns
-      : [];
+    routeData?.kind === 'home-marketing' && Array.isArray(routeData.campaigns) ? routeData.campaigns : [];
   const [campaigns, setCampaigns] = useState(seededCampaigns);
 
   useEffect(() => {
@@ -229,163 +42,117 @@ function HomeFallbackPage() {
     let mounted = true;
     getCmsCampaigns({ placement: 'home_promo', limit: 2 })
       .then((data) => {
-        if (!mounted) return;
-        setCampaigns(Array.isArray(data) ? data : []);
+        if (mounted) setCampaigns(Array.isArray(data) ? data : []);
       })
-      .catch((err) => {
-        console.warn('Failed to load CMS campaigns', err);
-      });
-    return () => {
-      mounted = false;
-    };
+      .catch((error) => console.warn('Failed to load CMS campaigns', error));
+    return () => { mounted = false; };
   }, [seededCampaigns.length]);
 
-  const activeProducts = useMemo(
-    () => products.filter((product) => product?.isActive !== false),
+  const navCategories = useMemo(() => buildCategoryCollections(categories).navCategories.slice(0, 5), [categories]);
+  const featuredProducts = useMemo(
+    () => products.filter((product) => product?.isActive !== false).slice(0, 4),
     [products]
   );
 
-  const bestsellers = useMemo(() => {
-    return [...activeProducts]
-      .sort((a, b) => {
-        const scoreA =
-          Math.min(getProductStock(a), 12) * 10 +
-          getProductPrice(a);
-        const scoreB =
-          Math.min(getProductStock(b), 12) * 10 +
-          getProductPrice(b);
-        return scoreB - scoreA;
-      })
-      .slice(0, 8);
-  }, [activeProducts]);
-
-  const featuredProduct = useMemo(() => {
-    return (
-      activeProducts.find((product) => product.id === heroConfig.featuredProductId) ||
-      bestsellers[0] ||
-      activeProducts[0] ||
-      null
-    );
-  }, [activeProducts, bestsellers, heroConfig.featuredProductId]);
-
-  const heroImage = getPrimaryImageUrl(featuredProduct);
-  const heroImageMedia = getPrimaryImageMedia(featuredProduct);
-  const heroShareImage = heroImage ? resolveImageUrl(heroImage) : '';
   const seoTitle = 'Домашний текстиль для уютного дома';
-  const seoDescription = `${heroConfig.subtitle || homeHeroDefaults.subtitle} Доставка по России, честные условия покупки и собственное производство.`;
   const homeJsonLd = useMemo(
-    () =>
-      buildJsonLdGraph([
-        buildOrganizationJsonLd({ siteSettings: DEFAULT_CMS_SITE_SETTINGS }),
-        buildWebSiteJsonLd({ siteSettings: DEFAULT_CMS_SITE_SETTINGS }),
-        buildWebPageJsonLd({
-          title: seoTitle,
-          description: seoDescription,
-          path: '/',
-          image: heroShareImage,
-          siteSettings: DEFAULT_CMS_SITE_SETTINGS
-        })
-      ]),
-    [heroShareImage, seoDescription, seoTitle]
+    () => buildJsonLdGraph([
+      buildOrganizationJsonLd({ siteSettings: DEFAULT_CMS_SITE_SETTINGS }),
+      buildWebSiteJsonLd({ siteSettings: DEFAULT_CMS_SITE_SETTINGS }),
+      buildWebPageJsonLd({
+        title: seoTitle,
+        description: hero.subtitle,
+        path: '/',
+        image: HOME_HERO_FALLBACK_IMAGE,
+        siteSettings: DEFAULT_CMS_SITE_SETTINGS
+      })
+    ]),
+    [hero.subtitle]
   );
-
-  const heroHighlights = [
-    {
-      title: 'Условия доставки',
-      subtitle: DELIVERY_SHORT_DISCLOSURE,
-      link: '/info/delivery',
-    },
-    {
-      title: 'Карта или СБП',
-      subtitle: 'Безопасная оплата через платёжную форму.',
-      link: '/info/payment',
-    },
-    {
-      title: 'Ткань и пошив под контролем',
-      subtitle: 'Собственное производство и понятные материалы.',
-      link: '/info/production',
-    },
-    {
-      title: 'Условия открыты заранее',
-      subtitle: 'Документы, возврат и реквизиты доступны до заказа.',
-      link: '/info/legal',
-    },
-  ];
-
-  const livePromoBanners = useMemo(() => {
-    return campaigns.slice(0, 2).map((campaign) => {
-      const creative = Array.isArray(campaign.creatives) ? campaign.creatives[0] : null;
-      const fact = promotionFactLabel(campaign.promotion);
-      return {
-        id: `campaign-${campaign.id}`,
-        eyebrow: creative?.eyebrow || 'Акция',
-        title: creative?.title || creative?.shortText || campaign.internalName,
-        description: creative?.description
-          ? creative.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-          : fact || 'Условия кампании доступны на промо-странице.',
-        cta: creative?.primaryCtaLabel || 'Подробнее',
-        link: creative?.primaryCtaUrl || campaign.landingPage?.path || `/promo/${campaign.slug}`,
-        secondaryCta: creative?.secondaryCtaLabel,
-        secondaryLink: creative?.secondaryCtaUrl,
-        className: 'bg-gradient-to-br from-[#edf4f6] via-white to-[#f7eee8]'
-      };
-    });
-  }, [campaigns]);
-
-  const featuredProductSummary = featuredProduct
-    ? {
-        name: featuredProduct.name,
-        priceLabel: `${getProductPrice(featuredProduct).toLocaleString('ru-RU')} ₽`,
-        link: buildProductPath(featuredProduct)
-      }
-    : null;
+  const livePromoBanners = useMemo(() => campaigns.slice(0, 2).map((campaign) => {
+    const creative = Array.isArray(campaign.creatives) ? campaign.creatives[0] : null;
+    return {
+      id: `campaign-${campaign.id}`,
+      eyebrow: creative?.eyebrow,
+      title: creative?.title || creative?.shortText || campaign.internalName,
+      description: creative?.description
+        ? creative.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+        : promotionFactLabel(campaign.promotion),
+      cta: creative?.primaryCtaLabel || 'Подробнее',
+      link: creative?.primaryCtaUrl || campaign.landingPage?.path || `/promo/${campaign.slug}`,
+      secondaryCta: creative?.secondaryCtaLabel,
+      secondaryLink: creative?.secondaryCtaUrl,
+    };
+  }), [campaigns]);
 
   return (
     <>
       <Seo
         title={seoTitle}
-        description={seoDescription}
+        description={hero.subtitle}
         canonicalPath="/"
-        image={heroShareImage}
-        imageAlt={featuredProduct?.name || seoTitle}
+        image={HOME_HERO_FALLBACK_IMAGE}
+        imageAlt="Спальня с постельным бельём в натуральных оттенках"
         jsonLd={homeJsonLd}
       />
 
-      <div className="home">
+      <div className="home page-shell space-y-5 pb-10 pt-3 sm:space-y-8 sm:pt-5">
         <HeroBanner
-          imageUrl={heroImage}
-          imageMedia={heroImageMedia}
-          title={heroConfig.title || homeHeroDefaults.title}
-          accent={heroConfig.accent || homeHeroDefaults.accent}
-          description={heroConfig.subtitle || homeHeroDefaults.subtitle}
-          badge={heroConfig.badge || homeHeroDefaults.badge}
-          ctaText={heroConfig.primaryCtaLabel || homeHeroDefaults.primaryCtaLabel}
-          ctaLink={heroConfig.primaryCtaLink || homeHeroDefaults.primaryCtaLink}
-          secondaryCtaText={heroConfig.secondaryCtaLabel || homeHeroDefaults.secondaryCtaLabel}
-          secondaryCtaLink={heroConfig.secondaryCtaLink || homeHeroDefaults.secondaryCtaLink}
-          highlights={heroHighlights}
-          featuredProduct={featuredProductSummary}
+          title={hero.title}
+          accent={hero.accent}
+          description={hero.subtitle}
+          ctaText={hero.primaryCtaLabel}
+          ctaLink={hero.primaryCtaLink}
         />
 
+        {navCategories.length ? (
+          <nav aria-label="Разделы каталога" className="flex gap-4 overflow-x-auto border-b border-ink/10 scrollbar-hide sm:gap-7">
+            {navCategories.map((category) => {
+              const token = resolveCategoryToken(category);
+              return (
+                <Link key={token} to={`/category/${token}`} className="focus-ring-soft flex min-h-11 shrink-0 items-center text-sm font-semibold text-primary hover:underline">
+                  {category.name}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : null}
+
         <FeaturedProducts
-          eyebrow="С чего начать"
-          title="Бестселлеры, которые быстро объясняют выбор"
-          description="Четыре-восемь проверенных товаров с тканью, ценой и быстрым действием прямо на главной."
-          products={bestsellers}
+          title="Текстиль для дома"
+          products={featuredProducts}
           loading={loading}
-          ctaText="Все бестселлеры"
-          ctaLink="/category/popular"
+          ctaText="Весь каталог"
+          ctaLink="/catalog"
         />
 
         <PromoBanners banners={livePromoBanners} />
 
-        <ShopByFeelSection />
+        <section className="border-t border-ink/10 pt-6">
+          <h2 className="font-display text-2xl font-medium sm:text-3xl">Ткани и фактуры</h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+            {fabrics.map(([name, description]) => (
+              <li key={name}>
+                <Link
+                  to={buildCatalogSearchHref({ query: name.replace('ё', 'е') })}
+                  className="focus-ring-soft flex min-h-16 flex-col justify-center gap-1 rounded-lg border border-ink/10 bg-white px-4 py-2 hover:border-primary/50"
+                >
+                  <span className="font-semibold text-primary">{name} <span aria-hidden="true">↗</span></span>
+                  <span className="text-sm text-muted">{description}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-        <BenefitsRow />
-
-        <ConversionCta />
-
-        <NewsletterForm />
+        <section aria-label="Условия покупки" className="grid gap-4 border-y border-ink/10 py-5 sm:grid-cols-3">
+          {serviceItems.map((item) => (
+            <div key={item.title}>
+              <Link to={item.url} className="focus-ring-soft inline-flex min-h-[44px] items-center text-sm font-semibold text-primary underline underline-offset-4">{item.title}</Link>
+              <p className="text-sm text-muted">{item.description}</p>
+            </div>
+          ))}
+        </section>
       </div>
     </>
   );
@@ -393,11 +160,10 @@ function HomeFallbackPage() {
 
 function Home() {
   return (
-    <CmsManagedPage
-      slug="home"
-      fallback={<HomeFallbackPage />}
-      afterManagedContent={<NewsletterForm />}
-    />
+    <>
+      <CmsManagedPage slug="home" fallback={<HomeFallbackPage />} />
+      <NewsletterForm />
+    </>
   );
 }
 

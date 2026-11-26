@@ -1,8 +1,8 @@
 import React from 'react';
-import { Button, Card, FieldError, Input } from '../../components/ui';
+import { FieldError, Input } from '../../components/ui';
+import CheckoutGuestPanel from './CheckoutGuestPanel';
 
 function ContactStep({
-  active,
   email,
   customerName,
   phone,
@@ -14,113 +14,85 @@ function ContactStep({
   onCustomerNameChange,
   onPhoneChange,
   onSavePaymentMethodChange,
-  onContinue,
-  onEdit,
-  showContinue = true,
   disabled = false
 }) {
   return (
-    <Card as="section" padding="lg">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">1</span>
-          <div>
-            <h2 className="text-2xl font-semibold">Контакты</h2>
-            <p className="text-sm text-muted">Нужны имя, телефон и электронная почта для чека и обновлений по заказу.</p>
-          </div>
+    <section aria-labelledby="checkout-contact-title">
+      <h2 id="checkout-contact-title" tabIndex={-1} className="mb-4 text-2xl font-semibold">Контакты</h2>
+      {!isAuthenticated && <CheckoutGuestPanel disabled={disabled} />}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label className="mb-1.5 block text-sm font-medium" htmlFor="checkout-email">Электронная почта</label>
+          <Input
+            id="checkout-email"
+            type="email"
+            value={email}
+            onChange={(event) => onEmailChange(event.target.value)}
+            onBlur={onEmailBlur}
+            placeholder="pochta@example.ru"
+            autoComplete="email"
+            inputMode="email"
+            invalid={Boolean(fieldErrors.email)}
+            aria-invalid={Boolean(fieldErrors.email)}
+            aria-describedby="checkout-email-hint"
+            aria-errormessage={fieldErrors.email ? 'checkout-email-error' : undefined}
+            required
+            disabled={disabled}
+          />
+          <p id="checkout-email-hint" className="mt-1.5 text-xs text-muted">Пришлём чек и статус заказа.</p>
+          <FieldError id="checkout-email-error">{fieldErrors.email}</FieldError>
         </div>
-        {!active ? (
-          <Button variant="ghost" size="sm" className="text-xs" onClick={onEdit} disabled={disabled}>
-            Изменить
-          </Button>
-        ) : null}
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium" htmlFor="checkout-customer-name">Имя получателя</label>
+          <Input
+            id="checkout-customer-name"
+            type="text"
+            value={customerName}
+            onChange={(event) => onCustomerNameChange(event.target.value)}
+            placeholder="Иван Иванов"
+            autoComplete="name"
+            invalid={Boolean(fieldErrors.customerName)}
+            aria-invalid={Boolean(fieldErrors.customerName)}
+            aria-errormessage={fieldErrors.customerName ? 'checkout-customer-name-error' : undefined}
+            required
+            disabled={disabled}
+          />
+          <FieldError id="checkout-customer-name-error">{fieldErrors.customerName}</FieldError>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium" htmlFor="checkout-phone">Телефон</label>
+          <Input
+            id="checkout-phone"
+            type="tel"
+            value={phone}
+            onChange={(event) => onPhoneChange(event.target.value)}
+            placeholder="+7 900 000-00-00"
+            autoComplete="tel"
+            inputMode="tel"
+            invalid={Boolean(fieldErrors.phone)}
+            aria-invalid={Boolean(fieldErrors.phone)}
+            aria-errormessage={fieldErrors.phone ? 'checkout-phone-error' : undefined}
+            required
+            disabled={disabled}
+          />
+          <FieldError id="checkout-phone-error">{fieldErrors.phone}</FieldError>
+        </div>
       </div>
 
-      {active ? (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm sm:col-span-2">
-              <span className="text-muted">Электронная почта (обязательно)</span>
-              <Input
-                id="checkout-email"
-                type="email"
-                value={email}
-                onChange={(event) => onEmailChange(event.target.value)}
-                onBlur={onEmailBlur}
-                placeholder="pochta@example.ru"
-                className={`mt-2 w-full ${fieldErrors.email ? 'input-error' : ''}`}
-                autoComplete="email"
-                inputMode="email"
-                aria-invalid={Boolean(fieldErrors.email)}
-                aria-errormessage={fieldErrors.email ? 'checkout-email-error' : undefined}
-                required
-                disabled={disabled}
-              />
-              <FieldError id="checkout-email-error">{fieldErrors.email}</FieldError>
-            </label>
-
-            <label className="block text-sm">
-              <span className="text-muted">Имя (обязательно)</span>
-              <Input
-                id="checkout-customer-name"
-                type="text"
-                value={customerName}
-                onChange={(event) => onCustomerNameChange(event.target.value)}
-                placeholder="Иван Иванов"
-                className={`mt-2 w-full ${fieldErrors.customerName ? 'input-error' : ''}`}
-                autoComplete="name"
-                aria-invalid={Boolean(fieldErrors.customerName)}
-                aria-errormessage={fieldErrors.customerName ? 'checkout-customer-name-error' : undefined}
-                required
-                disabled={disabled}
-              />
-              <FieldError id="checkout-customer-name-error">{fieldErrors.customerName}</FieldError>
-            </label>
-
-            <label className="block text-sm">
-              <span className="text-muted">Телефон (обязательно)</span>
-              <Input
-                id="checkout-phone"
-                type="tel"
-                value={phone}
-                onChange={(event) => onPhoneChange(event.target.value)}
-                placeholder="+7 900 000-00-00"
-                className={`mt-2 w-full ${fieldErrors.phone ? 'input-error' : ''}`}
-                autoComplete="tel"
-                inputMode="tel"
-                aria-invalid={Boolean(fieldErrors.phone)}
-                aria-errormessage={fieldErrors.phone ? 'checkout-phone-error' : undefined}
-                required
-                disabled={disabled}
-              />
-              <FieldError id="checkout-phone-error">{fieldErrors.phone}</FieldError>
-            </label>
-          </div>
-
-          {isAuthenticated ? (
-            <label className="mt-3 flex items-center gap-3 text-sm text-ink/90">
-              <input
-                type="checkbox"
-                checked={savePaymentMethod}
-                onChange={(event) => onSavePaymentMethodChange(event.target.checked)}
-                disabled={disabled}
-              />
-              <span>Сохранить карту для будущих покупок</span>
-            </label>
-          ) : null}
-
-          {showContinue ? (
-            <Button className="mt-5" onClick={onContinue} disabled={disabled}>
-              К адресу
-            </Button>
-          ) : null}
-        </>
-      ) : (
-        <p className="text-sm text-muted">
-          {customerName || 'Имя не указано'} · {phone || 'телефон не указан'} · {email || 'электронная почта не указана'}
-        </p>
-      )}
-    </Card>
+      {isAuthenticated ? (
+        <label className="mt-3 flex min-h-11 items-center gap-3 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={savePaymentMethod}
+            onChange={(event) => onSavePaymentMethodChange(event.target.checked)}
+            disabled={disabled}
+          />
+          <span>Сохранить карту для будущих покупок</span>
+        </label>
+      ) : null}
+    </section>
   );
 }
 

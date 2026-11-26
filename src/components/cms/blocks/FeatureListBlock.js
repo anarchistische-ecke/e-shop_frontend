@@ -26,8 +26,29 @@ function getFeatureItemClass(layoutVariant) {
     : '';
 }
 
-function FeatureListBlock({ section }) {
+function FeatureListBlock({ section, page }) {
   const items = Array.isArray(section.items) ? section.items : [];
+
+  if (page?.template === 'home') {
+    return (
+      <section id={section.anchorId || undefined} className="space-y-4 border-t border-ink/10 pt-5">
+        {section.title ? <h2 className="font-display text-2xl font-medium sm:text-3xl">{section.title}</h2> : null}
+        {section.body ? <CmsRichText html={section.body} className="max-w-2xl text-sm text-muted" /> : null}
+        {items.length ? (
+          <div className="grid gap-x-5 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+            {items.map((item, index) => (
+              <div key={`${item.title || item.label || 'feature'}-${index}`} className="border-l border-ink/15 pl-3">
+                {item.title || item.label ? <h3 className="text-sm font-semibold text-ink">{item.title || item.label}</h3> : null}
+                {item.description ? <p className="mt-1 text-sm leading-relaxed text-muted">{item.description}</p> : null}
+                {item.url ? <CmsAction label="Подробнее" url={item.url} variant="ghost" className="!px-0 text-primary" /> : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <CmsSectionActions section={section} />
+      </section>
+    );
+  }
 
   return (
     <section id={section.anchorId || undefined} className="space-y-4">

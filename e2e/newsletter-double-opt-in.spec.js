@@ -9,7 +9,8 @@ test('newsletter requires consent and confirms through a token-clean URL', async
   await page.getByRole('button', { name: 'Подписаться' }).click();
   await expect(page.getByText(/Подтвердите согласие/i)).toBeVisible();
 
-  await page.getByText(/Я согласен/i).click();
+  await page.locator('label').filter({ hasText: /Я согласен/i }).click();
+  await expect(page.getByRole('checkbox', { name: /Я согласен/i })).toBeChecked();
   await page.getByRole('button', { name: 'Подписаться' }).click();
   await expect(page.getByText(/Проверьте почту/i)).toBeVisible();
   expect(api.stats.newsletterRequests).toBe(1);

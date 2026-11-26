@@ -1,19 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-function HeaderBrand({ siteName, wayfindingLabel }) {
+function HeaderBrand({ siteName }) {
   return (
-    <div className="min-w-0 lg:relative lg:h-11 lg:self-center">
-      <Link
-        to="/"
-        className="touch-link focus-ring-soft flex min-h-[28px] items-center truncate rounded-xl font-display text-base font-semibold leading-none tracking-tight text-ink transition hover:text-primary sm:text-2xl lg:h-11 lg:min-h-11 lg:text-3xl"
-      >
-        {siteName}
-      </Link>
-      <p className="mt-0.5 hidden truncate text-[11px] uppercase tracking-[0.18em] text-muted sm:block lg:absolute lg:left-0 lg:top-[calc(100%-0.4rem)] lg:mt-0 lg:max-w-full">
-        Раздел: {wayfindingLabel}
-      </p>
-    </div>
+    <Link
+      to="/"
+      className="focus-ring-soft inline-flex min-h-11 min-w-0 items-center gap-2.5 rounded-lg font-display text-[1.125rem] font-semibold tracking-tight text-primary lg:gap-3 lg:text-[1.45rem]"
+    >
+      <span aria-hidden="true" className="relative grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-md border border-current lg:h-7 lg:w-7">
+        <span className="absolute h-5 w-px rotate-45 bg-current" />
+        <span className="absolute h-5 w-px -rotate-45 bg-current" />
+        <span className="absolute h-1.5 w-1.5 rotate-45 border border-current bg-white" />
+      </span>
+      <span className="truncate">{siteName}</span>
+    </Link>
   );
 }
 

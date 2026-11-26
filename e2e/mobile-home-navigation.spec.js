@@ -8,6 +8,9 @@ test.beforeEach(async ({ page }) => {
 test('home page shows categories as a visible mobile list instead of a hidden slider', async ({ page }) => {
   await page.goto('/');
 
+  await expect(page.getByTestId('home-hero').getByRole('heading', { level: 1 })).toBeInViewport();
+  await expect(page.locator('main .product-card').first().getByText(/₽/).first()).toBeInViewport();
+
   const categorySection = page.getByTestId('home-category-grid');
   await expect(
     categorySection.getByRole('heading', { name: /Быстрый вход в популярные разделы/i })

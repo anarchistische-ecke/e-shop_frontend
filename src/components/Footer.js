@@ -14,9 +14,11 @@ function FooterLink({ item }) {
     return null;
   }
 
+  const className = 'touch-link min-h-11 text-sm leading-5 text-white/85 underline-offset-4 hover:text-white hover:underline focus-visible:ring-white';
+
   if (isInternalUrl(item.url)) {
     return (
-      <Link to={item.url} className="touch-link block leading-5 hover:text-white">
+      <Link to={item.url} className={className}>
         {item.label}
       </Link>
     );
@@ -25,7 +27,7 @@ function FooterLink({ item }) {
   return (
     <a
       href={item.url}
-      className="touch-link block leading-5 hover:text-white"
+      className={className}
       rel={item.openInNewTab ? 'noreferrer' : undefined}
       target={item.openInNewTab ? '_blank' : undefined}
     >
@@ -34,10 +36,11 @@ function FooterLink({ item }) {
   );
 }
 
-function Footer() {
+function Footer({ fixedBottom = false }) {
   const currentYear = new Date().getFullYear();
   const { siteSettings } = useCmsSiteSettings();
   const { navigation: groups } = useCmsNavigation({ placement: 'footer' });
+  const phone = String(siteSettings.supportPhone || '').replace(/[^\d+]/g, '');
   const copyrightStartYear = Number(siteSettings?.copyrightStartYear || currentYear);
   const copyrightPeriod =
     copyrightStartYear && copyrightStartYear < currentYear
@@ -45,74 +48,50 @@ function Footer() {
       : currentYear;
 
   return (
-    <footer className="bg-accent text-white border-t border-white/10">
-      <div className="page-shell page-section--tight py-4 sm:py-5 lg:py-3 xl:py-4">
+    <footer className={`border-t border-white/15 bg-accent text-white ${fixedBottom ? 'pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:pb-0' : ''}`}>
+      <div className="page-shell py-8 md:py-12">
         <div
           data-testid="site-footer-content"
-          className="mx-auto w-full max-w-[72rem]"
+          className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[minmax(15rem,0.9fr)_minmax(0,2fr)] lg:gap-12"
         >
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)] lg:gap-6 lg:items-start">
-            <div className="space-y-3">
-              <Link to="/" className="touch-link font-display text-[1.95rem] font-semibold tracking-tight text-white">
-                {siteSettings.siteName}
-              </Link>
-              <p className="max-w-sm text-sm leading-6 text-white/72">
-                {siteSettings.brandDescription}
-              </p>
-              <div className="flex flex-wrap gap-1.5 text-sm">
-                <p className="m-0 inline-flex items-center gap-1.5 rounded-2xl bg-white/10 px-2.5 py-1">
-                  Телефон: {siteSettings.supportPhone}
-                </p>
-                <p className="m-0 inline-flex items-center gap-1.5 rounded-2xl bg-white/10 px-2.5 py-1">
-                  Почта: {siteSettings.supportEmail}
-                </p>
-              </div>
-              <div className="grid gap-1.5 text-xs text-white/68">
-                <p className="m-0 uppercase tracking-[0.22em] text-white/56">Реквизиты</p>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-1">
-                    {siteSettings.legalEntityShort}
-                  </span>
-                  <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-1">
-                    ИНН {siteSettings.legalInn}
-                  </span>
-                  <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-1">
-                    ОГРНИП {siteSettings.legalOgrnip}
-                  </span>
-                </div>
-              </div>
+          <div className="min-w-0">
+            <Link to="/" className="touch-link font-display text-2xl font-semibold tracking-tight text-white focus-visible:ring-white">
+              {siteSettings.siteName}
+            </Link>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-white/80">
+              {siteSettings.brandDescription}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 text-sm">
+              {phone ? <FooterLink item={{ label: siteSettings.supportPhone, url: `tel:${phone}` }} /> : null}
+              {siteSettings.supportEmail ? <FooterLink item={{ label: siteSettings.supportEmail, url: `mailto:${siteSettings.supportEmail}` }} /> : null}
             </div>
+          </div>
 
-            <div
-              data-testid="site-footer-link-grid"
-              className="grid grid-cols-2 gap-x-4 gap-y-3 sm:gap-x-5 lg:grid-cols-4"
-            >
-              {groups.map((grp) => (
-                <div key={grp.key || grp.title} className="space-y-2 min-w-0">
-                  <h4 className="mt-0 font-semibold text-white">{grp.title}</h4>
-                  <ul className="space-y-1 text-sm text-white/74">
-                    {(grp.items || []).map((item) => (
-                      <li key={`${grp.key || grp.title}:${item.label}:${item.url}`}>
-                        <FooterLink item={item} />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+          <div
+            data-testid="site-footer-link-grid"
+            className="grid grid-cols-2 gap-x-5 gap-y-5 md:grid-cols-4"
+          >
+            {groups.map((grp) => (
+              <div key={grp.key || grp.title} className="min-w-0">
+                <h2 className="mb-1 font-sans text-sm font-extrabold text-white">{grp.title}</h2>
+                <ul>
+                  {(grp.items || []).map((item) => (
+                    <li key={`${grp.key || grp.title}:${item.label}:${item.url}`}>
+                      <FooterLink item={item} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-2">
+      <div className="border-t border-white/20 py-4">
         <div className="page-shell">
-          <div className="mx-auto flex w-full max-w-[72rem] flex-wrap items-center justify-between gap-1.5 text-xs text-white/60">
-            <p className="m-0">© {siteSettings.siteName}, {copyrightPeriod}</p>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5">Карты</span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5">СБП</span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5">Чеки</span>
-            </div>
+          <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-x-4 gap-y-2 text-xs leading-5 text-white/75">
+            <p>© {siteSettings.siteName}, {copyrightPeriod}</p>
+            <p>{siteSettings.legalEntityShort} · ИНН {siteSettings.legalInn} · ОГРНИП {siteSettings.legalOgrnip}</p>
           </div>
         </div>
       </div>

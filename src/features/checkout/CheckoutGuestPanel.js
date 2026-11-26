@@ -1,54 +1,24 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Button, Card } from '../../components/ui';
-import { buildLoginRedirectPath, CART_SESSION_STRATEGY } from '../../utils/account';
+import { buildLoginRedirectPath } from '../../utils/account';
 
-function CheckoutGuestPanel({
-  isSubmitting,
-  onDisabledNavigation,
-  onGuestCheckout
-}) {
+function CheckoutGuestPanel({ disabled }) {
   const location = useLocation();
-  const disabledLinkClass = isSubmitting ? ' pointer-events-none opacity-60' : '';
   const redirectTo = buildLoginRedirectPath(location, '/checkout');
 
   return (
-    <Card
-      variant="tint"
-      padding="sm"
-      className="mb-5 bg-white/90 shadow-[0_18px_36px_rgba(43,39,34,0.08)]"
-    >
-      <p className="text-sm font-semibold text-ink">Оформление как гость</p>
-      <p className="mt-1 text-xs text-muted leading-relaxed">
-        Достаточно имени, телефона, домашнего адреса и электронной почты. Аккаунт нужен только если вы хотите сохранить данные для следующего заказа и видеть историю покупок.
-      </p>
-      <p className="mt-2 text-xs font-medium text-ink/80">
-        {CART_SESSION_STRATEGY.title}. {CART_SESSION_STRATEGY.summary}
-      </p>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <Button
-          variant="secondary"
-          block
-          className="justify-start text-left !py-2.5"
-          onClick={onGuestCheckout}
-          disabled={isSubmitting}
-        >
-          Оформить как гость
-        </Button>
-        <Button
-          as={Link}
-          to="/login"
-          state={{ from: redirectTo }}
-          variant="ghost"
-          block
-          className={`justify-start text-left !py-2.5${disabledLinkClass}`}
-          aria-disabled={isSubmitting}
-          onClick={onDisabledNavigation}
-        >
-          Войти и сохранить данные
-        </Button>
-      </div>
-    </Card>
+    <div className="flex flex-wrap items-center justify-between gap-x-4 border-y border-ink/10 py-1 text-sm">
+      <p className="py-1 font-medium text-ink">Оформление без аккаунта</p>
+      <Link
+        to="/login"
+        state={{ from: redirectTo }}
+        className="inline-flex min-h-11 items-center font-medium text-primary underline decoration-primary/35 underline-offset-4 hover:decoration-primary aria-disabled:pointer-events-none aria-disabled:opacity-60"
+        aria-disabled={disabled}
+        onClick={disabled ? (event) => event.preventDefault() : undefined}
+      >
+        Войти в аккаунт
+      </Link>
+    </div>
   );
 }
 

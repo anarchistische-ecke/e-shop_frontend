@@ -199,9 +199,6 @@ export function useCheckoutState() {
   const payableTotal = total;
   const deliveryLabel = DELIVERY_EXCLUDED_LABEL;
   const confirmationDeliveryLabel = homeAddress.trim() || 'Адрес не указан';
-  const checkoutSubmitLabel = isEmbeddedPaymentMode(paymentConfig)
-    ? 'Создать заказ и открыть форму оплаты'
-    : 'Перейти к оплате';
 
   const processingNotice = isSubmitting
     ? createNotification({
@@ -651,28 +648,13 @@ export function useCheckoutState() {
     await submitCheckout({ retrying: true });
   }, [submitCheckout]);
 
-  const mobileAction = activeStep === 0
-    ? {
-        label: 'Проверить заказ',
-        subtitle: 'Шаг 1 из 2 · Контакты и адрес',
-        action: handleContactAddressNext,
-        disabled: isSubmitting
-      }
-    : {
-        label: isSubmitting
-          ? 'Оформляем заказ…'
-          : safeRetryState?.retryLabel || checkoutSubmitLabel,
-        subtitle: safeRetryState
-          ? 'Шаг 2 из 2 · Безопасная проверка'
-          : 'Шаг 2 из 2 · Проверка и оплата',
-        action: safeRetryState
-          ? handleSafeRetry
-          : () => {
-              const form = document.getElementById('checkout-form');
-              if (form) form.requestSubmit();
-            },
-        disabled: isSubmitting
-      };
+  const submitLabel = activeStep === 0
+    ? 'Проверить заказ'
+    : isSubmitting
+      ? 'Оформляем заказ…'
+      : safeRetryState
+        ? safeRetryState.retryLabel || 'Проверить ещё раз'
+        : 'Перейти к оплате';
 
   return {
     isManager,
@@ -696,8 +678,7 @@ export function useCheckoutState() {
     savePaymentMethod,
     setSavePaymentMethod,
     expressMessage,
-    submitLabel: isSubmitting ? 'Оформляем заказ…' : checkoutSubmitLabel,
-    mobileAction,
+    submitLabel,
     processingNotice,
     safeRetryState,
     handleSafeRetry,

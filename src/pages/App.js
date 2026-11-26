@@ -98,17 +98,15 @@ function App({ routes = [] }) {
             Перейти к содержимому
           </a>
         ) : null}
-        {!isChromeHiddenRoute && <Header showMobileStickyMenu={showMobileStickyMenu} />}
+        {!isChromeHiddenRoute && !isCheckoutRoute && <Header showMobileStickyMenu={showMobileStickyMenu} />}
         <main
           id="main-content"
           ref={mainRef}
           tabIndex={-1}
           className={
-            isChromeHiddenRoute
+            isChromeHiddenRoute || isCheckoutRoute
               ? 'min-h-screen'
-              : `site-main-with-chrome min-h-[80vh] ${
-                  showMobileStickyMenu ? '' : 'site-main-with-chrome--no-mobile-menu'
-                }`
+              : 'site-main-with-chrome min-h-[80vh]'
           }
         >
           <Routes>
@@ -121,10 +119,15 @@ function App({ routes = [] }) {
             ))}
           </Routes>
         </main>
-        {!isChromeHiddenRoute && <Footer />}
         {!isChromeHiddenRoute && !isCheckoutRoute ? (
-          <CustomerChatWidget elevatedForMobileAction={hasMobileCommerceAction} />
+          <CustomerChatWidget
+            elevatedForMobileAction={hasMobileCommerceAction}
+            hasMobileNavigation={showMobileStickyMenu}
+          />
         ) : null}
+        {!isChromeHiddenRoute && !isCheckoutRoute && (
+          <Footer fixedBottom={showMobileStickyMenu || hasMobileCommerceAction} />
+        )}
       </div>
     </>
   );

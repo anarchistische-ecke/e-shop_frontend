@@ -77,7 +77,7 @@ describe('ProductCard', () => {
     const view = renderCard({ ...baseProduct, material: 'Хлопок' });
 
     expect(view.container.querySelector('[aria-label^="Показать изображение"]')).toBeNull();
-    expect(view.container.textContent).toContain('Материал: Хлопок');
+    expect([...view.container.querySelectorAll('p')].map((element) => element.textContent)).toContain('Хлопок');
     view.unmount();
   });
 });

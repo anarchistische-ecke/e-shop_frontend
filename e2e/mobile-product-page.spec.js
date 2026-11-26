@@ -50,6 +50,44 @@ test('mobile product page keeps gallery controls above the sticky cart bar and s
   expect(railBox.y).toBeLessThan(stickyBox.y);
   expect(railBox.y).toBeLessThan(purchaseBox.y);
   expect(purchaseBox.y).toBeLessThan(highlightsBox.y);
+  await expect(stickyBar).toContainText('Цена без доставки');
+  await expect(purchaseCard.getByRole('button', { name: 'Купить сейчас' }))
+    .toHaveAccessibleDescription('Доставка оплачивается отдельно.');
+  await expect(purchaseCard.getByText('В комплекте', { exact: true })).toHaveCount(0);
+});
+
+test('mobile product contents follow the selected bedding size', async ({ page }) => {
+  await mockStorefrontApi(page, {
+    products: products.map((product) => product.id === 'prod-satin-sand' ? {
+      ...product,
+      variants: product.variants.map((variant, index) => ({
+        ...variant,
+        name: index === 0 ? '1,5' : 'Евро',
+        stock: 5,
+      })),
+      specifications: [{
+        title: 'Комплектация',
+        description: '▸ Полуторное:\nодеяло 155×210 (1)\nпростыня 160×220 (1)\n▸ Евро:\nодеяло 200×220 (1)\nнаволочки 50×70 (2)\nбез простыни',
+        items: [],
+      }],
+    } : product),
+  });
+
+  await page.goto('/product/prod-satin-sand');
+  const purchaseCard = page.getByTestId('product-purchase-card');
+  const contents = purchaseCard.getByRole('list').filter({ hasText: 'Одеяло' });
+  await expect(contents.getByRole('listitem')).toHaveText(['Одеяло 155×210 · 1 шт.', 'Простыня 160×220 · 1 шт.']);
+
+  await purchaseCard.getByRole('button', { name: /Евро В наличии/ }).click();
+  await expect(contents.getByRole('listitem')).toHaveText([
+    'Одеяло 200×220 · 1 шт.',
+    'Наволочки 50×70 · 2 шт.',
+    'Без простыни',
+  ]);
+
+  await purchaseCard.getByRole('button', { name: 'Таблица размеров' }).click();
+  await expect(page.getByRole('button', { name: /Характеристики/ })).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#pdp-details-panel')).toContainText('простыня 160×220');
 });
 
 test('mobile gallery swipes between images and still opens zoom on tap', async ({ page }) => {

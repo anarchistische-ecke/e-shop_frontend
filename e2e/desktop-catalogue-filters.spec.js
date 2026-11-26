@@ -53,3 +53,17 @@ test('desktop footer stays centered and compact on wide screens', async ({ page 
   expect(metrics.width).toBeLessThanOrEqual(1160);
   expect(metrics.width / metrics.viewportWidth).toBeLessThan(0.82);
 });
+
+test('desktop header action icons keep their shape and touch targets', async ({ page }) => {
+  await page.goto('/');
+
+  const header = page.getByRole('banner');
+  for (const name of ['Избранное', 'Войти', 'Корзина']) {
+    const action = header.getByRole('link', { name, exact: true });
+    const icon = action.locator('svg');
+    await expect(action).toHaveCSS('width', '48px');
+    await expect(action).toHaveCSS('height', '48px');
+    await expect(icon).toHaveCSS('width', '20px');
+    await expect(icon).toHaveCSS('height', '20px');
+  }
+});
